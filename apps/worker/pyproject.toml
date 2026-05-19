@@ -1,0 +1,18 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "interview-worker"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "celery>=5.3.0",
+    "redis>=5.0.0",
+]
+
+[dependency-groups]
+dev = []
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/interview_worker"]

@@ -1,0 +1,27 @@
+temp/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+.venv/
+venv/
+
+# Node
+node_modules/
+
+# Env
+.env
+.env.local
+
+# Docker
+docker-compose.override.yml
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

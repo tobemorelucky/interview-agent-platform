@@ -1,0 +1,25 @@
+{
+  "generated_at": "2026-05-19T09:25:13",
+  "file_count_excluding_manifest": 19,
+  "files": [
+    "CLAUDE.md",
+    "PACKAGE_README.md",
+    "docs/01_prd.md",
+    "docs/02_architecture.md",
+    "docs/03_backend_design.md",
+    "docs/04_frontend_design.md",
+    "docs/05_database_design.md",
+    "docs/06_milvus_design.md",
+    "docs/07_ingestion_pipeline.md",
+    "docs/08_api_contract.md",
+    "docs/09_auth_and_permission.md",
+    "docs/10_admin_console.md",
+    "docs/11_prompt_spec.md",
+    "docs/12_task_state_machine.md",
+    "docs/13_testing_strategy.md",
+    "docs/14_local_development_and_deployment.md",
+    "docs/15_roadmap.md",
+    "docs/16_decision_log.md",
+    "docs/17_phase0_claude_code_kickoff.md"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv run:*)",
+      "Bash(curl -s http://localhost:8000/api/v1/health)",
+      "Bash(curl -s http://localhost:8000/)",
+      "Bash(kill %1)",
+      "Bash(uv sync:*)"
+    ]
+  }
+}
