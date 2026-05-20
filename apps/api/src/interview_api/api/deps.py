@@ -4,6 +4,7 @@ from jose import JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from interview_api.core.exceptions import (
+    AuthMissingTokenError,
     AuthPermissionDeniedError,
     AuthTokenExpiredError,
 )
@@ -12,13 +13,16 @@ from interview_api.infrastructure.db.session import get_db
 from interview_api.modules.users.models import User
 from interview_api.modules.users.repository import UserRepository
 
-security_scheme = HTTPBearer()
+security_scheme = HTTPBearer(auto_error=False)
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security_scheme),
+    credentials: HTTPAuthorizationCredentials | None = Depends(security_scheme),
     db: AsyncSession = Depends(get_db),
 ) -> User:
+    if credentials is None:
+        raise AuthMissingTokenError()
+
     token = credentials.credentials
     try:
         payload = decode_access_token(token)

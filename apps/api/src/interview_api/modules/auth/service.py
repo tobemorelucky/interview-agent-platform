@@ -49,11 +49,3 @@ class AuthService:
         access_token = create_access_token(user_id=user.id, role=user.role)
         return {"access_token": access_token, "token_type": "bearer"}
 
-    async def get_me(self, user_id: int) -> dict:
-        user = await self.repo.get_by_id(user_id)
-        return {
-            "id": user.id,
-            "email": user.email,
-            "username": user.username,
-            "role": user.role,
-        }

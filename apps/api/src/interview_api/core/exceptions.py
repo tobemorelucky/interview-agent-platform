@@ -6,6 +6,13 @@ class AppError(Exception):
         super().__init__(message)
 
 
+class AuthMissingTokenError(AppError):
+    def __init__(self, message: str = "缺少认证令牌"):
+        super().__init__(
+            code="AUTH_MISSING_TOKEN", message=message, status_code=401
+        )
+
+
 class AuthInvalidCredentialsError(AppError):
     def __init__(self, message: str = "邮箱或密码错误"):
         super().__init__(

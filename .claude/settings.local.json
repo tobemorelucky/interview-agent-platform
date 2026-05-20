@@ -11,7 +11,13 @@
       "Bash(ADMIN_EMAIL=admin@test.com ADMIN_USERNAME=admin ADMIN_PASSWORD=secure123 uv run python scripts/seed_admin.py)",
       "Bash(taskkill //F //IM uvicorn.exe)",
       "Bash(taskkill //F //IM python.exe)",
-      "Bash(npx vite:*)"
+      "Bash(npx vite:*)",
+      "Bash(curl -s http://localhost:8000/api/v1/auth/me)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d,ensure_ascii=False,indent=2\\)\\)\")",
+      "Bash(curl -s http://localhost:8000/api/v1/auth/me -H \"Authorization: Bearer invalidtoken\")",
+      "Bash(curl -s -X POST http://localhost:8000/api/v1/auth/login -H \"Content-Type: application/json\" -d '{\"email\":\"admin@test.com\",\"password\":\"secure123\"}')",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d,ensure_ascii=False,indent=2\\)\\)\" kill %1 echo \"Done\")",
+      "Bash(ADMIN_EMAIL=admin2@test.com ADMIN_USERNAME=admin ADMIN_PASSWORD=test123 uv run python scripts/seed_admin.py)"
     ]
   }
 }

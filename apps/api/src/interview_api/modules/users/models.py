@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Integer, String, func
+from sqlalchemy import Boolean, CheckConstraint, DateTime, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from interview_api.infrastructure.db.base import Base
@@ -14,7 +14,11 @@ class User(Base):
     username: Mapped[str | None] = mapped_column(String(100), unique=True, nullable=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[str] = mapped_column(
-        String(10), nullable=False, default="USER", server_default="USER"
+        String(10),
+        CheckConstraint("role IN ('USER', 'ADMIN')", name="ck_users_role"),
+        nullable=False,
+        default="USER",
+        server_default="USER",
     )
     is_active: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, server_default=func.true()

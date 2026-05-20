@@ -43,7 +43,7 @@ def check_env() -> dict:
 
 async def seed_admin(env: dict) -> None:
     async with async_session_factory() as session:
-        # Check if admin already exists
+        # Check if admin already exists (by email)
         result = await session.execute(
             select(User).where(User.email == env["email"])
         )
@@ -51,6 +51,18 @@ async def seed_admin(env: dict) -> None:
         if existing:
             print(f"Admin user already exists: {existing.email} (id={existing.id})")
             return
+
+        # Check if username is already taken by another user
+        result = await session.execute(
+            select(User).where(User.username == env["username"])
+        )
+        username_taken = result.scalar_one_or_none()
+        if username_taken:
+            print(
+                f"ERROR: Username '{env['username']}' is already taken "
+                f"(by user id={username_taken.id}, email={username_taken.email})"
+            )
+            sys.exit(1)
 
         user = User(
             email=env["email"],
