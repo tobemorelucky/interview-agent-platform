@@ -9,7 +9,7 @@
 建立项目 Monorepo 工程骨架与基础设施，包括：
 
 1. **Monorepo 目录结构** — `apps/api`、`apps/web`、`apps/worker`、`scripts/`、`docs/`
-2. **Docker Compose 基础设施** — PostgreSQL 16、Redis 7、etcd、MinIO、Milvus Standalone (v2.5.4)
+2. **Docker Compose 基础设施** — PostgreSQL 16、Redis 7、etcd、MinIO、Milvus Standalone (v2.5.10)
 3. **FastAPI 最小服务** — 健康检查端点 `/api/v1/health`
 4. **Celery Worker 骨架** — 可启动的 Celery app + ping 示例任务
 5. **Vue3 前端欢迎页** — 展示三个功能入口卡片的欢迎页
