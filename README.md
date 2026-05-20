@@ -40,7 +40,33 @@ docker compose up -d
 - MinIO API → `localhost:9000`
 - MinIO Console → `localhost:9001`
 
-### Step 2: 启动 API 服务
+### Step 2: 执行数据库迁移
+
+```bash
+cd apps/api
+uv sync
+uv run alembic upgrade head
+```
+
+### Step 3: 创建管理员账号（可选）
+
+```bash
+cd apps/api
+
+# Linux / macOS
+ADMIN_EMAIL=admin@example.com ADMIN_USERNAME=admin ADMIN_PASSWORD=change_me_admin \
+  uv run python scripts/seed_admin.py
+
+# Windows (PowerShell)
+$env:ADMIN_EMAIL="admin@example.com"
+$env:ADMIN_USERNAME="admin"
+$env:ADMIN_PASSWORD="change_me_admin"
+uv run python scripts/seed_admin.py
+```
+
+若管理员已存在，脚本会跳过创建。
+
+### Step 4: 启动 API 服务
 
 ```bash
 cd apps/api
@@ -57,7 +83,7 @@ curl http://localhost:8000/api/v1/health
 # → {"status":"ok","version":"0.1.0"}
 ```
 
-### Step 3: 启动 Worker
+### Step 5: 启动 Worker
 
 ```bash
 cd apps/worker
@@ -70,7 +96,7 @@ uv run celery -A interview_worker.celery_app worker -l info --pool=solo
 
 看到 `celery@... ready.` 及 `[tasks] . ping` 即表示 Worker 启动成功。
 
-### Step 4: 启动前端
+### Step 6: 启动前端
 
 ```bash
 cd apps/web
@@ -100,7 +126,7 @@ interview-agent-platform/
 | 阶段 | 内容 | 状态 |
 |------|------|------|
 | Phase 0 | 工程骨架与基础设施 | 已完成 |
-| Phase 1 | 认证与用户系统 | 待开始 |
+| Phase 1 | 认证与用户系统 | 已完成 |
 | Phase 2 | 面试知识库问答 | 待开始 |
 | Phase 3 | 简历模拟面试 | 待开始 |
 | Phase 4 | 管理员采集任务框架 | 待开始 |
@@ -111,9 +137,19 @@ interview-agent-platform/
 
 ## API 端点
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/` | 应用信息 |
-| GET | `/api/v1/health` | 应用存活检查 |
+### 系统
 
-> `/api/v1/readiness`（依赖就绪检查）将在 Phase 1+ 补上，届时会检查 DB / Redis / Milvus / MinIO 连接状态。
+| 方法 | 路径 | 说明 | 权限 |
+|------|------|------|------|
+| GET | `/` | 应用信息 | 公开 |
+| GET | `/api/v1/health` | 健康检查 | 公开 |
+
+### 认证 (Phase 1)
+
+| 方法 | 路径 | 说明 | 权限 |
+|------|------|------|------|
+| POST | `/api/v1/auth/register` | 注册 | 公开 |
+| POST | `/api/v1/auth/login` | 登录 | 公开 |
+| GET | `/api/v1/auth/me` | 当前用户信息 | 登录 |
+
+> `/api/v1/readiness`（依赖就绪检查）将在后续阶段补上。

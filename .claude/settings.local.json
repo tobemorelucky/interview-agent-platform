@@ -5,7 +5,13 @@
       "Bash(curl -s http://localhost:8000/api/v1/health)",
       "Bash(curl -s http://localhost:8000/)",
       "Bash(kill %1)",
-      "Bash(uv sync:*)"
+      "Bash(uv sync:*)",
+      "Bash(pnpm add:*)",
+      "Bash(docker compose:*)",
+      "Bash(ADMIN_EMAIL=admin@test.com ADMIN_USERNAME=admin ADMIN_PASSWORD=secure123 uv run python scripts/seed_admin.py)",
+      "Bash(taskkill //F //IM uvicorn.exe)",
+      "Bash(taskkill //F //IM python.exe)",
+      "Bash(npx vite:*)"
     ]
   }
 }
