@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
+import logging
+
+from fastapi import APIRouter, Depends, File, Query, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from interview_api.api.deps import get_current_user, require_admin
@@ -17,6 +19,8 @@ from interview_api.modules.kb.repository import (
 )
 from interview_api.modules.users.models import User
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api/v1/admin/kb", tags=["admin-kb"])
 
 
@@ -27,47 +31,31 @@ async def upload_document(
     current_user: User = Depends(require_admin),
 ):
     storage = MinioObjectStorageProvider()
-    repo = KbDocumentRepository(db)
+    service = KbIngestionService(db, storage)
     file_bytes = await file.read()
-    content_hash = KbIngestionService.compute_hash(file_bytes)
     filename = file.filename or "untitled"
-
-    # Check duplicate
-    existing = await repo.get_by_content_hash(content_hash)
-    service = KbIngestionService(db, storage, None, None)
-    if service.is_duplicate(existing):
-        from interview_api.core.exceptions import AppError
-        raise AppError(
-            code="DUPLICATE_DOCUMENT",
-            message=f"Document already exists with status '{existing.status}'",
-            status_code=409,
-        )
 
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
     source_type = "markdown" if ext in ("md", "markdown") else "txt"
 
-    # Upload to MinIO
-    storage_key = f"kb_documents/{content_hash}/{filename}"
-    await storage.ensure_bucket("interview-agent")
-    await storage.upload(
-        "interview-agent", storage_key, file_bytes,
-        "text/markdown" if source_type == "markdown" else "text/plain",
-    )
-
-    doc = await repo.create(
-        title=filename,
+    doc = await service.upload_and_create_document(
+        filename=filename,
+        file_bytes=file_bytes,
         source_type=source_type,
-        storage_key=storage_key,
-        content_hash=content_hash,
         uploaded_by=current_user.id,
     )
 
     # Dispatch async processing to Celery
+    repo = KbDocumentRepository(db)
     try:
         from interview_worker.tasks.kb_tasks import process_kb_document
         process_kb_document.delay(doc.id)
-    except Exception:
-        pass  # Celery not available; admin can retry later
+    except Exception as e:
+        logger.warning("Failed to dispatch Celery task for doc %s: %s", doc.id, e)
+        await repo.update_status(
+            doc.id, "UPLOADED",
+            error_message=f"Celery dispatch failed: {e}",
+        )
 
     return success(data=KbDocumentResponse.model_validate(doc).model_dump())
 

@@ -9,16 +9,13 @@ Usage:
 """
 
 import asyncio
-import os
 
 from interview_api.core.config import settings
 from interview_api.infrastructure.milvus.provider import MilvusVectorStoreProvider
 
 
 async def main():
-    dim = int(os.getenv("EMBEDDING_DIM", "768"))
-
-    provider = MilvusVectorStoreProvider(embedding_dim=dim)
+    provider = MilvusVectorStoreProvider(embedding_dim=settings.embedding_dim)
 
     collection_name = "kb_chunks_v1"
     alias = "kb_chunks_current"

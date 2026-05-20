@@ -1,10 +1,9 @@
-import os
-
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from interview_api.api.deps import get_current_user
+from interview_api.core.config import settings
 from interview_api.core.exceptions import NotFoundError
 from interview_api.core.response import success
 from interview_api.infrastructure.db.session import get_db
@@ -31,7 +30,7 @@ def _build_qa_service(db: AsyncSession) -> QaService:
     embedding = OpenAICompatibleEmbeddingProvider()
     llm = OpenAICompatibleLLMProvider()
     vector_store = MilvusVectorStoreProvider(
-        embedding_dim=int(os.getenv("EMBEDDING_DIM", "768"))
+        embedding_dim=settings.embedding_dim
     )
     return QaService(db, embedding, vector_store, llm)
 

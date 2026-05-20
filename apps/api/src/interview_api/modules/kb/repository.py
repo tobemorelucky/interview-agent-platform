@@ -1,4 +1,4 @@
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from interview_api.modules.kb.models import KbChunk, KbDocument
@@ -100,5 +100,11 @@ class KbChunkRepository:
             update(KbChunk)
             .where(KbChunk.id.in_(chunk_ids))
             .values(embedding_status="INDEXED")
+        )
+        await self.db.flush()
+
+    async def delete_by_document_id(self, document_id: int) -> None:
+        await self.db.execute(
+            delete(KbChunk).where(KbChunk.document_id == document_id)
         )
         await self.db.flush()

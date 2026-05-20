@@ -1,7 +1,20 @@
-from pydantic_settings import BaseSettings
+import os
+from pathlib import Path
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Resolve repo root relative to this file:
+# config.py → core → interview_api → src → api → apps → repo_root
+_ROOT = Path(__file__).resolve().parents[5]
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=os.getenv("ENV_FILE", str(_ROOT / ".env")),
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
     # App
     app_env: str = "development"
     app_debug: bool = True
@@ -42,6 +55,7 @@ class Settings(BaseSettings):
     embedding_base_url: str = ""
     embedding_api_key: str = ""
     embedding_model: str = ""
+    embedding_dim: int = 768
 
     # OCR / ASR
     ocr_provider: str = ""
@@ -50,8 +64,6 @@ class Settings(BaseSettings):
     # Celery
     celery_broker_url: str = "redis://localhost:6379/1"
     celery_result_backend: str = "redis://localhost:6379/2"
-
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
 
 settings = Settings()

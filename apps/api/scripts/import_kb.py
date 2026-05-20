@@ -16,7 +16,6 @@ Idempotency:
 
 import argparse
 import asyncio
-import os
 import sys
 from pathlib import Path
 
@@ -97,12 +96,10 @@ async def main():
     if args.retry_failed:
         print("--retry-failed enabled: will reprocess FAILED documents")
 
-    dim = int(os.getenv("EMBEDDING_DIM", "768"))
-
     async with async_session_factory() as db:
         storage = MinioObjectStorageProvider()
         embedding = OpenAICompatibleEmbeddingProvider()
-        vector_store = MilvusVectorStoreProvider(embedding_dim=dim)
+        vector_store = MilvusVectorStoreProvider(embedding_dim=settings.embedding_dim)
         service = KbIngestionService(db, storage, embedding, vector_store)
 
         stats = {"imported": 0, "skipped": 0, "retried": 0, "failed": 0}

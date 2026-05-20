@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class KbIngestionService:
-    def __init__(self, db, storage, embedding, vector_store):
+    def __init__(self, db, storage, embedding=None, vector_store=None):
         self.db = db
         self.storage = storage
         self.embedding = embedding
@@ -80,6 +80,11 @@ class KbIngestionService:
 
     async def process_document(self, document_id: int) -> None:
         """Full processing pipeline: download -> parse -> chunk -> embed -> index."""
+        if self.embedding is None or self.vector_store is None:
+            raise RuntimeError(
+                "KbIngestionService.process_document requires embedding and vector_store"
+            )
+
         doc = await self.kb_repo.get_by_id(document_id)
         if doc is None:
             logger.error(f"Document {document_id} not found")
@@ -156,9 +161,14 @@ class KbIngestionService:
             )
 
     async def retry_failed(self, document_id: int) -> None:
-        """Reset a FAILED document to UPLOADED and reprocess."""
+        """Reset a FAILED document to UPLOADED and reprocess.
+
+        Deletes existing chunks before reprocessing to avoid duplicates
+        from a previous failed attempt.
+        """
         doc = await self.kb_repo.get_by_id(document_id)
         if doc is None or doc.status != "FAILED":
             return
+        await self.chunk_repo.delete_by_document_id(document_id)
         await self.kb_repo.update_status(document_id, "UPLOADED")
         await self.process_document(document_id)
