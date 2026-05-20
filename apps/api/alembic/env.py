@@ -7,9 +7,7 @@ from interview_api.core.config import settings
 from interview_api.infrastructure.db.base import Base
 
 # Import all models so Base.metadata is complete
-import interview_api.modules.users.models  # noqa: F401
-import interview_api.modules.kb.models  # noqa: F401
-import interview_api.modules.qa.models  # noqa: F401
+import interview_api.modules.models  # noqa: F401
 
 target_metadata = Base.metadata
 config = context.config

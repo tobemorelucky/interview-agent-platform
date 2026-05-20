@@ -16,6 +16,9 @@ import sys
 
 from sqlalchemy import select
 
+# Register all models before DB access
+import interview_api.modules.models  # noqa: F401
+
 from interview_api.core.security import hash_password
 from interview_api.infrastructure.db.engine import engine
 from interview_api.infrastructure.db.session import async_session_factory
