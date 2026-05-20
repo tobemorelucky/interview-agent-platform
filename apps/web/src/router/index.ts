@@ -21,6 +21,18 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: "/qa",
+    name: "Qa",
+    component: () => import("../pages/QaPage.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/admin/kb/documents",
+    name: "AdminKbDocuments",
+    component: () => import("../pages/admin/AdminKbDocumentsPage.vue"),
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
+  {
     path: "/",
     redirect: "/dashboard",
   },

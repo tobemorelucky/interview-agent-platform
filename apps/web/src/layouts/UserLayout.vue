@@ -1,9 +1,19 @@
 <script setup lang="ts">
 import { useAuthStore } from "../stores/auth";
-import { useRouter } from "vue-router";
+import { useRouter, useRoute } from "vue-router";
 
 const auth = useAuthStore();
 const router = useRouter();
+const route = useRoute();
+
+const navItems = [
+  { path: "/dashboard", label: "首页" },
+  { path: "/qa", label: "知识问答" },
+];
+
+const adminNavItems = [
+  { path: "/admin/kb/documents", label: "知识库管理" },
+];
 
 function handleLogout() {
   auth.logout();
@@ -14,7 +24,29 @@ function handleLogout() {
 <template>
   <div class="user-layout">
     <header class="topbar">
-      <span class="brand">Interview Agent Platform</span>
+      <div class="topbar-left">
+        <span class="brand">Interview Agent Platform</span>
+        <nav class="nav-links">
+          <router-link
+            v-for="item in navItems"
+            :key="item.path"
+            :to="item.path"
+            :class="['nav-link', { active: route.path === item.path }]"
+          >
+            {{ item.label }}
+          </router-link>
+          <template v-if="auth.isAdmin">
+            <router-link
+              v-for="item in adminNavItems"
+              :key="item.path"
+              :to="item.path"
+              :class="['nav-link', 'nav-admin', { active: route.path === item.path }]"
+            >
+              {{ item.label }}
+            </router-link>
+          </template>
+        </nav>
+      </div>
       <div class="topbar-right">
         <span v-if="auth.currentUser" class="user-info">
           {{ auth.currentUser.email }}
@@ -48,10 +80,48 @@ function handleLogout() {
   flex-shrink: 0;
 }
 
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
 .brand {
   font-size: 16px;
   font-weight: 600;
   color: #1a1a2e;
+  flex-shrink: 0;
+}
+
+.nav-links {
+  display: flex;
+  gap: 4px;
+}
+
+.nav-link {
+  padding: 6px 14px;
+  font-size: 14px;
+  color: #555;
+  text-decoration: none;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.nav-link:hover {
+  background: #f0f2f5;
+}
+
+.nav-link.active {
+  color: #409eff;
+  background: #ecf5ff;
+}
+
+.nav-link.nav-admin {
+  color: #e6a23c;
+}
+
+.nav-link.nav-admin.active {
+  background: #fdf6ec;
 }
 
 .topbar-right {

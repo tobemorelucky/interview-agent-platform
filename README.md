@@ -48,6 +48,31 @@ uv sync
 uv run alembic upgrade head
 ```
 
+### Step 2.5: 初始化 MinIO Bucket
+
+```bash
+cd apps/api
+uv run python scripts/init_minio.py
+```
+
+### Step 2.6: 初始化 Milvus Collection
+
+```bash
+cd apps/api
+uv run python scripts/init_milvus.py
+```
+
+### Step 2.7: 批量导入知识库文档（可选）
+
+准备 `.md` 或 `.txt` 文档目录，执行离线导入：
+
+```bash
+cd apps/api
+uv run python scripts/import_kb.py --dir /path/to/docs
+```
+
+导入成功后，文档将被 chunk 化、embedding 化并写入 Milvus。
+
 ### Step 3: 创建管理员账号（可选）
 
 ```bash
@@ -127,7 +152,7 @@ interview-agent-platform/
 |------|------|------|
 | Phase 0 | 工程骨架与基础设施 | 已完成 |
 | Phase 1 | 认证与用户系统 | 已完成 |
-| Phase 2 | 面试知识库问答 | 待开始 |
+| Phase 2 | 面试知识库问答 | 已完成 |
 | Phase 3 | 简历模拟面试 | 待开始 |
 | Phase 4 | 管理员采集任务框架 | 待开始 |
 | Phase 5 | 牛客采集链路 | 待开始 |
@@ -151,5 +176,22 @@ interview-agent-platform/
 | POST | `/api/v1/auth/register` | 注册 | 公开 |
 | POST | `/api/v1/auth/login` | 登录 | 公开 |
 | GET | `/api/v1/auth/me` | 当前用户信息 | 登录 |
+
+### 知识库管理 (Phase 2, 管理员)
+
+| 方法 | 路径 | 说明 | 权限 |
+|------|------|------|------|
+| POST | `/api/v1/admin/kb/documents/upload` | 上传知识文档 | ADMIN |
+| GET | `/api/v1/admin/kb/documents` | 文档列表 | ADMIN |
+| GET | `/api/v1/admin/kb/documents/{id}` | 文档详情+chunks | ADMIN |
+
+### 知识库问答 (Phase 2, 用户)
+
+| 方法 | 路径 | 说明 | 权限 |
+|------|------|------|------|
+| POST | `/api/v1/qa/sessions` | 创建会话 | 登录 |
+| GET | `/api/v1/qa/sessions` | 我的会话列表 | 登录 |
+| GET | `/api/v1/qa/sessions/{id}` | 会话详情+历史消息 | 登录 |
+| POST | `/api/v1/qa/chat/stream` | 流式问答 (SSE) | 登录 |
 
 > `/api/v1/readiness`（依赖就绪检查）将在后续阶段补上。
