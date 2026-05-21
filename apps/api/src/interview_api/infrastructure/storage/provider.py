@@ -49,3 +49,19 @@ class MinioObjectStorageProvider:
     async def get_text(self, bucket_name: str, object_key: str) -> str:
         data = await self.download(bucket_name, object_key)
         return data.decode("utf-8")
+
+    async def delete(self, bucket_name: str, object_key: str) -> None:
+        """Delete an object from MinIO.  Logs and skips if the object does not exist."""
+        import logging
+        logger = logging.getLogger(__name__)
+        try:
+            self._client.remove_object(bucket_name, object_key)
+        except S3Error as e:
+            if e.code == "NoSuchKey":
+                logger.warning(
+                    "MinIO object not found during delete: bucket=%s key=%s",
+                    bucket_name,
+                    object_key,
+                )
+            else:
+                raise

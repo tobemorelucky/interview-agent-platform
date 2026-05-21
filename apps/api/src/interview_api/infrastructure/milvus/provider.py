@@ -1,3 +1,4 @@
+import logging
 import time
 from typing import Any
 
@@ -91,6 +92,26 @@ class MilvusVectorStoreProvider:
             {**dict(r["entity"]), "score": r.get("distance")}
             for r in results[0]
         ]
+
+    def delete_by_doc_id(self, collection_name: str, doc_id: int) -> None:
+        """Delete all vectors for a given doc_id from Milvus.
+
+        Uses a filter expression — no error if no matching vectors exist.
+        Flushes after delete so the change is immediately visible.
+        """
+        try:
+            self._client.delete(
+                collection_name=collection_name,
+                filter=f"doc_id == {doc_id}",
+            )
+            self._client.flush(collection_name=collection_name)
+        except Exception:
+            logging.getLogger(__name__).warning(
+                "Failed to delete Milvus vectors for doc_id=%s from %s",
+                doc_id,
+                collection_name,
+                exc_info=True,
+            )
 
     def get_by_ids(self, collection_name: str, ids: list[int]) -> list[dict]:
         results = self._client.get(

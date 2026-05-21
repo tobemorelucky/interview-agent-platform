@@ -76,6 +76,27 @@ class KbDocumentRepository:
         )
         return result.scalar() or 0
 
+    async def reset_status(self, doc_id: int) -> None:
+        """Reset document to UPLOADED and clear processing fields."""
+        await self.db.execute(
+            update(KbDocument)
+            .where(KbDocument.id == doc_id)
+            .values(
+                status="UPLOADED",
+                error_message=None,
+                chunk_count=0,
+                indexed_at=None,
+            )
+        )
+        await self.db.flush()
+
+    async def delete(self, doc_id: int) -> None:
+        """Hard-delete a kb_documents record by id."""
+        await self.db.execute(
+            delete(KbDocument).where(KbDocument.id == doc_id)
+        )
+        await self.db.flush()
+
 
 class KbChunkRepository:
     def __init__(self, db: AsyncSession):

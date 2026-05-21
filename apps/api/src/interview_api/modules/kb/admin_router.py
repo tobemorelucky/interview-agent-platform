@@ -4,14 +4,17 @@ from fastapi import APIRouter, Depends, File, Query, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from interview_api.api.deps import get_current_user, require_admin
+from interview_api.core.config import settings
 from interview_api.core.response import success
 from interview_api.infrastructure.db.session import get_db
+from interview_api.infrastructure.milvus.provider import MilvusVectorStoreProvider
 from interview_api.infrastructure.storage.provider import MinioObjectStorageProvider
 from interview_api.modules.kb.admin_schemas import (
     KbDocumentDetailResponse,
     KbDocumentListResponse,
     KbDocumentResponse,
 )
+from interview_api.modules.kb.admin_service import KbAdminService
 from interview_api.modules.kb.ingestion_service import KbIngestionService
 from interview_api.modules.kb.repository import (
     KbChunkRepository,
@@ -22,6 +25,12 @@ from interview_api.modules.users.models import User
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/admin/kb", tags=["admin-kb"])
+
+
+def _build_admin_service(db: AsyncSession) -> KbAdminService:
+    storage = MinioObjectStorageProvider()
+    vector_store = MilvusVectorStoreProvider(embedding_dim=settings.embedding_dim)
+    return KbAdminService(db, storage, vector_store)
 
 
 @router.post("/documents/upload", status_code=201)
@@ -97,3 +106,27 @@ async def get_document(
     detail = KbDocumentDetailResponse.model_validate(doc)
     detail.chunks = [KbChunkResponse.model_validate(c).model_dump() for c in chunks]
     return success(data=detail.model_dump())
+
+
+@router.delete("/documents/{document_id}")
+async def delete_document(
+    document_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    service = _build_admin_service(db)
+    await service.delete_document(document_id)
+    await db.commit()
+    return success(message="Document deleted")
+
+
+@router.post("/documents/{document_id}/reindex")
+async def reindex_document(
+    document_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    service = _build_admin_service(db)
+    doc_state = await service.reindex_document(document_id)
+    await db.commit()
+    return success(data=doc_state, message="Reindex dispatched")
