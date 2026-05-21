@@ -20,7 +20,19 @@
       "Bash(ADMIN_EMAIL=admin2@test.com ADMIN_USERNAME=admin ADMIN_PASSWORD=test123 uv run python scripts/seed_admin.py)",
       "Bash(curl -s -X POST http://localhost:8000/api/v1/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"admin@test.com\",\"password\":\"secure123\"}')",
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d,ensure_ascii=False,indent=2\\)\\)\" kill %1 echo \"\" echo \"Done\")",
-      "Bash(pnpm exec:*)"
+      "Bash(pnpm exec:*)",
+      "Bash(powershell -Command \"Get-Process docker -ErrorAction SilentlyContinue | Select-Object Id, ProcessName; docker ps --format '{{.Names}}' 2>&1\")",
+      "Bash(powershell -ExecutionPolicy Bypass -File scripts/dev/start-dev.ps1)",
+      "Bash(powershell -ExecutionPolicy Bypass -File scripts/dev/stop-dev.ps1)",
+      "Bash(where pnpm:*)",
+      "Bash(pnpm --version)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\" http://localhost:5173)",
+      "Bash(powershell -ExecutionPolicy Bypass -File scripts/dev/status-dev.ps1)",
+      "Bash(cmd /c stop-dev.bat)",
+      "Bash(netstat -ano)",
+      "Bash(powershell -Command \"Stop-Process -Id 161164,160112,154848 -Force -ErrorAction SilentlyContinue\")",
+      "Bash(xxd)",
+      "Bash(powershell -Command ':*)"
     ]
   }
 }

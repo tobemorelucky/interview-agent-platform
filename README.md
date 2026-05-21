@@ -26,6 +26,24 @@
 
 ## 本地启动
 
+### 快速启动（Windows，一键）
+
+配置好 `.env` 后，在仓库根目录双击运行：
+
+| 脚本 | 作用 |
+|------|------|
+| `start-dev.bat` | 启动 Docker + API + Worker + Web（每个服务独立窗口） |
+| `stop-dev.bat` | 停止 API / Worker / Web + Docker 容器 |
+| `status-dev.bat` | 查看各服务运行状态 + Docker 容器状态 |
+
+每个服务运行在独立的 cmd 窗口中，可直接看到实时日志。关闭窗口即停止该服务。
+
+---
+
+### 手动逐步启动
+
+如需手动控制每个步骤：
+
 ### Step 0: 配置环境变量
 
 在仓库根目录创建 `.env` 文件（从 `.env.example` 复制并填入实际值）：
@@ -144,7 +162,22 @@ uv run celery -A interview_worker.celery_app worker -l info
 uv run celery -A interview_worker.celery_app worker -l info --pool=solo
 ```
 
-看到 `celery@... ready.` 及 `[tasks] . ping` 即表示 Worker 启动成功。
+看到 `celery@... ready.` 且 `[tasks]` 列表中出现 `process_kb_document` 即表示 Worker 启动成功：
+
+```
+[tasks]
+  . ping
+  . process_kb_document
+```
+
+**验证任务注册**（Worker 启动后在另一个终端执行）：
+
+```bash
+cd apps/worker
+uv run celery -A interview_worker.celery_app inspect registered
+```
+
+预期输出应包含 `process_kb_document`。
 
 ### Step 6: 启动前端
 

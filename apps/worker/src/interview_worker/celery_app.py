@@ -16,7 +16,9 @@ app.conf.update(
     worker_prefetch_multiplier=1,
 )
 
-app.autodiscover_tasks(["interview_worker.tasks"])
+# Register task modules explicitly so @app.task decorators are processed.
+# autodiscover_tasks may not recurse into submodules of a package.
+import interview_worker.tasks.kb_tasks  # noqa: F401, E402 — registers process_kb_document
 
 
 @app.task(name="ping")
