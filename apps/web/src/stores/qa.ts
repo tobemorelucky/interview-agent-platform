@@ -1,12 +1,12 @@
 import { defineStore } from "pinia";
-import { ref, computed } from "vue";
+import { ref } from "vue";
 import {
   createSession,
   getSessions,
   getSession,
   chatStream,
 } from "../api/qa";
-import type { ChatSession, ChatMessage, Citation } from "../types/qa";
+import type { ChatSession, ChatMessage, Citation, RagStage } from "../types/qa";
 import { ApiError } from "../api/client";
 
 export const useQaStore = defineStore("qa", () => {
@@ -19,6 +19,11 @@ export const useQaStore = defineStore("qa", () => {
   const streamingContent = ref("");
   const streamingMessageId = ref<number | null>(null);
 
+  // RAG pipeline progress
+  const ragStage = ref<RagStage | null>(null);
+  const ragHitCount = ref<number>(0);
+  const ragTopK = ref<number>(0);
+
   async function fetchSessions() {
     sessions.value = await getSessions();
   }
@@ -30,6 +35,9 @@ export const useQaStore = defineStore("qa", () => {
     messages.value = [];
     citations.value = [];
     streamingContent.value = "";
+    ragStage.value = null;
+    ragHitCount.value = 0;
+    ragTopK.value = 0;
     return session;
   }
 
@@ -40,6 +48,9 @@ export const useQaStore = defineStore("qa", () => {
     messages.value = detail.messages;
     citations.value = [];
     streamingContent.value = "";
+    ragStage.value = null;
+    ragHitCount.value = 0;
+    ragTopK.value = 0;
   }
 
   async function sendMessage(content: string) {
@@ -53,12 +64,22 @@ export const useQaStore = defineStore("qa", () => {
     streamingContent.value = "";
     citations.value = [];
     streamingMessageId.value = null;
+    ragStage.value = null;
+    ragHitCount.value = 0;
+    ragTopK.value = 0;
 
     let fullContent = "";
     const collectedCitations: Citation[] = [];
 
     try {
       await chatStream(currentSession.value.id, content, {
+        onStatus(stage) {
+          ragStage.value = stage as RagStage;
+        },
+        onRetrieval(info) {
+          ragTopK.value = info.top_k;
+          ragHitCount.value = info.hit_count;
+        },
         onCitation(cs) {
           collectedCitations.push(...cs);
           citations.value = collectedCitations;
@@ -69,7 +90,6 @@ export const useQaStore = defineStore("qa", () => {
         },
         onDone(messageId) {
           streamingMessageId.value = messageId;
-          // Add the user + assistant messages to the local state
           messages.value.push({
             id: 0,
             session_id: currentSession.value!.id,
@@ -86,7 +106,6 @@ export const useQaStore = defineStore("qa", () => {
             citations_json: collectedCitations,
             created_at: null,
           });
-          // Refresh sessions to update title/order
           fetchSessions();
         },
         onError(msg) {
@@ -103,6 +122,7 @@ export const useQaStore = defineStore("qa", () => {
       }
     } finally {
       isStreaming.value = false;
+      ragStage.value = null;
     }
   }
 
@@ -119,6 +139,9 @@ export const useQaStore = defineStore("qa", () => {
     error,
     streamingContent,
     streamingMessageId,
+    ragStage,
+    ragHitCount,
+    ragTopK,
     fetchSessions,
     newSession,
     selectSession,

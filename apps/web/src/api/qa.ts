@@ -13,15 +13,19 @@ export async function getSession(id: number): Promise<SessionDetail> {
   return client.get(`/qa/sessions/${id}`);
 }
 
+export interface ChatStreamCallbacks {
+  onStatus: (stage: string) => void
+  onRetrieval: (info: { top_k: number; hit_count: number }) => void
+  onCitation: (citations: Citation[]) => void
+  onToken: (text: string) => void
+  onDone: (messageId: number) => void
+  onError: (message: string) => void
+}
+
 export async function chatStream(
   sessionId: number,
   message: string,
-  callbacks: {
-    onCitation: (citations: Citation[]) => void
-    onToken: (text: string) => void
-    onDone: (messageId: number) => void
-    onError: (message: string) => void
-  }
+  callbacks: ChatStreamCallbacks
 ): Promise<void> {
   const token = localStorage.getItem("access_token");
 
@@ -64,6 +68,12 @@ export async function chatStream(
       try {
         const data = JSON.parse(dataMatch[1]);
         switch (event) {
+          case "status":
+            callbacks.onStatus(data.stage);
+            break;
+          case "retrieval":
+            callbacks.onRetrieval(data);
+            break;
           case "citation":
             callbacks.onCitation(data);
             break;

@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import { useRouter } from "vue-router";
 import { useAuthStore } from "../stores/auth";
 
 const auth = useAuthStore();
+const router = useRouter();
 
 const features = [
   {
@@ -17,11 +19,28 @@ const features = [
     description: "查询已发布的牛客、小红书、抖音等多平台真实面经，了解最新面试趋势。",
   },
 ];
+
+function goAdminKb() {
+  router.push("/admin/kb/documents");
+}
 </script>
 
 <template>
   <div class="dashboard">
     <h2 class="welcome">欢迎，{{ auth.currentUser?.username || auth.currentUser?.email }}</h2>
+
+    <!-- Admin section -->
+    <div v-if="auth.isAdmin" class="admin-section">
+      <h3 class="section-title">管理</h3>
+      <div class="feature-grid">
+        <div class="feature-card admin-card" @click="goAdminKb">
+          <h3>知识库管理</h3>
+          <p>上传、查看、删除、重新索引知识库文档。修改分块/embedding配置后需在此重新索引。</p>
+        </div>
+      </div>
+    </div>
+
+    <h3 class="section-title">功能</h3>
     <div class="feature-grid">
       <div v-for="f in features" :key="f.title" class="feature-card">
         <h3>{{ f.title }}</h3>
@@ -44,10 +63,24 @@ const features = [
   margin-bottom: 32px;
 }
 
+.section-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: #999;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.admin-section {
+  margin-bottom: 32px;
+}
+
 .feature-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 20px;
+  margin-bottom: 32px;
 }
 
 .feature-card {
@@ -55,6 +88,20 @@ const features = [
   border-radius: 10px;
   padding: 24px;
   box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
+}
+
+.admin-card {
+  border: 2px solid #e6a23c;
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+
+.admin-card:hover {
+  box-shadow: 0 2px 16px rgba(230, 162, 60, 0.2);
+}
+
+.admin-card h3 {
+  color: #e6a23c;
 }
 
 .feature-card h3 {

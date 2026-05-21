@@ -2,7 +2,9 @@ export interface Citation {
   chunk_id: number
   doc_id: number
   title: string
-  content: string
+  source_type: string
+  preview: string
+  score: number | null
 }
 
 export interface ChatMessage {
@@ -55,4 +57,16 @@ export interface KbDocumentDetail extends KbDocument {
 export interface KbDocumentList {
   items: KbDocument[]
   total: number
+}
+
+/** RAG pipeline stage exposed via SSE status events. */
+export type RagStage =
+  | "analyzing_query"
+  | "embedding_query"
+  | "retrieving"
+  | "generating"
+
+export interface RetrievalInfo {
+  top_k: number
+  hit_count: number
 }

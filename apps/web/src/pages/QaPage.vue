@@ -1,11 +1,22 @@
 <script setup lang="ts">
-import { ref, onMounted, nextTick, watch } from "vue";
+import { ref, onMounted, nextTick, watch, computed } from "vue";
 import { useQaStore } from "../stores/qa";
 
 const qa = useQaStore();
 
 const inputMessage = ref("");
 const chatEl = ref<HTMLElement | null>(null);
+const expandedCitations = ref(false);
+
+const ragStageLabel = computed(() => {
+  const map: Record<string, string> = {
+    analyzing_query: "正在理解问题...",
+    embedding_query: "正在生成查询向量...",
+    retrieving: "正在检索知识库...",
+    generating: "正在生成回答...",
+  };
+  return map[qa.ragStage ?? ""] ?? "";
+});
 
 onMounted(async () => {
   await qa.fetchSessions();
@@ -14,16 +25,19 @@ onMounted(async () => {
 async function handleNewSession() {
   await qa.newSession();
   inputMessage.value = "";
+  expandedCitations.value = false;
 }
 
 async function handleSelectSession(id: number) {
   await qa.selectSession(id);
+  expandedCitations.value = false;
 }
 
 async function handleSend() {
   const msg = inputMessage.value.trim();
   if (!msg || qa.isStreaming) return;
   inputMessage.value = "";
+  expandedCitations.value = false;
 
   if (!qa.currentSession) {
     await qa.newSession();
@@ -80,29 +94,68 @@ watch(() => qa.streamingContent, () => {
             :class="['message', m.role]"
           >
             <div class="message-content">{{ m.content }}</div>
+            <!-- Historical citations: collapsed by default -->
             <div
               v-if="m.citations_json && m.citations_json.length > 0"
               class="citations"
             >
-              <div class="citations-title">引用来源:</div>
-              <div v-for="c in m.citations_json" :key="c.chunk_id" class="citation-item">
-                <strong>{{ c.title }}</strong>
-                <p>{{ c.content }}</p>
+              <div
+                class="citations-toggle"
+                @click="expandedCitations = !expandedCitations"
+              >
+                已检索到 {{ m.citations_json.length }} 个来源
+                <span class="toggle-arrow">{{ expandedCitations ? '▾' : '▸' }}</span>
+              </div>
+              <div v-if="expandedCitations" class="citations-list">
+                <div v-for="c in m.citations_json" :key="c.chunk_id" class="citation-card">
+                  <div class="citation-header">
+                    <strong>{{ c.title }}</strong>
+                    <span class="citation-type">{{ c.source_type }}</span>
+                    <span v-if="c.score != null" class="citation-score">
+                      相关度 {{ (c.score * 100).toFixed(1) }}%
+                    </span>
+                  </div>
+                  <p class="citation-preview">{{ c.preview }}</p>
+                </div>
               </div>
             </div>
           </div>
 
+          <!-- Streaming: RAG progress indicator -->
+          <div v-if="qa.isStreaming && !qa.streamingContent" class="rag-progress">
+            <div class="rag-spinner"></div>
+            <span class="rag-status-text">{{ ragStageLabel }}</span>
+            <span v-if="qa.ragHitCount > 0" class="rag-result">
+              已召回 {{ qa.ragHitCount }} 个片段
+            </span>
+          </div>
+
           <!-- Streaming message -->
-          <div v-if="qa.isStreaming" class="message assistant streaming">
+          <div v-if="qa.isStreaming && qa.streamingContent" class="message assistant streaming">
             <div class="message-content">{{ qa.streamingContent }}</div>
+            <!-- Live citations: collapsed by default -->
             <div
               v-if="qa.citations.length > 0"
               class="citations"
             >
-              <div class="citations-title">引用来源:</div>
-              <div v-for="c in qa.citations" :key="c.chunk_id" class="citation-item">
-                <strong>{{ c.title }}</strong>
-                <p>{{ c.content }}</p>
+              <div
+                class="citations-toggle"
+                @click="expandedCitations = !expandedCitations"
+              >
+                已检索到 {{ qa.citations.length }} 个来源
+                <span class="toggle-arrow">{{ expandedCitations ? '▾' : '▸' }}</span>
+              </div>
+              <div v-if="expandedCitations" class="citations-list">
+                <div v-for="c in qa.citations" :key="c.chunk_id" class="citation-card">
+                  <div class="citation-header">
+                    <strong>{{ c.title }}</strong>
+                    <span class="citation-type">{{ c.source_type }}</span>
+                    <span v-if="c.score != null" class="citation-score">
+                      相关度 {{ (c.score * 100).toFixed(1) }}%
+                    </span>
+                  </div>
+                  <p class="citation-preview">{{ c.preview }}</p>
+                </div>
               </div>
             </div>
           </div>
@@ -246,35 +299,119 @@ watch(() => qa.streamingContent, () => {
   line-height: 1.6;
 }
 
-.citations {
-  margin-top: 8px;
-  padding: 10px 12px;
-  background: #fafafa;
+/* RAG progress indicator */
+.rag-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #f5f7fa;
   border-radius: 8px;
-  border: 1px solid #eee;
-}
-
-.citations-title {
-  font-size: 12px;
-  color: #999;
-  margin-bottom: 6px;
-}
-
-.citation-item {
-  margin-bottom: 6px;
-}
-
-.citation-item strong {
-  font-size: 12px;
+  margin-bottom: 12px;
+  font-size: 13px;
   color: #666;
 }
 
-.citation-item p {
+.rag-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #d9d9d9;
+  border-top: 2px solid #409eff;
+  border-radius: 50%;
+  animation: rag-spin 0.8s linear infinite;
+}
+
+@keyframes rag-spin {
+  to { transform: rotate(360deg); }
+}
+
+.rag-status-text {
+  color: #555;
+}
+
+.rag-result {
+  color: #409eff;
+  font-weight: 500;
+  margin-left: auto;
+}
+
+/* Citations */
+.citations {
+  margin-top: 8px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.citations-toggle {
+  padding: 8px 12px;
   font-size: 12px;
+  color: #666;
+  cursor: pointer;
+  background: #fafafa;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+}
+
+.citations-toggle:hover {
+  background: #f0f2f5;
+}
+
+.toggle-arrow {
+  font-size: 10px;
   color: #999;
-  margin-top: 2px;
-  line-height: 1.4;
-  max-height: 60px;
+}
+
+.citations-list {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.citation-card {
+  padding: 8px 10px;
+  background: #fafafa;
+  border-radius: 6px;
+  border: 1px solid #f0f0f0;
+}
+
+.citation-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.citation-header strong {
+  font-size: 13px;
+  color: #333;
+}
+
+.citation-type {
+  font-size: 11px;
+  color: #999;
+  background: #eee;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.citation-score {
+  font-size: 11px;
+  color: #67c23a;
+  margin-left: auto;
+}
+
+.citation-preview {
+  font-size: 12px;
+  color: #888;
+  line-height: 1.5;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
   overflow: hidden;
 }
 

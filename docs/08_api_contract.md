@@ -133,11 +133,27 @@
 响应：
 
 - `text/event-stream`
-- 事件建议：
-  - `token`
-  - `citation`
-  - `done`
-  - `error`
+- 事件顺序：
+  1. `status: {stage: "analyzing_query"}` — 正在理解问题
+  2. `status: {stage: "embedding_query"}` — 正在生成查询向量
+  3. `status: {stage: "retrieving"}` — 正在检索知识库
+  4. `retrieval: {top_k, hit_count}` — 检索完成（召回片段数）
+  5. `citation: [{chunk_id, doc_id, title, source_type, preview, score}]` — 引用来源预览（不含完整内容）
+  6. `status: {stage: "generating"}` — 正在生成回答
+  7. `token: {content}` — 流式 token
+  8. `done: {message_id}` — 回答完成
+- 错误：`error: {code, message}`
+
+### SSE 事件类型
+
+| 事件 | 数据结构 | 说明 |
+|------|---------|------|
+| `status` | `{"stage": "analyzing_query" \| "embedding_query" \| "retrieving" \| "generating"}` | RAG 流水线进度 |
+| `retrieval` | `{"top_k": int, "hit_count": int}` | 检索结果统计 |
+| `citation` | `[{"chunk_id": int, "doc_id": int, "title": str, "source_type": str, "preview": str, "score": float \| null}]` | 引用来源预览 |
+| `token` | `{"content": str}` | 流式回答片段 |
+| `done` | `{"message_id": int}` | 回答完成 |
+| `error` | `{"code": str, "message": str}` | 错误信息 |
 
 ---
 

@@ -16,3 +16,7 @@ export async function getKbDocuments(offset = 0, limit = 50): Promise<KbDocument
 export async function getKbDocument(id: number): Promise<KbDocumentDetail> {
   return client.get(`/admin/kb/documents/${id}`);
 }
+
+export async function deleteKbDocument(id: number): Promise<void> {
+  return client.delete(`/admin/kb/documents/${id}`);
+}

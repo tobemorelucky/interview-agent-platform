@@ -37,6 +37,18 @@ cp .env.example .env
 
 > `.env` 已加入 `.gitignore`，不会被提交。API 和 Worker 均从仓库根目录 `.env` 自动读取配置，无需分别放置。
 
+### 关键配置项说明
+
+| 分类 | 环境变量 | 默认值 | 说明 |
+|------|---------|--------|------|
+| KB 分块 | `KB_CHUNK_SIZE` | 800 | 知识库文档分块大小（字符数），修改后需重新导入 |
+| KB 分块 | `KB_CHUNK_OVERLAP` | 120 | 相邻块重叠字符数，修改后需重新导入 |
+| KB 分块 | `KB_CHUNK_MIN_SIZE` | 80 | 最小 chunk 大小，小于此值的片段会被丢弃 |
+| KB 分块 | `KB_EMBEDDING_BATCH_SIZE` | 20 | embedding 批处理大小 |
+| RAG 检索 | `RAG_RETRIEVAL_TOP_K` | 3 | 检索召回数量，无需重新导入 |
+| RAG 检索 | `RAG_CONTEXT_MAX_CHARS` | 4000 | 传入 LLM 的上下文最大字符数 |
+| RAG 检索 | `RAG_CITATION_PREVIEW_CHARS` | 240 | 前端引用来源预览字符数 |
+
 ### Step 1: 启动基础设施
 
 ```bash
@@ -83,6 +95,8 @@ uv run python scripts/import_kb.py --dir /path/to/docs
 ```
 
 导入成功后，文档将被 chunk 化、embedding 化并写入 Milvus。
+
+> **提示**：修改 `.env` 中的 `KB_CHUNK_SIZE` / `KB_CHUNK_OVERLAP` / `KB_CHUNK_MIN_SIZE` 后，需在管理后台删除旧文档并重新上传，使新的分块参数生效。
 
 ### Step 3: 创建管理员账号（可选）
 
@@ -192,9 +206,12 @@ interview-agent-platform/
 
 | 方法 | 路径 | 说明 | 权限 |
 |------|------|------|------|
-| POST | `/api/v1/admin/kb/documents/upload` | 上传知识文档 | ADMIN |
+| POST | `/api/v1/admin/kb/documents/upload` | 上传知识文档（支持批量） | ADMIN |
 | GET | `/api/v1/admin/kb/documents` | 文档列表 | ADMIN |
 | GET | `/api/v1/admin/kb/documents/{id}` | 文档详情+chunks | ADMIN |
+| DELETE | `/api/v1/admin/kb/documents/{id}` | 删除文档（含 Milvus/MinIO/PostgreSQL） | ADMIN |
+
+> **更新知识库内容**：当前阶段采用"删除旧文档 → 重新上传"的方式更新知识库。修改 `KB_CHUNK_SIZE` / `KB_CHUNK_OVERLAP` / embedding 模型等配置后，请在管理后台删除旧文档并重新上传，使新配置生效。
 
 ### 知识库问答 (Phase 2, 用户)
 
