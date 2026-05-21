@@ -24,6 +24,7 @@ dependencies = [
     "aiofiles>=24.0",
     "python-multipart>=0.0.20",
     "volcengine-python-sdk[ark]>=5.0.27",
+    "celery>=5.4",
 ]
 
 [dependency-groups]

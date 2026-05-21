@@ -212,7 +212,7 @@ onUnmounted(stopPolling);
     <!-- Upload -->
     <div class="upload-section">
       <label class="upload-btn" :class="{ disabled: uploading }">
-        {{ uploading ? "上传中..." : "上传文档" }}
+        {{ uploading ? "上传中..." : "上传文档（支持多选）" }}
         <input
           type="file"
           accept=".md,.txt,.markdown"
@@ -221,7 +221,7 @@ onUnmounted(stopPolling);
           @change="handleUpload"
         />
       </label>
-      <span class="upload-hint">支持 .md / .txt 文件，可多选</span>
+      <span class="upload-hint">支持 .md / .txt 文件，可按 Ctrl / Shift 一次选择多个</span>
       <span v-if="pollTimer" class="poll-indicator">自动刷新中...</span>
       <div v-if="uploadError" class="upload-error">{{ uploadError }}</div>
     </div>

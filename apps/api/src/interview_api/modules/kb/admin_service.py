@@ -83,11 +83,12 @@ class KbAdminService:
         # 3. Reset document status
         await self._kb_repo.reset_status(document_id)
 
-        # 4. Dispatch Celery processing task
+        # 4. Dispatch Celery processing task (via broker, not direct import)
         try:
-            from interview_worker.tasks.kb_tasks import process_kb_document
-
-            process_kb_document.delay(document_id)
+            from interview_api.infrastructure.tasks.celery_client import (
+                dispatch_process_kb_document,
+            )
+            dispatch_process_kb_document(document_id)
         except Exception:
             logger.exception(
                 "Failed to dispatch Celery task for reindex of doc %s", document_id

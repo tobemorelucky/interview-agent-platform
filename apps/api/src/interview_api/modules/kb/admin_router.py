@@ -54,11 +54,13 @@ async def upload_document(
         uploaded_by=current_user.id,
     )
 
-    # Dispatch async processing to Celery
+    # Dispatch async processing to Celery (via broker, not direct import)
     repo = KbDocumentRepository(db)
     try:
-        from interview_worker.tasks.kb_tasks import process_kb_document
-        process_kb_document.delay(doc.id)
+        from interview_api.infrastructure.tasks.celery_client import (
+            dispatch_process_kb_document,
+        )
+        dispatch_process_kb_document(doc.id)
     except Exception as e:
         logger.warning("Failed to dispatch Celery task for doc %s: %s", doc.id, e)
         await repo.update_status(
