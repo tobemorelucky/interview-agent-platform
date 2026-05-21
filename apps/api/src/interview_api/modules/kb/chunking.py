@@ -2,6 +2,8 @@
 
 import re
 
+from interview_api.core.config import settings
+
 
 def clean_markdown(text: str) -> str:
     """Lightly clean markdown while preserving semantic structure.
@@ -35,14 +37,22 @@ def clean_markdown(text: str) -> str:
 
 def chunk_text(
     text: str,
-    chunk_size: int = 500,
-    chunk_overlap: int = 100,
+    chunk_size: int | None = None,
+    chunk_overlap: int | None = None,
+    min_size: int | None = None,
 ) -> list[str]:
     """Split text into overlapping chunks by paragraph boundaries.
 
     Attempts to split on paragraph boundaries (double newline), then falls
     back to character-level splitting for very long paragraphs.
     """
+    if chunk_size is None:
+        chunk_size = settings.kb_chunk_size
+    if chunk_overlap is None:
+        chunk_overlap = settings.kb_chunk_overlap
+    if min_size is None:
+        min_size = settings.kb_chunk_min_size
+
     text = clean_markdown(text)
     paragraphs = text.split("\n\n")
 
@@ -58,19 +68,20 @@ def chunk_text(
             current = (current + "\n\n" + para).strip() if current else para
         else:
             if current:
-                chunks.append(current)
+                if len(current) >= min_size:
+                    chunks.append(current)
                 current = ""
 
             if len(para) > chunk_size:
                 # Long paragraph: character-level sliding window
                 for i in range(0, len(para), chunk_size - chunk_overlap):
                     piece = para[i : i + chunk_size]
-                    if len(piece) >= chunk_overlap // 2:
+                    if len(piece) >= min_size:
                         chunks.append(piece)
             else:
                 current = para
 
-    if current:
+    if current and len(current) >= min_size:
         chunks.append(current)
 
     return chunks

@@ -7,6 +7,7 @@ from pathlib import Path
 from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from interview_api.core.config import settings
 from interview_api.modules.qa.models import ChatMessage, ChatSession
 
 logger = logging.getLogger(__name__)
@@ -68,8 +69,10 @@ class QaService:
 
     # ---- Retrieval ----
 
-    async def retrieve(self, query: str, top_k: int = 5) -> list[dict]:
+    async def retrieve(self, query: str, top_k: int | None = None) -> list[dict]:
         """Search Milvus for relevant chunks."""
+        if top_k is None:
+            top_k = settings.rag_retrieval_top_k
         query_vec = await self.embedding.embed_query(query)
         results = self.vector_store.search(
             "kb_chunks_current",
@@ -78,15 +81,36 @@ class QaService:
         )
         return results
 
-    # ---- Answer generation (streaming) ----
+    # ---- Context building ----
 
     def _build_context(self, chunks: list[dict]) -> str:
-        lines = []
+        """Build LLM context from retrieved chunks, capped by rag_context_max_chars.
+
+        Chunks are appended in search rank order.  When the accumulated length
+        exceeds the cap, further chunks are dropped.  The last included chunk
+        is truncated if only partial space remains (only kept when > 100 chars).
+        """
+        max_chars = settings.rag_context_max_chars
+        parts: list[str] = []
+        total = 0
+
         for i, c in enumerate(chunks):
             title = c.get("title", "Unknown")
             content = c.get("content", "")
-            lines.append(f"[{i + 1}] ({title}) {content}")
-        return "\n\n".join(lines)
+            entry = f"[{i + 1}] ({title}) {content}"
+
+            if total + len(entry) > max_chars:
+                remaining = max_chars - total
+                if remaining > 100:
+                    parts.append(entry[:remaining])
+                break
+
+            parts.append(entry)
+            total += len(entry)
+
+        return "\n\n".join(parts)
+
+    # ---- Prompt building ----
 
     def _load_prompt_template(self) -> str:
         return PROMPT_TEMPLATE_PATH.read_text(encoding="utf-8")
@@ -95,17 +119,36 @@ class QaService:
         template = self._load_prompt_template()
         return template.format(question=question, context=context)
 
+    # ---- SSE helpers ----
+
+    @staticmethod
+    def _sse(event: str, data: dict | list) -> str:
+        return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+    # ---- Streaming chat ----
+
     async def chat_stream(
         self,
         session_id: int,
         user_id: int,
         message: str,
     ):
-        """Yields SSE event strings: citation, token, done, error."""
+        """Yields SSE events: status, retrieval, citation, token, done, error.
+
+        Event order:
+          1. status: analyzing_query
+          2. status: embedding_query
+          3. status: retrieving
+          4. retrieval: {top_k, hit_count}
+          5. citation: [...]  (preview-only, no full chunk content)
+          6. status: generating
+          7. token ... (streaming)
+          8. done
+        """
         # Validate session belongs to user
         session = await self.get_session(session_id, user_id)
         if session is None:
-            yield 'event: error\ndata: {"code":"QA_SESSION_NOT_FOUND","message":"Session not found"}\n\n'
+            yield self._sse("error", {"code": "QA_SESSION_NOT_FOUND", "message": "Session not found"})
             return
 
         # Save user message
@@ -118,34 +161,45 @@ class QaService:
         await self.db.flush()
 
         try:
-            # Retrieve relevant chunks
-            chunks = await self.retrieve(message)
+            # --- RAG pipeline with progress events ---
 
-            # Build citations
+            yield self._sse("status", {"stage": "analyzing_query"})
+            yield self._sse("status", {"stage": "embedding_query"})
+            yield self._sse("status", {"stage": "retrieving"})
+
+            top_k = settings.rag_retrieval_top_k
+            chunks = await self.retrieve(message, top_k=top_k)
+
+            yield self._sse("retrieval", {"top_k": top_k, "hit_count": len(chunks)})
+
+            # Build citations — preview only, full content omitted
+            preview_len = settings.rag_citation_preview_chars
             citations = [
                 {
                     "chunk_id": c.get("chunk_id"),
                     "doc_id": c.get("doc_id"),
                     "title": c.get("title", ""),
-                    "content": c.get("content", "")[:300],
+                    "source_type": c.get("source_type", ""),
+                    "preview": (c.get("content", "") or "")[:preview_len],
+                    "score": c.get("score"),
                 }
                 for c in chunks
             ]
+            yield self._sse("citation", citations)
 
-            # Send citations first
-            yield f"event: citation\ndata: {json.dumps(citations, ensure_ascii=False)}\n\n"
-
-            # Build prompt
+            # Build prompt (context capped by rag_context_max_chars)
             context = self._build_context(chunks)
             prompt = self._build_prompt(message, context)
 
+            yield self._sse("status", {"stage": "generating"})
+
             # Stream LLM response
-            messages = [{"role": "user", "content": prompt}]
+            llm_messages = [{"role": "user", "content": prompt}]
             full_content = ""
 
-            async for token in self.llm.chat_stream(messages):
+            async for token in self.llm.chat_stream(llm_messages):
                 full_content += token
-                yield f"event: token\ndata: {json.dumps({'content': token}, ensure_ascii=False)}\n\n"
+                yield self._sse("token", {"content": token})
 
             # Save assistant message
             assistant_msg = ChatMessage(
@@ -161,9 +215,8 @@ class QaService:
             if session.title is None:
                 session.title = message[:100]
 
-            # Send done
-            yield f"event: done\ndata: {json.dumps({'message_id': assistant_msg.id})}\n\n"
+            yield self._sse("done", {"message_id": assistant_msg.id})
 
         except Exception as e:
             logger.exception("QA chat stream error")
-            yield f'event: error\ndata: {json.dumps({"code":"QA_ERROR","message":str(e)})}\n\n'
+            yield self._sse("error", {"code": "QA_ERROR", "message": str(e)})

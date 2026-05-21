@@ -9,6 +9,7 @@ import logging
 import time
 from datetime import datetime, timezone
 
+from interview_api.core.config import settings
 from interview_api.modules.kb.chunking import chunk_text
 from interview_api.modules.kb.repository import (
     KbChunkRepository,
@@ -118,7 +119,7 @@ class KbIngestionService:
             # Embed
             chunk_texts = [c["content"] for c in chunk_dicts]
             embeddings = []
-            batch_size = 20
+            batch_size = settings.kb_embedding_batch_size
             for i in range(0, len(chunk_texts), batch_size):
                 batch = chunk_texts[i : i + batch_size]
                 emb = await self.embedding.embed_texts(batch)

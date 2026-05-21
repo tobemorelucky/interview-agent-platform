@@ -57,6 +57,17 @@ class Settings(BaseSettings):
     embedding_model: str = ""
     embedding_dim: int = 768
 
+    # KB chunking
+    kb_chunk_size: int = 800
+    kb_chunk_overlap: int = 120
+    kb_chunk_min_size: int = 80
+    kb_embedding_batch_size: int = 20
+
+    # RAG retrieval
+    rag_retrieval_top_k: int = 3
+    rag_context_max_chars: int = 4000
+    rag_citation_preview_chars: int = 240
+
     # OCR / ASR
     ocr_provider: str = ""
     asr_provider: str = ""

@@ -62,7 +62,10 @@ class MilvusVectorStoreProvider:
                 pass
 
     def insert(self, collection_name: str, entities: list[dict]) -> None:
+        if not entities:
+            return
         self._client.insert(collection_name=collection_name, data=entities)
+        self._client.flush(collection_name=collection_name)
 
     def search(
         self,
@@ -84,7 +87,10 @@ class MilvusVectorStoreProvider:
         )
         if not results:
             return []
-        return [dict(r["entity"]) for r in results[0]]
+        return [
+            {**dict(r["entity"]), "score": r.get("distance")}
+            for r in results[0]
+        ]
 
     def get_by_ids(self, collection_name: str, ids: list[int]) -> list[dict]:
         results = self._client.get(
