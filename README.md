@@ -162,7 +162,7 @@ uv run celery -A interview_worker.celery_app worker -l info
 uv run celery -A interview_worker.celery_app worker -l info --pool=solo
 ```
 
-看到 `celery@... ready.` 且 `[tasks]` 列表中出现 `process_kb_document` 即表示 Worker 启动成功：
+看到 `[tasks]` 中包含 `process_kb_document` 表示 Worker 启动成功：
 
 ```
 [tasks]
@@ -170,14 +170,48 @@ uv run celery -A interview_worker.celery_app worker -l info --pool=solo
   . process_kb_document
 ```
 
-**验证任务注册**（Worker 启动后在另一个终端执行）：
+> **配置说明**：API 和 Worker 均从仓库根目录 `.env` 读取配置（复用同一 `Settings` 类），确保 broker / database / embedding 等使用相同的值。
+
+**启动后验证任务注册**（另开终端）：
 
 ```bash
 cd apps/worker
 uv run celery -A interview_worker.celery_app inspect registered
+# 预期输出包含:  * process_kb_document
 ```
 
-预期输出应包含 `process_kb_document`。
+**端到端验证上传→处理流程**：
+
+1. 管理后台 http://localhost:5173/admin/kb/documents 上传一个 `.md` 文件
+2. 观察 **API 日志** — 应看到：
+   ```
+   Dispatched process_kb_document doc_id=3 task_id=xxx-xxx broker=redis://...
+   ```
+3. 观察 **Worker 日志** — 几秒内应出现：
+   ```
+   Task received: document_id=3 ...
+   [doc 3] Status -> PROCESSING
+   [doc 3] Downloading from MinIO ...
+   [doc 3] Chunked into N pieces
+   [doc 3] Embedding ...
+   [doc 3] Inserting vectors into Milvus ...
+   [doc 3] Status -> INDEXED (complete)
+   ```
+4. 前端刷新 — 文档状态从"待处理"变为"已索引"
+
+**诊断命令**：
+
+```bash
+# 检查 Worker 监听哪些队列
+cd apps/worker
+uv run celery -A interview_worker.celery_app inspect active_queues
+
+# 检查 Worker 是否在线
+uv run celery -A interview_worker.celery_app inspect ping
+
+# 检查 Worker 统计数据
+uv run celery -A interview_worker.celery_app inspect stats
+```
 
 ### Step 6: 启动前端
 

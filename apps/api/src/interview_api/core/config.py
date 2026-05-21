@@ -3,14 +3,31 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Resolve repo root relative to this file:
-# config.py → core → interview_api → src → api → apps → repo_root
-_ROOT = Path(__file__).resolve().parents[5]
+
+def _find_env_file() -> Path:
+    """Walk up from CWD to find the repo-root .env file.
+
+    This is robust even when the package is installed in site-packages
+    (e.g. the Worker imports interview_api as a dependency).
+    """
+    # 1. Explicit override
+    if override := os.getenv("ENV_FILE"):
+        return Path(override)
+
+    # 2. Walk up from CWD
+    cwd = Path.cwd()
+    for parent in [cwd, *cwd.parents]:
+        candidate = parent / ".env"
+        if candidate.exists():
+            return candidate
+
+    # 3. Fallback: relative to this source file
+    return Path(__file__).resolve().parents[5] / ".env"
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=os.getenv("ENV_FILE", str(_ROOT / ".env")),
+        env_file=str(_find_env_file()),
         env_file_encoding="utf-8",
         extra="ignore",
     )

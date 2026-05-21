@@ -1,5 +1,6 @@
 """Admin service for KB document lifecycle: delete and reindex."""
 
+import asyncio
 import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -39,8 +40,10 @@ class KbAdminService:
             from interview_api.core.exceptions import NotFoundError
             raise NotFoundError(message="Document not found")
 
-        # 1. Delete Milvus vectors (best-effort)
-        self.vector_store.delete_by_doc_id("kb_chunks_current", document_id)
+        # 1. Delete Milvus vectors (best-effort, runs in thread to avoid blocking event loop)
+        await asyncio.to_thread(
+            self.vector_store.delete_by_doc_id, "kb_chunks_current", document_id
+        )
 
         # 2. Delete PostgreSQL chunks
         await self._chunk_repo.delete_by_document_id(document_id)
@@ -65,7 +68,10 @@ class KbAdminService:
     # ------------------------------------------------------------------
 
     async def reindex_document(self, document_id: int) -> dict:
-        """Clean existing chunks/vectors, reset status, and dispatch Celery reprocessing.
+        """Clean existing chunks/vectors and reset status.
+
+        Celery dispatch happens in the router AFTER the DB commit so the
+        worker can see the reset document.
 
         Returns the document's current state after reset.
         """
@@ -74,30 +80,16 @@ class KbAdminService:
             from interview_api.core.exceptions import NotFoundError
             raise NotFoundError(message="Document not found")
 
-        # 1. Delete Milvus vectors (best-effort)
-        self.vector_store.delete_by_doc_id("kb_chunks_current", document_id)
+        # 1. Delete Milvus vectors (best-effort, runs in thread to avoid blocking event loop)
+        await asyncio.to_thread(
+            self.vector_store.delete_by_doc_id, "kb_chunks_current", document_id
+        )
 
         # 2. Delete PostgreSQL chunks
         await self._chunk_repo.delete_by_document_id(document_id)
 
         # 3. Reset document status
         await self._kb_repo.reset_status(document_id)
-
-        # 4. Dispatch Celery processing task (via broker, not direct import)
-        try:
-            from interview_api.infrastructure.tasks.celery_client import (
-                dispatch_process_kb_document,
-            )
-            dispatch_process_kb_document(document_id)
-        except Exception:
-            logger.exception(
-                "Failed to dispatch Celery task for reindex of doc %s", document_id
-            )
-            await self._kb_repo.update_status(
-                document_id,
-                "FAILED",
-                error_message="Celery dispatch failed during reindex",
-            )
 
         # Return current document state
         doc = await self._kb_repo.get_by_id(document_id)

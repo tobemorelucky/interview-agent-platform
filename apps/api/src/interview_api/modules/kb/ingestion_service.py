@@ -88,20 +88,30 @@ class KbIngestionService:
 
         doc = await self.kb_repo.get_by_id(document_id)
         if doc is None:
-            logger.error(f"Document {document_id} not found")
+            logger.error(f"Document {document_id} not found — marking as FAILED")
+            await self.kb_repo.update_status(
+                document_id,
+                "FAILED",
+                error_message="Document not found at processing time (possible race condition)",
+            )
             return
 
         try:
+            logger.info("[doc %s] Status -> PROCESSING", document_id)
             await self.kb_repo.update_status(document_id, "PROCESSING")
 
             # Download and parse
+            logger.info("[doc %s] Downloading from MinIO: %s", document_id, doc.storage_key)
             file_bytes = await self.storage.download("interview-agent", doc.storage_key)
             text = file_bytes.decode("utf-8")
+            logger.info("[doc %s] Downloaded %s bytes", document_id, len(file_bytes))
 
             # Chunk
+            logger.info("[doc %s] Chunking text...", document_id)
             chunks = chunk_text(text)
             if not chunks:
                 raise ValueError("No content extracted from document")
+            logger.info("[doc %s] Chunked into %s pieces", document_id, len(chunks))
 
             # Save chunks to PostgreSQL
             chunk_dicts = [
@@ -115,8 +125,10 @@ class KbIngestionService:
             ]
             chunk_entities = await self.chunk_repo.create_batch(chunk_dicts)
             chunk_ids = [c.id for c in chunk_entities]
+            logger.info("[doc %s] Saved %s chunks to PostgreSQL", document_id, len(chunk_entities))
 
             # Embed
+            logger.info("[doc %s] Embedding %s chunks (batch_size=%s)...", document_id, len(chunks), settings.kb_embedding_batch_size)
             chunk_texts = [c["content"] for c in chunk_dicts]
             embeddings = []
             batch_size = settings.kb_embedding_batch_size
@@ -124,6 +136,7 @@ class KbIngestionService:
                 batch = chunk_texts[i : i + batch_size]
                 emb = await self.embedding.embed_texts(batch)
                 embeddings.extend(emb)
+            logger.info("[doc %s] Embedding finished — %s vectors", document_id, len(embeddings))
 
             # Insert to Milvus
             milvus_entities = []
@@ -140,7 +153,9 @@ class KbIngestionService:
                     "created_at_ts": now_ts,
                 })
 
+            logger.info("[doc %s] Inserting %s vectors into Milvus...", document_id, len(milvus_entities))
             self.vector_store.insert("kb_chunks_current", milvus_entities)
+            logger.info("[doc %s] Milvus insert done", document_id)
 
             # Mark chunks as indexed
             await self.chunk_repo.mark_indexed(chunk_ids)
@@ -151,7 +166,7 @@ class KbIngestionService:
                 "INDEXED",
                 chunk_count=len(chunk_entities),
             )
-            logger.info(f"Document {document_id} indexed successfully")
+            logger.info("[doc %s] Status -> INDEXED (complete)", document_id)
 
         except Exception as e:
             logger.exception(f"Document {document_id} processing failed")

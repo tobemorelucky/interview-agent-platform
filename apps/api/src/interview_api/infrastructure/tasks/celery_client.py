@@ -21,12 +21,24 @@ _app.conf.update(
 )
 
 
-def dispatch_process_kb_document(document_id: int) -> None:
+def dispatch_process_kb_document(document_id: int) -> str:
     """Send a process_kb_document task to the Celery worker via the broker.
 
-    The worker must register a task named ``process_kb_document`` that accepts
-    a single ``document_id`` argument.  This function does NOT import any
-    interview_worker module.
+    Returns the Celery task_id so the caller can log or track it.
     """
-    _app.send_task("process_kb_document", args=[document_id])
-    logger.info("Dispatched process_kb_document task for doc_id=%s", document_id)
+    result = _app.send_task("process_kb_document", args=[document_id])
+    task_id = result.id
+    logger.info(
+        "Dispatched process_kb_document doc_id=%s task_id=%s broker=%s",
+        document_id,
+        task_id,
+        _mask_url(settings.celery_broker_url),
+    )
+    return task_id
+
+
+def _mask_url(url: str) -> str:
+    """Mask password in a Redis URL for safe logging."""
+    if "@" in url:
+        return url.rsplit("@", 1)[0].rsplit(":", 1)[0] + ":***@" + url.rsplit("@", 1)[1]
+    return url

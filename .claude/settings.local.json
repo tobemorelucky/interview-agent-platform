@@ -32,7 +32,10 @@
       "Bash(netstat -ano)",
       "Bash(powershell -Command \"Stop-Process -Id 161164,160112,154848 -Force -ErrorAction SilentlyContinue\")",
       "Bash(xxd)",
-      "Bash(powershell -Command ':*)"
+      "Bash(powershell -Command ':*)",
+      "Bash(powershell:*)",
+      "Bash(echo \"Worker PID: $!\")",
+      "Read(//tmp/**)"
     ]
   }
 }

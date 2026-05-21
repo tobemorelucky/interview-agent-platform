@@ -1,8 +1,11 @@
 """Celery tasks for knowledge base document processing."""
 
 import asyncio
+import time
 
 from celery.utils.log import get_task_logger
+
+from interview_worker._asyncio import run_async
 
 from interview_api.core.config import settings
 from interview_api.infrastructure.db.session import async_session_factory
@@ -17,14 +20,28 @@ from interview_worker.celery_app import app
 logger = get_task_logger(__name__)
 
 
-@app.task(name="process_kb_document")
-def process_kb_document(document_id: int):
-    """Process a KB document: chunk → embed → index into Milvus."""
-    asyncio.run(_process(document_id))
+@app.task(name="process_kb_document", bind=True)
+def process_kb_document(self, document_id: int):
+    """Process a KB document: chunk -> embed -> index into Milvus."""
+    logger.info(
+        "Task received: document_id=%s task_id=%s task_name=%s",
+        document_id,
+        self.request.id,
+        self.name,
+    )
+    t0 = time.monotonic()
+    try:
+        run_async(_process(document_id))
+    except Exception:
+        logger.exception("Task FAILED: document_id=%s", document_id)
+        raise
+    finally:
+        elapsed = time.monotonic() - t0
+        logger.info("Task finished: document_id=%s elapsed=%.2fs", document_id, elapsed)
 
 
 async def _process(document_id: int):
-    logger.info("Processing kb document %s", document_id)
+    logger.info("[doc %s] Loading document from PostgreSQL...", document_id)
 
     async with async_session_factory() as db:
         try:
@@ -34,11 +51,13 @@ async def _process(document_id: int):
                 embedding_dim=settings.embedding_dim
             )
             service = KbIngestionService(db, storage, embedding, vector_store)
+
+            logger.info("[doc %s] Starting process_document...", document_id)
             await service.process_document(document_id)
 
             await db.commit()
-            logger.info("Document %s processed successfully", document_id)
+            logger.info("[doc %s] SUCCESS — status updated to INDEXED", document_id)
         except Exception:
             await db.rollback()
-            logger.exception("Document %s processing failed", document_id)
+            logger.exception("[doc %s] FAILED — see traceback above", document_id)
             raise

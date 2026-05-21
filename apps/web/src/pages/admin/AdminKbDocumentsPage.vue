@@ -96,26 +96,38 @@ async function handleUpload(event: Event) {
   const files = input.files;
   if (!files || files.length === 0) return;
 
+  // Copy FileList to array and clear input immediately so Vue re-renders
+  // don't invalidate the file references during async uploads.
+  const fileArray: File[] = [];
+  for (let i = 0; i < files.length; i++) {
+    fileArray.push(files[i]);
+  }
+  input.value = "";
+
   uploading.value = true;
   uploadError.value = null;
   uploadResults.value = [];
 
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
+  for (const file of fileArray) {
     try {
       await uploadKbDocument(file);
-      uploadResults.value.push({ filename: file.name, status: "success" });
+      uploadResults.value = [
+        ...uploadResults.value,
+        { filename: file.name, status: "success" as const },
+      ];
     } catch (e: any) {
       const msg = e?.message || "上传失败";
-      const status = msg.includes("已存在") || msg.includes("already exists") || msg.includes("DUPLICATE")
-        ? "duplicate"
-        : "error";
-      uploadResults.value.push({ filename: file.name, status, message: msg });
+      const status = (
+        msg.includes("已存在") || msg.includes("already exists") || msg.includes("DUPLICATE")
+      ) ? "duplicate" as const : "error" as const;
+      uploadResults.value = [
+        ...uploadResults.value,
+        { filename: file.name, status, message: msg },
+      ];
     }
   }
 
   uploading.value = false;
-  input.value = "";
   await loadDocuments();
 }
 

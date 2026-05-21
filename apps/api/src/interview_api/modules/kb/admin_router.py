@@ -54,13 +54,23 @@ async def upload_document(
         uploaded_by=current_user.id,
     )
 
+    # Commit so the document row is visible to the worker before we dispatch
+    await db.commit()
+
     # Dispatch async processing to Celery (via broker, not direct import)
     repo = KbDocumentRepository(db)
     try:
         from interview_api.infrastructure.tasks.celery_client import (
             dispatch_process_kb_document,
         )
-        dispatch_process_kb_document(doc.id)
+
+        task_id = dispatch_process_kb_document(doc.id)
+        logger.info(
+            "Upload doc_id=%s filename=%s -> Celery task_id=%s",
+            doc.id,
+            filename,
+            task_id,
+        )
     except Exception as e:
         logger.warning("Failed to dispatch Celery task for doc %s: %s", doc.id, e)
         await repo.update_status(
@@ -131,4 +141,26 @@ async def reindex_document(
     service = _build_admin_service(db)
     doc_state = await service.reindex_document(document_id)
     await db.commit()
+
+    # Dispatch Celery task AFTER commit so the worker can see the reset document
+    try:
+        from interview_api.infrastructure.tasks.celery_client import (
+            dispatch_process_kb_document,
+        )
+        task_id = dispatch_process_kb_document(document_id)
+        logger.info(
+            "Reindex doc_id=%s -> Celery task_id=%s", document_id, task_id
+        )
+    except Exception:
+        logger.exception(
+            "Failed to dispatch Celery task for reindex of doc %s", document_id
+        )
+        kb_repo = KbDocumentRepository(db)
+        await kb_repo.update_status(
+            document_id,
+            "FAILED",
+            error_message="Celery dispatch failed during reindex",
+        )
+        await db.commit()
+
     return success(data=doc_state, message="Reindex dispatched")

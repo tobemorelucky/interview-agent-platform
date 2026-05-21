@@ -1,37 +1,38 @@
 @echo off
-setlocal enabledelayedexpansion
+setlocal
 
 set ROOT=%~dp0
-set RUNTIME=%ROOT%.runtime\dev
+set LOGDIR=%ROOT%logs\dev
+set RUNDIR=%ROOT%.runtime\dev
 
-if not exist "%RUNTIME%" mkdir "%RUNTIME%"
+if not exist "%LOGDIR%" mkdir "%LOGDIR%"
+if not exist "%RUNDIR%" mkdir "%RUNDIR%"
+
+REM Clean up stale PID files from previous runs
+del "%RUNDIR%\api.pid" 2>nul
+del "%RUNDIR%\worker.pid" 2>nul
+del "%RUNDIR%\web.pid" 2>nul
 
 echo ============================================
 echo   Interview Agent Platform - Start Dev
 echo ============================================
 echo.
 
-:: ---- Docker ----
+REM ---- Docker ----
 echo [1/4] Starting Docker infrastructure...
-docker compose up -d
+docker compose up -d > "%LOGDIR%\docker.log" 2>&1
 
-:: ---- API ----
+REM ---- API ----
 echo [2/4] Starting API on http://localhost:8000/docs
-powershell -Command ^
-  "$p = Start-Process cmd -ArgumentList '/k','cd /d %ROOT%apps\api && title API :8000 && uv run uvicorn interview_api.main:app --reload --host 0.0.0.0 --port 8000' -WindowStyle Normal -PassThru;" ^
-  "$p.Id | Out-File '%RUNTIME%\api.pid' -NoNewline"
+start "API :8000" "%RUNDIR%\run-api.bat"
 
-:: ---- Worker ----
+REM ---- Worker ----
 echo [3/4] Starting Worker (Celery, pool=solo)
-powershell -Command ^
-  "$p = Start-Process cmd -ArgumentList '/k','cd /d %ROOT%apps\worker && title Worker && uv run celery -A interview_worker.celery_app worker -l info --pool=solo' -WindowStyle Normal -PassThru;" ^
-  "$p.Id | Out-File '%RUNTIME%\worker.pid' -NoNewline"
+start "Worker" "%RUNDIR%\run-worker.bat"
 
-:: ---- Web ----
+REM ---- Web ----
 echo [4/4] Starting Web on http://localhost:5173
-powershell -Command ^
-  "$p = Start-Process cmd -ArgumentList '/k','cd /d %ROOT%apps\web && title Web :5173 && pnpm dev' -WindowStyle Normal -PassThru;" ^
-  "$p.Id | Out-File '%RUNTIME%\web.pid' -NoNewline"
+start "Web :5173" "%RUNDIR%\run-web.bat"
 
 echo.
 echo ============================================
@@ -40,8 +41,10 @@ echo ============================================
 echo.
 echo   API:       http://localhost:8000/docs
 echo   Web:       http://localhost:5173
+echo   Logs:      logs\dev\*.log
 echo.
-echo   Check status:   status-dev.bat
-echo   Stop all:       stop-dev.bat
+echo   Tail logs: Get-Content logs\dev\api.log -Wait
+echo.
+echo   Stop all:  stop-dev.bat
 echo.
 pause
