@@ -23,6 +23,7 @@ dependencies = [
     "openai>=1.0",
     "aiofiles>=24.0",
     "python-multipart>=0.0.20",
+    "volcengine-python-sdk[ark]>=5.0.27",
 ]
 
 [dependency-groups]

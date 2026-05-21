@@ -1,11 +1,11 @@
 """Celery tasks for knowledge base document processing."""
 
 import asyncio
-import os
 
 from celery import Task
 from celery.utils.log import get_task_logger
 
+from interview_api.core.config import settings
 from interview_api.infrastructure.db.session import async_session_factory
 from interview_api.infrastructure.embedding.provider import (
     OpenAICompatibleEmbeddingProvider,
@@ -31,7 +31,7 @@ class KbDocumentTask(Task):
                 storage = MinioObjectStorageProvider()
                 embedding = OpenAICompatibleEmbeddingProvider()
                 vector_store = MilvusVectorStoreProvider(
-                    embedding_dim=int(os.getenv("EMBEDDING_DIM", "768"))
+                    embedding_dim=settings.embedding_dim
                 )
                 service = KbIngestionService(db, storage, embedding, vector_store)
                 await service.process_document(document_id)

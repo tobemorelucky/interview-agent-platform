@@ -30,3 +30,6 @@ Thumbs.db
 MANIFEST.json
 PACKAGE_README.md
 interview_agent_formal_docs_pack.zip
+
+
+test*.py

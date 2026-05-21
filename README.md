@@ -26,6 +26,17 @@
 
 ## 本地启动
 
+### Step 0: 配置环境变量
+
+在仓库根目录创建 `.env` 文件（从 `.env.example` 复制并填入实际值）：
+
+```bash
+cp .env.example .env
+# 然后编辑 .env，填入 LLM_API_KEY、EMBEDDING_API_KEY 等实际配置
+```
+
+> `.env` 已加入 `.gitignore`，不会被提交。API 和 Worker 均从仓库根目录 `.env` 自动读取配置，无需分别放置。
+
 ### Step 1: 启动基础设施
 
 ```bash
