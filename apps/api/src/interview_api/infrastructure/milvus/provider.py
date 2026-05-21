@@ -97,17 +97,28 @@ class MilvusVectorStoreProvider:
         """Delete all vectors for a given doc_id from Milvus.
 
         Uses a filter expression — no error if no matching vectors exist.
-        Flushes after delete so the change is immediately visible.
+        Flush is best-effort; a flush failure does not undo the delete.
         """
+        mlogger = logging.getLogger(__name__)
         try:
             self._client.delete(
                 collection_name=collection_name,
                 filter=f"doc_id == {doc_id}",
             )
+        except Exception:
+            mlogger.warning(
+                "Failed to delete Milvus vectors for doc_id=%s from %s",
+                doc_id,
+                collection_name,
+                exc_info=True,
+            )
+            return
+
+        try:
             self._client.flush(collection_name=collection_name)
         except Exception:
-            logging.getLogger(__name__).warning(
-                "Failed to delete Milvus vectors for doc_id=%s from %s",
+            mlogger.warning(
+                "Flush failed after delete for doc_id=%s from %s",
                 doc_id,
                 collection_name,
                 exc_info=True,
