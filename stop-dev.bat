@@ -1,71 +1,56 @@
 @echo off
 setlocal enabledelayedexpansion
 
-set ROOT=%~dp0
-set PIDDIR=%ROOT%.runtime\dev
-
 echo ============================================
 echo   Interview Agent Platform - Stop Dev
 echo ============================================
 echo.
 
-REM ---- Kill API (PID file first, then port fallback) ----
+REM ---- Kill API by port (most reliable) ----
 echo [1/4] Stopping API...
 set KILLED=0
-if exist "%PIDDIR%\api.pid" (
-    set /p API_PID=<"%PIDDIR%\api.pid"
-    taskkill /PID !API_PID! /T /F 2>nul
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":8000 " ^| findstr "LISTENING"') do (
+    taskkill /PID %%a /T /F 2>nul
     if !errorlevel!==0 set KILLED=1
-    del "%PIDDIR%\api.pid" 2>nul
-)
-if !KILLED!==0 (
-    for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":8000 " ^| findstr "LISTENING"') do (
-        taskkill /PID %%a /T /F 2>nul
-        set KILLED=1
-    )
 )
 if !KILLED!==0 (echo   API was not running) else (echo   API stopped)
 
-REM ---- Kill Worker (PID file first, then window title fallback) ----
-echo [2/4] Stopping Worker...
+REM ---- Kill Web by port (most reliable) ----
+echo [2/4] Stopping Web...
 set KILLED=0
-if exist "%PIDDIR%\worker.pid" (
-    set /p WORKER_PID=<"%PIDDIR%\worker.pid"
-    taskkill /PID !WORKER_PID! /T /F 2>nul
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":5173 " ^| findstr "LISTENING"') do (
+    taskkill /PID %%a /T /F 2>nul
     if !errorlevel!==0 set KILLED=1
-    del "%PIDDIR%\worker.pid" 2>nul
-)
-if !KILLED!==0 (
-    taskkill /FI "WINDOWTITLE eq Worker" /T /F 2>nul
-    if !errorlevel!==0 set KILLED=1
-)
-if !KILLED!==0 (echo   Worker was not running) else (echo   Worker stopped)
-
-REM ---- Kill Web (PID file first, then port fallback) ----
-echo [3/4] Stopping Web...
-set KILLED=0
-if exist "%PIDDIR%\web.pid" (
-    set /p WEB_PID=<"%PIDDIR%\web.pid"
-    taskkill /PID !WEB_PID! /T /F 2>nul
-    if !errorlevel!==0 set KILLED=1
-    del "%PIDDIR%\web.pid" 2>nul
-)
-if !KILLED!==0 (
-    for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":5173 " ^| findstr "LISTENING"') do (
-        taskkill /PID %%a /T /F 2>nul
-        set KILLED=1
-    )
 )
 if !KILLED!==0 (echo   Web was not running) else (echo   Web stopped)
 
-REM ---- Clean up any remaining runner cmd windows ----
-taskkill /FI "WINDOWTITLE eq API :8000" /T /F 2>nul
-taskkill /FI "WINDOWTITLE eq Worker" /T /F 2>nul
-taskkill /FI "WINDOWTITLE eq Web :5173" /T /F 2>nul
+REM ---- Kill Worker by window title ----
+echo [3/4] Stopping Worker...
+taskkill /FI "WINDOWTITLE eq IAP_DEV_WORKER" /T /F 2>nul
+if !errorlevel!==0 (
+    echo   Worker stopped
+) else (
+    echo   Worker was not running
+)
 
-REM ---- Docker ----
+REM ---- Clean up any remaining service windows ----
+taskkill /FI "WINDOWTITLE eq IAP_DEV_API_8000" /T /F 2>nul
+taskkill /FI "WINDOWTITLE eq IAP_DEV_WEB_5173" /T /F 2>nul
+taskkill /FI "WINDOWTITLE eq IAP_DEV_WORKER" /T /F 2>nul
+
+REM ---- Docker (only if daemon is reachable) ----
 echo [4/4] Stopping Docker containers...
-docker compose -f "%ROOT%docker-compose.yml" down --timeout 30 2>nul
+docker info >nul 2>&1
+if !errorlevel!==0 (
+    docker compose down 2>&1
+    if !errorlevel!==0 (
+        echo   Docker containers stopped
+    ) else (
+        echo   Docker compose down returned error (containers may already be stopped^)
+    )
+) else (
+    echo   Docker daemon not reachable - skip docker compose down
+)
 
 echo.
 echo ============================================

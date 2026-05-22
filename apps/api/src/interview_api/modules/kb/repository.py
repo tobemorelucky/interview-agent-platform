@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -39,6 +41,57 @@ class KbDocumentRepository:
         await self.db.flush()
         return doc
 
+    async def update_task_id(self, doc_id: int, task_id: str) -> None:
+        await self.db.execute(
+            update(KbDocument)
+            .where(KbDocument.id == doc_id)
+            .values(task_id=task_id)
+        )
+        await self.db.flush()
+
+    async def mark_processing_started(self, doc_id: int) -> None:
+        """Set status=PROCESSING, clear error_message, record start time."""
+        await self.db.execute(
+            update(KbDocument)
+            .where(KbDocument.id == doc_id)
+            .values(
+                status="PROCESSING",
+                error_message=None,
+                processing_started_at=datetime.now(timezone.utc),
+            )
+        )
+        await self.db.flush()
+
+    async def mark_processing_finished(
+        self,
+        doc_id: int,
+        status: str,
+        error_message: str | None = None,
+        chunk_count: int | None = None,
+    ) -> None:
+        """Mark processing complete with final status.
+
+        - INDEXED: sets chunk_count, indexed_at, processing_finished_at
+        - FAILED:  sets error_message, processing_finished_at
+        """
+        values: dict = {
+            "status": status,
+            "processing_finished_at": datetime.now(timezone.utc),
+        }
+        if status == "INDEXED":
+            values["error_message"] = None
+            values["indexed_at"] = datetime.now(timezone.utc)
+            if chunk_count is not None:
+                values["chunk_count"] = chunk_count
+        elif status == "FAILED":
+            if error_message is not None:
+                values["error_message"] = error_message[:2000]  # Truncate long errors
+
+        await self.db.execute(
+            update(KbDocument).where(KbDocument.id == doc_id).values(**values)
+        )
+        await self.db.flush()
+
     async def update_status(
         self,
         doc_id: int,
@@ -46,13 +99,13 @@ class KbDocumentRepository:
         error_message: str | None = None,
         chunk_count: int | None = None,
     ) -> None:
+        """Legacy helper — prefer mark_processing_started / mark_processing_finished."""
         values = {"status": status}
         if error_message is not None:
             values["error_message"] = error_message
         if chunk_count is not None:
             values["chunk_count"] = chunk_count
         if status == "INDEXED":
-            from datetime import datetime, timezone
             values["indexed_at"] = datetime.now(timezone.utc)
 
         await self.db.execute(
@@ -86,6 +139,8 @@ class KbDocumentRepository:
                 error_message=None,
                 chunk_count=0,
                 indexed_at=None,
+                processing_started_at=None,
+                processing_finished_at=None,
             )
         )
         await self.db.flush()

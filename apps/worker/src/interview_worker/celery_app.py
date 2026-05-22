@@ -1,8 +1,10 @@
 import logging
 
 from celery import Celery
+from celery.signals import worker_shutdown
 
 from interview_api.core.config import settings
+from interview_worker._asyncio import run_async, shutdown_loop
 
 logging.basicConfig(
     level=logging.INFO,
@@ -31,3 +33,12 @@ import interview_worker.tasks.kb_tasks  # noqa: E402, F401
 @app.task(name="ping")
 def ping():
     return "pong"
+
+
+@worker_shutdown.connect
+def close_async_resources(**_kwargs):
+    """Release async resources before the worker process exits."""
+    from interview_api.infrastructure.db.engine import engine
+
+    run_async(engine.dispose())
+    shutdown_loop()

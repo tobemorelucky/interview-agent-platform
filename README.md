@@ -211,7 +211,22 @@ uv run celery -A interview_worker.celery_app inspect ping
 
 # 检查 Worker 统计数据
 uv run celery -A interview_worker.celery_app inspect stats
+
+# 检查 Worker 注册的任务（应包含 process_kb_document）
+uv run celery -A interview_worker.celery_app inspect registered
+
+# 查看 Redis 队列中待处理任务数（broker 在 Redis DB 1）
+docker compose exec redis redis-cli -n 1 LLEN celery
 ```
+
+**手动处理某个文档**（适用于 Worker 未运行或任务丢失时）：
+
+```bash
+cd apps/api
+uv run python scripts/process_kb_document_once.py <doc_id>
+```
+
+脚本会执行完整的处理流程：清理旧 chunks → 下载 → 分块 → embedding → Milvus 写入 → 标记 INDEXED。即使 Worker 正常运行也可以使用，不会产生重复数据。
 
 ### Step 6: 启动前端
 

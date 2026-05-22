@@ -47,6 +47,7 @@ async def upload_document(
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
     source_type = "markdown" if ext in ("md", "markdown") else "txt"
 
+    # 1. Create document record
     doc = await service.upload_and_create_document(
         filename=filename,
         file_bytes=file_bytes,
@@ -54,10 +55,10 @@ async def upload_document(
         uploaded_by=current_user.id,
     )
 
-    # Commit so the document row is visible to the worker before we dispatch
+    # 2. Commit so the document row is visible to the worker BEFORE we dispatch
     await db.commit()
 
-    # Dispatch async processing to Celery (via broker, not direct import)
+    # 3. Dispatch Celery task and persist task_id
     repo = KbDocumentRepository(db)
     try:
         from interview_api.infrastructure.tasks.celery_client import (
@@ -65,6 +66,8 @@ async def upload_document(
         )
 
         task_id = dispatch_process_kb_document(doc.id)
+        doc.task_id = task_id  # ORM tracks this change; auto-flushed on commit
+        await db.commit()
         logger.info(
             "Upload doc_id=%s filename=%s -> Celery task_id=%s",
             doc.id,
@@ -74,9 +77,11 @@ async def upload_document(
     except Exception as e:
         logger.warning("Failed to dispatch Celery task for doc %s: %s", doc.id, e)
         await repo.update_status(
-            doc.id, "UPLOADED",
+            doc.id,
+            "FAILED",
             error_message=f"Celery dispatch failed: {e}",
         )
+        await db.commit()
 
     return success(data=KbDocumentResponse.model_validate(doc).model_dump())
 
@@ -143,11 +148,14 @@ async def reindex_document(
     await db.commit()
 
     # Dispatch Celery task AFTER commit so the worker can see the reset document
+    kb_repo = KbDocumentRepository(db)
     try:
         from interview_api.infrastructure.tasks.celery_client import (
             dispatch_process_kb_document,
         )
         task_id = dispatch_process_kb_document(document_id)
+        await kb_repo.update_task_id(document_id, task_id)
+        await db.commit()
         logger.info(
             "Reindex doc_id=%s -> Celery task_id=%s", document_id, task_id
         )
@@ -155,7 +163,6 @@ async def reindex_document(
         logger.exception(
             "Failed to dispatch Celery task for reindex of doc %s", document_id
         )
-        kb_repo = KbDocumentRepository(db)
         await kb_repo.update_status(
             document_id,
             "FAILED",

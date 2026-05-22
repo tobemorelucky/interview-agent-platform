@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     app_env: str = "development"
     app_debug: bool = True
     app_name: str = "Interview Agent Platform"
+    sql_echo: bool = False
 
     # Database
     database_url: str = (

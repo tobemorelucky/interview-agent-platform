@@ -10,6 +10,9 @@ class KbDocumentResponse(BaseModel):
     status: str
     chunk_count: int
     error_message: str | None = None
+    task_id: str | None = None
+    processing_started_at: datetime | None = None
+    processing_finished_at: datetime | None = None
     uploaded_by: int | None = None
     created_at: datetime | None = None
     indexed_at: datetime | None = None

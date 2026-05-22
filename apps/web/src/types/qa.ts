@@ -35,6 +35,9 @@ export interface KbDocument {
   status: string
   chunk_count: number
   error_message: string | null
+  task_id: string | null
+  processing_started_at: string | null
+  processing_finished_at: string | null
   uploaded_by: number | null
   created_at: string | null
   indexed_at: string | null

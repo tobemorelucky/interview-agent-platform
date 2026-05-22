@@ -24,6 +24,7 @@ interface UploadResult {
   filename: string
   status: "success" | "error" | "duplicate"
   message?: string
+  task_id?: string | null
 }
 const uploadResults = ref<UploadResult[]>([]);
 
@@ -110,10 +111,10 @@ async function handleUpload(event: Event) {
 
   for (const file of fileArray) {
     try {
-      await uploadKbDocument(file);
+      const doc = await uploadKbDocument(file);
       uploadResults.value = [
         ...uploadResults.value,
-        { filename: file.name, status: "success" as const },
+        { filename: file.name, status: "success" as const, task_id: doc.task_id },
       ];
     } catch (e: any) {
       const msg = e?.message || "上传失败";
@@ -213,6 +214,16 @@ function statusTag(status: string): string {
   return map[status] || status;
 }
 
+function shortTaskId(taskId: string | null | undefined): string {
+  if (!taskId) return "-";
+  return taskId.length <= 8 ? taskId : taskId.substring(0, 8) + "...";
+}
+
+function formatTime(ts: string | null | undefined): string {
+  if (!ts) return "-";
+  return new Date(ts).toLocaleString();
+}
+
 onMounted(loadDocuments);
 onUnmounted(stopPolling);
 </script>
@@ -243,7 +254,11 @@ onUnmounted(stopPolling);
       <div v-for="r in uploadResults" :key="r.filename" :class="['result-item', r.status]">
         <span class="result-icon">{{ r.status === 'success' ? 'OK' : r.status === 'duplicate' ? '~' : '!' }}</span>
         <span class="result-filename">{{ r.filename }}</span>
-        <span class="result-msg">{{ r.status === 'success' ? '上传成功' : r.status === 'duplicate' ? '已存在' : r.message }}</span>
+        <span class="result-msg">
+          <template v-if="r.status === 'success'">上传成功，等待后台处理<span v-if="r.task_id" class="result-task"> ({{ shortTaskId(r.task_id) }})</span></template>
+          <template v-else-if="r.status === 'duplicate'">已存在</template>
+          <template v-else>{{ r.message }}</template>
+        </span>
       </div>
     </div>
 
@@ -281,6 +296,7 @@ onUnmounted(stopPolling);
           <th>标题</th>
           <th>类型</th>
           <th>状态</th>
+          <th>任务</th>
           <th>Chunks</th>
           <th>上传时间</th>
           <th>操作</th>
@@ -302,6 +318,12 @@ onUnmounted(stopPolling);
             <span :class="['status-tag', doc.status.toLowerCase()]">
               {{ statusTag(doc.status) }}
             </span>
+            <div v-if="doc.status === 'FAILED' && doc.error_message" class="status-error-hint" :title="doc.error_message">
+              {{ doc.error_message.substring(0, 40) }}{{ doc.error_message.length > 40 ? '...' : '' }}
+            </div>
+          </td>
+          <td class="col-task">
+            <span :title="doc.task_id || ''" class="task-id-text">{{ shortTaskId(doc.task_id) }}</span>
           </td>
           <td>{{ doc.chunk_count }}</td>
           <td>{{ doc.created_at ? new Date(doc.created_at).toLocaleDateString() : '-' }}</td>
@@ -715,5 +737,35 @@ onUnmounted(stopPolling);
   border: 1px solid #d9d9d9;
   border-radius: 6px;
   cursor: pointer;
+}
+
+/* Task ID column */
+.col-task {
+  max-width: 90px;
+}
+
+.task-id-text {
+  font-size: 11px;
+  color: #999;
+  font-family: monospace;
+  cursor: default;
+}
+
+.result-task {
+  font-size: 11px;
+  color: #999;
+  font-family: monospace;
+}
+
+/* Error hint under status */
+.status-error-hint {
+  font-size: 11px;
+  color: #f56c6c;
+  margin-top: 2px;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: default;
 }
 </style>
