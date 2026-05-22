@@ -35,7 +35,8 @@
       "Bash(powershell -Command ':*)",
       "Bash(powershell:*)",
       "Bash(echo \"Worker PID: $!\")",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(dir E:\\\\work\\\\code\\\\python\\\\interview-agent-platform\\\\apps\\\\api\\\\prompt_templates:*)"
     ]
   }
 }

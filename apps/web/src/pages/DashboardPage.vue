@@ -20,6 +20,10 @@ const features = [
   },
 ];
 
+function goResume() {
+  router.push("/resumes");
+}
+
 function goAdminKb() {
   router.push("/admin/kb/documents");
 }
@@ -42,9 +46,17 @@ function goAdminKb() {
 
     <h3 class="section-title">功能</h3>
     <div class="feature-grid">
-      <div v-for="f in features" :key="f.title" class="feature-card">
-        <h3>{{ f.title }}</h3>
-        <p>{{ f.description }}</p>
+      <div class="feature-card" @click="router.push('/qa')" style="cursor:pointer">
+        <h3>{{ features[0].title }}</h3>
+        <p>{{ features[0].description }}</p>
+      </div>
+      <div class="feature-card resume-card" @click="goResume">
+        <h3>{{ features[1].title }}</h3>
+        <p>{{ features[1].description }}</p>
+      </div>
+      <div class="feature-card">
+        <h3>{{ features[2].title }}</h3>
+        <p>{{ features[2].description }}</p>
       </div>
     </div>
   </div>
@@ -109,6 +121,20 @@ function goAdminKb() {
   font-weight: 600;
   color: #1a1a2e;
   margin-bottom: 10px;
+}
+
+.resume-card {
+  border: 2px solid #409eff;
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+
+.resume-card:hover {
+  box-shadow: 0 2px 16px rgba(64, 158, 255, 0.2);
+}
+
+.resume-card h3 {
+  color: #409eff;
 }
 
 .feature-card p {

@@ -90,6 +90,18 @@ class Settings(BaseSettings):
     ocr_provider: str = ""
     asr_provider: str = ""
 
+    # Resume
+    resume_max_file_size_mb: int = 10
+    resume_allowed_types: str = "pdf,docx,txt"
+    resume_question_count: int = 20
+
+    # Resume KB Retrieval
+    resume_kb_retrieval_enabled: bool = True
+    resume_retrieval_top_k: int = 8
+    resume_retrieval_query_count: int = 5
+    resume_retrieval_min_score: float = 0.55
+    resume_fallback_to_llm: bool = True
+
     # Celery
     celery_broker_url: str = "redis://localhost:6379/1"
     celery_result_backend: str = "redis://localhost:6379/2"

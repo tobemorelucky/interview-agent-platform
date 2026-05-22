@@ -27,6 +27,18 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: "/resumes",
+    name: "ResumeList",
+    component: () => import("../pages/ResumeListPage.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/resumes/:id",
+    name: "ResumeReport",
+    component: () => import("../pages/ResumeReportPage.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
     path: "/admin/kb/documents",
     name: "AdminKbDocuments",
     component: () => import("../pages/admin/AdminKbDocumentsPage.vue"),

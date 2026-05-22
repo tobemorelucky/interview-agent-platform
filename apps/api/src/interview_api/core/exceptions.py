@@ -50,3 +50,28 @@ class NotFoundError(AppError):
 class ValidationError(AppError):
     def __init__(self, message: str = "请求参数无效"):
         super().__init__(code="VALIDATION_ERROR", message=message, status_code=422)
+
+
+class ResumeFileTypeInvalidError(AppError):
+    def __init__(self, message: str = "不支持的文件类型，仅支持 PDF、DOCX、TXT"):
+        super().__init__(code="RESUME_FILE_TYPE_INVALID", message=message, status_code=422)
+
+
+class ResumeFileTooLargeError(AppError):
+    def __init__(self, message: str = "文件大小超过限制"):
+        super().__init__(code="RESUME_FILE_TOO_LARGE", message=message, status_code=422)
+
+
+class ResumeNotFoundError(NotFoundError):
+    def __init__(self, message: str = "简历不存在"):
+        super().__init__(code="RESUME_NOT_FOUND", message=message)
+
+
+class ResumeReportNotReadyError(AppError):
+    def __init__(self, message: str = "简历分析尚未完成"):
+        super().__init__(code="RESUME_REPORT_NOT_READY", message=message, status_code=409)
+
+
+class ResumeParseFailedError(AppError):
+    def __init__(self, message: str = "简历解析失败"):
+        super().__init__(code="RESUME_PARSE_FAILED", message=message, status_code=422)

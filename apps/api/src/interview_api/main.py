@@ -18,6 +18,7 @@ from interview_api.infrastructure.db.engine import engine
 from interview_api.modules.auth.router import router as auth_router
 from interview_api.modules.kb.admin_router import router as kb_admin_router
 from interview_api.modules.qa.router import router as qa_router
+from interview_api.modules.resume.router import router as resume_router
 
 
 @asynccontextmanager
@@ -52,6 +53,7 @@ async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
 app.include_router(auth_router)
 app.include_router(kb_admin_router)
 app.include_router(qa_router)
+app.include_router(resume_router)
 
 
 @app.get("/")

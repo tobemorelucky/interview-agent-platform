@@ -28,6 +28,7 @@ app.conf.update(
 
 # Register task modules explicitly so @app.task decorators are processed.
 import interview_worker.tasks.kb_tasks  # noqa: E402, F401
+import interview_worker.tasks.resume_tasks  # noqa: E402, F401
 
 
 @app.task(name="ping")

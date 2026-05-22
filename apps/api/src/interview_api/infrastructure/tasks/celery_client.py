@@ -37,6 +37,22 @@ def dispatch_process_kb_document(document_id: int) -> str:
     return task_id
 
 
+def dispatch_process_resume(resume_id: int) -> str:
+    """Send a process_resume task to the Celery worker via the broker.
+
+    Returns the Celery task_id so the caller can log or track it.
+    """
+    result = _app.send_task("process_resume", args=[resume_id])
+    task_id = result.id
+    logger.info(
+        "Dispatched process_resume resume_id=%s task_id=%s broker=%s",
+        resume_id,
+        task_id,
+        _mask_url(settings.celery_broker_url),
+    )
+    return task_id
+
+
 def _mask_url(url: str) -> str:
     """Mask password in a Redis URL for safe logging."""
     if "@" in url:

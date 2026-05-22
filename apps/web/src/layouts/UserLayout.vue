@@ -9,6 +9,7 @@ const route = useRoute();
 const navItems = [
   { path: "/dashboard", label: "首页" },
   { path: "/qa", label: "知识问答" },
+  { path: "/resumes", label: "简历面试" },
 ];
 
 const adminNavItems = [
