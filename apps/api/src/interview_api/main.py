@@ -19,6 +19,7 @@ from interview_api.modules.auth.router import router as auth_router
 from interview_api.modules.kb.admin_router import router as kb_admin_router
 from interview_api.modules.qa.router import router as qa_router
 from interview_api.modules.resume.router import router as resume_router
+from interview_api.modules.interview.router import router as interview_router
 
 
 @asynccontextmanager
@@ -54,6 +55,7 @@ app.include_router(auth_router)
 app.include_router(kb_admin_router)
 app.include_router(qa_router)
 app.include_router(resume_router)
+app.include_router(interview_router)
 
 
 @app.get("/")

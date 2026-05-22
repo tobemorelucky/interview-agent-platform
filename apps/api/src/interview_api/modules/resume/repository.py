@@ -71,6 +71,19 @@ class ResumeRepository:
         )
         await self.db.flush()
 
+    async def update_processing_stage(
+        self, resume_id: int, stage: str, message: str = ""
+    ) -> None:
+        await self.db.execute(
+            update(Resume)
+            .where(Resume.id == resume_id)
+            .values(
+                processing_stage=stage,
+                stage_message=message[:500] if message else None,
+            )
+        )
+        await self.db.flush()
+
     async def mark_processing_finished(
         self,
         resume_id: int,

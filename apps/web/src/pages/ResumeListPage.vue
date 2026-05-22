@@ -4,7 +4,7 @@ import { useRouter } from "vue-router";
 import { listResumes, uploadResume, deleteResume } from "../api/resume";
 import { ApiError } from "../api/client";
 import type { Resume } from "../types/resume";
-import { statusLabel, statusColor } from "../types/resume";
+import { statusLabel, statusColor, stageLabel } from "../types/resume";
 
 const router = useRouter();
 const resumes = ref<Resume[]>([]);
@@ -129,6 +129,7 @@ onUnmounted(() => {
           <th>文件名</th>
           <th>类型</th>
           <th>状态</th>
+          <th>处理阶段</th>
           <th>上传时间</th>
           <th>操作</th>
         </tr>
@@ -146,6 +147,13 @@ onUnmounted(() => {
             <span v-if="r.error_message" class="error-tip" :title="r.error_message">
               ⚠
             </span>
+          </td>
+          <td class="stage">
+            <template v-if="r.processing_stage">
+              <span class="stage-label">{{ stageLabel(r.processing_stage) }}</span>
+              <span v-if="r.stage_message" class="stage-msg">{{ r.stage_message }}</span>
+            </template>
+            <span v-else class="stage-na">-</span>
           </td>
           <td class="time">{{ r.created_at ? new Date(r.created_at).toLocaleString("zh-CN") : "-" }}</td>
           <td class="actions">
@@ -296,6 +304,31 @@ h2 {
   margin-left: 6px;
   cursor: help;
   font-size: 14px;
+}
+
+.stage {
+  max-width: 180px;
+}
+
+.stage-label {
+  display: block;
+  font-size: 12px;
+  color: #409eff;
+  font-weight: 500;
+}
+
+.stage-msg {
+  display: block;
+  font-size: 11px;
+  color: #999;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stage-na {
+  color: #ccc;
 }
 
 .time {

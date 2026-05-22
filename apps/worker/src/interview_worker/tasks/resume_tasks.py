@@ -97,12 +97,22 @@ async def _process(resume_id: int):
             embedding = OpenAICompatibleEmbeddingProvider()
             vector_store = MilvusVectorStoreProvider(embedding_dim=settings.embedding_dim)
 
-            # 1. Download & parse
-            logger.info("[resume %s] Downloading and parsing...", resume_id)
+            # Helper: update stage in its own short-lived session so the frontend
+            # sees progress even while the pipeline session is still open.
+            async def _update_stage(stage: str, message: str = ""):
+                async with async_session_factory() as s:
+                    await ResumeRepository(s).update_processing_stage(
+                        resume_id, stage, message
+                    )
+                    await s.commit()
+
             resume = await repo.get_by_id(resume_id)
             if resume is None:
                 raise ValueError(f"Resume {resume_id} not found")
 
+            # 1. Download & parse
+            logger.info("[resume %s] ========== PARSING_RESUME ==========", resume_id)
+            await _update_stage("PARSING_RESUME", "正在解析简历文件...")
             file_bytes = await storage.download(
                 bucket_name=settings.minio_bucket,
                 object_key=resume.storage_key,
@@ -113,25 +123,56 @@ async def _process(resume_id: int):
             logger.info("[resume %s] Parsed %s chars of text", resume_id, len(raw_text))
 
             # 2. Structured extraction
-            logger.info("[resume %s] LLM structured extraction...", resume_id)
+            logger.info("[resume %s] ========== STRUCTURING_RESUME ==========", resume_id)
+            await _update_stage("STRUCTURING_RESUME", "正在提取简历结构化信息...")
             parse_prompt = _load_prompt("resume_parse_v1.md").format(resume_text=raw_text)
+            logger.info(
+                "[resume %s] LLM call starting: structured extraction (%s chars input)",
+                resume_id,
+                len(parse_prompt),
+            )
             structured_raw = await llm.chat([{"role": "user", "content": parse_prompt}])
-            structured_json = _parse_json_response(structured_raw)
+            logger.info(
+                "[resume %s] LLM response: %s chars",
+                resume_id,
+                len(structured_raw),
+            )
+            structured_json = _parse_json_response_logged(structured_raw, resume_id)
             logger.info("[resume %s] Structured extraction done", resume_id)
 
             # 3. Generate retrieval queries
-            logger.info("[resume %s] Generating retrieval queries...", resume_id)
+            logger.info(
+                "[resume %s] ========== GENERATING_RETRIEVAL_QUERIES ==========",
+                resume_id,
+            )
+            await _update_stage(
+                "GENERATING_RETRIEVAL_QUERIES", "正在生成知识库检索查询..."
+            )
             queries_prompt = _load_prompt("resume_retrieval_queries_v1.md").format(
                 structured_resume=json.dumps(structured_json, ensure_ascii=False),
                 query_count=settings.resume_retrieval_query_count,
             )
+            logger.info(
+                "[resume %s] LLM call starting: retrieval query generation",
+                resume_id,
+            )
             queries_raw = await llm.chat([{"role": "user", "content": queries_prompt}])
-            queries_json = _parse_json_response(queries_raw)
-            logger.info("[resume %s] Generated %s retrieval queries", resume_id, len(queries_json.get("queries", [])))
+            logger.info(
+                "[resume %s] LLM response: %s chars",
+                resume_id,
+                len(queries_raw),
+            )
+            queries_json = _parse_json_response_logged(queries_raw, resume_id)
+            logger.info(
+                "[resume %s] Generated %s retrieval queries",
+                resume_id,
+                len(queries_json.get("queries", [])),
+            )
 
             # 4. KB Retrieval
             if settings.resume_kb_retrieval_enabled:
-                logger.info("[resume %s] Running KB retrieval...", resume_id)
+                logger.info("[resume %s] ========== RETRIEVING_KB ==========", resume_id)
+                await _update_stage("RETRIEVING_KB", "正在检索知识库相关内容...")
                 retrieval_service = ResumeRetrievalService(embedding, vector_store)
                 retrieved_context = await retrieval_service.retrieve(
                     queries=queries_json.get("queries", []),
@@ -152,15 +193,30 @@ async def _process(resume_id: int):
                 fallback_policy = "NO_KB"
 
             # 5. Generate interview questions
-            logger.info("[resume %s] Generating interview questions (policy=%s)...", resume_id, fallback_policy)
+            logger.info(
+                "[resume %s] ========== GENERATING_QUESTIONS (policy=%s) ==========",
+                resume_id,
+                fallback_policy,
+            )
+            await _update_stage("GENERATING_QUESTIONS", "正在生成面试问题...")
             questions_prompt = _load_prompt("resume_interview_questions_v1.md").format(
                 structured_resume=json.dumps(structured_json, ensure_ascii=False),
                 retrieved_context=json.dumps(retrieved_context, ensure_ascii=False),
                 fallback_policy=fallback_policy,
                 question_count=settings.resume_question_count,
             )
+            logger.info(
+                "[resume %s] LLM call starting: interview question generation (%s chars input)",
+                resume_id,
+                len(questions_prompt),
+            )
             questions_raw = await llm.chat([{"role": "user", "content": questions_prompt}])
-            questions_json = _parse_json_response(questions_raw)
+            logger.info(
+                "[resume %s] LLM response: %s chars",
+                resume_id,
+                len(questions_raw),
+            )
+            questions_json = _parse_json_response_logged(questions_raw, resume_id)
             logger.info(
                 "[resume %s] Generated %s questions",
                 resume_id,
@@ -168,7 +224,8 @@ async def _process(resume_id: int):
             )
 
             # 6. Save report
-            logger.info("[resume %s] Saving report...", resume_id)
+            logger.info("[resume %s] ========== SAVING_REPORT ==========", resume_id)
+            await _update_stage("SAVING_REPORT", "正在保存分析报告...")
             report = ResumeReport(
                 resume_id=resume_id,
                 user_id=resume.user_id,
@@ -182,6 +239,7 @@ async def _process(resume_id: int):
 
             await repo.mark_processing_finished(resume_id, "COMPLETED")
             await db.commit()
+            await _update_stage("COMPLETED", "简历分析完成")
             logger.info("[resume %s] SUCCESS — status COMPLETED", resume_id)
 
         except Exception:
@@ -194,6 +252,9 @@ async def _process(resume_id: int):
                 await repo2.mark_processing_finished(
                     resume_id, "FAILED", error_message=error_text
                 )
+                await repo2.update_processing_stage(
+                    resume_id, "FAILED", error_text[:500]
+                )
                 await db2.commit()
             logger.info("[resume %s] Status -> FAILED", resume_id)
 
@@ -204,13 +265,24 @@ def _parse_json_response(raw: str) -> dict:
     """Parse JSON from LLM response, stripping markdown code fences if present."""
     text = raw.strip()
     if text.startswith("```"):
-        # Remove opening fence (```json or ```)
         text = text.split("\n", 1)[-1] if "\n" in text else ""
-        # Remove closing fence
         if text.endswith("```"):
             text = text[:-3]
         text = text.strip()
     return json.loads(text)
+
+
+def _parse_json_response_logged(raw: str, resume_id: int) -> dict:
+    """Parse JSON with detailed logging on failure."""
+    try:
+        return _parse_json_response(raw)
+    except Exception:
+        logger.error(
+            "[resume %s] JSON parse failed. Raw (first 500 chars): %s",
+            resume_id,
+            raw[:500],
+        )
+        raise
 
 
 def _format_error() -> str:

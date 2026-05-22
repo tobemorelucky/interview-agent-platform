@@ -11,3 +11,8 @@ pick it up automatically.
 from interview_api.modules.users.models import User  # noqa: F401
 from interview_api.modules.kb.models import KbDocument, KbChunk  # noqa: F401
 from interview_api.modules.qa.models import ChatSession, ChatMessage  # noqa: F401
+from interview_api.modules.resume.models import Resume, ResumeReport  # noqa: F401
+from interview_api.modules.interview.models import (  # noqa: F401
+    InterviewSession,
+    InterviewMessage,
+)

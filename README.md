@@ -162,12 +162,13 @@ uv run celery -A interview_worker.celery_app worker -l info
 uv run celery -A interview_worker.celery_app worker -l info --pool=solo
 ```
 
-看到 `[tasks]` 中包含 `process_kb_document` 表示 Worker 启动成功：
+看到 `[tasks]` 中包含 `process_kb_document` 和 `process_resume` 表示 Worker 启动成功：
 
 ```
 [tasks]
   . ping
   . process_kb_document
+  . process_resume
 ```
 
 > **配置说明**：API 和 Worker 均从仓库根目录 `.env` 读取配置（复用同一 `Settings` 类），确保 broker / database / embedding 等使用相同的值。
@@ -177,7 +178,7 @@ uv run celery -A interview_worker.celery_app worker -l info --pool=solo
 ```bash
 cd apps/worker
 uv run celery -A interview_worker.celery_app inspect registered
-# 预期输出包含:  * process_kb_document
+# 预期输出包含:  * process_kb_document, process_resume
 ```
 
 **端到端验证上传→处理流程**：
@@ -260,7 +261,17 @@ interview-agent-platform/
 | Phase 0 | 工程骨架与基础设施 | 已完成 |
 | Phase 1 | 认证与用户系统 | 已完成 |
 | Phase 2 | 面试知识库问答 | 已完成 |
-| Phase 3 | 简历模拟面试 | 待开始 |
+| Phase 3 | 简历模拟面试 | 已完成 |
+
+### Phase 3 简历模拟面试
+
+支持上传 **PDF / DOCX / TXT** 格式的简历文件。系统解析简历后，会结合面试知识库检索相关历史面试题，生成针对性的模拟面试问题。
+
+> **依赖提示**：PDF 解析依赖 `pypdf`，DOCX 解析依赖 `python-docx`。如果遇到 `ModuleNotFoundError`，请先确保已执行 `uv sync`：
+> ```bash
+> cd apps/api && uv sync
+> cd apps/worker && uv sync
+> ```
 | Phase 4 | 管理员采集任务框架 | 待开始 |
 | Phase 5 | 牛客采集链路 | 待开始 |
 | Phase 6 | 小红书图文采集 | 待开始 |
@@ -303,5 +314,15 @@ interview-agent-platform/
 | GET | `/api/v1/qa/sessions` | 我的会话列表 | 登录 |
 | GET | `/api/v1/qa/sessions/{id}` | 会话详情+历史消息 | 登录 |
 | POST | `/api/v1/qa/chat/stream` | 流式问答 (SSE) | 登录 |
+
+### 简历面试 (Phase 3, 用户)
+
+| 方法 | 路径 | 说明 | 权限 |
+|------|------|------|------|
+| POST | `/api/v1/resumes/upload` | 上传简历（PDF/DOCX/TXT） | 登录 |
+| GET | `/api/v1/resumes` | 我的简历列表 | 登录 |
+| GET | `/api/v1/resumes/{id}` | 简历详情 | 登录 |
+| GET | `/api/v1/resumes/{id}/report` | 面试报告（含知识库召回信息） | 登录 |
+| DELETE | `/api/v1/resumes/{id}` | 删除简历及报告 | 登录 |
 
 > `/api/v1/readiness`（依赖就绪检查）将在后续阶段补上。

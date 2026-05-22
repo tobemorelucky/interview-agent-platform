@@ -14,6 +14,8 @@ class ResumeResponse(BaseModel):
     status: str
     error_message: str | None = None
     task_id: str | None = None
+    processing_stage: str | None = None
+    stage_message: str | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
 

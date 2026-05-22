@@ -102,6 +102,14 @@ class Settings(BaseSettings):
     resume_retrieval_min_score: float = 0.55
     resume_fallback_to_llm: bool = True
 
+    # Interview Chat
+    interview_memory_compression_trigger_turns: int = 50
+    interview_memory_recent_keep_count: int = 10
+    interview_retrieval_top_k: int = 8
+    interview_retrieval_min_score: float = 0.55
+    interview_max_context_chars: int = 8000
+    interview_resume_raw_text_preview_chars: int = 2000
+
     # Celery
     celery_broker_url: str = "redis://localhost:6379/1"
     celery_result_backend: str = "redis://localhost:6379/2"

@@ -1,0 +1,44 @@
+陈昊｜Python 后端 / RAG 应用开发工程师（测试简历）
+============================================================
+联系方式：chenhao.test@example.com | 137-0000-8821 | 杭州 | github.com/demo-rag-chenhao
+求职方向：互联网后端开发、AI 应用开发、RAG/Agent 工程化
+
+教育背景
+--------
+浙江工业大学 计算机科学与技术 本科 | 2021.09 - 2025.06
+主修课程：数据结构、数据库系统、计算机网络、操作系统、软件工程、自然语言处理。
+
+专业技能
+--------
+- 后端：Python、FastAPI、Pydantic、SQLAlchemy、RESTful API、SSE 流式输出、Docker、Linux。
+- 数据与缓存：Milvus 向量数据库、Redis 缓存/分布式锁/限流、PostgreSQL、MySQL、MinIO。
+- RAG 与 Agent：RAGAssistant 项目、LangChain、LangGraph、Agent 工作流、Tool Calling、Query Rewrite、Rerank。
+- 评估与可观测：LangSmith trace、LangSmith evaluation、LLM-as-Judge、retrieval hit@k、faithfulness、pytest。
+
+项目经历
+--------
+1. RAGAssistant：面向业务文档的 RAG 与 Agent 问答系统 | 核心成员 | 2025.09 - 2026.04
+   - 使用 FastAPI 搭建后端服务，提供文档上传、解析、索引、问答、会话记录和评估任务 API。
+   - 使用 Milvus 存储文档 chunk embedding，支持按照用户、文档类型、页码、时间范围进行 metadata filter。
+   - 使用 Redis 缓存热点问题、embedding 结果和 Agent 中间状态，减少重复计算并提升接口响应速度。
+   - 设计 Agent 工作流：意图识别 -> 问题拆解 -> 检索规划 -> 工具调用 -> 答案自检 -> 引用生成。
+   - 接入 LangSmith 进行数据集评估，跟踪 answer correctness、context relevance、引用页命中率和响应耗时。
+   - 通过 chunk 合并、rerank 和缓存优化，将平均首 token 时间从约 2.6s 降低到约 1.4s（测试环境）。
+
+2. 企业知识库后台管理系统 | 后端开发 | 2025.03 - 2025.07
+   - 实现知识库、数据源、角色权限、问答日志、模型配置等管理接口。
+   - 使用 Redis 实现登录态缓存和接口限流；使用 PostgreSQL 保存元数据与审计记录。
+   - 为检索链路增加 request_id 与 trace_id，便于在日志、LangSmith trace 和异常报告之间关联定位。
+
+实习经历
+--------
+杭州某云服务公司 AI 平台组 后端开发实习生 | 2025.06 - 2025.09
+- 参与内部 AI 问答平台研发，完成文档上传、解析任务、索引状态查询等接口。
+- 编写 Milvus collection 初始化脚本和 Redis 缓存清理脚本，减少人工部署错误。
+- 补充接口测试与异常分支测试，提升核心模块测试覆盖率。
+
+个人总结
+--------
+- 熟悉互联网后端开发流程，能围绕 FastAPI、Redis、Milvus 和数据库完成可部署的业务服务。
+- 熟悉 RAGAssistant 类项目的工程链路，理解 Agent 工作流、检索评估和 LangSmith 评估闭环。
+- 关注可维护性、可观测性和性能优化，适合 AI 应用开发、RAG 平台开发、后端开发岗位。

@@ -20,8 +20,8 @@ const features = [
   },
 ];
 
-function goResume() {
-  router.push("/resumes");
+function goInterview() {
+  router.push("/interview");
 }
 
 function goAdminKb() {
@@ -50,7 +50,7 @@ function goAdminKb() {
         <h3>{{ features[0].title }}</h3>
         <p>{{ features[0].description }}</p>
       </div>
-      <div class="feature-card resume-card" @click="goResume">
+      <div class="feature-card resume-card" @click="goInterview">
         <h3>{{ features[1].title }}</h3>
         <p>{{ features[1].description }}</p>
       </div>

@@ -7,6 +7,8 @@ export interface Resume {
   status: "UPLOADED" | "PROCESSING" | "COMPLETED" | "FAILED"
   error_message: string | null
   task_id: string | null
+  processing_stage: string | null
+  stage_message: string | null
   created_at: string
   updated_at: string
 }
@@ -170,6 +172,21 @@ export function statusLabel(status: string): string {
     case "COMPLETED": return "已完成"
     case "FAILED": return "失败"
     default: return status
+  }
+}
+
+export function stageLabel(stage: string | null): string {
+  if (!stage) return ""
+  switch (stage) {
+    case "PARSING_RESUME": return "解析简历文件"
+    case "STRUCTURING_RESUME": return "提取结构化信息"
+    case "GENERATING_RETRIEVAL_QUERIES": return "生成检索查询"
+    case "RETRIEVING_KB": return "检索知识库"
+    case "GENERATING_QUESTIONS": return "生成面试问题"
+    case "SAVING_REPORT": return "保存分析报告"
+    case "COMPLETED": return "完成"
+    case "FAILED": return "失败"
+    default: return stage
   }
 }
 
