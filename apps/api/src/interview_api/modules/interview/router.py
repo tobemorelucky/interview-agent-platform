@@ -14,13 +14,21 @@ from interview_api.infrastructure.llm.provider import OpenAICompatibleLLMProvide
 from interview_api.infrastructure.milvus.provider import MilvusVectorStoreProvider
 from interview_api.core.config import settings
 from interview_api.modules.interview.schemas import (
-    CreateSessionRequest,
     BindResumeRequest,
+    CreateSessionRequest,
     SendMessageRequest,
     InterviewSessionResponse,
     InterviewSessionDetailResponse,
 )
-from interview_api.modules.interview.service import InterviewService
+from interview_api.modules.interview.service import InterviewService, InterviewChatService
+from interview_api.modules.interview.repository import (
+    InterviewSessionRepository,
+    InterviewSessionQuestionRepository,
+    InterviewMessageRepository,
+)
+from interview_api.modules.interview.memory import InterviewMemoryManager
+from interview_api.modules.interview.prompt_builder import InterviewPromptBuilder
+from interview_api.modules.resume.repository import ResumeRepository, ResumeReportRepository
 
 router = APIRouter(prefix="/api/v1/interview", tags=["interview"])
 
@@ -30,6 +38,28 @@ def _build_service(db: AsyncSession) -> InterviewService:
     llm = OpenAICompatibleLLMProvider()
     vector_store = MilvusVectorStoreProvider(embedding_dim=settings.embedding_dim)
     return InterviewService(db, embedding, vector_store, llm)
+
+
+def _build_chat_service(db: AsyncSession) -> InterviewChatService:
+    embedding = OpenAICompatibleEmbeddingProvider()
+    llm = OpenAICompatibleLLMProvider()
+    vector_store = MilvusVectorStoreProvider(embedding_dim=settings.embedding_dim)
+    return InterviewChatService(
+        db=db,
+        llm=llm,
+        embedding=embedding,
+        vector_store=vector_store,
+        session_repo=InterviewSessionRepository(db),
+        msg_repo=InterviewMessageRepository(db),
+        question_repo=InterviewSessionQuestionRepository(db),
+        report_repo=ResumeReportRepository(db),
+        resume_repo=ResumeRepository(db),
+        prompt_builder=InterviewPromptBuilder(),
+        memory_manager=InterviewMemoryManager(),
+    )
+
+
+# ── Session CRUD ──
 
 
 @router.post(
@@ -72,23 +102,23 @@ async def get_session(
     return success(data=result)
 
 
-@router.post("/sessions/{session_id}/resume")
-async def bind_resume(
+@router.delete("/sessions/{session_id}")
+async def delete_session(
     session_id: int,
-    body: BindResumeRequest,
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     service = _build_service(db)
-    try:
-        await service.bind_resume(
-            session_id=session_id,
-            user_id=current_user.id,
-            resume_id=body.resume_id,
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
-    return success(data={"status": "ok"})
+    deleted = await service.delete_session(
+        session_id=session_id,
+        user_id=current_user.id,
+    )
+    if not deleted:
+        raise HTTPException(status_code=404, detail="会话不存在")
+    return success(message="Session deleted")
+
+
+# ── Question-Driven Chat ──
 
 
 @router.post("/sessions/{session_id}/messages/stream")
@@ -98,7 +128,8 @@ async def send_message_stream(
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    service = _build_service(db)
+    """Question-driven interview chat with SSE streaming."""
+    service = _build_chat_service(db)
     return StreamingResponse(
         service.chat_stream(
             session_id=session_id,
@@ -114,17 +145,139 @@ async def send_message_stream(
     )
 
 
-@router.delete("/sessions/{session_id}")
-async def delete_session(
+# ── Question Management ──
+
+
+@router.post("/sessions/{session_id}/start")
+async def start_interview(
     session_id: int,
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    service = _build_service(db)
-    deleted = await service.delete_session(
-        session_id=session_id,
-        user_id=current_user.id,
-    )
-    if not deleted:
+    """Start the interview: return first question."""
+    service = _build_chat_service(db)
+    result = await service.start_interview(session_id, user_id=current_user.id)
+    if result is None:
         raise HTTPException(status_code=404, detail="会话不存在")
-    return success(message="Session deleted")
+    if "error" in result:
+        sub_code = result.get("sub_code", "")
+        if sub_code == "GENERATING":
+            raise HTTPException(
+                status_code=status.HTTP_202_ACCEPTED,
+                detail=result["message"],
+            )
+        raise HTTPException(status_code=400, detail=result["message"])
+    return success(data=result)
+
+
+@router.post("/sessions/{session_id}/questions/generate")
+async def generate_questions(
+    session_id: int,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Trigger question generation (synchronous, may take 10-30s)."""
+    service = _build_chat_service(db)
+    session = await service.session_repo.get_by_id_and_user(
+        session_id, current_user.id
+    )
+    if session is None:
+        raise HTTPException(status_code=404, detail="会话不存在")
+    if session.resume_id is None:
+        raise HTTPException(status_code=400, detail="请先绑定简历")
+
+    await service.generate_questions(session_id)
+
+    # Re-read session to get final status
+    session = await service.session_repo.get_by_id_and_user(
+        session_id, current_user.id
+    )
+    return success(data={
+        "status": "ok",
+        "question_generation_status": session.question_generation_status,
+    })
+
+
+@router.get("/sessions/{session_id}/questions")
+async def list_questions(
+    session_id: int,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get question list (answers masked based on status)."""
+    service = _build_chat_service(db)
+    result = await service.get_question_list(session_id, user_id=current_user.id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="会话不存在")
+    return success(data=result)
+
+
+@router.get("/sessions/{session_id}/questions/current")
+async def get_current_question(
+    session_id: int,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get current interview question."""
+    service = _build_chat_service(db)
+    result = await service.get_current_question(session_id, user_id=current_user.id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="会话不存在")
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["message"])
+    return success(data=result)
+
+
+@router.get("/sessions/{session_id}/questions/{question_id}")
+async def get_question_detail(
+    session_id: int,
+    question_id: int,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get question detail including standard_answer (only if ASKED/ANSWERED)."""
+    service = _build_chat_service(db)
+    result = await service.reveal_answer(session_id, current_user.id, question_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="题目不存在")
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["message"])
+    return success(data=result)
+
+
+@router.post("/sessions/{session_id}/questions/{question_id}/skip")
+async def skip_question(
+    session_id: int,
+    question_id: int,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Skip current question and advance to next."""
+    service = _build_chat_service(db)
+    result = await service.skip_question(session_id, current_user.id, question_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="题目不存在")
+    return success(data=result)
+
+
+# ── Resume Binding ──
+
+
+@router.post("/sessions/{session_id}/resume")
+async def bind_resume(
+    session_id: int,
+    body: BindResumeRequest,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Bind a resume to the interview session. Triggers async question generation."""
+    service = _build_service(db)
+    try:
+        await service.bind_resume(
+            session_id=session_id,
+            user_id=current_user.id,
+            resume_id=body.resume_id,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+    return success(data={"status": "ok"})

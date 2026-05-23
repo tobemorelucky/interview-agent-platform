@@ -112,6 +112,13 @@ class Settings(BaseSettings):
     interview_max_context_chars: int = 8000
     interview_resume_raw_text_preview_chars: int = 2000
 
+    # Interview Question Generation
+    interview_question_count: int = 8
+    interview_question_retrieval_top_k: int = 5
+    interview_question_retrieval_min_score: float = 0.55
+    interview_dimension_extraction_enabled: bool = True
+    interview_max_follow_ups_per_question: int = 3
+
     # Celery
     celery_broker_url: str = "redis://localhost:6379/1"
     celery_result_backend: str = "redis://localhost:6379/2"

@@ -220,3 +220,104 @@ class InterviewPromptBuilder:
             lines.append(f"{role_label}: {content}")
 
         return "\n".join(lines)
+
+    # ── Phase 3.3: Question-driven evaluation / follow-up prompts ──
+
+    def build_evaluation_prompt(
+        self,
+        current_question: str,
+        standard_answer: str,
+        resume_structured: dict | None,
+        resume_raw_text: str | None,
+        memory_summary: str | None,
+        recent_messages: list,
+        user_answer: str,
+    ) -> str:
+        """Build evaluation prompt for the first answer to a question.
+
+        Does NOT retrieve KB — the standard_answer is the scoring rubric.
+        """
+        template = _load_prompt("interview_question_evaluation_v1.md")
+
+        resume_context = ""
+        if resume_structured:
+            resume_context = self._format_resume_context(
+                resume_structured, resume_raw_text
+            )
+        elif resume_raw_text:
+            preview = resume_raw_text[: settings.interview_resume_raw_text_preview_chars]
+            resume_context = f"候选人简历原文（节选）：\n{preview}"
+
+        memory_text = memory_summary or "（无历史摘要）"
+        conv_text = self._format_recent_conversation(recent_messages)
+
+        # Cap context sizes
+        max_chars = settings.interview_max_context_chars
+        resume_alloc = min(len(resume_context), max_chars // 3)
+        conv_alloc = min(len(conv_text), max_chars // 3)
+        memory_alloc = min(len(memory_text), max_chars // 6)
+
+        return template.format(
+            current_question=current_question,
+            standard_answer=standard_answer or "（无参考答案，请根据简历和常识评价）",
+            resume_context=resume_context[:resume_alloc],
+            memory_summary=memory_text[:memory_alloc],
+            recent_conversation=conv_text[:conv_alloc],
+            user_answer=user_answer,
+        )
+
+    def build_follow_up_prompt(
+        self,
+        current_question: str,
+        standard_answer: str,
+        resume_structured: dict | None,
+        resume_raw_text: str | None,
+        memory_summary: str | None,
+        recent_messages: list,
+        user_answer: str,
+        retrieved_context: list[dict] | None,
+    ) -> str:
+        """Build evaluation prompt for follow-up answers.
+
+        Retrieves KB context to help the LLM ask deeper follow-up questions.
+        Falls back to evaluation prompt if KB retrieval fails.
+        """
+        template = _load_prompt("interview_question_evaluation_v1.md")
+
+        resume_context = ""
+        if resume_structured:
+            resume_context = self._format_resume_context(
+                resume_structured, resume_raw_text
+            )
+        elif resume_raw_text:
+            preview = resume_raw_text[: settings.interview_resume_raw_text_preview_chars]
+            resume_context = f"候选人简历原文（节选）：\n{preview}"
+
+        memory_text = memory_summary or "（无历史摘要）"
+        conv_text = self._format_recent_conversation(recent_messages)
+        knowledge_text = self._format_retrieved_context(retrieved_context)
+
+        # Cap context sizes
+        max_chars = settings.interview_max_context_chars
+        knowledge_alloc = min(len(knowledge_text), max_chars // 4)
+        resume_alloc = min(len(resume_context), max_chars // 3)
+        conv_alloc = min(len(conv_text), max_chars // 3)
+        memory_alloc = min(len(memory_text), max_chars // 6)
+
+        return template.format(
+            current_question=current_question,
+            standard_answer=standard_answer or "（无参考答案，请根据简历和常识评价）",
+            resume_context=resume_context[:resume_alloc],
+            memory_summary=memory_text[:memory_alloc],
+            recent_conversation=conv_text[:conv_alloc],
+            user_answer=user_answer,
+        ) + f"\n\n【知识库参考（用于追问深度）】\n{knowledge_text[:knowledge_alloc]}"
+
+    def build_dimension_extraction_prompt(
+        self, resume_structured: dict
+    ) -> str:
+        """Build prompt for extracting interview dimensions from resume."""
+        import json as _json
+        template = _load_prompt("interview_dimension_extraction_v1.md")
+        resume_json_str = _json.dumps(resume_structured, ensure_ascii=False, indent=2)
+        return template.format(resume_summary_json=resume_json_str)

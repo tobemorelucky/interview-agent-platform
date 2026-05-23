@@ -3,7 +3,11 @@ from datetime import datetime, timezone
 from sqlalchemy import select, update, delete, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from interview_api.modules.interview.models import InterviewSession, InterviewMessage
+from interview_api.modules.interview.models import (
+    InterviewSession,
+    InterviewSessionQuestion,
+    InterviewMessage,
+)
 
 
 class InterviewSessionRepository:
@@ -94,6 +98,121 @@ class InterviewSessionRepository:
     async def delete(self, session_id: int) -> None:
         await self.db.execute(
             delete(InterviewSession).where(InterviewSession.id == session_id)
+        )
+        await self.db.flush()
+
+    async def update_question_generation_status(
+        self, session_id: int, status: str, error: str | None = None
+    ) -> None:
+        values = {
+            "question_generation_status": status,
+            "updated_at": datetime.now(timezone.utc),
+        }
+        if error is not None:
+            values["question_generation_error"] = error
+        elif status == "READY":
+            values["question_generation_error"] = None
+        await self.db.execute(
+            update(InterviewSession)
+            .where(InterviewSession.id == session_id)
+            .values(**values)
+        )
+        await self.db.flush()
+
+    async def update_current_question_index(
+        self, session_id: int, index: int
+    ) -> None:
+        await self.db.execute(
+            update(InterviewSession)
+            .where(InterviewSession.id == session_id)
+            .values(
+                current_question_index=index,
+                updated_at=datetime.now(timezone.utc),
+            )
+        )
+        await self.db.flush()
+
+
+class InterviewSessionQuestionRepository:
+    def __init__(self, db: AsyncSession):
+        self.db = db
+
+    async def batch_create(
+        self, session_id: int, questions: list[dict]
+    ) -> list[InterviewSessionQuestion]:
+        objs = [
+            InterviewSessionQuestion(
+                session_id=session_id,
+                question_index=q["question_index"],
+                question=q["question"],
+                standard_answer=q.get("standard_answer"),
+                dimension=q.get("dimension"),
+                difficulty=q.get("difficulty"),
+                source=q.get("source", "LLM_GENERATED"),
+                evidence_json=q.get("evidence_json"),
+                status=q.get("status", "PENDING"),
+            )
+            for q in questions
+        ]
+        self.db.add_all(objs)
+        await self.db.flush()
+        return objs
+
+    async def get_by_session_id(
+        self, session_id: int
+    ) -> list[InterviewSessionQuestion]:
+        result = await self.db.execute(
+            select(InterviewSessionQuestion)
+            .where(InterviewSessionQuestion.session_id == session_id)
+            .order_by(InterviewSessionQuestion.question_index)
+        )
+        return list(result.scalars().all())
+
+    async def get_by_index(
+        self, session_id: int, question_index: int
+    ) -> InterviewSessionQuestion | None:
+        result = await self.db.execute(
+            select(InterviewSessionQuestion).where(
+                InterviewSessionQuestion.session_id == session_id,
+                InterviewSessionQuestion.question_index == question_index,
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def get_by_id(
+        self, question_id: int
+    ) -> InterviewSessionQuestion | None:
+        result = await self.db.execute(
+            select(InterviewSessionQuestion).where(
+                InterviewSessionQuestion.id == question_id
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def update_status(self, question_id: int, status: str) -> None:
+        await self.db.execute(
+            update(InterviewSessionQuestion)
+            .where(InterviewSessionQuestion.id == question_id)
+            .values(status=status, updated_at=datetime.now(timezone.utc))
+        )
+        await self.db.flush()
+
+    async def increment_follow_up(self, question_id: int) -> None:
+        await self.db.execute(
+            update(InterviewSessionQuestion)
+            .where(InterviewSessionQuestion.id == question_id)
+            .values(
+                follow_up_count=InterviewSessionQuestion.follow_up_count + 1,
+                updated_at=datetime.now(timezone.utc),
+            )
+        )
+        await self.db.flush()
+
+    async def delete_by_session_id(self, session_id: int) -> None:
+        await self.db.execute(
+            delete(InterviewSessionQuestion).where(
+                InterviewSessionQuestion.session_id == session_id
+            )
         )
         await self.db.flush()
 

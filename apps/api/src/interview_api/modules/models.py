@@ -14,5 +14,6 @@ from interview_api.modules.qa.models import ChatSession, ChatMessage  # noqa: F4
 from interview_api.modules.resume.models import Resume, ResumeReport  # noqa: F401
 from interview_api.modules.interview.models import (  # noqa: F401
     InterviewSession,
+    InterviewSessionQuestion,
     InterviewMessage,
 )
