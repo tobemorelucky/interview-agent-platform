@@ -10,6 +10,12 @@ class CreateSessionRequest(BaseModel):
     title: str | None = None
 
 
+class SetTargetPositionRequest(BaseModel):
+    target_position: str
+    interview_mode: str = "comprehensive"
+    question_count: int = 20
+
+
 class BindResumeRequest(BaseModel):
     resume_id: int
 
@@ -33,6 +39,12 @@ class InterviewSessionResponse(BaseModel):
     total_questions: int = 0
     turn_count: int
     last_compressed_turn: int
+    target_position: str | None = None
+    target_position_confirmed: bool = False
+    interview_mode: str = "comprehensive"
+    interview_plan_json: dict | None = None
+    planner_trace_json: dict | None = None
+    question_count: int = 20
     resume_filename: str | None = None
     resume_status: str | None = None
     created_at: datetime | None = None
@@ -72,6 +84,12 @@ class InterviewSessionQuestionResponse(BaseModel):
     source: str = "LLM_GENERATED"
     evidence_json: dict | None = None
     follow_up_count: int = 0
+    parent_question_id: int | None = None
+    is_dynamic: bool = False
+    planned_order: int | None = None
+    answer_summary: str | None = None
+    missing_points_json: dict | None = None
+    evaluation_json: dict | None = None
     status: str = "PENDING"
     created_at: datetime | None = None
     updated_at: datetime | None = None

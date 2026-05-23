@@ -123,21 +123,44 @@ class InterviewService:
             await self.db.commit()
             return
 
+        # Auto-suggest target position from resume
+        if session.target_position is None:
+            suggested = await self._suggest_position_from_resume(session_id)
+            if suggested:
+                await self.session_repo.update_target_position(
+                    session_id,
+                    target_position=suggested,
+                    interview_mode="comprehensive",
+                    question_count=settings.interview_question_count,
+                )
+                # Un-confirm so user must confirm
+                from sqlalchemy import update
+                await self.db.execute(
+                    update(InterviewSession)
+                    .where(InterviewSession.id == session_id)
+                    .values(target_position_confirmed=False)
+                )
+
         # Auto-generate welcome message from assistant
         existing_messages = await self.msg_repo.get_by_session_id(session_id)
         has_welcome = any(
             m.role == "ASSISTANT" and m.turn_index == 0 for m in existing_messages
         )
         if not has_welcome:
+            pos = session.target_position or "你简历匹配的岗位"
             welcome = (
-                "我已读取你的简历，可以开始模拟面试。\n\n"
-                "你可以点击「开始面试」让我根据你的简历进行针对性提问。"
+                f"我已读取你的简历。根据分析，我判断你面试的目标岗位是 **{pos}**，是否正确？\n\n"
+                "请回复确认，或直接告诉我你实际要面试的岗位名称（如「后端开发实习」「Python 后端」「AI 应用开发」等）。"
             )
             await self.msg_repo.create(
                 session_id=session_id,
                 role="ASSISTANT",
                 content=welcome,
-                metadata_json={"source": "LLM_GENERATED"},
+                metadata_json={
+                    "source": "LLM_GENERATED",
+                    "type": "POSITION_SUGGESTION",
+                    "suggested_position": session.target_position,
+                },
                 turn_index=0,
             )
 
@@ -146,24 +169,86 @@ class InterviewService:
                 session_id, f"面试练习 - {resume.filename}"
             )
 
-        # Set status to GENERATING, commit, then fire background task.
-        await self.session_repo.update_question_generation_status(
-            session_id, "GENERATING"
+        # Position not yet confirmed — generation will be triggered later.
+        await self.db.commit()
+
+    # ── Target Position ──
+
+    async def set_target_position(
+        self,
+        session_id: int,
+        user_id: int,
+        target_position: str,
+        interview_mode: str = "comprehensive",
+        question_count: int = 20,
+    ) -> None:
+        """Set the target position for a session and confirms it.
+
+        Raises ValueError with a user-facing message on failure.
+        """
+        session = await self.session_repo.get_by_id_and_user(session_id, user_id)
+        if session is None:
+            raise ValueError("会话不存在")
+        if session.resume_id is None:
+            raise ValueError("请先绑定一份简历")
+
+        await self.session_repo.update_target_position(
+            session_id,
+            target_position=target_position,
+            interview_mode=interview_mode,
+            question_count=question_count,
         )
         await self.db.commit()
 
-        # Fire background task with a NEW DB session so it survives
-        # this request's session lifecycle.
-        asyncio.create_task(
-            _generate_questions_background(
-                session_id=session_id,
-                llm=self.llm,
-                embedding=self.embedding,
-                vector_store=self.vector_store,
-                prompt_builder=self.prompt_builder,
-                memory_manager=self.memory_manager,
-            )
-        )
+    # ── Position Suggestion ──
+
+    async def _suggest_position_from_resume(
+        self, session_id: int
+    ) -> str | None:
+        """Extract a suggested target position from the bound resume."""
+        session = await self.session_repo.get_by_id(session_id)
+        if session is None or session.resume_id is None:
+            return None
+
+        report = await self.report_repo.get_by_resume_id(session.resume_id)
+        if report is None or not report.summary_json:
+            return None
+
+        structured = report.summary_json
+        basic = structured.get("basic_info", {})
+        target_role = basic.get("target_role", "")
+        current_role = basic.get("current_role", "")
+
+        # If resume already has target_role, use it
+        if target_role:
+            return target_role
+
+        # Build suggestion from skills + current role
+        skills = structured.get("skills", {})
+        if isinstance(skills, dict):
+            tech_keywords = []
+            for key in ("languages", "frameworks", "ai_ml"):
+                vals = skills.get(key, [])
+                if isinstance(vals, list):
+                    tech_keywords.extend(vals[:3])
+
+            if tech_keywords:
+                tech_str = "/".join(tech_keywords[:3])
+                if current_role:
+                    return f"{tech_str} {current_role}"
+                return f"{tech_str} 开发"
+
+        if current_role:
+            return current_role
+
+        # Last resort: construct from projects
+        projects = structured.get("projects", [])
+        if isinstance(projects, list) and projects:
+            for p in projects[:1]:
+                if isinstance(p, dict) and p.get("name"):
+                    return f"{p['name']} 相关开发"
+
+        return "技术开发"
 
     # ── Helpers ──
 
@@ -182,6 +267,12 @@ class InterviewService:
             "current_question_index": session.current_question_index,
             "question_generation_status": session.question_generation_status,
             "question_generation_error": session.question_generation_error,
+            "target_position": session.target_position,
+            "target_position_confirmed": session.target_position_confirmed,
+            "interview_mode": session.interview_mode,
+            "interview_plan_json": session.interview_plan_json,
+            "planner_trace_json": session.planner_trace_json,
+            "question_count": session.question_count,
             "memory_summary": session.memory_summary,
             "turn_count": session.turn_count,
             "last_compressed_turn": session.last_compressed_turn,
@@ -213,6 +304,12 @@ class InterviewService:
             "source": q.source,
             "evidence_json": q.evidence_json,
             "follow_up_count": q.follow_up_count,
+            "parent_question_id": q.parent_question_id,
+            "is_dynamic": q.is_dynamic,
+            "planned_order": q.planned_order,
+            "answer_summary": q.answer_summary,
+            "missing_points_json": q.missing_points_json,
+            "evaluation_json": q.evaluation_json,
             "status": q.status,
             "created_at": q.created_at,
             "updated_at": q.updated_at,
@@ -329,6 +426,8 @@ class InterviewChatService:
                 return
 
             structured = report.summary_json
+            target_pos = session.target_position or ""
+            target_count = session.question_count or settings.interview_question_count
 
             # Clean old questions
             await self.question_repo.delete_by_session_id(session_id)
@@ -337,10 +436,49 @@ class InterviewChatService:
             )
             await self.db.commit()
 
-            # Step 1: Extract dimensions
-            dimensions = await self._extract_dimensions(structured)
+            # ── Planner Agent Step tracker ──
+            trace_steps: list[dict] = []
+            plan_data: dict = {
+                "target_position": target_pos,
+                "interview_mode": session.interview_mode,
+                "question_count": target_count,
+            }
 
-            # Step 2: Retrieve from KB
+            # ── Step 1: ANALYZE_RESUME ──
+            analysis_summary = f"识别到 {target_pos} 相关技能"
+            trace_steps.append({
+                "step": "ANALYZE_RESUME",
+                "status": "DONE",
+                "summary": analysis_summary,
+            })
+
+            # ── Step 2: PLAN_DIMENSIONS ──
+            dimensions_raw = await self._extract_dimensions(
+                structured, target_position=target_pos, question_count=target_count
+            )
+
+            if isinstance(dimensions_raw, dict):
+                dimensions = dimensions_raw.get("dimensions", [])
+                analysis_summary = dimensions_raw.get("analysis_summary", analysis_summary)
+            else:
+                dimensions = dimensions_raw if isinstance(dimensions_raw, list) else []
+
+            trace_steps.append({
+                "step": "PLAN_DIMENSIONS",
+                "status": "DONE",
+                "summary": f"生成 {len(dimensions)} 个面试维度，目标 {target_count} 道候选题",
+            })
+            plan_data["dimensions"] = [
+                {
+                    "name": d.get("dimension", ""),
+                    "weight": d.get("weight", 0),
+                    "question_count": d.get("question_count", 0),
+                    "reason": d.get("reason", ""),
+                }
+                for d in dimensions
+            ]
+
+            # ── Step 3: RETRIEVE_QUESTIONS ──
             retrieval_service = QuestionRetrievalService(
                 self.embedding, self.vector_store
             )
@@ -349,13 +487,23 @@ class InterviewChatService:
                 top_k=settings.interview_question_retrieval_top_k,
                 min_score=settings.interview_question_retrieval_min_score,
             )
+            total_hits = sum(len(h) for h in grouped_hits.values())
+            hit_summary_parts = []
+            for dim_name, hits in grouped_hits.items():
+                if hits:
+                    hit_summary_parts.append(f"{dim_name} 命中 {len(hits)} 条")
+            trace_steps.append({
+                "step": "RETRIEVE_QUESTIONS",
+                "status": "DONE",
+                "summary": "; ".join(hit_summary_parts) if hit_summary_parts else "无命中",
+            })
 
-            # Step 3: Aggregate and extract questions from KB hits
+            # ── Step 4: JUDGE_SUFFICIENCY ──
             kb_questions, seen_chunks = self._extract_questions_from_hits(grouped_hits)
-
-            # Step 4: LLM supplement if not enough
-            target_count = settings.interview_question_count
             all_questions = list(kb_questions)
+            vector_count = sum(
+                1 for q in all_questions if q.get("source") == "VECTOR_RETRIEVED"
+            )
 
             if len(all_questions) < target_count:
                 covered_dims = {q["dimension"] for q in all_questions if q.get("dimension")}
@@ -364,32 +512,66 @@ class InterviewChatService:
                 count_needed = target_count - len(all_questions)
 
                 llm_questions = await self._llm_generate_questions(
-                    structured, all_questions, missing_dims, count_needed, target_count
+                    structured, all_questions, missing_dims, count_needed, target_count,
+                    target_position=target_pos,
+                    interview_mode=session.interview_mode,
+                    plan_json=plan_data,
+                    retrieved_context=json.dumps(
+                        {k: [{"title": h.get("title", ""), "preview": h.get("preview", "")[:200]}
+                             for h in v[:3]]
+                         for k, v in grouped_hits.items()},
+                        ensure_ascii=False,
+                    ),
                 )
                 all_questions.extend(llm_questions)
 
-            # Step 5: Complete standard_answer for VECTOR_RETRIEVED questions
             all_questions = await self._complete_answers(all_questions, structured)
 
-            # Step 6: Assign question_index with dimension interleaving
-            all_questions = self._interleave_questions(all_questions)
+            hybrid_count = sum(1 for q in all_questions if q.get("source") == "HYBRID")
+            llm_count = sum(1 for q in all_questions if q.get("source") == "LLM_GENERATED")
 
+            plan_data["source_distribution"] = {
+                "VECTOR_RETRIEVED": vector_count,
+                "HYBRID": hybrid_count,
+                "LLM_GENERATED": llm_count,
+            }
+            trace_steps.append({
+                "step": "BUILD_QUESTION_QUEUE",
+                "status": "DONE",
+                "summary": (
+                    f"生成 {len(all_questions)} 道题："
+                    f"VECTOR_RETRIEVED={vector_count}, "
+                    f"HYBRID={hybrid_count}, "
+                    f"LLM_GENERATED={llm_count}"
+                ),
+            })
+
+            # ── Step 5: Interleave, index, save ──
+            all_questions = self._interleave_questions(all_questions)
             for i, q in enumerate(all_questions):
                 q["question_index"] = i
+                q["planned_order"] = i
                 q["status"] = "PENDING"
 
-            # Step 7: Save
             if all_questions:
                 await self.question_repo.batch_create(session_id, all_questions)
+
+            # Save plan and trace to session
+            await self.session_repo.save_plan(
+                session_id,
+                plan_json=plan_data,
+                trace_json={"steps": trace_steps},
+            )
 
             await self.session_repo.update_question_generation_status(
                 session_id, "READY"
             )
             await self.db.commit()
             logger.info(
-                "Question generation complete: session=%s count=%s",
+                "Question generation complete: session=%s count=%s plan=%s",
                 session_id,
                 len(all_questions),
+                json.dumps(plan_data.get("source_distribution", {}), ensure_ascii=False),
             )
 
         except Exception as e:
@@ -415,6 +597,12 @@ class InterviewChatService:
         resume = await self.resume_repo.get_by_id(session.resume_id)
         if resume is None or resume.status != "COMPLETED":
             return None
+
+        if not session.target_position_confirmed:
+            return {
+                "error": "TARGET_POSITION_REQUIRED",
+                "message": "请先确认本次面试岗位",
+            }
 
         gen_status = session.question_generation_status
         if gen_status == "PENDING":
@@ -494,6 +682,23 @@ class InterviewChatService:
             yield _sse("error", {"code": "RESUME_NOT_READY", "message": "简历已被删除或未处理完成"})
             return
 
+        if not session.target_position_confirmed:
+            # Save user message first
+            new_turn = session.turn_count + 1
+            await self.msg_repo.create(
+                session_id=session_id,
+                role="USER",
+                content=content,
+                turn_index=new_turn,
+            )
+            await self.db.flush()
+            # Let LLM handle the position confirmation dialog
+            async for evt in self._handle_position_confirmation(
+                session, content, new_turn
+            ):
+                yield evt
+            return
+
         # Check question readiness
         gen_status = session.question_generation_status
         if gen_status != "READY":
@@ -543,6 +748,17 @@ class InterviewChatService:
             # Determine mode: follow-up or first-answer evaluation
             is_follow_up = self._is_follow_up_mode(recent_msgs)
 
+            # Build question summaries (no standard_answer)
+            all_summaries = await self.question_repo.get_question_summaries(session_id)
+            completed = [s for s in all_summaries if s["status"] in ("ANSWERED", "ASKED")]
+            remaining = [s for s in all_summaries if s["status"] in ("PENDING",)]
+            completed_text = self.prompt_builder.build_question_summary_text(
+                completed, "completed"
+            )
+            remaining_text = self.prompt_builder.build_question_summary_text(
+                remaining, "remaining"
+            )
+
             if is_follow_up:
                 # ── Follow-up mode: retrieve KB for deeper questioning ──
                 yield _sse("status", {"stage": "retrieving_kb"})
@@ -564,6 +780,10 @@ class InterviewChatService:
                     recent_messages=recent_msgs,
                     user_answer=content,
                     retrieved_context=retrieved_chunks,
+                    target_position=session.target_position or "",
+                    interview_mode=session.interview_mode,
+                    completed_summaries=completed_text,
+                    remaining_summaries=remaining_text,
                 )
             else:
                 # ── Evaluation mode: use standard_answer as rubric ──
@@ -576,6 +796,10 @@ class InterviewChatService:
                     memory_summary=session.memory_summary,
                     recent_messages=recent_msgs,
                     user_answer=content,
+                    target_position=session.target_position or "",
+                    interview_mode=session.interview_mode,
+                    completed_summaries=completed_text,
+                    remaining_summaries=remaining_text,
                 )
 
             # Stream LLM response
@@ -601,7 +825,6 @@ class InterviewChatService:
 
             # Handle actions
             if action == "FOLLOW_UP":
-                # Check max follow-ups
                 if q.follow_up_count >= settings.interview_max_follow_ups_per_question:
                     action = "NEXT_QUESTION"
                 else:
@@ -614,8 +837,51 @@ class InterviewChatService:
                         "max_follow_ups": settings.interview_max_follow_ups_per_question,
                     })
 
+            if action == "INSERT_DYNAMIC_QUESTION":
+                dynamic_q_data = decision.get("dynamic_question") or {}
+                if dynamic_q_data.get("question"):
+                    new_index = q.question_index + 1
+                    new_q = await self.question_repo.create_dynamic(
+                        session_id=session_id,
+                        question_data={
+                            "question_index": new_index,
+                            "question": dynamic_q_data["question"],
+                            "standard_answer": dynamic_q_data.get("standard_answer"),
+                            "dimension": dynamic_q_data.get("dimension"),
+                            "difficulty": dynamic_q_data.get("difficulty"),
+                            "source": dynamic_q_data.get("source", "LLM_GENERATED"),
+                            "parent_question_id": q.id,
+                            "planned_order": q.planned_order,
+                        },
+                    )
+                    # Update question count for subsequent questions
+                    all_questions = await self.question_repo.get_by_session_id(session_id)
+                    yield _sse("dynamic_question", {
+                        "question_id": new_q.id,
+                        "question_index": new_q.question_index,
+                        "question": new_q.question,
+                        "source": new_q.source,
+                        "dimension": new_q.dimension,
+                        "difficulty": new_q.difficulty,
+                        "reason": dynamic_q_data.get("reason", ""),
+                        "parent_question_id": q.id,
+                    })
+
             if action == "NEXT_QUESTION":
-                await self.question_repo.update_status(q.id, "ANSWERED")
+                # Save evaluation for current question
+                await self.question_repo.update_evaluation(
+                    q.id,
+                    answer_summary=json.dumps(
+                        decision.get("covered_points", []), ensure_ascii=False
+                    ),
+                    missing_points_json=decision.get("missing_points"),
+                    evaluation_json={
+                        "score": score,
+                        "evaluation": evaluation_text,
+                        "risk_tip": decision.get("risk_tip"),
+                    },
+                    status="ANSWERED",
+                )
                 new_index = session.current_question_index + 1
                 await self.session_repo.update_current_question_index(session_id, new_index)
 
@@ -642,12 +908,24 @@ class InterviewChatService:
                     action = "COMPLETE"
 
             if action == "COMPLETE":
-                await self.question_repo.update_status(q.id, "ANSWERED")
+                await self.question_repo.update_evaluation(
+                    q.id,
+                    answer_summary=json.dumps(
+                        decision.get("covered_points", []), ensure_ascii=False
+                    ),
+                    missing_points_json=decision.get("missing_points"),
+                    evaluation_json={
+                        "score": score,
+                        "evaluation": evaluation_text,
+                        "risk_tip": decision.get("risk_tip"),
+                    },
+                    status="ANSWERED",
+                )
                 answered = [
                     x for x in all_questions
                     if x.status in ("ANSWERED", "ASKED")
                 ]
-                avg_score = score  # simplified; real impl would track per-question scores
+                avg_score = score
                 yield _sse("interview_complete", {
                     "total_questions": len(all_questions),
                     "answered_count": len(answered),
@@ -658,6 +936,12 @@ class InterviewChatService:
             assistant_content = evaluation_text
             if action == "FOLLOW_UP":
                 assistant_content += "\n\n" + decision.get("follow_up_question", "")
+            elif action == "INSERT_DYNAMIC_QUESTION":
+                dq = decision.get("dynamic_question") or {}
+                assistant_content += (
+                    "\n\n" + dq.get("question", "")
+                    + "\n\n（基于你的回答临场追问）"
+                )
             await self.msg_repo.create(
                 session_id=session_id,
                 role="ASSISTANT",
@@ -820,20 +1104,188 @@ class InterviewChatService:
 
     # ── Internal helpers ──
 
-    async def _extract_dimensions(self, structured: dict) -> list[dict]:
+    async def _handle_position_confirmation(
+        self, session: InterviewSession, user_message: str, turn_index: int
+    ):
+        """Handle position confirmation dialog via LLM.
+
+        When target_position is not yet confirmed, this method:
+        1. Asks LLM to determine if user confirmed or provided a new position
+        2. If confirmed → saves confirmed=true, triggers background generation
+        3. If new position → updates and confirms, triggers generation
+        4. If unclear → LLM responds asking for clarification
+        """
+        try:
+            suggested = session.target_position or "未推测"
+            prompt = (
+                f"你正在确认候选人的面试目标岗位。\n\n"
+                f"系统推测的岗位：{suggested}\n\n"
+                f"候选人的回复：{user_message}\n\n"
+                f"请判断候选人的意图：\n"
+                f"1. 如果候选人确认岗位（如「是的」「可以」「对」「OK」「好」等），返回：CONFIRM\n"
+                f"2. 如果候选人给出了新的岗位名称（如「后端开发实习」「Python后端」），返回：NEW_POSITION: <新岗位>\n"
+                f"3. 如果候选人问了其他问题，返回：OTHER\n\n"
+                f"只返回上述格式，不要其他内容。"
+            )
+            result = await self.llm.chat([{"role": "user", "content": prompt}])
+            result = result.strip()
+
+            if result.startswith("CONFIRM"):
+                from sqlalchemy import update
+                await self.db.execute(
+                    update(InterviewSession)
+                    .where(InterviewSession.id == session.id)
+                    .values(target_position_confirmed=True)
+                )
+                await self.db.flush()
+
+                confirm_msg = (
+                    f"好的，确认面试岗位：**{suggested}**。\n\n"
+                    "正在为你生成面试题，请稍候..."
+                )
+                yield _sse("token", {"content": confirm_msg})
+
+                await self.msg_repo.create(
+                    session_id=session.id,
+                    role="ASSISTANT",
+                    content=confirm_msg,
+                    metadata_json={
+                        "source": "SYSTEM",
+                        "type": "POSITION_CONFIRMED",
+                        "target_position": suggested,
+                    },
+                    turn_index=turn_index,
+                )
+                await self.session_repo.increment_turn(session.id)
+                await self.db.commit()
+
+                yield _sse("evaluation", {
+                    "score": 0,
+                    "comment": f"岗位确认：{suggested}",
+                    "action": "POSITION_CONFIRMED",
+                })
+                yield _sse("done", {
+                    "message_id": 0,
+                    "turn_index": turn_index,
+                    "action": "POSITION_CONFIRMED",
+                })
+                return
+
+            elif result.startswith("NEW_POSITION:"):
+                new_pos = result.replace("NEW_POSITION:", "").strip()
+                await self.session_repo.update_target_position(
+                    session.id,
+                    target_position=new_pos,
+                    interview_mode=session.interview_mode,
+                    question_count=session.question_count,
+                )
+                from sqlalchemy import update
+                await self.db.execute(
+                    update(InterviewSession)
+                    .where(InterviewSession.id == session.id)
+                    .values(target_position_confirmed=True)
+                )
+                await self.db.flush()
+
+                confirm_msg = (
+                    f"好的，更新面试岗位为：**{new_pos}**。\n\n"
+                    "正在为你生成面试题，请稍候..."
+                )
+                yield _sse("token", {"content": confirm_msg})
+
+                await self.msg_repo.create(
+                    session_id=session.id,
+                    role="ASSISTANT",
+                    content=confirm_msg,
+                    metadata_json={
+                        "source": "SYSTEM",
+                        "type": "POSITION_CONFIRMED",
+                        "target_position": new_pos,
+                    },
+                    turn_index=turn_index,
+                )
+                await self.session_repo.increment_turn(session.id)
+                await self.db.commit()
+
+                yield _sse("evaluation", {
+                    "score": 0,
+                    "comment": f"岗位已更新：{new_pos}",
+                    "action": "POSITION_CONFIRMED",
+                })
+                yield _sse("done", {
+                    "message_id": 0,
+                    "turn_index": turn_index,
+                    "action": "POSITION_CONFIRMED",
+                })
+                return
+
+            else:
+                # OTHER — LLM responds naturally asking for position
+                clarify_prompt = (
+                    f"你是面试助手。系统推测候选人面试岗位是「{suggested}」，但候选人回复不够明确。"
+                    f"请友好地请候选人确认岗位：是「{suggested}」吗？或者告诉实际岗位名称。\n\n"
+                    f"候选人说：{user_message}\n\n"
+                    f"请简短回复（30字内），引导候选人确认岗位。"
+                )
+                response_text = await self.llm.chat(
+                    [{"role": "user", "content": clarify_prompt}]
+                )
+
+                yield _sse("token", {"content": response_text})
+                yield _sse("evaluation", {
+                    "score": 0,
+                    "comment": "请先确认岗位",
+                    "action": "AWAIT_POSITION",
+                })
+
+                await self.msg_repo.create(
+                    session_id=session.id,
+                    role="ASSISTANT",
+                    content=response_text.strip(),
+                    metadata_json={
+                        "source": "SYSTEM",
+                        "type": "POSITION_CLARIFY",
+                    },
+                    turn_index=turn_index,
+                )
+                await self.session_repo.increment_turn(session.id)
+                await self.db.commit()
+                yield _sse("done", {
+                    "message_id": 0,
+                    "turn_index": turn_index,
+                    "action": "AWAIT_POSITION",
+                })
+                return
+
+        except Exception:
+            logger.exception("Position confirmation failed")
+            yield _sse("error", {
+                "code": "TARGET_POSITION_REQUIRED",
+                "message": "请先确认本次面试岗位",
+            })
+
+    async def _extract_dimensions(
+        self, structured: dict, target_position: str = "", question_count: int = 20
+    ) -> list[dict]:
         """Extract interview dimensions from structured resume via LLM."""
         if not settings.interview_dimension_extraction_enabled:
-            return self._rule_based_dimensions(structured)
+            return self._rule_based_dimensions(structured, target_position)
 
         try:
-            prompt = self.prompt_builder.build_dimension_extraction_prompt(structured)
+            prompt = self.prompt_builder.build_dimension_extraction_prompt(
+                structured,
+                target_position=target_position,
+                question_count=question_count,
+            )
             response = await self.llm.chat([{"role": "user", "content": prompt}])
             return self._parse_json_response(response)
         except Exception:
             logger.exception("Dimension extraction via LLM failed, falling back to rules")
-            return self._rule_based_dimensions(structured)
+            return self._rule_based_dimensions(structured, target_position)
 
-    def _rule_based_dimensions(self, structured: dict) -> list[dict]:
+    def _rule_based_dimensions(
+        self, structured: dict, target_position: str = ""
+    ) -> list[dict]:
         """Fallback: extract dimensions from skills and projects."""
         dimensions: list[dict] = []
         skills = structured.get("skills", {})
@@ -928,6 +1380,10 @@ class InterviewChatService:
         missing_dims: list[str],
         count_needed: int,
         target_count: int,
+        target_position: str = "",
+        interview_mode: str = "comprehensive",
+        plan_json: dict | None = None,
+        retrieved_context: str = "",
     ) -> list[dict]:
         """Use LLM to generate supplementary questions."""
         import json as _json
@@ -938,11 +1394,15 @@ class InterviewChatService:
                 ensure_ascii=False,
             )
             prompt = _load_prompt("interview_question_generation_v1.md").format(
+                target_position=target_position or "未指定",
+                interview_plan=_json.dumps(plan_json or {}, ensure_ascii=False),
                 resume_summary=_json.dumps(structured, ensure_ascii=False, indent=2),
+                retrieved_context=retrieved_context or "（无）",
                 existing_questions=existing_text or "（无）",
                 missing_dimensions=", ".join(missing_dims) if missing_dims else "（无）",
                 count_needed=str(count_needed),
                 target_count=str(target_count),
+                interview_mode=interview_mode,
             )
             response = await self.llm.chat([{"role": "user", "content": prompt}])
             items = self._parse_json_response(response)

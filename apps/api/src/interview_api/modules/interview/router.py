@@ -17,6 +17,7 @@ from interview_api.modules.interview.schemas import (
     BindResumeRequest,
     CreateSessionRequest,
     SendMessageRequest,
+    SetTargetPositionRequest,
     InterviewSessionResponse,
     InterviewSessionDetailResponse,
 )
@@ -116,6 +117,55 @@ async def delete_session(
     if not deleted:
         raise HTTPException(status_code=404, detail="会话不存在")
     return success(message="Session deleted")
+
+
+# ── Target Position ──
+
+
+@router.post("/sessions/{session_id}/target-position")
+async def set_target_position(
+    session_id: int,
+    body: SetTargetPositionRequest,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Set target position and trigger question generation."""
+    service = _build_service(db)
+    try:
+        await service.set_target_position(
+            session_id=session_id,
+            user_id=current_user.id,
+            target_position=body.target_position,
+            interview_mode=body.interview_mode,
+            question_count=body.question_count,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
+    # After confirming position, trigger question generation in background
+    from interview_api.modules.interview.service import _generate_questions_background
+    from interview_api.modules.interview.repository import InterviewSessionRepository
+    import asyncio
+
+    session_repo = InterviewSessionRepository(db)
+    await session_repo.update_question_generation_status(session_id, "GENERATING")
+    await db.commit()
+
+    asyncio.create_task(
+        _generate_questions_background(
+            session_id=session_id,
+            llm=OpenAICompatibleLLMProvider(),
+            embedding=OpenAICompatibleEmbeddingProvider(),
+            vector_store=MilvusVectorStoreProvider(embedding_dim=settings.embedding_dim),
+            prompt_builder=InterviewPromptBuilder(),
+            memory_manager=InterviewMemoryManager(),
+        )
+    )
+    return success(data={
+        "status": "ok",
+        "message": "岗位已确认，题目生成已触发",
+        "question_generation_status": "GENERATING",
+    })
 
 
 # ── Question-Driven Chat ──

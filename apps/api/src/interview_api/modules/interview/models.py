@@ -2,6 +2,7 @@ from datetime import datetime
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     DateTime,
     ForeignKey,
     Integer,
@@ -41,6 +42,18 @@ class InterviewSession(Base):
     last_compressed_turn: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0
     )
+    target_position: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    target_position_confirmed: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    interview_mode: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="comprehensive", server_default="comprehensive"
+    )
+    interview_plan_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    planner_trace_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    question_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=20, server_default="20"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -72,6 +85,16 @@ class InterviewSessionQuestion(Base):
     follow_up_count: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0"
     )
+    parent_question_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("interview_session_questions.id", ondelete="SET NULL"), nullable=True
+    )
+    is_dynamic: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    planned_order: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    answer_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    missing_points_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    evaluation_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     status: Mapped[str] = mapped_column(
         String(20), nullable=False, default="PENDING", server_default="PENDING"
     )

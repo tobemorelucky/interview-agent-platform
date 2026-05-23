@@ -113,11 +113,14 @@ class Settings(BaseSettings):
     interview_resume_raw_text_preview_chars: int = 2000
 
     # Interview Question Generation
-    interview_question_count: int = 8
+    interview_question_count: int = 20
     interview_question_retrieval_top_k: int = 5
     interview_question_retrieval_min_score: float = 0.55
     interview_dimension_extraction_enabled: bool = True
-    interview_max_follow_ups_per_question: int = 3
+    interview_max_follow_ups_per_question: int = 2
+    interview_require_target_position: bool = True
+    interview_default_mode: str = "comprehensive"
+    interview_enable_dynamic_question: bool = True
 
     # Celery
     celery_broker_url: str = "redis://localhost:6379/1"

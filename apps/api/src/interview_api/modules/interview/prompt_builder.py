@@ -232,6 +232,11 @@ class InterviewPromptBuilder:
         memory_summary: str | None,
         recent_messages: list,
         user_answer: str,
+        target_position: str = "",
+        interview_mode: str = "comprehensive",
+        completed_summaries: str = "（无）",
+        remaining_summaries: str = "（无）",
+        interview_enable_dynamic: bool = True,
     ) -> str:
         """Build evaluation prompt for the first answer to a question.
 
@@ -253,9 +258,14 @@ class InterviewPromptBuilder:
 
         # Cap context sizes
         max_chars = settings.interview_max_context_chars
-        resume_alloc = min(len(resume_context), max_chars // 3)
+        resume_alloc = min(len(resume_context), max_chars // 4)
         conv_alloc = min(len(conv_text), max_chars // 3)
         memory_alloc = min(len(memory_text), max_chars // 6)
+
+        enable_dynamic = (
+            "true" if (interview_enable_dynamic and settings.interview_enable_dynamic_question)
+            else "false"
+        )
 
         return template.format(
             current_question=current_question,
@@ -264,6 +274,11 @@ class InterviewPromptBuilder:
             memory_summary=memory_text[:memory_alloc],
             recent_conversation=conv_text[:conv_alloc],
             user_answer=user_answer,
+            target_position=target_position or "未指定",
+            interview_mode=interview_mode,
+            completed_questions_summary=completed_summaries,
+            remaining_questions_summary=remaining_summaries,
+            interview_enable_dynamic_question=enable_dynamic,
         )
 
     def build_follow_up_prompt(
@@ -276,11 +291,14 @@ class InterviewPromptBuilder:
         recent_messages: list,
         user_answer: str,
         retrieved_context: list[dict] | None,
+        target_position: str = "",
+        interview_mode: str = "comprehensive",
+        completed_summaries: str = "（无）",
+        remaining_summaries: str = "（无）",
     ) -> str:
         """Build evaluation prompt for follow-up answers.
 
         Retrieves KB context to help the LLM ask deeper follow-up questions.
-        Falls back to evaluation prompt if KB retrieval fails.
         """
         template = _load_prompt("interview_question_evaluation_v1.md")
 
@@ -297,12 +315,15 @@ class InterviewPromptBuilder:
         conv_text = self._format_recent_conversation(recent_messages)
         knowledge_text = self._format_retrieved_context(retrieved_context)
 
-        # Cap context sizes
         max_chars = settings.interview_max_context_chars
         knowledge_alloc = min(len(knowledge_text), max_chars // 4)
-        resume_alloc = min(len(resume_context), max_chars // 3)
-        conv_alloc = min(len(conv_text), max_chars // 3)
+        resume_alloc = min(len(resume_context), max_chars // 4)
+        conv_alloc = min(len(conv_text), max_chars // 4)
         memory_alloc = min(len(memory_text), max_chars // 6)
+
+        enable_dynamic = (
+            "true" if settings.interview_enable_dynamic_question else "false"
+        )
 
         return template.format(
             current_question=current_question,
@@ -311,13 +332,51 @@ class InterviewPromptBuilder:
             memory_summary=memory_text[:memory_alloc],
             recent_conversation=conv_text[:conv_alloc],
             user_answer=user_answer,
+            target_position=target_position or "未指定",
+            interview_mode=interview_mode,
+            completed_questions_summary=completed_summaries,
+            remaining_questions_summary=remaining_summaries,
+            interview_enable_dynamic_question=enable_dynamic,
         ) + f"\n\n【知识库参考（用于追问深度）】\n{knowledge_text[:knowledge_alloc]}"
 
     def build_dimension_extraction_prompt(
-        self, resume_structured: dict
+        self, resume_structured: dict, target_position: str = "", question_count: int = 20
     ) -> str:
         """Build prompt for extracting interview dimensions from resume."""
         import json as _json
         template = _load_prompt("interview_dimension_extraction_v1.md")
         resume_json_str = _json.dumps(resume_structured, ensure_ascii=False, indent=2)
-        return template.format(resume_summary_json=resume_json_str)
+        return template.format(
+            resume_summary_json=resume_json_str,
+            target_position=target_position or "未指定",
+            question_count=str(question_count),
+        )
+
+    def build_question_summary_text(
+        self, questions: list[dict], question_type: str = "completed"
+    ) -> str:
+        """Format question summaries for prompt inclusion.
+
+        Args:
+            questions: list of question summary dicts (no standard_answer).
+            question_type: "completed" or "remaining".
+        """
+        if not questions:
+            return "（无）"
+        label = "已完成题目" if question_type == "completed" else "剩余题目"
+        lines = [f"【{label}】"]
+        for q in questions:
+            status_mark = {
+                "ASKED": "提问中",
+                "ANSWERED": "已答",
+                "SKIPPED": "已跳过",
+                "PENDING": "待提问",
+            }.get(q.get("status", ""), q.get("status", ""))
+            dyn = " [动态插入]" if q.get("is_dynamic") else ""
+            lines.append(
+                f"- Q{q.get('question_index', '?')}: {q.get('question', '')[:100]} "
+                f"[{status_mark}][{q.get('dimension', '')}]{dyn}"
+            )
+            if q.get("answer_summary"):
+                lines.append(f"  表现: {q['answer_summary'][:200]}")
+        return "\n".join(lines)
