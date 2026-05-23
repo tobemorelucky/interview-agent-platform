@@ -1,11 +1,13 @@
 """Interview service: session CRUD, resume binding, chat streaming with memory."""
 
+import asyncio
 import json
 import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from interview_api.core.config import settings
+from interview_api.infrastructure.db.session import async_session_factory
 from interview_api.modules.interview.models import (
     InterviewSession,
     InterviewSessionQuestion,
@@ -144,12 +146,24 @@ class InterviewService:
                 session_id, f"面试练习 - {resume.filename}"
             )
 
-        # Set status to GENERATING and commit — frontend will call
-        # POST /questions/generate to actually trigger generation.
+        # Set status to GENERATING, commit, then fire background task.
         await self.session_repo.update_question_generation_status(
             session_id, "GENERATING"
         )
         await self.db.commit()
+
+        # Fire background task with a NEW DB session so it survives
+        # this request's session lifecycle.
+        asyncio.create_task(
+            _generate_questions_background(
+                session_id=session_id,
+                llm=self.llm,
+                embedding=self.embedding,
+                vector_store=self.vector_store,
+                prompt_builder=self.prompt_builder,
+                memory_manager=self.memory_manager,
+            )
+        )
 
     # ── Helpers ──
 
@@ -210,6 +224,46 @@ class InterviewService:
 
 def _sse(event: str, data: dict | list) -> str:
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+# ── Background question generation (with fresh DB session) ──
+
+
+async def _generate_questions_background(
+    session_id: int,
+    llm,
+    embedding,
+    vector_store,
+    prompt_builder: InterviewPromptBuilder,
+    memory_manager: InterviewMemoryManager,
+) -> None:
+    """Run question generation in background with a fresh DB session."""
+    try:
+        async with async_session_factory() as db:
+            session_repo = InterviewSessionRepository(db)
+            msg_repo = InterviewMessageRepository(db)
+            question_repo = InterviewSessionQuestionRepository(db)
+            report_repo = ResumeReportRepository(db)
+            resume_repo = ResumeRepository(db)
+
+            chat_service = InterviewChatService(
+                db=db,
+                llm=llm,
+                embedding=embedding,
+                vector_store=vector_store,
+                session_repo=session_repo,
+                msg_repo=msg_repo,
+                question_repo=question_repo,
+                report_repo=report_repo,
+                resume_repo=resume_repo,
+                prompt_builder=prompt_builder,
+                memory_manager=memory_manager,
+            )
+            await chat_service.generate_questions(session_id)
+    except Exception:
+        logging.getLogger(__name__).exception(
+            "Background question generation failed for session %s", session_id
+        )
 
 
 # ── InterviewChatService: Question-driven chat ──
@@ -883,7 +937,7 @@ class InterviewChatService:
                  for q in existing],
                 ensure_ascii=False,
             )
-            prompt = _load_prompt("interview_question_generation_v1").format(
+            prompt = _load_prompt("interview_question_generation_v1.md").format(
                 resume_summary=_json.dumps(structured, ensure_ascii=False, indent=2),
                 existing_questions=existing_text or "（无）",
                 missing_dimensions=", ".join(missing_dims) if missing_dims else "（无）",

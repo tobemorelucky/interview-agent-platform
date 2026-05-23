@@ -176,25 +176,44 @@ async def generate_questions(
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Trigger question generation (synchronous, may take 10-30s)."""
-    service = _build_chat_service(db)
-    session = await service.session_repo.get_by_id_and_user(
-        session_id, current_user.id
+    """Trigger question generation (runs in background, returns immediately)."""
+    from interview_api.modules.interview.service import _generate_questions_background
+    from interview_api.modules.interview.repository import (
+        InterviewSessionRepository,
     )
+    from interview_api.infrastructure.embedding.provider import OpenAICompatibleEmbeddingProvider
+    from interview_api.infrastructure.llm.provider import OpenAICompatibleLLMProvider
+    from interview_api.infrastructure.milvus.provider import MilvusVectorStoreProvider
+    from interview_api.modules.interview.memory import InterviewMemoryManager
+    from interview_api.modules.interview.prompt_builder import InterviewPromptBuilder
+    import asyncio
+
+    session_repo = InterviewSessionRepository(db)
+    session = await session_repo.get_by_id_and_user(session_id, current_user.id)
     if session is None:
         raise HTTPException(status_code=404, detail="会话不存在")
     if session.resume_id is None:
         raise HTTPException(status_code=400, detail="请先绑定简历")
 
-    await service.generate_questions(session_id)
+    # Set GENERATING and commit
+    await session_repo.update_question_generation_status(session_id, "GENERATING")
+    await db.commit()
 
-    # Re-read session to get final status
-    session = await service.session_repo.get_by_id_and_user(
-        session_id, current_user.id
+    # Fire background task with fresh session
+    asyncio.create_task(
+        _generate_questions_background(
+            session_id=session_id,
+            llm=OpenAICompatibleLLMProvider(),
+            embedding=OpenAICompatibleEmbeddingProvider(),
+            vector_store=MilvusVectorStoreProvider(embedding_dim=settings.embedding_dim),
+            prompt_builder=InterviewPromptBuilder(),
+            memory_manager=InterviewMemoryManager(),
+        )
     )
     return success(data={
         "status": "ok",
-        "question_generation_status": session.question_generation_status,
+        "message": "题目生成已触发",
+        "question_generation_status": "GENERATING",
     })
 
 
