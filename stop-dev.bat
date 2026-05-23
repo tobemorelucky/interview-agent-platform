@@ -33,16 +33,11 @@ if !errorlevel!==0 (
     echo   Worker was not running
 )
 
-REM ---- Clean up any remaining service windows ----
-taskkill /FI "WINDOWTITLE eq IAP_DEV_API_8000" /T /F 2>nul
-taskkill /FI "WINDOWTITLE eq IAP_DEV_WEB_5173" /T /F 2>nul
-taskkill /FI "WINDOWTITLE eq IAP_DEV_WORKER" /T /F 2>nul
-
 REM ---- Docker (only if daemon is reachable) ----
 echo [4/4] Stopping Docker containers...
 docker info >nul 2>&1
 if !errorlevel!==0 (
-    docker compose down 2>&1
+    docker compose down >nul 2>&1
     if !errorlevel!==0 (
         echo   Docker containers stopped
     ) else (
@@ -54,9 +49,7 @@ if !errorlevel!==0 (
 
 echo.
 echo ============================================
-echo   All services stopped
+echo   All services stopped - window will close in 3s
 echo ============================================
-
-REM Auto-close after 5 seconds (press any key to close sooner)
-timeout /t 5 /nobreak >nul
-exit /b 0
+timeout /t 3 >nul
+exit /b

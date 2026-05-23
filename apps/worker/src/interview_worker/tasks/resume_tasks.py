@@ -1,61 +1,22 @@
-"""Celery tasks for resume processing.
+"""Celery task for resume processing — delegates to shared processor.
 
-Pipeline:
-  1. Download & parse resume file (PDF/DOCX/TXT)
-  2. LLM structured extraction (resume_parse_v1)
-  3. LLM retrieval query generation (resume_retrieval_queries_v1)
-  4. KB retrieval (Milvus kb_chunks_current)
-  5. LLM question generation with KB context (resume_interview_questions_v1)
-  6. Save report
+In Phase 3, resume processing runs in-process (asyncio.create_task in the API).
+This Celery task exists for Phase 4+ when we may switch back to async workers
+for bulk ingestion. It simply delegates to the shared processor module.
 """
 
-import json
 import time
-from pathlib import Path
-
 from celery.utils.log import get_task_logger
-
+from interview_worker import _paths  # noqa: F401
 from interview_worker._asyncio import run_async
-
-from interview_api.core.config import settings
-from interview_api.infrastructure.db.session import async_session_factory
-from interview_api.infrastructure.embedding.provider import (
-    OpenAICompatibleEmbeddingProvider,
-)
-from interview_api.infrastructure.llm.provider import OpenAICompatibleLLMProvider
-from interview_api.infrastructure.milvus.provider import MilvusVectorStoreProvider
-from interview_api.infrastructure.storage.provider import MinioObjectStorageProvider
-from interview_api.modules.resume.models import ResumeReport
-from interview_api.modules.resume.parser import ResumeParser
-from interview_api.modules.resume.repository import ResumeRepository, ResumeReportRepository
-from interview_api.modules.resume.retrieval import ResumeRetrievalService
 from interview_worker.celery_app import app
 
 logger = get_task_logger(__name__)
 
-# Prompt templates live in apps/api/prompt_templates/
-# This file is at apps/worker/src/interview_worker/tasks/resume_tasks.py
-# Walk up 6 parents (to repo root), then into apps/api/prompt_templates/
-_PROMPT_DIR = (
-    Path(__file__).resolve().parent.parent.parent.parent.parent.parent
-    / "apps" / "api" / "prompt_templates"
-)
-
-
-def _load_prompt(name: str) -> str:
-    """Load a prompt template from the api prompt_templates directory."""
-    return (_PROMPT_DIR / name).read_text(encoding="utf-8")
-
 
 @app.task(name="process_resume", bind=True)
 def process_resume(self, resume_id: int):
-    """Process a resume: parse -> extract -> KB retrieval -> question generation.
-
-    Lifecycle:
-    1. Mark PROCESSING
-    2. Run pipeline
-    3. Mark COMPLETED on success, FAILED on error
-    """
+    """Process a resume via the shared processor (delegates to API module)."""
     logger.info(
         "Task received: resume_id=%s task_id=%s",
         resume_id,
@@ -63,12 +24,18 @@ def process_resume(self, resume_id: int):
     )
     t0 = time.monotonic()
     try:
-        run_async(_process(resume_id))
-    except Exception:
+        from interview_api.modules.resume.processor import process_resume_async
+
+        run_async(process_resume_async(resume_id, task_id=self.request.id))
+    except Exception as exc:
         elapsed = time.monotonic() - t0
         logger.exception(
             "Task FAILED: resume_id=%s elapsed=%.2fs", resume_id, elapsed
         )
+        try:
+            run_async(_mark_resume_failed(resume_id, exc))
+        except Exception:
+            logger.exception("Failed to mark resume_id=%s as FAILED", resume_id)
         raise
     else:
         elapsed = time.monotonic() - t0
@@ -77,218 +44,18 @@ def process_resume(self, resume_id: int):
         )
 
 
-async def _process(resume_id: int):
-    """Async body of process_resume."""
+async def _mark_resume_failed(resume_id: int, exc: Exception) -> None:
+    """Best-effort status update for failures before the shared processor runs."""
+    from interview_api.infrastructure.db.session import async_session_factory
+    from interview_api.modules.resume.repository import ResumeRepository
 
-    # Phase 0: mark PROCESSING in its own transaction
-    async with async_session_factory() as db0:
-        repo0 = ResumeRepository(db0)
-        await repo0.mark_processing_started(resume_id)
-        await db0.commit()
-    logger.info("[resume %s] Status -> PROCESSING", resume_id)
-
-    # Phase 1: run pipeline
+    error_text = f"Worker task failed before resume processing completed: {exc}"
     async with async_session_factory() as db:
         repo = ResumeRepository(db)
-        report_repo = ResumeReportRepository(db)
-        try:
-            storage = MinioObjectStorageProvider()
-            llm = OpenAICompatibleLLMProvider()
-            embedding = OpenAICompatibleEmbeddingProvider()
-            vector_store = MilvusVectorStoreProvider(embedding_dim=settings.embedding_dim)
-
-            # Helper: update stage in its own short-lived session so the frontend
-            # sees progress even while the pipeline session is still open.
-            async def _update_stage(stage: str, message: str = ""):
-                async with async_session_factory() as s:
-                    await ResumeRepository(s).update_processing_stage(
-                        resume_id, stage, message
-                    )
-                    await s.commit()
-
-            resume = await repo.get_by_id(resume_id)
-            if resume is None:
-                raise ValueError(f"Resume {resume_id} not found")
-
-            # 1. Download & parse
-            logger.info("[resume %s] ========== PARSING_RESUME ==========", resume_id)
-            await _update_stage("PARSING_RESUME", "正在解析简历文件...")
-            file_bytes = await storage.download(
-                bucket_name=settings.minio_bucket,
-                object_key=resume.storage_key,
-            )
-            parser = ResumeParser()
-            raw_text = parser.parse(file_bytes, resume.file_type)
-            await repo.update_raw_text(resume_id, raw_text)
-            logger.info("[resume %s] Parsed %s chars of text", resume_id, len(raw_text))
-
-            # 2. Structured extraction
-            logger.info("[resume %s] ========== STRUCTURING_RESUME ==========", resume_id)
-            await _update_stage("STRUCTURING_RESUME", "正在提取简历结构化信息...")
-            parse_prompt = _load_prompt("resume_parse_v1.md").format(resume_text=raw_text)
-            logger.info(
-                "[resume %s] LLM call starting: structured extraction (%s chars input)",
-                resume_id,
-                len(parse_prompt),
-            )
-            structured_raw = await llm.chat([{"role": "user", "content": parse_prompt}])
-            logger.info(
-                "[resume %s] LLM response: %s chars",
-                resume_id,
-                len(structured_raw),
-            )
-            structured_json = _parse_json_response_logged(structured_raw, resume_id)
-            logger.info("[resume %s] Structured extraction done", resume_id)
-
-            # 3. Generate retrieval queries
-            logger.info(
-                "[resume %s] ========== GENERATING_RETRIEVAL_QUERIES ==========",
-                resume_id,
-            )
-            await _update_stage(
-                "GENERATING_RETRIEVAL_QUERIES", "正在生成知识库检索查询..."
-            )
-            queries_prompt = _load_prompt("resume_retrieval_queries_v1.md").format(
-                structured_resume=json.dumps(structured_json, ensure_ascii=False),
-                query_count=settings.resume_retrieval_query_count,
-            )
-            logger.info(
-                "[resume %s] LLM call starting: retrieval query generation",
-                resume_id,
-            )
-            queries_raw = await llm.chat([{"role": "user", "content": queries_prompt}])
-            logger.info(
-                "[resume %s] LLM response: %s chars",
-                resume_id,
-                len(queries_raw),
-            )
-            queries_json = _parse_json_response_logged(queries_raw, resume_id)
-            logger.info(
-                "[resume %s] Generated %s retrieval queries",
-                resume_id,
-                len(queries_json.get("queries", [])),
-            )
-
-            # 4. KB Retrieval
-            if settings.resume_kb_retrieval_enabled:
-                logger.info("[resume %s] ========== RETRIEVING_KB ==========", resume_id)
-                await _update_stage("RETRIEVING_KB", "正在检索知识库相关内容...")
-                retrieval_service = ResumeRetrievalService(embedding, vector_store)
-                retrieved_context = await retrieval_service.retrieve(
-                    queries=queries_json.get("queries", []),
-                )
-                fallback_policy = retrieval_service.determine_fallback_policy(
-                    retrieved_context,
-                    question_count=settings.resume_question_count,
-                )
-                logger.info(
-                    "[resume %s] KB retrieval done: %s total hits, policy=%s",
-                    resume_id,
-                    retrieved_context.get("total_hits", 0),
-                    fallback_policy,
-                )
-            else:
-                logger.info("[resume %s] KB retrieval disabled", resume_id)
-                retrieved_context = {"total_hits": 0, "queries": []}
-                fallback_policy = "NO_KB"
-
-            # 5. Generate interview questions
-            logger.info(
-                "[resume %s] ========== GENERATING_QUESTIONS (policy=%s) ==========",
-                resume_id,
-                fallback_policy,
-            )
-            await _update_stage("GENERATING_QUESTIONS", "正在生成面试问题...")
-            questions_prompt = _load_prompt("resume_interview_questions_v1.md").format(
-                structured_resume=json.dumps(structured_json, ensure_ascii=False),
-                retrieved_context=json.dumps(retrieved_context, ensure_ascii=False),
-                fallback_policy=fallback_policy,
-                question_count=settings.resume_question_count,
-            )
-            logger.info(
-                "[resume %s] LLM call starting: interview question generation (%s chars input)",
-                resume_id,
-                len(questions_prompt),
-            )
-            questions_raw = await llm.chat([{"role": "user", "content": questions_prompt}])
-            logger.info(
-                "[resume %s] LLM response: %s chars",
-                resume_id,
-                len(questions_raw),
-            )
-            questions_json = _parse_json_response_logged(questions_raw, resume_id)
-            logger.info(
-                "[resume %s] Generated %s questions",
-                resume_id,
-                len(questions_json.get("questions", [])),
-            )
-
-            # 6. Save report
-            logger.info("[resume %s] ========== SAVING_REPORT ==========", resume_id)
-            await _update_stage("SAVING_REPORT", "正在保存分析报告...")
-            report = ResumeReport(
-                resume_id=resume_id,
-                user_id=resume.user_id,
-                summary_json=structured_json,
-                retrieval_queries_json=queries_json,
-                retrieved_context_json=retrieved_context,
-                questions_json=questions_json,
-                suggestions_json=questions_json.get("overall_suggestions", {}),
-            )
-            await report_repo.create(report)
-
-            await repo.mark_processing_finished(resume_id, "COMPLETED")
-            await db.commit()
-            await _update_stage("COMPLETED", "简历分析完成")
-            logger.info("[resume %s] SUCCESS — status COMPLETED", resume_id)
-
-        except Exception:
-            await db.rollback()
-            logger.exception("[resume %s] Pipeline failed — marking FAILED", resume_id)
-
-            error_text = _format_error()
-            async with async_session_factory() as db2:
-                repo2 = ResumeRepository(db2)
-                await repo2.mark_processing_finished(
-                    resume_id, "FAILED", error_message=error_text
-                )
-                await repo2.update_processing_stage(
-                    resume_id, "FAILED", error_text[:500]
-                )
-                await db2.commit()
-            logger.info("[resume %s] Status -> FAILED", resume_id)
-
-            raise
-
-
-def _parse_json_response(raw: str) -> dict:
-    """Parse JSON from LLM response, stripping markdown code fences if present."""
-    text = raw.strip()
-    if text.startswith("```"):
-        text = text.split("\n", 1)[-1] if "\n" in text else ""
-        if text.endswith("```"):
-            text = text[:-3]
-        text = text.strip()
-    return json.loads(text)
-
-
-def _parse_json_response_logged(raw: str, resume_id: int) -> dict:
-    """Parse JSON with detailed logging on failure."""
-    try:
-        return _parse_json_response(raw)
-    except Exception:
-        logger.error(
-            "[resume %s] JSON parse failed. Raw (first 500 chars): %s",
+        await repo.mark_processing_finished(
             resume_id,
-            raw[:500],
+            "FAILED",
+            error_message=error_text,
         )
-        raise
-
-
-def _format_error() -> str:
-    """Return a one-line summary of the current exception."""
-    import sys
-
-    exc_type, exc_value, _ = sys.exc_info()
-    msg = f"{exc_type.__name__}: {exc_value}" if exc_type else str(exc_value)
-    return msg[:2000]
+        await repo.update_processing_stage(resume_id, "FAILED", error_text[:500])
+        await db.commit()

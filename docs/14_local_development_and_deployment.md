@@ -13,6 +13,86 @@
 
 ---
 
+## 17. Local Worker Notes For Resume Processing
+
+As of Phase 3, resume analysis is not an API in-process background task. The
+API writes the uploaded resume row, dispatches `process_resume` to Celery, and
+the Celery worker performs parsing, LLM extraction, KB retrieval, and report
+persistence.
+
+Local development therefore requires these services to be healthy at the same
+time:
+
+```text
+PostgreSQL  -> resume rows and reports
+Redis DB 1  -> Celery broker
+Redis DB 2  -> Celery result backend
+MinIO       -> uploaded resume files
+API         -> upload, polling, interview session binding
+Worker      -> process_resume and process_kb_document tasks
+Web         -> user interaction and polling
+```
+
+The worker imports shared API modules. In local development it must prefer the
+live source tree at `apps/api/src`, not a stale `interview_api` wheel inside the
+worker virtual environment. The provided `.runtime/dev/run-worker.bat` sets:
+
+```bat
+PYTHONPATH=<repo>\apps\api\src;<repo>\apps\worker\src;%PYTHONPATH%
+```
+
+If a resume stays at `processing_stage=QUEUED`, check `logs/dev/worker-YYYY-MM-DD.log`
+first. The most common causes are:
+
+1. Redis is not reachable on `localhost:6379`.
+2. The worker is not running or has exited.
+3. The worker imported a stale API package and cannot find the current resume
+   processor module.
+
+Expected successful log sequence:
+
+```text
+API: Dispatched process_resume resume_id=<id> task_id=<task_id>
+Worker: Task process_resume[<task_id>] received
+Worker: [resume <id>] Status -> PROCESSING
+Worker: [resume <id>] ========== PARSING_RESUME ==========
+Worker: [resume <id>] SUCCESS - status COMPLETED
+```
+
+If the worker reaches `STRUCTURING_RESUME` and then stops moving, it is waiting
+for the configured LLM provider. `LLM_REQUEST_TIMEOUT_SECONDS` bounds this wait
+so provider/network problems become a visible `FAILED` resume instead of an
+indefinite processing state.
+`LLM_MAX_RETRIES=0` is recommended for local development because SDK-level
+automatic retries can otherwise make one slow provider call look like a stuck
+worker.
+For local verification, keep `RESUME_QUESTION_COUNT` modest, for example `8`.
+Generating 20 full questions can exceed the default LLM timeout on slower
+providers.
+
+Worker database sessions must load the unified ORM model registry before
+writing rows with cross-module foreign keys. The runtime import path is:
+
+```text
+interview_api.infrastructure.db.session
+  -> interview_api.modules.models
+  -> users, kb, qa, resume, interview models
+```
+
+If `resume_reports` fails with `NoReferencedTableError` for `users`, the worker
+is not using the live API source or the model registry was not imported in that
+process.
+
+The resume processor should keep DB transactions short. LLM calls, embedding
+requests, Milvus search, and MinIO download must happen outside an open DB
+transaction. This avoids row locks, stale asyncpg connections, and status
+updates that hang while a long-running provider call is in progress.
+
+When testing after a manual stop, restart PostgreSQL and Redis before retrying.
+If they were stopped while a task was running, the log may also show
+`connection is closed` or Redis connection-refused errors. Those are shutdown
+side effects; re-run the task after infrastructure is healthy.
+
 # 2. 推荐开发环境
 
 ## 2.1 操作系统

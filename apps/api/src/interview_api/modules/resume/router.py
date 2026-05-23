@@ -36,9 +36,8 @@ async def upload_resume(
     await db.commit()
 
     resume_id = resume_data["id"]
-
-    # Dispatch Celery task AFTER commit so worker can see the row
     repo = ResumeRepository(db)
+
     try:
         from interview_api.infrastructure.tasks.celery_client import (
             dispatch_process_resume,
@@ -46,22 +45,37 @@ async def upload_resume(
 
         task_id = dispatch_process_resume(resume_id)
         await repo.update_task_id(resume_id, task_id)
-        await db.commit()
         resume_data["task_id"] = task_id
-        logger.info(
-            "Upload resume_id=%s filename=%s -> Celery task_id=%s",
-            resume_id,
-            filename,
-            task_id,
-        )
     except Exception as e:
-        logger.warning("Failed to dispatch Celery task for resume %s: %s", resume_id, e)
+        logger.exception("Failed to dispatch resume task for resume %s", resume_id)
         await repo.mark_processing_finished(
-            resume_id, "FAILED", error_message=f"Celery dispatch failed: {e}"
+            resume_id,
+            "FAILED",
+            error_message=f"Celery dispatch failed: {e}",
+        )
+        await repo.update_processing_stage(
+            resume_id, "FAILED", "Resume analysis dispatch failed. Please retry later."
         )
         await db.commit()
         resume_data["status"] = "FAILED"
         resume_data["error_message"] = f"Celery dispatch failed: {e}"
+        resume_data["processing_stage"] = "FAILED"
+        resume_data["stage_message"] = "Resume analysis dispatch failed. Please retry later."
+        return success(data=resume_data)
+
+    await repo.update_processing_stage(
+        resume_id, "QUEUED", "Resume analysis task queued."
+    )
+    await db.commit()
+    resume_data["processing_stage"] = "QUEUED"
+    resume_data["stage_message"] = "Resume analysis task queued."
+
+    logger.info(
+        "Upload resume_id=%s filename=%s -> Celery task_id=%s",
+        resume_id,
+        filename,
+        resume_data["task_id"],
+    )
 
     return success(data=resume_data)
 

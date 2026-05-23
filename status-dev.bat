@@ -22,6 +22,14 @@ if %errorlevel%==0 (
     echo   [STOPPED]  Worker
 )
 
+REM ---- Redis (Celery broker) ----
+powershell -NoProfile -Command "$c=New-Object Net.Sockets.TcpClient; try { $c.Connect('localhost',6379); $c.Close(); exit 0 } catch { exit 1 }" >nul 2>&1
+if %errorlevel%==0 (
+    echo   [RUNNING]  Redis  localhost:6379
+) else (
+    echo   [STOPPED]  Redis  localhost:6379
+)
+
 REM ---- Web (port 5173) ----
 netstat -ano | findstr ":5173 " | findstr "LISTENING" >nul
 if %errorlevel%==0 (
@@ -39,5 +47,6 @@ if %errorlevel%==0 (
     echo   Docker daemon not reachable
 )
 echo.
-timeout /t 5 /nobreak >nul
-exit /b 0
+echo Window will close in 3s, or press any key to close now...
+timeout /t 3 >nul
+exit /b

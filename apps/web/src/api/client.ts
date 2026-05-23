@@ -19,7 +19,7 @@ client.interceptors.response.use(
   (response) => {
     const envelope = response.data as ApiEnvelope;
     if (envelope.code === "OK") {
-      return envelope.data;
+      return envelope.data as unknown as typeof response;
     }
     throw new ApiError(envelope.code, envelope.message);
   },

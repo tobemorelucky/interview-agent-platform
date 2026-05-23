@@ -90,7 +90,7 @@ watch(() => qa.streamingContent, () => {
 
           <div
             v-for="m in qa.messages"
-            :key="m.id || m.created_at"
+            :key="m.id ?? m.created_at ?? m.content"
             :class="['message', m.role]"
           >
             <div class="message-content">{{ m.content }}</div>

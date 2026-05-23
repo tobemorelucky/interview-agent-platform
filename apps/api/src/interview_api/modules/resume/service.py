@@ -95,6 +95,8 @@ class ResumeService:
                     "status": r.status,
                     "error_message": r.error_message,
                     "task_id": r.task_id,
+                    "processing_stage": r.processing_stage,
+                    "stage_message": r.stage_message,
                     "created_at": r.created_at.isoformat() if r.created_at else None,
                     "updated_at": r.updated_at.isoformat() if r.updated_at else None,
                 }
@@ -122,6 +124,8 @@ class ResumeService:
             "status": resume.status,
             "error_message": resume.error_message,
             "task_id": resume.task_id,
+            "processing_stage": resume.processing_stage,
+            "stage_message": resume.stage_message,
             "raw_text_preview": raw_text_preview,
             "created_at": resume.created_at.isoformat() if resume.created_at else None,
             "updated_at": resume.updated_at.isoformat() if resume.updated_at else None,

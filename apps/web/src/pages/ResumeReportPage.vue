@@ -3,7 +3,7 @@ import { ref, onMounted, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { getResume, getResumeReport } from "../api/resume";
 import { ApiError } from "../api/client";
-import type { ResumeDetail, ResumeReport, InterviewQuestion, RetrievedQueryResult } from "../types/resume";
+import type { ResumeDetail, ResumeReport } from "../types/resume";
 import { sourceLabel, sourceColor, statusLabel } from "../types/resume";
 
 const route = useRoute();

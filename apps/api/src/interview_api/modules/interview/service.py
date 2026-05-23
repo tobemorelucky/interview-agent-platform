@@ -36,6 +36,9 @@ class InterviewService:
     async def create_session(
         self, user_id: int, title: str | None = None
     ) -> InterviewSession:
+        if title is None:
+            existing = await self.session_repo.list_by_user(user_id)
+            title = f"面试练习 {len(existing) + 1}"
         session = await self.session_repo.create(user_id=user_id, title=title)
         await self.db.commit()
         return session
@@ -83,7 +86,7 @@ class InterviewService:
     async def bind_resume(
         self, session_id: int, user_id: int, resume_id: int
     ) -> None:
-        """Bind a processed resume to an interview session.
+        """Bind an uploaded resume to an interview session.
 
         Raises ValueError with a user-facing message on failure.
         """
@@ -91,33 +94,41 @@ class InterviewService:
         if session is None:
             raise ValueError("会话不存在")
 
-        if session.resume_id is not None:
+        already_bound = session.resume_id == resume_id
+        if session.resume_id is not None and not already_bound:
             raise ValueError("该会话已绑定简历，每个会话仅限绑定一份简历")
 
         resume = await self.resume_repo.get_by_id(resume_id)
         if resume is None or resume.user_id != user_id:
             raise ValueError("简历不存在")
+        if resume.status == "FAILED":
+            raise ValueError("简历处理失败，请重新上传")
+
+        if not already_bound:
+            await self.session_repo.bind_resume(session_id, resume_id)
 
         if resume.status != "COMPLETED":
-            raise ValueError(
-                f"简历尚未处理完成（当前状态: {resume.status}），请等待处理完成后再绑定"
-            )
-
-        await self.session_repo.bind_resume(session_id, resume_id)
+            await self.db.commit()
+            return
 
         # Auto-generate welcome message from assistant
-        welcome = (
-            "我已读取你的简历，可以开始模拟面试。\n\n"
-            "你可以输入「开始面试」让我根据你的简历进行针对性提问，"
-            "也可以先聊聊你感兴趣的方向或想重点准备的内容。"
+        existing_messages = await self.msg_repo.get_by_session_id(session_id)
+        has_welcome = any(
+            m.role == "ASSISTANT" and m.turn_index == 0 for m in existing_messages
         )
-        await self.msg_repo.create(
-            session_id=session_id,
-            role="ASSISTANT",
-            content=welcome,
-            metadata_json={"source": "LLM_GENERATED"},
-            turn_index=0,
-        )
+        if not has_welcome:
+            welcome = (
+                "我已读取你的简历，可以开始模拟面试。\n\n"
+                "你可以输入「开始面试」让我根据你的简历进行针对性提问，"
+                "也可以先聊聊你感兴趣的方向或想重点准备的内容。"
+            )
+            await self.msg_repo.create(
+                session_id=session_id,
+                role="ASSISTANT",
+                content=welcome,
+                metadata_json={"source": "LLM_GENERATED"},
+                turn_index=0,
+            )
 
         if session.title is None:
             await self.session_repo.update_title(

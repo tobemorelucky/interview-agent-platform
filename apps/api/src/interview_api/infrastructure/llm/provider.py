@@ -12,6 +12,8 @@ class OpenAICompatibleLLMProvider:
         self._client = AsyncOpenAI(
             base_url=settings.llm_base_url,
             api_key=settings.llm_api_key,
+            timeout=settings.llm_request_timeout_seconds,
+            max_retries=settings.llm_max_retries,
         )
         self._model = settings.llm_model
 

@@ -67,6 +67,8 @@ class Settings(BaseSettings):
     llm_base_url: str = ""
     llm_api_key: str = ""
     llm_model: str = ""
+    llm_request_timeout_seconds: float = 60.0
+    llm_max_retries: int = 0
 
     # Embedding
     embedding_provider: str = ""
@@ -93,7 +95,7 @@ class Settings(BaseSettings):
     # Resume
     resume_max_file_size_mb: int = 10
     resume_allowed_types: str = "pdf,docx,txt"
-    resume_question_count: int = 20
+    resume_question_count: int = 8
 
     # Resume KB Retrieval
     resume_kb_retrieval_enabled: bool = True

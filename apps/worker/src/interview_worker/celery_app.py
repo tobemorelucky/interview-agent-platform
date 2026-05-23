@@ -3,6 +3,7 @@ import logging
 from celery import Celery
 from celery.signals import worker_shutdown
 
+from interview_worker import _paths  # noqa: F401
 from interview_api.core.config import settings
 from interview_worker._asyncio import run_async, shutdown_loop
 

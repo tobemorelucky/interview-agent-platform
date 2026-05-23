@@ -178,6 +178,7 @@ export function statusLabel(status: string): string {
 export function stageLabel(stage: string | null): string {
   if (!stage) return ""
   switch (stage) {
+    case "QUEUED": return "已加入队列"
     case "PARSING_RESUME": return "解析简历文件"
     case "STRUCTURING_RESUME": return "提取结构化信息"
     case "GENERATING_RETRIEVAL_QUERIES": return "生成检索查询"

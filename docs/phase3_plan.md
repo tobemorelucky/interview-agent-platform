@@ -1,6 +1,6 @@
 # Phase 3 Implementation Plan: Resume-Driven Mock Interview
 
-## Status: PENDING CONFIRMATION
+## Status: IMPLEMENTED WITH CELERY WORKER RUNTIME
 
 ---
 
@@ -1317,3 +1317,54 @@ Milvus uses **COSINE** metric. Score = cosine similarity between the query embed
 8. **No partial progress** — frontend only sees UPLOADED/PROCESSING/COMPLETED/FAILED, not "retrieving KB" substage.
 9. **KB retrieval is read-only** — no feedback loop to improve KB coverage based on what questions were commonly generated.
 10. **No question-level feedback** — users can't rate or flag individual questions as helpful/unhelpful.
+
+---
+
+## 15. Runtime Correction Notes
+
+The implemented Phase 3 runtime uses Celery for resume processing:
+
+```text
+Frontend upload
+  -> API saves file and resume row
+  -> API dispatches Celery task `process_resume`
+  -> Worker imports live API source from `apps/api/src`
+  -> Worker updates processing_stage and status
+  -> Frontend polls resume status and unlocks interview chat after COMPLETED
+```
+
+Important local development rule: the worker must not load a stale installed
+copy of `interview_api` from `apps/worker/.venv/Lib/site-packages`. It must
+prefer the source checkout. The worker bootstrap module
+`interview_worker._paths` and `.runtime/dev/run-worker.bat` both ensure
+`apps/api/src` appears before site-packages on `sys.path`.
+
+If a resume remains `QUEUED`, inspect the worker log for:
+
+```text
+Task process_resume[...] received
+ModuleNotFoundError: No module named 'interview_api.modules.resume.processor'
+Cannot connect to redis://localhost:6379/1
+```
+
+These messages mean the task never reached the resume processor, so the user
+interface will keep polling until the resume is marked `FAILED` or re-uploaded.
+
+Additional runtime fixes:
+
+- Worker and API DB sessions import `interview_api.modules.models` so SQLAlchemy
+  metadata contains all tables before ORM flush. Without this, saving
+  `resume_reports.user_id` can fail in the worker with `NoReferencedTableError`
+  because only `resume.models` was imported and the `users` table was missing
+  from the process-local metadata registry.
+- The resume processor uses short DB sessions. It reads resume metadata, saves
+  raw text, updates each stage, and saves the final report in separate
+  transactions. Slow external calls do not hold a DB transaction open.
+- Celery passes the current task id into the processor. If Redis later delivers
+  an older unacknowledged task for the same resume, the processor skips it when
+  the resume row already points to a newer task id.
+- Resume processing exceptions are re-raised after best-effort `FAILED` status
+  persistence so Celery results reflect task failure instead of reporting
+  `succeeded` for a failed resume.
+- The async SQLAlchemy engine uses connection pre-ping and recycle settings to
+  reduce failures after local Docker infrastructure is restarted.

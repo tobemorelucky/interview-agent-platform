@@ -36,7 +36,20 @@
       "Bash(powershell:*)",
       "Bash(echo \"Worker PID: $!\")",
       "Read(//tmp/**)",
-      "Bash(dir E:\\\\work\\\\code\\\\python\\\\interview-agent-platform\\\\apps\\\\api\\\\prompt_templates:*)"
+      "Bash(dir E:\\\\work\\\\code\\\\python\\\\interview-agent-platform\\\\apps\\\\api\\\\prompt_templates:*)",
+      "Bash(ls -la \"E:\\\\work\\\\code\\\\python\\\\interview-agent-platform\"/*.sh \"E:\\\\work\\\\code\\\\python\\\\interview-agent-platform\"/*.bat \"E:\\\\work\\\\code\\\\python\\\\interview-agent-platform\"/*.ps1)",
+      "Bash(findstr \":5432 \")",
+      "Bash(findstr \"LISTENING\")",
+      "Bash(findstr \":6379 \")",
+      "Bash(findstr \":9000 \")",
+      "Bash(cmd.exe /c \"echo test1 && echo test2 >&2\")",
+      "Bash(cmd.exe /c \"echo stdout1 & echo stderr1 >&2\")",
+      "Bash(cmd.exe //c \"echo stdout_line && echo stderr_line 1>&2\")",
+      "Bash(echo \"Exit: $?\")",
+      "Bash(cmd.exe:*)",
+      "Bash(cat)",
+      "Bash(rm -f /tmp/test_redirect.bat)",
+      "Bash(powershell.exe:*)"
     ]
   }
 }

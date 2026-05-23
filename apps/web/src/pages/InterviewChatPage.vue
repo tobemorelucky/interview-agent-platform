@@ -36,19 +36,26 @@ const chatContainer = ref<HTMLElement | null>(null)
 
 // ── Computed ──
 const activeSession = () => sessions.value.find((s) => s.id === activeSessionId.value)
+const isActiveResumeReady = () => activeSession()?.resume_status === "COMPLETED"
+const isActiveResumeFailed = () => activeSession()?.resume_status === "FAILED"
+const hasActiveResume = () => Boolean(activeSession()?.resume_id)
 
 // ── Methods ──
 
 async function loadSessions() {
   try {
     sessions.value = await listSessions()
+    const active = activeSession()
+    if (active?.resume_id && active.resume_status !== "COMPLETED" && active.resume_status !== "FAILED") {
+      startResumePoll(active.resume_id, active.id)
+    }
   } catch (e) {
     console.error("Failed to load sessions", e)
   }
 }
 
-async function selectSession(id: number) {
-  if (activeSessionId.value === id) return
+async function selectSession(id: number, force = false) {
+  if (!force && activeSessionId.value === id) return
   activeSessionId.value = id
   loading.value = true
   messages.value = []
@@ -58,9 +65,22 @@ async function selectSession(id: number) {
   try {
     const detail = await getSession(id)
     messages.value = detail.messages || []
+    const index = sessions.value.findIndex((s) => s.id === id)
+    if (index >= 0) {
+      sessions.value[index] = {
+        ...sessions.value[index],
+        ...detail,
+      }
+    }
     // If resume processing, start polling
-    if (detail.resume_status && detail.resume_status !== "COMPLETED" && detail.resume_id) {
-      startResumePoll(detail.resume_id)
+    if (detail.resume_id && detail.resume_status !== "COMPLETED" && detail.resume_status !== "FAILED") {
+      startResumePoll(detail.resume_id, id)
+    } else {
+      if (resumePollTimer.value) clearInterval(resumePollTimer.value)
+      resumePollTimer.value = null
+      uploadingResume.value = false
+      resumeProcessingStage.value = ""
+      resumeStageMessage.value = ""
     }
   } catch (e) {
     console.error("Failed to load session", e)
@@ -95,6 +115,9 @@ async function handleDeleteSession(id: number) {
 }
 
 async function handleUploadResume() {
+  const sessionId = activeSessionId.value
+  if (!sessionId) return
+
   const input = document.createElement("input")
   input.type = "file"
   input.accept = ".pdf,.docx,.txt"
@@ -106,7 +129,17 @@ async function handleUploadResume() {
     resumeStageMessage.value = ""
     try {
       const resume = await uploadResume(file)
-      startResumePoll(resume.id)
+      if (resume.status === "FAILED") {
+        alert(`简历处理任务创建失败: ${resume.error_message || "未知错误"}`)
+        uploadingResume.value = false
+        return
+      }
+      resumeProcessingStage.value = resume.processing_stage || ""
+      resumeStageMessage.value = resume.stage_message || ""
+      await bindResume(sessionId, resume.id)
+      await loadSessions()
+      await selectSession(sessionId, true)
+      startResumePoll(resume.id, sessionId)
     } catch (e) {
       if (e instanceof ApiError) alert(e.message)
       else alert("上传失败")
@@ -116,10 +149,13 @@ async function handleUploadResume() {
   input.click()
 }
 
-function startResumePoll(resumeId: number) {
+function startResumePoll(resumeId: number, sessionId = activeSessionId.value) {
   if (resumePollTimer.value) clearInterval(resumePollTimer.value)
+  uploadingResume.value = true
+  let pollCount = 0
   resumePollTimer.value = setInterval(async () => {
     try {
+      pollCount++
       const resume = await apiGetResume(resumeId)
       resumeProcessingStage.value = resume.processing_stage || ""
       resumeStageMessage.value = resume.stage_message || ""
@@ -127,14 +163,17 @@ function startResumePoll(resumeId: number) {
         clearInterval(resumePollTimer.value!)
         resumePollTimer.value = null
         uploadingResume.value = false
-        // Auto-bind to current session
-        if (activeSessionId.value) {
+        await loadSessions()
+        // Finalize the already-bound session and add the welcome message.
+        if (sessionId) {
           try {
-            await bindResume(activeSessionId.value, resumeId)
+            await bindResume(sessionId, resumeId)
             resumeProcessingStage.value = ""
             resumeStageMessage.value = ""
             // Reload session to show welcome message
-            await selectSession(activeSessionId.value)
+            if (activeSessionId.value === sessionId) {
+              await selectSession(sessionId, true)
+            }
             // Update sessions list
             await loadSessions()
           } catch (e) {
@@ -145,7 +184,19 @@ function startResumePoll(resumeId: number) {
         clearInterval(resumePollTimer.value!)
         resumePollTimer.value = null
         uploadingResume.value = false
+        resumeProcessingStage.value = resume.processing_stage || "FAILED"
+        resumeStageMessage.value = resume.error_message || resume.stage_message || ""
+        await loadSessions()
+        if (sessionId && activeSessionId.value === sessionId) {
+          await selectSession(sessionId, true)
+        }
         alert(`简历处理失败: ${resume.error_message || "未知错误"}`)
+      } else if (resume.status === "UPLOADED" || resume.processing_stage === "QUEUED") {
+        // Warn after 20 polls (~60s) that worker may not be running
+        if (pollCount === 20) {
+          resumeStageMessage.value =
+            "处理较慢，请确认 Celery Worker 已启动。如长时间无响应，请检查服务状态。"
+        }
       }
     } catch {
       // polling error, ignore
@@ -157,8 +208,16 @@ async function handleSend() {
   const text = inputText.value.trim()
   if (!text || sending.value || !activeSessionId.value) return
 
-  if (!activeSession()?.resume_id) {
+  if (!hasActiveResume()) {
     alert("请先上传并绑定一份简历")
+    return
+  }
+  if (isActiveResumeFailed()) {
+    alert("简历处理失败，请重新上传简历后再开始面试")
+    return
+  }
+  if (!isActiveResumeReady()) {
+    alert("简历还在处理中，请等待处理完成后再开始面试")
     return
   }
 
@@ -360,16 +419,18 @@ loadSessions()
             class="btn-upload"
             @click="handleUploadResume"
           >
-            {{ activeSession()?.resume_id ? '更换简历' : '上传简历' }}
+            {{ hasActiveResume() ? '更换简历' : '上传简历' }}
           </button>
         </div>
 
         <!-- Messages -->
         <div ref="chatContainer" class="chat-messages" v-if="!loading">
           <div v-if="messages.length === 0 && !streaming" class="chat-empty">
-            <p v-if="activeSession()?.resume_id">
+            <p v-if="isActiveResumeReady()">
               简历已就绪，输入「开始面试」开启模拟面试
             </p>
+            <p v-else-if="isActiveResumeFailed()">简历处理失败，请重新上传简历</p>
+            <p v-else-if="hasActiveResume()">简历处理中，请等待处理完成</p>
             <p v-else>请先上传简历</p>
           </div>
 
@@ -433,11 +494,15 @@ loadSessions()
         <div class="chat-input">
           <textarea
             v-model="inputText"
-            :disabled="sending || !activeSession()?.resume_id"
+            :disabled="sending || !isActiveResumeReady()"
             :placeholder="
-              activeSession()?.resume_id
+              isActiveResumeReady()
                 ? '输入你的回答... (Enter 发送, Shift+Enter 换行)'
-                : '请先上传简历'
+                : isActiveResumeFailed()
+                  ? '简历处理失败，请重新上传简历'
+                  : hasActiveResume()
+                    ? '简历处理中，请稍候'
+                    : '请先上传简历'
             "
             rows="2"
             @keydown="handleKeydown"
@@ -445,7 +510,7 @@ loadSessions()
           <button
             v-if="!streaming"
             class="btn-send"
-            :disabled="!inputText.trim() || sending || !activeSession()?.resume_id"
+            :disabled="!inputText.trim() || sending || !isActiveResumeReady()"
             @click="handleSend"
           >
             发送

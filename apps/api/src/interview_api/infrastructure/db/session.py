@@ -3,6 +3,7 @@ from collections.abc import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from interview_api.infrastructure.db.engine import engine
+import interview_api.modules.models  # noqa: F401
 
 async_session_factory = async_sessionmaker(
     engine,

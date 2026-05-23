@@ -219,11 +219,6 @@ function shortTaskId(taskId: string | null | undefined): string {
   return taskId.length <= 8 ? taskId : taskId.substring(0, 8) + "...";
 }
 
-function formatTime(ts: string | null | undefined): string {
-  if (!ts) return "-";
-  return new Date(ts).toLocaleString();
-}
-
 onMounted(loadDocuments);
 onUnmounted(stopPolling);
 </script>
