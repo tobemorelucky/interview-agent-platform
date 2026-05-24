@@ -149,7 +149,7 @@ class InterviewService:
         if not has_welcome:
             pos = session.target_position or "你简历匹配的岗位"
             welcome = (
-                f"我已读取你的简历。根据分析，我判断你面试的目标岗位是 **{pos}**，是否正确？\n\n"
+                f"我已读取你的简历。根据分析，我判断你面试的目标岗位是「{pos}」，是否正确？\n\n"
                 "请回复确认，或直接告诉我你实际要面试的岗位名称（如「后端开发实习」「Python 后端」「AI 应用开发」等）。"
             )
             await self.msg_repo.create(
@@ -219,36 +219,51 @@ class InterviewService:
         target_role = basic.get("target_role", "")
         current_role = basic.get("current_role", "")
 
-        # If resume already has target_role, use it
-        if target_role:
-            return target_role
+        # Use LLM to find the single best target position
+        try:
+            import json as _json
+            basic_info = structured.get("basic_info", {})
+            projects = structured.get("projects", [])
+            skills = structured.get("skills", {})
+            highlights = structured.get("highlights", [])
 
-        # Build suggestion from skills + current role
-        skills = structured.get("skills", {})
-        if isinstance(skills, dict):
-            tech_keywords = []
-            for key in ("languages", "frameworks", "ai_ml"):
-                vals = skills.get(key, [])
-                if isinstance(vals, list):
-                    tech_keywords.extend(vals[:3])
+            # Build a very short summary for the LLM
+            summary_parts = []
+            if basic_info.get("current_role"):
+                summary_parts.append(f"当前岗位: {basic_info['current_role']}")
+            if basic_info.get("target_role"):
+                summary_parts.append(f"目标岗位(原始): {basic_info['target_role']}")
+            if isinstance(skills, dict):
+                techs = []
+                for key in ("languages", "frameworks", "ai_ml"):
+                    vals = skills.get(key, [])
+                    if isinstance(vals, list):
+                        techs.extend(vals[:3])
+                if techs:
+                    summary_parts.append(f"技术栈: {', '.join(techs[:6])}")
+            if isinstance(projects, list) and projects:
+                p_names = [p.get("name", "") for p in projects[:2] if isinstance(p, dict)]
+                if p_names:
+                    summary_parts.append(f"项目: {', '.join(p_names)}")
+            if isinstance(highlights, list) and highlights:
+                summary_parts.append(f"亮点: {', '.join(highlights[:2])}")
 
-            if tech_keywords:
-                tech_str = "/".join(tech_keywords[:3])
-                if current_role:
-                    return f"{tech_str} {current_role}"
-                return f"{tech_str} 开发"
-
-        if current_role:
-            return current_role
-
-        # Last resort: construct from projects
-        projects = structured.get("projects", [])
-        if isinstance(projects, list) and projects:
-            for p in projects[:1]:
-                if isinstance(p, dict) and p.get("name"):
-                    return f"{p['name']} 相关开发"
-
-        return "技术开发"
+            summary = "; ".join(summary_parts)
+            prompt = (
+                "根据简历信息，用15字以内给出候选人最可能的1个面试岗位名称。"
+                "只返回岗位名，不要解释。\n\n"
+                f"{summary}"
+            )
+            result = await self.llm.chat([{"role": "user", "content": prompt}])
+            pos = result.strip().replace("'", "").replace('"', "").split("\n")[0]
+            # Take first line, max 30 chars
+            pos = pos.replace("、", ",").replace("；", ",").split(",")[0].strip()
+            return pos[:30] if pos else "技术开发"
+        except Exception:
+            logger.warning("LLM position suggestion failed, using fallback")
+            if current_role:
+                return current_role
+            return "技术开发"
 
     # ── Helpers ──
 
@@ -356,7 +371,7 @@ async def _generate_questions_background(
                 prompt_builder=prompt_builder,
                 memory_manager=memory_manager,
             )
-            await chat_service.generate_questions(session_id)
+            await chat_service.generate_plan(session_id)
     except Exception:
         logging.getLogger(__name__).exception(
             "Background question generation failed for session %s", session_id
@@ -396,200 +411,349 @@ class InterviewChatService:
         self.prompt_builder = prompt_builder
         self.memory_manager = memory_manager
 
-    # ── Question Generation ──
+    # ── Lightweight Interview Plan (rule-based, no LLM) ──
 
-    async def generate_questions(self, session_id: int) -> None:
-        """Generate interview question queue for a session.
+    async def _init_lightweight_plan(self, session_id: int) -> dict:
+        """Initialize interview_plan_json from resume data without LLM.
 
-        Runs as a background task (asyncio.create_task).
-        Updates question_generation_status throughout.
+        Phase 3.5b: The plan is a lightweight internal structure for tracking
+        dimensions and budget. No LLM calls, no user-visible wait.
+        """
+        session = await self.session_repo.get_by_id(session_id)
+        if not session or not session.resume_id:
+            return {}
+
+        report = await self.report_repo.get_by_resume_id(session.resume_id)
+        if not report or not report.summary_json:
+            return {}
+
+        structured = report.summary_json
+        skills = structured.get("skills", {})
+        projects = structured.get("projects", [])
+        budget = session.question_count or settings.interview_question_count
+
+        dimensions = []
+
+        # Extract from skills
+        if isinstance(skills, dict):
+            all_techs = []
+            for key in ("languages", "frameworks", "databases", "tools", "ai_ml"):
+                vals = skills.get(key, [])
+                if isinstance(vals, list):
+                    all_techs.extend(vals)
+            # Top skills get dimension slots
+            for tech in all_techs[:5]:
+                dimensions.append({
+                    "name": f"{tech} 技术深度",
+                    "planned_count": max(1, budget // max(len(all_techs[:5]), 1)),
+                    "asked_count": 0,
+                    "priority": "MEDIUM",
+                    "reason": f"简历技术栈包含 {tech}",
+                    "search_queries": [f"{tech} 面试题", f"{tech} 技术原理"],
+                })
+
+        # Extract from projects
+        if isinstance(projects, list):
+            for p in projects[:3]:
+                name = p.get("name", "") if isinstance(p, dict) else ""
+                if name:
+                    dimensions.append({
+                        "name": f"项目深挖: {name}",
+                        "planned_count": max(1, budget // 6),
+                        "asked_count": 0,
+                        "priority": "HIGH",
+                        "reason": f"简历核心项目",
+                        "search_queries": [f"{name} 技术架构", f"项目经验 面试"],
+                    })
+
+        # Add behavioral and risk dimensions
+        if structured.get("risk_points"):
+            dimensions.append({
+                "name": "简历风险点考察",
+                "planned_count": 2,
+                "asked_count": 0,
+                "priority": "MEDIUM",
+                "reason": "简历存在风险点",
+                "search_queries": ["行为面试 项目挑战", "技术短板 面试"],
+            })
+
+        plan = {
+            "target_position": session.target_position or "",
+            "interview_mode": session.interview_mode,
+            "question_budget": budget,
+            "strategy": {"question_generation": "on_demand"},
+            "dimensions": dimensions,
+            "_kb_cache": {},
+        }
+        await self.session_repo.save_plan(session_id, plan_json=plan, trace_json=None)
+        return plan
+
+    # ── Interview Plan Generation (legacy compat) ──
+
+    async def generate_plan(self, session_id: int) -> None:
+        """Generate lightweight interview plan (rule-based, no LLM).
+
+        Phase 3.5b: Plan is rule-based from resume data. Used by background tasks.
         """
         try:
             session = await self.session_repo.get_by_id(session_id)
             if session is None or session.resume_id is None:
                 return
-
             resume = await self.resume_repo.get_by_id(session.resume_id)
             if resume is None or resume.status != "COMPLETED":
-                await self.session_repo.update_question_generation_status(
-                    session_id, "FAILED", "简历未处理完成"
-                )
+                await self.session_repo.update_question_generation_status(session_id, "FAILED", "简历未处理完成")
                 await self.db.commit()
                 return
-
-            report = await self.report_repo.get_by_resume_id(session.resume_id)
-            if report is None or not report.summary_json:
-                await self.session_repo.update_question_generation_status(
-                    session_id, "FAILED", "简历解析报告不存在"
-                )
-                await self.db.commit()
-                return
-
-            structured = report.summary_json
-            target_pos = session.target_position or ""
-            target_count = session.question_count or settings.interview_question_count
-
-            # Clean old questions
-            await self.question_repo.delete_by_session_id(session_id)
-            await self.session_repo.update_question_generation_status(
-                session_id, "GENERATING"
-            )
+            await self._init_lightweight_plan(session_id)
+            await self.session_repo.update_question_generation_status(session_id, "READY")
             await self.db.commit()
-
-            # ── Planner Agent Step tracker ──
-            trace_steps: list[dict] = []
-            plan_data: dict = {
-                "target_position": target_pos,
-                "interview_mode": session.interview_mode,
-                "question_count": target_count,
-            }
-
-            # ── Step 1: ANALYZE_RESUME ──
-            analysis_summary = f"识别到 {target_pos} 相关技能"
-            trace_steps.append({
-                "step": "ANALYZE_RESUME",
-                "status": "DONE",
-                "summary": analysis_summary,
-            })
-
-            # ── Step 2: PLAN_DIMENSIONS ──
-            dimensions_raw = await self._extract_dimensions(
-                structured, target_position=target_pos, question_count=target_count
-            )
-
-            if isinstance(dimensions_raw, dict):
-                dimensions = dimensions_raw.get("dimensions", [])
-                analysis_summary = dimensions_raw.get("analysis_summary", analysis_summary)
-            else:
-                dimensions = dimensions_raw if isinstance(dimensions_raw, list) else []
-
-            trace_steps.append({
-                "step": "PLAN_DIMENSIONS",
-                "status": "DONE",
-                "summary": f"生成 {len(dimensions)} 个面试维度，目标 {target_count} 道候选题",
-            })
-            plan_data["dimensions"] = [
-                {
-                    "name": d.get("dimension", ""),
-                    "weight": d.get("weight", 0),
-                    "question_count": d.get("question_count", 0),
-                    "reason": d.get("reason", ""),
-                }
-                for d in dimensions
-            ]
-
-            # ── Step 3: RETRIEVE_QUESTIONS ──
-            retrieval_service = QuestionRetrievalService(
-                self.embedding, self.vector_store
-            )
-            grouped_hits = await retrieval_service.retrieve_by_dimensions(
-                dimensions,
-                top_k=settings.interview_question_retrieval_top_k,
-                min_score=settings.interview_question_retrieval_min_score,
-            )
-            total_hits = sum(len(h) for h in grouped_hits.values())
-            hit_summary_parts = []
-            for dim_name, hits in grouped_hits.items():
-                if hits:
-                    hit_summary_parts.append(f"{dim_name} 命中 {len(hits)} 条")
-            trace_steps.append({
-                "step": "RETRIEVE_QUESTIONS",
-                "status": "DONE",
-                "summary": "; ".join(hit_summary_parts) if hit_summary_parts else "无命中",
-            })
-
-            # ── Step 4: JUDGE_SUFFICIENCY ──
-            kb_questions, seen_chunks = self._extract_questions_from_hits(grouped_hits)
-            all_questions = list(kb_questions)
-            vector_count = sum(
-                1 for q in all_questions if q.get("source") == "VECTOR_RETRIEVED"
-            )
-
-            if len(all_questions) < target_count:
-                covered_dims = {q["dimension"] for q in all_questions if q.get("dimension")}
-                all_dim_names = {d.get("dimension", "") for d in dimensions}
-                missing_dims = list(all_dim_names - covered_dims)
-                count_needed = target_count - len(all_questions)
-
-                llm_questions = await self._llm_generate_questions(
-                    structured, all_questions, missing_dims, count_needed, target_count,
-                    target_position=target_pos,
-                    interview_mode=session.interview_mode,
-                    plan_json=plan_data,
-                    retrieved_context=json.dumps(
-                        {k: [{"title": h.get("title", ""), "preview": h.get("preview", "")[:200]}
-                             for h in v[:3]]
-                         for k, v in grouped_hits.items()},
-                        ensure_ascii=False,
-                    ),
-                )
-                all_questions.extend(llm_questions)
-
-            all_questions = await self._complete_answers(all_questions, structured)
-
-            hybrid_count = sum(1 for q in all_questions if q.get("source") == "HYBRID")
-            llm_count = sum(1 for q in all_questions if q.get("source") == "LLM_GENERATED")
-
-            plan_data["source_distribution"] = {
-                "VECTOR_RETRIEVED": vector_count,
-                "HYBRID": hybrid_count,
-                "LLM_GENERATED": llm_count,
-            }
-            trace_steps.append({
-                "step": "BUILD_QUESTION_QUEUE",
-                "status": "DONE",
-                "summary": (
-                    f"生成 {len(all_questions)} 道题："
-                    f"VECTOR_RETRIEVED={vector_count}, "
-                    f"HYBRID={hybrid_count}, "
-                    f"LLM_GENERATED={llm_count}"
-                ),
-            })
-
-            # ── Step 5: Interleave, index, save ──
-            all_questions = self._interleave_questions(all_questions)
-            for i, q in enumerate(all_questions):
-                q["question_index"] = i
-                q["planned_order"] = i
-                q["status"] = "PENDING"
-
-            if all_questions:
-                await self.question_repo.batch_create(session_id, all_questions)
-
-            # Save plan and trace to session
-            await self.session_repo.save_plan(
-                session_id,
-                plan_json=plan_data,
-                trace_json={"steps": trace_steps},
-            )
-
-            await self.session_repo.update_question_generation_status(
-                session_id, "READY"
-            )
-            await self.db.commit()
-            logger.info(
-                "Question generation complete: session=%s count=%s plan=%s",
-                session_id,
-                len(all_questions),
-                json.dumps(plan_data.get("source_distribution", {}), ensure_ascii=False),
-            )
-
         except Exception as e:
-            logger.exception("Question generation failed for session %s", session_id)
+            logger.exception("Plan generation failed for session %s", session_id)
             try:
-                await self.session_repo.update_question_generation_status(
-                    session_id, "FAILED", str(e)
-                )
+                await self.session_repo.update_question_generation_status(session_id, "FAILED", str(e))
                 await self.db.commit()
             except Exception:
                 logger.exception("Failed to update FAILED status")
+
+    # ── On-Demand Question Generation ──
+
+    # ── Confirm Position + Generate Q1 ──
+
+    async def confirm_and_generate_first_question(
+        self,
+        session_id: int,
+        target_position: str,
+        interview_mode: str = "comprehensive",
+        question_count: int = 20,
+    ) -> dict | None:
+        """Confirm target position and immediately generate Q1.
+
+        Phase 3.5b: No separate plan generation wait. No "start interview" step.
+        Returns Q1 directly so frontend can display it immediately.
+        """
+        session = await self.session_repo.get_by_id(session_id)
+        if session is None or session.resume_id is None:
+            return {"error": "SESSION_INVALID", "message": "会话不存在或未绑定简历"}
+
+        resume = await self.resume_repo.get_by_id(session.resume_id)
+        if resume is None or resume.status != "COMPLETED":
+            return {"error": "RESUME_NOT_READY", "message": "简历未处理完成"}
+
+        try:
+            # 1. Save position + confirm
+            await self.session_repo.update_target_position(
+                session_id,
+                target_position=target_position,
+                interview_mode=interview_mode,
+                question_count=question_count,
+            )
+            from sqlalchemy import update
+            await self.db.execute(
+                update(InterviewSession)
+                .where(InterviewSession.id == session_id)
+                .values(target_position_confirmed=True)
+            )
+            await self.db.flush()
+
+            # 2. Init lightweight plan (rule-based, no LLM)
+            await self._init_lightweight_plan(session_id)
+
+            # 3. Generate Q1
+            await self.session_repo.update_question_generation_status(session_id, "GENERATING_QUESTION")
+            await self.db.commit()
+
+            q_data = await self.generate_next_question(session_id)
+            if not q_data:
+                await self.session_repo.update_question_generation_status(session_id, "FAILED", "第一题生成失败")
+                await self.db.commit()
+                return {"error": "QUESTION_GENERATION_FAILED", "message": "第一题生成失败，请重试"}
+
+            # 4. Mark Q1 ASKED, set index
+            await self.question_repo.update_status(q_data["question_id"], "ASKED")
+            await self.session_repo.update_current_question_index(session_id, 0)
+            await self.session_repo.update_question_generation_status(session_id, "READY")
+
+            # 5. Welcome message
+            await self.msg_repo.create(
+                session_id=session_id, role="ASSISTANT",
+                content=f"面试开始。第一题：{q_data['question']}",
+                metadata_json={"source": "QUESTION_DRIVEN", "question_id": q_data["question_id"]},
+                turn_index=0,
+            )
+            await self.db.commit()
+
+            return {
+                "target_position_confirmed": True,
+                "question_budget": question_count,
+                "current_question": {
+                    "question_id": q_data["question_id"],
+                    "question_index": 0,
+                    "question": q_data["question"],
+                    "dimension": q_data["dimension"],
+                    "difficulty": q_data["difficulty"],
+                    "source": q_data["source"],
+                    "evidence": q_data.get("evidence"),
+                },
+            }
+        except Exception:
+            logger.exception("confirm_and_generate_first_question failed for session %s", session_id)
+            try:
+                await self.session_repo.update_question_generation_status(session_id, "FAILED", str(Exception))
+                await self.db.commit()
+            except Exception:
+                pass
+            return {"error": "GENERATION_FAILED", "message": "生成失败，请重试"}
+
+    async def generate_next_question(
+        self,
+        session_id: int,
+        dimension_hint: str | None = None,
+        is_dynamic: bool = False,
+        parent_question_id: int | None = None,
+        user_answer: str = "",
+        on_token: callable = None,
+    ) -> dict | None:
+        """Generate ONE question on demand (Phase 3.5).
+
+        Called when:
+        - Starting interview (first question)
+        - Controller decides NEXT_QUESTION
+        - Controller decides INSERT_DYNAMIC_QUESTION
+
+        Reads interview_plan_json, picks next dimension, retrieves KB,
+        calls LLM to generate 1 question + standard_answer, saves to DB.
+        """
+        session = await self.session_repo.get_by_id(session_id)
+        if session is None or not session.interview_plan_json:
+            return None
+
+        plan = session.interview_plan_json
+        dimensions = plan.get("dimensions", [])
+        existing = await self.question_repo.get_by_session_id(session_id)
+
+        # Pick next dimension
+        if dimension_hint:
+            dim = next((d for d in dimensions if d.get("name") == dimension_hint), None)
+        else:
+            dim = None
+        if not dim:
+            # Pick first dimension below planned_count, sorted by priority
+            high_first = sorted(dimensions, key=lambda d: (
+                0 if d.get("priority") == "HIGH" else 1
+            ))
+            for d in high_first:
+                if d.get("asked_count", 0) < d.get("planned_count", 0):
+                    dim = d
+                    break
+        if not dim:
+            dim = dimensions[0] if dimensions else {"name": "综合", "search_queries": [], "planned_count": 1, "asked_count": 0}
+
+        dim_name = dim.get("name", "综合")
+        search_queries = dim.get("search_queries", [])
+
+        # Retrieve KB for this dimension
+        kb_context = ""
+        kb_cache = plan.get("_kb_cache", {})
+        if dim_name in kb_cache and kb_cache[dim_name]:
+            hits = kb_cache[dim_name][:5]
+            kb_context = "\n".join(
+                f"[{h.get('title', '')}] {h.get('preview', '')}"
+                for h in hits
+            )
+
+        # Determine question index
+        question_index = len(existing)
+        next_index = max((q.question_index for q in existing), default=-1) + 1
+
+        # Get resume data
+        report = await self.report_repo.get_by_resume_id(session.resume_id)
+        structured = report.summary_json if report else None
+        resume_text = ""
+        if structured:
+            resume_text = json.dumps(structured, ensure_ascii=False)[:2000]
+
+        # Get completed questions summary
+        completed = [q for q in existing if q.status in ("ANSWERED",)]
+        completed_text = ""
+        for q in completed[:10]:
+            completed_text += f"Q{q.question_index}: {q.question[:100]} | 评价: {q.answer_summary or '无'}\n"
+
+        # Build concise prompt (Phase 3.5b: keep it short for fast generation)
+        prompt = (
+            f"你是技术面试官。为目标岗位「{session.target_position or '未指定'}」的候选人"
+            f"出一道「{dim_name}」维度的面试题。\n\n"
+            f"简历: {resume_text[:1000]}\n\n"
+            f"KB参考: {kb_context[:500] or '（无）'}\n"
+            f"历史: {completed_text[:300] or '（无）'}\n"
+            f"最近回答: {user_answer[:200] or '（开始面试）'}\n\n"
+            f"返回JSON（只一道题，必须含standard_answer 3-5个要点）:\n"
+            f'{{"question":"...","standard_answer":"...","dimension":"{dim_name}",'
+            f'"difficulty":"MEDIUM","source":"LLM_GENERATED"}}'
+        )
+
+        try:
+            # Stream LLM response for progress (use chat_stream to avoid 30s idle)
+            response = ""
+            async for token in self.llm.chat_stream(
+                [{"role": "user", "content": prompt}]
+            ):
+                response += token
+                if on_token:
+                    await on_token(token)
+            data = self._parse_decision(response)
+            if not data.get("question"):
+                return None
+
+            q = {
+                "question_index": next_index,
+                "question": data["question"],
+                "standard_answer": data.get("standard_answer", ""),
+                "dimension": data.get("dimension", dim_name),
+                "difficulty": data.get("difficulty", "MEDIUM"),
+                "source": data.get("source", "LLM_GENERATED"),
+                "evidence_json": data.get("evidence"),
+                "status": "PENDING",
+                "is_dynamic": is_dynamic,
+                "parent_question_id": parent_question_id,
+                "planned_order": next_index,
+            }
+            # Actually create in DB
+            result = await self.question_repo.batch_create(session_id, [q])
+            question_obj = result[0] if result else None
+            if not question_obj:
+                return None
+
+            # Update dimension asked_count
+            dim["asked_count"] = dim.get("asked_count", 0) + 1
+            await self.session_repo.save_plan(session_id, plan_json=plan, trace_json=None)
+
+            return {
+                "question_id": question_obj.id,
+                "question_index": question_obj.question_index,
+                "question": question_obj.question,
+                "standard_answer": question_obj.standard_answer,
+                "dimension": question_obj.dimension,
+                "difficulty": question_obj.difficulty,
+                "source": question_obj.source,
+                "evidence": question_obj.evidence_json,
+                "is_dynamic": is_dynamic,
+                "total_questions": plan.get("question_budget", 20),
+            }
+        except Exception:
+            logger.exception("Failed to generate next question for session %s", session_id)
+            return None
+
+    # ── Legacy: trigger from router ──
+    async def generate_questions(self, session_id: int) -> None:
+        """Legacy compat: calls generate_plan (Phase 3.5 on-demand mode)."""
+        await self.generate_plan(session_id)
 
     # ── Start Interview ──
 
     async def start_interview(
         self, session_id: int, user_id: int
     ) -> dict | None:
-        """Start the interview: return first question."""
+        """Start the interview: generate and return first question (on-demand)."""
         session = await self.session_repo.get_by_id_and_user(session_id, user_id)
         if session is None:
             return None
@@ -599,63 +763,49 @@ class InterviewChatService:
             return None
 
         if not session.target_position_confirmed:
-            return {
-                "error": "TARGET_POSITION_REQUIRED",
-                "message": "请先确认本次面试岗位",
-            }
+            return {"error": "TARGET_POSITION_REQUIRED", "message": "请先确认本次面试岗位"}
 
         gen_status = session.question_generation_status
         if gen_status == "PENDING":
-            return {
-                "error": "QUESTIONS_NOT_READY",
-                "sub_code": "PENDING",
-                "message": "题目尚未生成，请等待简历处理完成或手动触发生成",
-            }
-        elif gen_status == "GENERATING":
-            return {
-                "error": "QUESTIONS_NOT_READY",
-                "sub_code": "GENERATING",
-                "message": "题目正在生成中，请稍候",
-            }
+            return {"error": "TARGET_POSITION_REQUIRED", "message": "请先确认面试岗位"}
         elif gen_status == "FAILED":
-            return {
-                "error": "QUESTIONS_NOT_READY",
-                "sub_code": "FAILED",
-                "message": "题目生成失败，请重试 POST /questions/generate",
-            }
+            return {"error": "QUESTIONS_NOT_READY", "sub_code": "FAILED", "message": "题目生成失败，请重试"}
 
-        questions = await self.question_repo.get_by_session_id(session_id)
-        if not questions:
-            return {
-                "error": "QUESTIONS_NOT_READY",
-                "sub_code": "EMPTY",
-                "message": "题目列表为空",
-            }
+        # Generate Q1 on demand
+        await self.session_repo.update_question_generation_status(session_id, "GENERATING_QUESTION")
+        await self.db.commit()
 
-        q = questions[0]
-        await self.question_repo.update_status(q.id, "ASKED")
+        q_data = await self.generate_next_question(session_id)
+        if not q_data:
+            await self.session_repo.update_question_generation_status(session_id, "FAILED", "第一题生成失败")
+            await self.db.commit()
+            return {"error": "QUESTION_GENERATION_FAILED", "message": "第一题生成失败"}
+
+        # Mark ASKED
+        q_id = q_data["question_id"]
+        await self.question_repo.update_status(q_id, "ASKED")
         await self.session_repo.update_current_question_index(session_id, 0)
+        await self.session_repo.update_question_generation_status(session_id, "READY")
 
-        # Save welcome message
+        # Welcome message
         await self.msg_repo.create(
-            session_id=session_id,
-            role="ASSISTANT",
-            content=f"开始面试。第一题：{q.question}",
-            metadata_json={"source": "QUESTION_DRIVEN", "question_id": q.id},
+            session_id=session_id, role="ASSISTANT",
+            content=f"开始面试。第一题：{q_data['question']}",
+            metadata_json={"source": "QUESTION_DRIVEN", "question_id": q_id},
             turn_index=0,
         )
         await self.db.commit()
 
         return {
             "type": "QUESTION",
-            "question_id": q.id,
-            "question_index": 0,
-            "total_questions": len(questions),
-            "question": q.question,
-            "dimension": q.dimension,
-            "difficulty": q.difficulty,
-            "source": q.source,
-            "evidence": q.evidence_json,
+            "question_id": q_data["question_id"],
+            "question_index": q_data["question_index"],
+            "total_questions": q_data.get("total_questions", 20),
+            "question": q_data["question"],
+            "dimension": q_data["dimension"],
+            "difficulty": q_data["difficulty"],
+            "source": q_data["source"],
+            "evidence": q_data.get("evidence"),
         }
 
     # ── Chat Stream (Question-Driven) ──
@@ -699,16 +849,15 @@ class InterviewChatService:
                 yield evt
             return
 
-        # Check question readiness
+        # Check readiness (Phase 3.5b: READY or GENERATING_QUESTION means OK)
         gen_status = session.question_generation_status
-        if gen_status != "READY":
+        if gen_status not in ("READY", "GENERATING_QUESTION"):
             yield _sse("error", {
                 "code": "QUESTIONS_NOT_READY",
                 "sub_code": gen_status,
                 "message": {
-                    "PENDING": "题目尚未生成",
-                    "GENERATING": "题目正在生成中，请稍候",
-                    "FAILED": f"题目生成失败: {session.question_generation_error or '未知错误'}",
+                    "PENDING": "请先确认面试岗位",
+                    "FAILED": f"生成失败: {session.question_generation_error or '未知错误'}",
                 }.get(gen_status, "题目状态异常"),
             })
             return
@@ -838,33 +987,21 @@ class InterviewChatService:
                     })
 
             if action == "INSERT_DYNAMIC_QUESTION":
-                dynamic_q_data = decision.get("dynamic_question") or {}
-                if dynamic_q_data.get("question"):
-                    new_index = q.question_index + 1
-                    new_q = await self.question_repo.create_dynamic(
-                        session_id=session_id,
-                        question_data={
-                            "question_index": new_index,
-                            "question": dynamic_q_data["question"],
-                            "standard_answer": dynamic_q_data.get("standard_answer"),
-                            "dimension": dynamic_q_data.get("dimension"),
-                            "difficulty": dynamic_q_data.get("difficulty"),
-                            "source": dynamic_q_data.get("source", "LLM_GENERATED"),
-                            "parent_question_id": q.id,
-                            "planned_order": q.planned_order,
-                        },
-                    )
-                    # Update question count for subsequent questions
-                    all_questions = await self.question_repo.get_by_session_id(session_id)
+                yield _sse("status", {"stage": "generating_dynamic_question"})
+                dynamic_q_data = await self.generate_next_question(
+                    session_id, is_dynamic=True, parent_question_id=q.id,
+                    user_answer=content,
+                )
+                if dynamic_q_data:
                     yield _sse("dynamic_question", {
-                        "question_id": new_q.id,
-                        "question_index": new_q.question_index,
-                        "question": new_q.question,
-                        "source": new_q.source,
-                        "dimension": new_q.dimension,
-                        "difficulty": new_q.difficulty,
-                        "reason": dynamic_q_data.get("reason", ""),
+                        "question_id": dynamic_q_data["question_id"],
+                        "question_index": dynamic_q_data["question_index"],
+                        "question": dynamic_q_data["question"],
+                        "source": dynamic_q_data["source"],
+                        "dimension": dynamic_q_data["dimension"],
+                        "difficulty": dynamic_q_data["difficulty"],
                         "parent_question_id": q.id,
+                        "reason": "基于你的回答临时追问",
                     })
 
             if action == "NEXT_QUESTION":
@@ -882,27 +1019,34 @@ class InterviewChatService:
                     },
                     status="ANSWERED",
                 )
-                new_index = session.current_question_index + 1
-                await self.session_repo.update_current_question_index(session_id, new_index)
 
-                next_q = await self.question_repo.get_by_index(session_id, new_index)
-                if next_q:
-                    await self.question_repo.update_status(next_q.id, "ASKED")
-                    preview = decision.get("next_question_preview", "")
+                # Phase 3.5: generate next question on-demand
+                yield _sse("status", {"stage": "generating_next_question"})
+                dim_hint = decision.get("next_dimension_hint")
+                total_budget = session.interview_plan_json.get("question_budget", 20) if session.interview_plan_json else 20
+                next_q_data = await self.generate_next_question(
+                    session_id, dimension_hint=dim_hint, user_answer=content
+                )
+                if next_q_data:
+                    new_index = session.current_question_index + 1
+                    await self.session_repo.update_current_question_index(session_id, new_index)
+                    await self.question_repo.update_status(next_q_data["question_id"], "ASKED")
+                    await self.session_repo.update_question_generation_status(session_id, "READY")
+
                     yield _sse("question_transition", {
                         "from_index": session.current_question_index,
                         "to_index": new_index,
-                        "preview": preview,
+                        "preview": "",
                     })
                     yield _sse("question", {
-                        "question_id": next_q.id,
+                        "question_id": next_q_data["question_id"],
                         "question_index": new_index,
-                        "total_questions": len(all_questions),
-                        "question": next_q.question,
-                        "source": next_q.source,
-                        "dimension": next_q.dimension,
-                        "difficulty": next_q.difficulty,
-                        "evidence": next_q.evidence_json,
+                        "total_questions": total_budget,
+                        "question": next_q_data["question"],
+                        "source": next_q_data["source"],
+                        "dimension": next_q_data["dimension"],
+                        "difficulty": next_q_data["difficulty"],
+                        "evidence": next_q_data.get("evidence"),
                     })
                 else:
                     action = "COMPLETE"
@@ -1131,91 +1275,78 @@ class InterviewChatService:
             result = result.strip()
 
             if result.startswith("CONFIRM"):
-                from sqlalchemy import update
-                await self.db.execute(
-                    update(InterviewSession)
-                    .where(InterviewSession.id == session.id)
-                    .values(target_position_confirmed=True)
-                )
-                await self.db.flush()
-
-                confirm_msg = (
-                    f"好的，确认面试岗位：**{suggested}**。\n\n"
-                    "正在为你生成面试题，请稍候..."
-                )
-                yield _sse("token", {"content": confirm_msg})
-
-                await self.msg_repo.create(
-                    session_id=session.id,
-                    role="ASSISTANT",
-                    content=confirm_msg,
-                    metadata_json={
-                        "source": "SYSTEM",
-                        "type": "POSITION_CONFIRMED",
-                        "target_position": suggested,
-                    },
-                    turn_index=turn_index,
-                )
-                await self.session_repo.increment_turn(session.id)
-                await self.db.commit()
-
-                yield _sse("evaluation", {
-                    "score": 0,
-                    "comment": f"岗位确认：{suggested}",
-                    "action": "POSITION_CONFIRMED",
-                })
-                yield _sse("done", {
-                    "message_id": 0,
-                    "turn_index": turn_index,
-                    "action": "POSITION_CONFIRMED",
-                })
-                return
-
+                pos = suggested
             elif result.startswith("NEW_POSITION:"):
-                new_pos = result.replace("NEW_POSITION:", "").strip()
+                pos = result.replace("NEW_POSITION:", "").strip()
+            else:
+                pos = None
+
+            if pos:
+                yield _sse("token", {"content": f"好的，面试岗位：「{pos}」。\n\n"})
+
+                # Save position + init lightweight plan
+                from sqlalchemy import update as sqla_update
                 await self.session_repo.update_target_position(
-                    session.id,
-                    target_position=new_pos,
+                    session.id, target_position=pos,
                     interview_mode=session.interview_mode,
                     question_count=session.question_count,
                 )
-                from sqlalchemy import update
                 await self.db.execute(
-                    update(InterviewSession)
+                    sqla_update(InterviewSession)
                     .where(InterviewSession.id == session.id)
                     .values(target_position_confirmed=True)
                 )
-                await self.db.flush()
-
-                confirm_msg = (
-                    f"好的，更新面试岗位为：**{new_pos}**。\n\n"
-                    "正在为你生成面试题，请稍候..."
+                await self._init_lightweight_plan(session.id)
+                await self.session_repo.update_question_generation_status(
+                    session.id, "GENERATING_QUESTION"
                 )
-                yield _sse("token", {"content": confirm_msg})
-
-                await self.msg_repo.create(
-                    session_id=session.id,
-                    role="ASSISTANT",
-                    content=confirm_msg,
-                    metadata_json={
-                        "source": "SYSTEM",
-                        "type": "POSITION_CONFIRMED",
-                        "target_position": new_pos,
-                    },
-                    turn_index=turn_index,
-                )
-                await self.session_repo.increment_turn(session.id)
                 await self.db.commit()
 
-                yield _sse("evaluation", {
-                    "score": 0,
-                    "comment": f"岗位已更新：{new_pos}",
-                    "action": "POSITION_CONFIRMED",
-                })
+                # Generate Q1 with streaming (collect tokens, yield after)
+                yield _sse("status", {"stage": "generating_first_question"})
+                tokens = []
+                async def collect(tok):
+                    tokens.append(tok)
+
+                q1_data = await self.generate_next_question(
+                    session.id, on_token=collect,
+                )
+                # Yield collected tokens
+                for tok in tokens:
+                    yield _sse("token", {"content": tok})
+
+                if q1_data:
+                    # Mark Q1 ASKED
+                    await self.question_repo.update_status(q1_data["question_id"], "ASKED")
+                    await self.session_repo.update_current_question_index(session.id, 0)
+                    await self.session_repo.update_question_generation_status(session.id, "READY")
+                    await self.db.commit()
+
+                    yield _sse("question", {
+                        "question_id": q1_data["question_id"],
+                        "question_index": 0,
+                        "total_questions": session.question_count,
+                        "question": q1_data["question"],
+                        "source": q1_data["source"],
+                        "dimension": q1_data["dimension"],
+                        "difficulty": q1_data["difficulty"],
+                        "evidence": q1_data.get("evidence"),
+                    })
+                    yield _sse("evaluation", {
+                        "score": 0,
+                        "comment": f"岗位确认：{pos}，面试开始",
+                        "action": "INTERVIEW_STARTED",
+                    })
+                else:
+                    yield _sse("evaluation", {
+                        "score": 0,
+                        "comment": "题目生成失败，请重试",
+                        "action": "GENERATION_FAILED",
+                    })
                 yield _sse("done", {
                     "message_id": 0,
                     "turn_index": turn_index,
-                    "action": "POSITION_CONFIRMED",
+                    "action": "INTERVIEW_STARTED",
                 })
                 return
 

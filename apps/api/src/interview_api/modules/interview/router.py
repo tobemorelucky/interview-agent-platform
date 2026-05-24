@@ -129,43 +129,23 @@ async def set_target_position(
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Set target position and trigger question generation."""
-    service = _build_service(db)
-    try:
-        await service.set_target_position(
-            session_id=session_id,
-            user_id=current_user.id,
-            target_position=body.target_position,
-            interview_mode=body.interview_mode,
-            question_count=body.question_count,
-        )
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+    """Confirm target position and immediately generate + return Q1.
 
-    # After confirming position, trigger question generation in background
-    from interview_api.modules.interview.service import _generate_questions_background
-    from interview_api.modules.interview.repository import InterviewSessionRepository
-    import asyncio
-
-    session_repo = InterviewSessionRepository(db)
-    await session_repo.update_question_generation_status(session_id, "GENERATING")
-    await db.commit()
-
-    asyncio.create_task(
-        _generate_questions_background(
-            session_id=session_id,
-            llm=OpenAICompatibleLLMProvider(),
-            embedding=OpenAICompatibleEmbeddingProvider(),
-            vector_store=MilvusVectorStoreProvider(embedding_dim=settings.embedding_dim),
-            prompt_builder=InterviewPromptBuilder(),
-            memory_manager=InterviewMemoryManager(),
-        )
+    Phase 3.5b: No separate "generate plan" wait. No "start interview" step.
+    Returns Q1 directly for frontend to display immediately.
+    """
+    chat_service = _build_chat_service(db)
+    result = await chat_service.confirm_and_generate_first_question(
+        session_id=session_id,
+        target_position=body.target_position,
+        interview_mode=body.interview_mode,
+        question_count=body.question_count,
     )
-    return success(data={
-        "status": "ok",
-        "message": "岗位已确认，题目生成已触发",
-        "question_generation_status": "GENERATING",
-    })
+    if result is None:
+        raise HTTPException(status_code=404, detail="会话不存在")
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["message"])
+    return success(data=result)
 
 
 # ── Question-Driven Chat ──
@@ -245,11 +225,9 @@ async def generate_questions(
     if session.resume_id is None:
         raise HTTPException(status_code=400, detail="请先绑定简历")
 
-    # Set GENERATING and commit
-    await session_repo.update_question_generation_status(session_id, "GENERATING")
+    await session_repo.update_question_generation_status(session_id, "GENERATING_QUESTION")
     await db.commit()
 
-    # Fire background task with fresh session
     asyncio.create_task(
         _generate_questions_background(
             session_id=session_id,
@@ -262,8 +240,8 @@ async def generate_questions(
     )
     return success(data={
         "status": "ok",
-        "message": "题目生成已触发",
-        "question_generation_status": "GENERATING",
+        "message": "已触发",
+        "question_generation_status": "GENERATING_QUESTION",
     })
 
 

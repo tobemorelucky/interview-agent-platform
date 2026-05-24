@@ -109,85 +109,17 @@ async def _run_pipeline(resume_id: int) -> None:
     structured_json = _parse_json_logged(structured_raw, resume_id)
     logger.info("[resume %s] Structured extraction done", resume_id)
 
-    logger.info(
-        "[resume %s] ========== GENERATING_RETRIEVAL_QUERIES ==========",
-        resume_id,
-    )
-    await _update_stage(
-        resume_id,
-        "GENERATING_RETRIEVAL_QUERIES",
-        "Generating knowledge-base retrieval queries...",
-    )
-    queries_prompt = _load_prompt("resume_retrieval_queries_v1.md").format(
-        structured_resume=json.dumps(structured_json, ensure_ascii=False),
-        query_count=settings.resume_retrieval_query_count,
-    )
-    logger.info("[resume %s] LLM call: retrieval query generation", resume_id)
-    queries_raw = await llm.chat([{"role": "user", "content": queries_prompt}])
-    logger.info("[resume %s] LLM response: %s chars", resume_id, len(queries_raw))
-    queries_json = _parse_json_logged(queries_raw, resume_id)
-    logger.info(
-        "[resume %s] Generated %s retrieval queries",
-        resume_id,
-        len(queries_json.get("queries", [])),
-    )
+    # Phase 3.5: skip retrieval queries + KB retrieval + question generation.
+    # All KB retrieval and question generation happens on-demand during interview.
+    logger.info("[resume %s] ========== SKIPPING RETRIEVAL/QUESTIONS (Phase 3.5) ==========")
+    logger.info("[resume %s] ========== SKIPPING KB/RETRIEVAL (Phase 3.5) ==========")
+    queries_json = {"queries": []}
+    retrieved_context = {"total_hits": 0, "queries": []}
+    fallback_policy = "NO_KB"
 
-    if settings.resume_kb_retrieval_enabled:
-        logger.info("[resume %s] ========== RETRIEVING_KB ==========", resume_id)
-        await _update_stage(resume_id, "RETRIEVING_KB", "Retrieving KB context...")
-        try:
-            retrieval_service = ResumeRetrievalService(embedding, vector_store)
-            retrieved_context = await retrieval_service.retrieve(
-                queries=queries_json.get("queries", []),
-            )
-            fallback_policy = retrieval_service.determine_fallback_policy(
-                retrieved_context,
-                question_count=settings.resume_question_count,
-            )
-            logger.info(
-                "[resume %s] KB retrieval done: %s total hits, policy=%s",
-                resume_id,
-                retrieved_context.get("total_hits", 0),
-                fallback_policy,
-            )
-        except Exception:
-            logger.warning(
-                "[resume %s] KB retrieval failed; continuing without KB context",
-                resume_id,
-                exc_info=True,
-            )
-            retrieved_context = {"total_hits": 0, "queries": []}
-            fallback_policy = "NO_KB"
-    else:
-        logger.info("[resume %s] KB retrieval disabled", resume_id)
-        retrieved_context = {"total_hits": 0, "queries": []}
-        fallback_policy = "NO_KB"
-
-    logger.info(
-        "[resume %s] ========== GENERATING_QUESTIONS (policy=%s) ==========",
-        resume_id,
-        fallback_policy,
-    )
-    await _update_stage(resume_id, "GENERATING_QUESTIONS", "Generating questions...")
-    questions_prompt = _load_prompt("resume_interview_questions_v1.md").format(
-        structured_resume=json.dumps(structured_json, ensure_ascii=False),
-        retrieved_context=json.dumps(retrieved_context, ensure_ascii=False),
-        fallback_policy=fallback_policy,
-        question_count=settings.resume_question_count,
-    )
-    logger.info(
-        "[resume %s] LLM call: interview question generation (%s chars input)",
-        resume_id,
-        len(questions_prompt),
-    )
-    questions_raw = await llm.chat([{"role": "user", "content": questions_prompt}])
-    logger.info("[resume %s] LLM response: %s chars", resume_id, len(questions_raw))
-    questions_json = _parse_json_logged(questions_raw, resume_id)
-    logger.info(
-        "[resume %s] Generated %s questions",
-        resume_id,
-        len(questions_json.get("questions", [])),
-    )
+    # Phase 3.5: skip question generation during resume upload.
+    logger.info("[resume %s] ========== SKIPPING GENERATING_QUESTIONS (Phase 3.5) ==========")
+    questions_json = {"questions": []}
 
     logger.info("[resume %s] ========== SAVING_REPORT ==========", resume_id)
     await _update_stage(resume_id, "SAVING_REPORT", "Saving analysis report...")
