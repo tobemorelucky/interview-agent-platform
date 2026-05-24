@@ -7,10 +7,13 @@ import {
   bindResume,
   deleteSession,
   sendMessageStream,
+  getCurrentQuestion,
+  getQuestions,
+  getQuestionDetail,
 } from "../api/interview"
 import { uploadResume, getResume as apiGetResume } from "../api/resume"
 import { ApiError } from "../api/client"
-import type { InterviewSession, InterviewMessage } from "../types/interview"
+import type { InterviewSession, InterviewMessage, InterviewQuestion, InterviewQuestionSummary } from "../types/interview"
 import { sourceLabel, sourceColor } from "../types/interview"
 import { statusLabel, stageLabel } from "../types/resume"
 
@@ -18,6 +21,12 @@ import { statusLabel, stageLabel } from "../types/resume"
 const sessions = ref<InterviewSession[]>([])
 const activeSessionId = ref<number | null>(null)
 const messages = ref<InterviewMessage[]>([])
+const currentQuestion = ref<InterviewQuestion | null>(null)
+const questionList = ref<InterviewQuestionSummary[]>([])
+const answerVisible = ref(false)
+const standardAnswer = ref("")
+const questionBudget = ref(20)
+const generatedCount = ref(0)
 const inputText = ref("")
 const loading = ref(false)
 const sending = ref(false)
@@ -62,6 +71,13 @@ async function selectSession(id: number, force = false) {
   streamingContent.value = ""
   streamingSource.value = ""
   streaming.value = false
+  // Phase 3.6: Clear question state when switching sessions
+  currentQuestion.value = null
+  questionList.value = []
+  answerVisible.value = false
+  standardAnswer.value = ""
+  questionBudget.value = 20
+  generatedCount.value = 0
   try {
     const detail = await getSession(id)
     messages.value = detail.messages || []
@@ -72,6 +88,20 @@ async function selectSession(id: number, force = false) {
         ...detail,
       }
     }
+    // Phase 3.6: Restore question state on refresh
+    if (detail.target_position_confirmed) {
+      questionBudget.value = detail.question_count || 20
+      try {
+        const cq = await getCurrentQuestion(id)
+        if (cq && cq.question) currentQuestion.value = cq
+      } catch { /* question endpoint may not be ready */ }
+      try {
+        const ql = await getQuestions(id)
+        questionList.value = ql.questions || []
+        generatedCount.value = ql.total || 0
+      } catch { /* questions endpoint may not be ready */ }
+    }
+
     // If resume processing, start polling
     if (detail.resume_id && detail.resume_status !== "COMPLETED" && detail.resume_status !== "FAILED") {
       startResumePoll(detail.resume_id, id)
@@ -245,7 +275,7 @@ async function handleSend() {
   abortController = sendMessageStream(
     activeSessionId.value,
     text,
-    // onToken
+    // onToken — accumulate for messages display
     (token) => {
       streamingContent.value += token
     },
@@ -257,23 +287,25 @@ async function handleSend() {
     () => {},
     // onDone
     (data) => {
-      // Add assistant message
-      messages.value.push({
-        id: data.message_id,
-        role: "ASSISTANT",
-        content: streamingContent.value,
-        metadata_json: {
-          source: (data.source as "KB_RETRIEVED" | "LLM_GENERATED" | "HYBRID") || "LLM_GENERATED",
-        },
-        turn_index: data.turn_index,
-        created_at: new Date().toISOString(),
-      })
+      // Save accumulated content as assistant message
+      if (streamingContent.value) {
+        messages.value.push({
+          id: data.message_id || 0,
+          role: "ASSISTANT",
+          content: streamingContent.value,
+          metadata_json: {
+            source: "QUESTION_DRIVEN",
+            action: data.action,
+          },
+          turn_index: data.turn_index,
+          created_at: new Date().toISOString(),
+        })
+      }
       streamingContent.value = ""
       streaming.value = false
       sending.value = false
       streamingSource.value = ""
       abortController = null
-      // Reload sessions to update turn count
       loadSessions()
     },
     // onCompressed
@@ -289,7 +321,63 @@ async function handleSend() {
       abortController = null
     },
     // onStatus
-    () => {}
+    () => {},
+    // Phase 3.6: New SSE callbacks
+    // onEvaluation
+    () => {
+      if (currentQuestion.value) {
+        currentQuestion.value = { ...currentQuestion.value }
+      }
+    },
+    // onFollowUp
+    (data) => {
+      if (currentQuestion.value) {
+        currentQuestion.value.follow_up_count = data.follow_up_count
+      }
+    },
+    // onQuestion
+    (data) => {
+      currentQuestion.value = {
+        question_id: data.question_id,
+        question_index: data.question_index,
+        total_questions: data.total_questions,
+        question: data.question,
+        source: data.source,
+        dimension: data.dimension,
+        difficulty: data.difficulty,
+        evidence: data.evidence,
+      }
+      answerVisible.value = false
+      standardAnswer.value = ""
+      generatedCount.value = data.question_index + 1
+      questionBudget.value = data.total_questions
+    },
+    // onDynamicQuestion
+    (data) => {
+      currentQuestion.value = {
+        question_id: data.question_id,
+        question_index: data.question_index,
+        question: data.question,
+        source: data.source,
+        dimension: data.dimension,
+        difficulty: data.difficulty,
+        is_dynamic: true,
+        parent_question_id: data.parent_question_id,
+      }
+      answerVisible.value = false
+      standardAnswer.value = ""
+      generatedCount.value = data.question_index + 1
+    },
+    // onQuestionTransition
+    () => {
+      // Frontend can show "generating next question" indicator
+    },
+    // onInterviewComplete
+    (data) => {
+      alert(`面试结束！已回答 ${data.answered_count} / ${data.question_budget || data.total_questions || questionBudget.value} 题`)
+      sending.value = false
+      streaming.value = false
+    }
   )
 }
 
@@ -322,6 +410,31 @@ function handleKeydown(e: KeyboardEvent) {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault()
     handleSend()
+  }
+}
+
+// Phase 3.6: Simple markdown formatting for display
+function formatContent(text: string): string {
+  if (!text) return ""
+  return text
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\n/g, "<br>")
+}
+
+// Phase 3.6: Toggle standard answer visibility
+async function toggleAnswer() {
+  if (!currentQuestion.value || !activeSessionId.value) return
+  if (answerVisible.value) {
+    answerVisible.value = false
+    return
+  }
+  try {
+    const detail = await getQuestionDetail(activeSessionId.value, currentQuestion.value.question_id)
+    standardAnswer.value = detail.standard_answer || "暂无答案"
+    answerVisible.value = true
+  } catch {
+    standardAnswer.value = "获取答案失败"
+    answerVisible.value = true
   }
 }
 
@@ -425,13 +538,34 @@ loadSessions()
 
         <!-- Messages -->
         <div ref="chatContainer" class="chat-messages" v-if="!loading">
-          <div v-if="messages.length === 0 && !streaming" class="chat-empty">
-            <p v-if="isActiveResumeReady()">
-              简历已就绪，输入「开始面试」开启模拟面试
+          <div v-if="messages.length === 0 && !streaming && !currentQuestion" class="chat-empty">
+            <p v-if="isActiveResumeReady() && !activeSession()?.target_position_confirmed">
+              简历已就绪，请确认面试岗位后开始
+            </p>
+            <p v-else-if="isActiveResumeReady()">
+              简历已就绪，面试即将开始...
             </p>
             <p v-else-if="isActiveResumeFailed()">简历处理失败，请重新上传简历</p>
             <p v-else-if="hasActiveResume()">简历处理中，请等待处理完成</p>
             <p v-else>请先上传简历</p>
+          </div>
+
+          <!-- Phase 3.6: Question card as chat bubble -->
+          <div v-if="currentQuestion && activeSession()?.target_position_confirmed" class="message-row assistant">
+            <div class="message-bubble question-bubble">
+              <div class="q-header">
+                <span class="q-badge">Q{{ currentQuestion.question_index + 1 }} / {{ questionBudget }}</span>
+                <span class="q-dimension" v-if="currentQuestion.dimension">{{ currentQuestion.dimension }}</span>
+                <span class="q-difficulty" v-if="currentQuestion.difficulty">{{ currentQuestion.difficulty }}</span>
+                <span class="q-source" v-if="currentQuestion.source">{{ sourceLabel(currentQuestion.source) }}</span>
+                <span v-if="currentQuestion.is_dynamic" class="q-dynamic">⚡ 临时追问</span>
+              </div>
+              <div class="q-body">{{ currentQuestion.question }}</div>
+              <button class="q-answer-btn" @click="toggleAnswer">
+                {{ answerVisible ? '收起答案' : '展开参考答案' }}
+              </button>
+              <div v-if="answerVisible" class="q-answer">{{ standardAnswer }}</div>
+            </div>
           </div>
 
           <div
@@ -441,7 +575,7 @@ loadSessions()
             :class="msg.role.toLowerCase()"
           >
             <div class="message-bubble">
-              <div class="message-content">{{ msg.content }}</div>
+              <div class="message-content" v-html="formatContent(msg.content)"></div>
               <div class="message-meta" v-if="msg.role === 'ASSISTANT'">
                 <span
                   v-if="msg.metadata_json?.source"
@@ -475,7 +609,7 @@ loadSessions()
           <!-- Streaming bubble -->
           <div v-if="streaming" class="message-row assistant">
             <div class="message-bubble">
-              <div class="message-content">{{ streamingContent || '思考中...' }}</div>
+              <div class="message-content" v-html="formatContent(streamingContent) || '思考中...'"></div>
               <div class="message-meta" v-if="streamingSource">
                 <span
                   class="source-badge"
@@ -915,5 +1049,67 @@ loadSessions()
 
 .btn-stop:hover {
   background: #e04545;
+}
+
+/* Phase 3.6: Question Bubble in chat */
+.question-bubble {
+  background: #f0f7ff !important;
+  border: 1px solid #b3d8ff !important;
+  max-width: 90% !important;
+}
+.q-header {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.q-badge {
+  background: #409eff;
+  color: #fff;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.q-dimension, .q-difficulty, .q-source {
+  font-size: 12px;
+  color: #606266;
+  background: #ecf5ff;
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+.q-dynamic {
+  font-size: 12px;
+  color: #e6a23c;
+  font-weight: 600;
+}
+.q-body {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #303133;
+  margin-bottom: 12px;
+}
+.q-answer-btn {
+  background: none;
+  border: 1px solid #409eff;
+  color: #409eff;
+  padding: 4px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.q-answer-btn:hover {
+  background: #ecf5ff;
+}
+.q-answer {
+  margin-top: 10px;
+  padding: 12px;
+  background: #fff;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  color: #303133;
 }
 </style>

@@ -951,13 +951,12 @@ class InterviewChatService:
                     remaining_summaries=remaining_text,
                 )
 
-            # Stream LLM response
+            # Accumulate LLM response (don't stream raw JSON to frontend)
             llm_messages = [{"role": "user", "content": prompt}]
             full_content = ""
 
             async for token in self.llm.chat_stream(llm_messages):
                 full_content += token
-                yield _sse("token", {"content": token})
 
             # Parse LLM decision
             decision = self._parse_decision(full_content)
@@ -966,9 +965,32 @@ class InterviewChatService:
             evaluation_text = decision.get("evaluation", "")
             score = decision.get("score", 0)
 
+            # Format evaluation as readable Markdown, stream as tokens
+            md_lines = []
+            if evaluation_text:
+                md_lines.append(f"**面试官点评**\n{evaluation_text}")
+            if score:
+                md_lines.append(f"\n**得分**: {score} / 5")
+            missing = decision.get("missing_points") or []
+            if missing:
+                md_lines.append("\n**缺失点**:")
+                for mp in missing:
+                    md_lines.append(f"- {mp}" if isinstance(mp, str) else f"- {mp}")
+            risk = decision.get("risk_tip")
+            if risk:
+                md_lines.append(f"\n**风险提示**: {risk}")
+
+            eval_md = "\n".join(md_lines)
+            # Stream evaluation as tokens (small chunks for smooth display)
+            for i in range(0, len(eval_md), 10):
+                yield _sse("token", {"content": eval_md[i:i+10]})
+
             yield _sse("evaluation", {
                 "score": score,
-                "comment": evaluation_text,
+                "evaluation": evaluation_text,
+                "covered_points": decision.get("covered_points", []),
+                "missing_points": decision.get("missing_points", []),
+                "risk_tip": decision.get("risk_tip"),
                 "action": action,
             })
 
@@ -1025,7 +1047,7 @@ class InterviewChatService:
                 dim_hint = decision.get("next_dimension_hint")
                 total_budget = session.interview_plan_json.get("question_budget", 20) if session.interview_plan_json else 20
                 next_q_data = await self.generate_next_question(
-                    session_id, dimension_hint=dim_hint, user_answer=content
+                    session_id, dimension_hint=dim_hint, user_answer=content,
                 )
                 if next_q_data:
                     new_index = session.current_question_index + 1
@@ -1048,6 +1070,19 @@ class InterviewChatService:
                         "difficulty": next_q_data["difficulty"],
                         "evidence": next_q_data.get("evidence"),
                     })
+                    # Save question as ASSISTANT message
+                    await self.msg_repo.create(
+                        session_id=session_id, role="ASSISTANT",
+                        content=next_q_data["question"],
+                        metadata_json={
+                            "source": "QUESTION_DRIVEN", "type": "QUESTION",
+                            "question_id": next_q_data["question_id"],
+                            "dimension": next_q_data["dimension"],
+                            "difficulty": next_q_data["difficulty"],
+                            "source_label": next_q_data["source"],
+                        },
+                        turn_index=new_turn,
+                    )
                 else:
                     action = "COMPLETE"
 
@@ -1076,26 +1111,33 @@ class InterviewChatService:
                     "avg_score": avg_score,
                 })
 
-            # Save assistant message
-            assistant_content = evaluation_text
+            # Save assistant message (Phase 3.6: Markdown format, structured metadata)
             if action == "FOLLOW_UP":
-                assistant_content += "\n\n" + decision.get("follow_up_question", "")
-            elif action == "INSERT_DYNAMIC_QUESTION":
-                dq = decision.get("dynamic_question") or {}
-                assistant_content += (
-                    "\n\n" + dq.get("question", "")
-                    + "\n\n（基于你的回答临场追问）"
+                assistant_content = (
+                    f"{eval_md}\n\n**追问**\n{decision.get('follow_up_question', '')}"
                 )
+                msg_type = "FOLLOW_UP"
+            elif action == "INSERT_DYNAMIC_QUESTION":
+                assistant_content = eval_md
+                msg_type = "EVALUATION"
+            else:
+                assistant_content = eval_md
+                msg_type = "EVALUATION"
+
             await self.msg_repo.create(
                 session_id=session_id,
                 role="ASSISTANT",
                 content=assistant_content,
                 metadata_json={
                     "source": "QUESTION_DRIVEN",
+                    "type": msg_type,
                     "question_id": q.id,
                     "action": action,
                     "score": score,
                     "is_follow_up": is_follow_up,
+                    "covered_points": decision.get("covered_points", []),
+                    "missing_points": decision.get("missing_points", []),
+                    "risk_tip": decision.get("risk_tip"),
                 },
                 turn_index=new_turn,
             )
@@ -1302,18 +1344,15 @@ class InterviewChatService:
                 )
                 await self.db.commit()
 
-                # Generate Q1 with streaming (collect tokens, yield after)
+                # Generate Q1, then stream the question text (not raw JSON)
                 yield _sse("status", {"stage": "generating_first_question"})
-                tokens = []
-                async def collect(tok):
-                    tokens.append(tok)
-
-                q1_data = await self.generate_next_question(
-                    session.id, on_token=collect,
-                )
-                # Yield collected tokens
-                for tok in tokens:
-                    yield _sse("token", {"content": tok})
+                yield _sse("token", {"content": "。"})  # keep-alive
+                q1_data = await self.generate_next_question(session.id)
+                if q1_data:
+                    # Stream question text character by character
+                    q_text = q1_data["question"]
+                    for i in range(0, len(q_text), 3):
+                        yield _sse("token", {"content": q_text[i:i+3]})
 
                 if q1_data:
                     # Mark Q1 ASKED
@@ -1332,6 +1371,18 @@ class InterviewChatService:
                         "difficulty": q1_data["difficulty"],
                         "evidence": q1_data.get("evidence"),
                     })
+                    # Save Q1 as ASSISTANT message
+                    await self.msg_repo.create(
+                        session_id=session.id, role="ASSISTANT",
+                        content=q1_data["question"],
+                        metadata_json={
+                            "source": "QUESTION_DRIVEN", "type": "QUESTION",
+                            "question_id": q1_data["question_id"],
+                            "dimension": q1_data["dimension"],
+                            "difficulty": q1_data["difficulty"],
+                        },
+                        turn_index=turn_index,
+                    )
                     yield _sse("evaluation", {
                         "score": 0,
                         "comment": f"岗位确认：{pos}，面试开始",

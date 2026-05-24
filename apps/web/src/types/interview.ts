@@ -1,17 +1,3 @@
-export interface InterviewSession {
-  id: number
-  user_id: number
-  resume_id: number | null
-  title: string | null
-  status: string
-  turn_count: number
-  last_compressed_turn: number
-  resume_filename: string | null
-  resume_status: string | null
-  created_at: string
-  updated_at: string
-}
-
 export interface InterviewMessage {
   id: number
   role: "USER" | "ASSISTANT" | "SYSTEM"
@@ -19,15 +5,6 @@ export interface InterviewMessage {
   metadata_json: InterviewMessageMeta | null
   turn_index: number
   created_at: string
-}
-
-export interface InterviewMessageMeta {
-  retrieval_queries?: string[]
-  retrieved_context?: RetrievedContextItem[]
-  source?: "KB_RETRIEVED" | "LLM_GENERATED" | "HYBRID"
-  evidence?: EvidenceItem[]
-  compressed?: boolean
-  token_estimate?: number
 }
 
 export interface RetrievedContextItem {
@@ -45,11 +22,6 @@ export interface EvidenceItem {
   source_type: string
   preview: string
   score: number
-}
-
-export interface InterviewSessionDetail extends InterviewSession {
-  memory_summary: string | null
-  messages: InterviewMessage[]
 }
 
 // SSE Events
@@ -86,6 +58,135 @@ export interface SSECompressedEvent {
 export interface SSEErrorEvent {
   code: string
   message: string
+}
+
+// Phase 3.6: Question & New SSE types
+
+export interface InterviewQuestion {
+  question_id: number
+  question_index: number
+  total_questions?: number
+  question: string
+  standard_answer?: string | null
+  dimension?: string | null
+  difficulty?: string | null
+  source: string
+  evidence?: unknown
+  status?: string
+  follow_up_count?: number
+  is_dynamic?: boolean
+  parent_question_id?: number | null
+  standard_answer_hidden?: boolean
+}
+
+export interface InterviewQuestionSummary {
+  id: number
+  question_index: number
+  question: string
+  dimension?: string | null
+  difficulty?: string | null
+  status: string
+  is_dynamic?: boolean
+  answer_summary?: string | null
+}
+
+export interface InterviewQuestionList {
+  questions: InterviewQuestionSummary[]
+  total: number
+  current_question_index: number
+  question_generation_status: string
+}
+
+export interface StartInterviewResult {
+  type: string
+  question_id: number
+  question_index: number
+  total_questions: number
+  question: string
+  dimension?: string | null
+  difficulty?: string | null
+  source: string
+  evidence?: unknown
+}
+
+export interface TargetPositionResult {
+  target_position_confirmed: boolean
+  question_budget: number
+  current_question?: {
+    question_id: number
+    question_index: number
+    question: string
+    dimension?: string | null
+    difficulty?: string | null
+    source: string
+    evidence?: unknown
+  }
+}
+
+export interface InterviewSessionDetail extends InterviewSession {
+  memory_summary: string | null
+  messages: InterviewMessage[]
+  questions?: InterviewQuestion[]
+  current_question_index?: number
+  question_generation_status?: string
+  total_questions?: number
+  target_position?: string | null
+  target_position_confirmed?: boolean
+  interview_mode?: string
+  interview_plan_json?: unknown
+  question_count?: number
+}
+
+export interface InterviewSession {
+  id: number
+  user_id: number
+  resume_id: number | null
+  title: string | null
+  status: string
+  current_question_index?: number
+  question_generation_status?: string
+  question_generation_error?: string | null
+  total_questions?: number
+  turn_count?: number
+  last_compressed_turn?: number
+  target_position?: string | null
+  target_position_confirmed?: boolean
+  interview_mode?: string
+  interview_plan_json?: unknown
+  question_count?: number
+  resume_filename?: string | null
+  resume_status?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
+export interface InterviewMessageMeta {
+  retrieval_queries?: string[]
+  retrieved_context?: RetrievedContextItem[]
+  source?: string
+  evidence?: EvidenceItem[]
+  compressed?: boolean
+  type?: "QUESTION" | "EVALUATION" | "FOLLOW_UP" | "POSITION_CONFIRMED" | "POSITION_SUGGESTION"
+  question_id?: number
+  action?: string
+  score?: number
+  is_follow_up?: boolean
+  covered_points?: string[]
+  missing_points?: string[]
+  risk_tip?: string
+  target_position?: string
+  dimension?: string
+  difficulty?: string
+}
+
+// SSE evaluation event
+export interface EvaluationEvent {
+  score: number
+  evaluation: string
+  covered_points?: string[]
+  missing_points?: string[]
+  risk_tip?: string
+  action: string
 }
 
 export function sourceLabel(source: string): string {

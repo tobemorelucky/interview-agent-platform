@@ -50,7 +50,8 @@
       "Bash(cat)",
       "Bash(rm -f /tmp/test_redirect.bat)",
       "Bash(powershell.exe:*)",
-      "Bash(python -c ':*)"
+      "Bash(python -c ':*)",
+      "Bash(npx vue-tsc:*)"
     ]
   }
 }
