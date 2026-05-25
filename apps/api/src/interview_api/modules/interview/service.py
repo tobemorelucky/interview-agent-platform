@@ -1028,9 +1028,7 @@ class InterviewChatService:
                 md_lines.append(f"\n**风险提示**: {risk}")
 
             eval_md = "\n".join(md_lines)
-            # Stream evaluation as tokens (small chunks for smooth display)
-            for i in range(0, len(eval_md), 10):
-                yield _sse("token", {"content": eval_md[i:i+10]})
+            # Phase 3.7: Don't stream eval markdown as tokens. Only send structured event.
 
             yield _sse("evaluation", {
                 "score": score,
@@ -1159,36 +1157,34 @@ class InterviewChatService:
                     "avg_score": avg_score,
                 })
 
-            # Save assistant message (Phase 3.6: Markdown format, structured metadata)
-            if action == "FOLLOW_UP":
-                assistant_content = (
-                    f"{eval_md}\n\n**追问**\n{decision.get('follow_up_question', '')}"
-                )
-                msg_type = "FOLLOW_UP"
-            elif action == "INSERT_DYNAMIC_QUESTION":
-                assistant_content = eval_md
-                msg_type = "EVALUATION"
-            else:
-                assistant_content = eval_md
-                msg_type = "EVALUATION"
-
+            # Phase 3.7: Save EVALUATION as separate message
             await self.msg_repo.create(
-                session_id=session_id,
-                role="ASSISTANT",
-                content=assistant_content,
+                session_id=session_id, role="ASSISTANT",
+                content=eval_md,
                 metadata_json={
-                    "source": "QUESTION_DRIVEN",
-                    "type": msg_type,
-                    "question_id": q.id,
-                    "action": action,
-                    "score": score,
-                    "is_follow_up": is_follow_up,
+                    "source": "QUESTION_DRIVEN", "type": "EVALUATION",
+                    "question_id": q.id, "action": action, "score": score,
                     "covered_points": decision.get("covered_points", []),
                     "missing_points": decision.get("missing_points", []),
                     "risk_tip": decision.get("risk_tip"),
+                    "collapsed_default": True,
                 },
                 turn_index=new_turn,
             )
+
+            # Phase 3.7: Save FOLLOW_UP as separate message (no eval mixed in)
+            if action == "FOLLOW_UP":
+                await self.msg_repo.create(
+                    session_id=session_id, role="ASSISTANT",
+                    content=decision.get("follow_up_question", ""),
+                    metadata_json={
+                        "source": "QUESTION_DRIVEN", "type": "FOLLOW_UP",
+                        "question_id": q.id,
+                        "follow_up_count": q.follow_up_count + 1,
+                        "max_follow_ups": settings.interview_max_follow_ups_per_question,
+                    },
+                    turn_index=new_turn,
+                )
 
             await self.session_repo.increment_turn(session_id)
 
@@ -1270,8 +1266,7 @@ class InterviewChatService:
         for q in questions:
             item = InterviewService._question_to_dict(q)
             # Mask standard_answer for questions not yet ASKED/ANSWERED
-            if q.status not in ("ASKED", "ANSWERED"):
-                item["standard_answer"] = None
+            if q.status not in ("ASKED", "ANSWERED", "SKIPPED"):    item["standard_answer"] = None
             result.append(item)
         return {
             "questions": result,

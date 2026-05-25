@@ -80,6 +80,14 @@ async function selectSession(id: number, force = false) {
   try {
     const detail = await getSession(id)
     messages.value = detail.messages || []
+    // Phase 3.7: Initialize eval collapsed state on refresh
+    for (const msg of messages.value) {
+      if (msg.metadata_json?.type === "EVALUATION") {
+        if (evalCollapsed.value[msg.id] === undefined) {
+          evalCollapsed.value[msg.id] = true
+        }
+      }
+    }
     const index = sessions.value.findIndex((s) => s.id === id)
     if (index >= 0) {
       sessions.value[index] = {
@@ -280,14 +288,18 @@ async function handleSend() {
     },
     // onCitation
     () => {},
-    // onDone — only clear state, no auto-save (structured events handle message creation)
-    () => {
+    // onDone — reload authoritative messages from server, then clear state
+    (data: any) => {
       streamingContent.value = ""
       streaming.value = false
       sending.value = false
       streamingSource.value = ""
       abortController = null
       loadSessions()
+      // Phase 3.7: Reload messages from server to get proper message types/metadata
+      if (activeSessionId.value) {
+        selectSession(activeSessionId.value, true).catch(() => {})
+      }
     },
     // onCompressed
     (data) => {
@@ -445,7 +457,44 @@ function formatContent(text: string): string {
     .replace(/\n/g, "<br>")
 }
 
-// Phase 3.6 final: Render helpers
+// Phase 3.7: buildDisplayItems for refresh-proof rendering
+function buildDisplayItems(msgs: InterviewMessage[]) {
+  const items: any[] = []
+  for (const msg of msgs) {
+    const t = msg.metadata_json?.type
+    if (msg.role === "USER") {
+      items.push({ id: msg.id, type: "USER", content: msg.content, raw: msg })
+    } else if (t === "QUESTION" || t === "FOLLOW_UP" || t === "DYNAMIC_QUESTION") {
+      const meta = msg.metadata_json as any
+      items.push({
+        id: msg.id, type: t, content: msg.content,
+        question_id: meta.question_id, question_index: meta.question_index,
+        dimension: meta.dimension, difficulty: meta.difficulty,
+        source: meta.source || meta.source_label, evidence: meta.evidence,
+        follow_up_count: meta.follow_up_count, max_follow_ups: meta.max_follow_ups,
+        is_dynamic: t === "DYNAMIC_QUESTION", parent_question_id: meta.parent_question_id,
+        raw: msg,
+      })
+    } else if (t === "EVALUATION") {
+      items.push({
+        id: msg.id, type: "EVALUATION", content: msg.content,
+        question_id: (msg.metadata_json as any).question_id,
+        score: (msg.metadata_json as any).score,
+        missing_points: (msg.metadata_json as any).missing_points || [],
+        risk_tip: (msg.metadata_json as any).risk_tip,
+        covered_points: (msg.metadata_json as any).covered_points || [],
+        action: (msg.metadata_json as any).action,
+        raw: msg,
+      })
+    } else if (t === "INTERVIEW_COMPLETE") {
+      items.push({ id: msg.id, type: "INTERVIEW_COMPLETE", content: msg.content, raw: msg })
+    } else {
+      items.push({ id: msg.id, type: "NORMAL", content: msg.content, role: msg.role, raw: msg })
+    }
+  }
+  return items
+}
+
 function isQuestionType(msg: InterviewMessage): boolean {
   if (!msg.metadata_json) return false
   const t = (msg.metadata_json as any).type
@@ -472,7 +521,12 @@ async function toggleAnswerForMsg(msg: InterviewMessage) {
 }
 
 function toggleEvalCollapse(msgId: number) {
-  evalCollapsed.value[msgId] = !evalCollapsed.value[msgId]
+  // Phase 3.7: undefined/true → expand (set false); false → collapse (set true)
+  if (evalCollapsed.value[msgId] === false) {
+    evalCollapsed.value[msgId] = true   // collapse
+  } else {
+    evalCollapsed.value[msgId] = false  // expand
+  }
 }
 
 async function scrollToBottom() {
@@ -615,9 +669,9 @@ loadSessions()
               <div class="message-bubble eval-bubble" @click="toggleEvalCollapse(msg.id)">
                 <div class="eval-summary">
                   面试官点评 · 得分 {{ msg.metadata_json?.score ?? '?' }}/5
-                  <span class="eval-toggle">{{ evalCollapsed[msg.id] ? '▸ 展开' : '▾ 收起' }}</span>
+                  <span class="eval-toggle">{{ evalCollapsed[msg.id] !== false ? '▸ 展开' : '▾ 收起' }}</span>
                 </div>
-                <div v-if="!evalCollapsed[msg.id]" class="eval-detail">
+                <div v-if="evalCollapsed[msg.id] === false" class="eval-detail">
                   <div class="eval-text">{{ msg.content }}</div>
                   <div v-if="msg.metadata_json?.missing_points?.length" class="eval-missing">
                     <strong>缺失点:</strong>
