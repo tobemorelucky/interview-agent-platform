@@ -12,10 +12,19 @@ echo ============================================
 echo   Interview Agent Platform - Start Dev
 echo ============================================
 echo.
-echo   Phase 3: Resume processing runs through Celery Worker.
-echo   Required: PostgreSQL + Redis + MinIO + LLM_API_KEY
-echo   Worker must stay connected for resume and KB document processing.
-echo.
+
+REM ---- Clean up any leftover processes from previous run ----
+echo [0/4] Cleaning up old processes...
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":8000 " ^| findstr "LISTENING"') do (
+    taskkill /PID %%a /T /F 2>nul
+)
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":5173 " ^| findstr "LISTENING"') do (
+    taskkill /PID %%a /T /F 2>nul
+)
+taskkill /FI "WINDOWTITLE eq IAP_DEV_API_8000" /T /F 2>nul
+taskkill /FI "WINDOWTITLE eq IAP_DEV_WEB_5173" /T /F 2>nul
+taskkill /FI "WINDOWTITLE eq IAP_DEV_WORKER" /T /F 2>nul
+taskkill /FI "WINDOWTITLE eq IAP_DEV_WORKER_EXITED" /T /F 2>nul
 
 REM ---- Docker ----
 echo [1/4] Starting Docker infrastructure (PG + Redis + MinIO + Milvus)...
@@ -27,8 +36,8 @@ REM ---- API ----
 echo [2/4] Starting API on http://localhost:8000/docs
 start "IAP_DEV_API_8000" "%RUNDIR%\run-api.bat"
 
-REM ---- Worker (optional for Phase 3, needed for KB doc ingestion) ----
-echo [3/4] Starting Worker (Celery, pool=solo) [optional for resume]
+REM ---- Worker (optional, needed for resume processing) ----
+echo [3/4] Starting Worker (Celery, pool=solo)
 start "IAP_DEV_WORKER" "%RUNDIR%\run-worker.bat"
 
 REM ---- Web ----
@@ -44,10 +53,10 @@ echo   API:       http://localhost:8000/docs
 echo   Web:       http://localhost:5173
 echo   Logs:      logs\dev\*-%DATESTAMP%.log
 echo.
-echo   Tail logs: Get-Content logs\dev\api-%DATESTAMP%.log -Wait -Encoding UTF8
-echo.
 echo   Stop all:  stop-dev.bat
+echo   Status:    status-dev.bat
 echo.
-echo Window will close in 3s, or press any key to close now...
+echo   This window will close in 3s.
+echo   Dev log windows (API/Web/Worker) will stay open.
 timeout /t 3 >nul
 exit /b

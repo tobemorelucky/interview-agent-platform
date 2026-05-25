@@ -120,6 +120,7 @@ export function sendMessageStream(
     action: string;
   }) => void,
   onFollowUp?: (data: {
+    question_id?: number;
     question: string;
     follow_up_count: number;
     max_follow_ups: number;
@@ -136,9 +137,9 @@ export function sendMessageStream(
   }) => void,
   onDynamicQuestion?: (data: {
     question_id: number;
-    question_index: number;
+    question_index?: number;
     question: string;
-    source: string;
+    source?: string;
     dimension?: string;
     difficulty?: string;
     parent_question_id?: number;

@@ -161,13 +161,15 @@ export interface InterviewSession {
 }
 
 export interface InterviewMessageMeta {
+  [key: string]: unknown  // allow dynamic fields from SSE events
   retrieval_queries?: string[]
   retrieved_context?: RetrievedContextItem[]
   source?: string
-  evidence?: EvidenceItem[]
+  evidence?: EvidenceItem[] | unknown[]
   compressed?: boolean
-  type?: "QUESTION" | "EVALUATION" | "FOLLOW_UP" | "POSITION_CONFIRMED" | "POSITION_SUGGESTION"
+  type?: "QUESTION" | "EVALUATION" | "FOLLOW_UP" | "DYNAMIC_QUESTION" | "POSITION_CONFIRMED" | "POSITION_SUGGESTION"
   question_id?: number
+  question_index?: number
   action?: string
   score?: number
   is_follow_up?: boolean
@@ -177,6 +179,10 @@ export interface InterviewMessageMeta {
   target_position?: string
   dimension?: string
   difficulty?: string
+  follow_up_count?: number
+  max_follow_ups?: number
+  source_label?: string
+  parent_question_id?: number
 }
 
 // SSE evaluation event

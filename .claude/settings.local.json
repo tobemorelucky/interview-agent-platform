@@ -51,7 +51,12 @@
       "Bash(rm -f /tmp/test_redirect.bat)",
       "Bash(powershell.exe:*)",
       "Bash(python -c ':*)",
-      "Bash(npx vue-tsc:*)"
+      "Bash(npx vue-tsc:*)",
+      "Bash(curl -s http://localhost:8000/api/v1/auth/me -H \"Authorization: Bearer test\")",
+      "Bash(curl -v http://localhost:8000/api/v1/auth/me)",
+      "Bash(curl:*)",
+      "Bash(python3:*)",
+      "Bash(git checkout:*)"
     ]
   }
 }

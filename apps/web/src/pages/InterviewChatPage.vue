@@ -7,13 +7,12 @@ import {
   bindResume,
   deleteSession,
   sendMessageStream,
-  getCurrentQuestion,
   getQuestions,
   getQuestionDetail,
 } from "../api/interview"
 import { uploadResume, getResume as apiGetResume } from "../api/resume"
 import { ApiError } from "../api/client"
-import type { InterviewSession, InterviewMessage, InterviewQuestion, InterviewQuestionSummary } from "../types/interview"
+import type { InterviewSession, InterviewMessage, InterviewQuestionSummary } from "../types/interview"
 import { sourceLabel, sourceColor } from "../types/interview"
 import { statusLabel, stageLabel } from "../types/resume"
 
@@ -21,10 +20,10 @@ import { statusLabel, stageLabel } from "../types/resume"
 const sessions = ref<InterviewSession[]>([])
 const activeSessionId = ref<number | null>(null)
 const messages = ref<InterviewMessage[]>([])
-const currentQuestion = ref<InterviewQuestion | null>(null)
 const questionList = ref<InterviewQuestionSummary[]>([])
-const answerVisible = ref(false)
-const standardAnswer = ref("")
+const answerVisibleMap = ref<Record<number, boolean>>({})
+const standardAnswerMap = ref<Record<number, string>>({})
+const evalCollapsed = ref<Record<number, boolean>>({})
 const questionBudget = ref(20)
 const generatedCount = ref(0)
 const inputText = ref("")
@@ -71,11 +70,11 @@ async function selectSession(id: number, force = false) {
   streamingContent.value = ""
   streamingSource.value = ""
   streaming.value = false
-  // Phase 3.6: Clear question state when switching sessions
-  currentQuestion.value = null
+  // Phase 3.6: Clear state when switching sessions
   questionList.value = []
-  answerVisible.value = false
-  standardAnswer.value = ""
+  answerVisibleMap.value = {}
+  standardAnswerMap.value = {}
+  evalCollapsed.value = {}
   questionBudget.value = 20
   generatedCount.value = 0
   try {
@@ -92,14 +91,10 @@ async function selectSession(id: number, force = false) {
     if (detail.target_position_confirmed) {
       questionBudget.value = detail.question_count || 20
       try {
-        const cq = await getCurrentQuestion(id)
-        if (cq && cq.question) currentQuestion.value = cq
-      } catch { /* question endpoint may not be ready */ }
-      try {
         const ql = await getQuestions(id)
         questionList.value = ql.questions || []
         generatedCount.value = ql.total || 0
-      } catch { /* questions endpoint may not be ready */ }
+      } catch { /* ignore */ }
     }
 
     // If resume processing, start polling
@@ -285,22 +280,8 @@ async function handleSend() {
     },
     // onCitation
     () => {},
-    // onDone
-    (data) => {
-      // Save accumulated content as assistant message
-      if (streamingContent.value) {
-        messages.value.push({
-          id: data.message_id || 0,
-          role: "ASSISTANT",
-          content: streamingContent.value,
-          metadata_json: {
-            source: "QUESTION_DRIVEN",
-            action: data.action,
-          },
-          turn_index: data.turn_index,
-          created_at: new Date().toISOString(),
-        })
-      }
+    // onDone — only clear state, no auto-save (structured events handle message creation)
+    () => {
       streamingContent.value = ""
       streaming.value = false
       sending.value = false
@@ -322,56 +303,91 @@ async function handleSend() {
     },
     // onStatus
     () => {},
-    // Phase 3.6: New SSE callbacks
-    // onEvaluation
-    () => {
-      if (currentQuestion.value) {
-        currentQuestion.value = { ...currentQuestion.value }
-      }
-    },
-    // onFollowUp
+    // Phase 3.6 final: New SSE callbacks
+    // onEvaluation — add collapsible evaluation message
     (data) => {
-      if (currentQuestion.value) {
-        currentQuestion.value.follow_up_count = data.follow_up_count
-      }
+      const mid = Date.now()
+      evalCollapsed.value[mid] = true  // default collapsed
+      messages.value.push({
+        id: mid,
+        role: "ASSISTANT",
+        content: data.evaluation || "",
+        metadata_json: {
+          type: "EVALUATION",
+          question_id: (data as any).question_id,
+          score: data.score,
+          missing_points: data.missing_points || [],
+          risk_tip: data.risk_tip,
+          covered_points: data.covered_points || [],
+          action: data.action,
+        },
+        turn_index: messages.value.length,
+        created_at: new Date().toISOString(),
+      })
     },
-    // onQuestion
+    // onFollowUp — add as question bubble
     (data) => {
-      currentQuestion.value = {
-        question_id: data.question_id,
-        question_index: data.question_index,
-        total_questions: data.total_questions,
-        question: data.question,
-        source: data.source,
-        dimension: data.dimension,
-        difficulty: data.difficulty,
-        evidence: data.evidence,
-      }
-      answerVisible.value = false
-      standardAnswer.value = ""
-      generatedCount.value = data.question_index + 1
+      const mid = Date.now()
+      messages.value.push({
+        id: mid,
+        role: "ASSISTANT",
+        content: data.question || "",
+        metadata_json: {
+          type: "FOLLOW_UP",
+          question_id: data.question_id,
+          follow_up_count: data.follow_up_count,
+          max_follow_ups: data.max_follow_ups,
+        },
+        turn_index: messages.value.length,
+        created_at: new Date().toISOString(),
+      })
+    },
+    // onQuestion — add as question bubble
+    (data) => {
+      const mid = Date.now()
+      messages.value.push({
+        id: mid,
+        role: "ASSISTANT",
+        content: data.question,
+        metadata_json: {
+          type: "QUESTION",
+          question_id: data.question_id,
+          question_index: data.question_index,
+          dimension: data.dimension,
+          difficulty: data.difficulty,
+          source: data.source,
+          source_label: data.source,
+          evidence: data.evidence as unknown[],
+        },
+        turn_index: messages.value.length,
+        created_at: new Date().toISOString(),
+      })
+      generatedCount.value = (data.question_index ?? 0) + 1
       questionBudget.value = data.total_questions
     },
-    // onDynamicQuestion
+    // onDynamicQuestion — add as dynamic question bubble
     (data) => {
-      currentQuestion.value = {
-        question_id: data.question_id,
-        question_index: data.question_index,
-        question: data.question,
-        source: data.source,
-        dimension: data.dimension,
-        difficulty: data.difficulty,
-        is_dynamic: true,
-        parent_question_id: data.parent_question_id,
-      }
-      answerVisible.value = false
-      standardAnswer.value = ""
-      generatedCount.value = data.question_index + 1
+      const mid = Date.now()
+      messages.value.push({
+        id: mid,
+        role: "ASSISTANT",
+        content: data.question,
+        metadata_json: {
+          type: "DYNAMIC_QUESTION",
+          question_id: data.question_id,
+          question_index: data.question_index,
+          dimension: data.dimension,
+          difficulty: data.difficulty,
+          source: data.source,
+          parent_question_id: data.parent_question_id,
+        },
+        turn_index: messages.value.length,
+        created_at: new Date().toISOString(),
+      })
+      generatedCount.value = (data.question_index ?? 0) + 1
     },
-    // onQuestionTransition
-    () => {
-      // Frontend can show "generating next question" indicator
-    },
+    // onQuestionTransition — noop
+    () => {},
     // onInterviewComplete
     (data) => {
       alert(`面试结束！已回答 ${data.answered_count} / ${data.question_budget || data.total_questions || questionBudget.value} 题`)
@@ -421,21 +437,34 @@ function formatContent(text: string): string {
     .replace(/\n/g, "<br>")
 }
 
-// Phase 3.6: Toggle standard answer visibility
-async function toggleAnswer() {
-  if (!currentQuestion.value || !activeSessionId.value) return
-  if (answerVisible.value) {
-    answerVisible.value = false
+// Phase 3.6 final: Render helpers
+function isQuestionType(msg: InterviewMessage): boolean {
+  if (!msg.metadata_json) return false
+  const t = (msg.metadata_json as any).type
+  return t === "QUESTION" || t === "FOLLOW_UP" || t === "DYNAMIC_QUESTION"
+}
+
+async function toggleAnswerForMsg(msg: InterviewMessage) {
+  if (!activeSessionId.value) return
+  if (!msg.metadata_json) return
+  const qid = (msg.metadata_json as Record<string, unknown>).question_id as number | undefined
+  if (!qid) return
+  if (answerVisibleMap.value[msg.id]) {
+    answerVisibleMap.value[msg.id] = false
     return
   }
   try {
-    const detail = await getQuestionDetail(activeSessionId.value, currentQuestion.value.question_id)
-    standardAnswer.value = detail.standard_answer || "暂无答案"
-    answerVisible.value = true
+    const detail = await getQuestionDetail(activeSessionId.value, qid)
+    standardAnswerMap.value[msg.id] = detail.standard_answer || "暂无答案"
+    answerVisibleMap.value[msg.id] = true
   } catch {
-    standardAnswer.value = "获取答案失败"
-    answerVisible.value = true
+    standardAnswerMap.value[msg.id] = "获取答案失败"
+    answerVisibleMap.value[msg.id] = true
   }
+}
+
+function toggleEvalCollapse(msgId: number) {
+  evalCollapsed.value[msgId] = !evalCollapsed.value[msgId]
 }
 
 async function scrollToBottom() {
@@ -538,73 +567,71 @@ loadSessions()
 
         <!-- Messages -->
         <div ref="chatContainer" class="chat-messages" v-if="!loading">
-          <div v-if="messages.length === 0 && !streaming && !currentQuestion" class="chat-empty">
-            <p v-if="isActiveResumeReady() && !activeSession()?.target_position_confirmed">
-              简历已就绪，请确认面试岗位后开始
-            </p>
-            <p v-else-if="isActiveResumeReady()">
-              简历已就绪，面试即将开始...
-            </p>
+          <div v-if="messages.length === 0 && !streaming" class="chat-empty">
+            <p v-if="isActiveResumeReady() && !activeSession()?.target_position_confirmed">简历已就绪，请确认面试岗位后开始</p>
+            <p v-else-if="isActiveResumeReady()">简历已就绪，面试即将开始...</p>
             <p v-else-if="isActiveResumeFailed()">简历处理失败，请重新上传简历</p>
             <p v-else-if="hasActiveResume()">简历处理中，请等待处理完成</p>
             <p v-else>请先上传简历</p>
           </div>
 
-          <!-- Phase 3.6: Question card as chat bubble -->
-          <div v-if="currentQuestion && activeSession()?.target_position_confirmed" class="message-row assistant">
-            <div class="message-bubble question-bubble">
-              <div class="q-header">
-                <span class="q-badge">Q{{ currentQuestion.question_index + 1 }} / {{ questionBudget }}</span>
-                <span class="q-dimension" v-if="currentQuestion.dimension">{{ currentQuestion.dimension }}</span>
-                <span class="q-difficulty" v-if="currentQuestion.difficulty">{{ currentQuestion.difficulty }}</span>
-                <span class="q-source" v-if="currentQuestion.source">{{ sourceLabel(currentQuestion.source) }}</span>
-                <span v-if="currentQuestion.is_dynamic" class="q-dynamic">⚡ 临时追问</span>
+          <!-- Phase 3.6 final: Render by metadata_json.type -->
+          <template v-for="msg in messages" :key="msg.id">
+            <!-- QUESTION / FOLLOW_UP / DYNAMIC_QUESTION bubbles -->
+            <div v-if="isQuestionType(msg)" class="message-row assistant">
+              <div class="message-bubble question-bubble">
+                <div class="q-header">
+                  <span class="q-badge" v-if="msg.metadata_json?.type === 'QUESTION'">
+                    Q{{ msg.metadata_json?.question_index ?? '?' }} / {{ questionBudget }}
+                  </span>
+                  <span class="q-badge followup" v-else-if="msg.metadata_json?.type === 'FOLLOW_UP'">
+                    追问 {{ msg.metadata_json?.follow_up_count ?? '' }}
+                  </span>
+                  <span class="q-badge dynamic" v-else>⚡ 临时追问</span>
+                  <span class="q-dimension" v-if="msg.metadata_json?.dimension">{{ msg.metadata_json.dimension }}</span>
+                  <span class="q-difficulty" v-if="msg.metadata_json?.difficulty">{{ msg.metadata_json.difficulty }}</span>
+                  <span class="q-source" v-if="msg.metadata_json?.source_label || msg.metadata_json?.source">
+                    {{ sourceLabel(msg.metadata_json?.source_label || msg.metadata_json?.source || '') }}
+                  </span>
+                </div>
+                <div class="q-body">{{ msg.content }}</div>
+                <button class="q-answer-btn" @click="toggleAnswerForMsg(msg)">
+                  {{ answerVisibleMap[msg.id] ? '收起答案' : '展开参考答案' }}
+                </button>
+                <div v-if="answerVisibleMap[msg.id]" class="q-answer">{{ standardAnswerMap[msg.id] || '加载中...' }}</div>
               </div>
-              <div class="q-body">{{ currentQuestion.question }}</div>
-              <button class="q-answer-btn" @click="toggleAnswer">
-                {{ answerVisible ? '收起答案' : '展开参考答案' }}
-              </button>
-              <div v-if="answerVisible" class="q-answer">{{ standardAnswer }}</div>
             </div>
-          </div>
 
-          <div
-            v-for="msg in messages"
-            :key="msg.id"
-            class="message-row"
-            :class="msg.role.toLowerCase()"
-          >
-            <div class="message-bubble">
-              <div class="message-content" v-html="formatContent(msg.content)"></div>
-              <div class="message-meta" v-if="msg.role === 'ASSISTANT'">
-                <span
-                  v-if="msg.metadata_json?.source"
-                  class="source-badge"
-                  :style="{ background: sourceColor(msg.metadata_json.source) }"
-                >
+            <!-- EVALUATION: collapsible card -->
+            <div v-else-if="msg.metadata_json?.type === 'EVALUATION'" class="message-row assistant">
+              <div class="message-bubble eval-bubble" @click="toggleEvalCollapse(msg.id)">
+                <div class="eval-summary">
+                  面试官点评 · 得分 {{ msg.metadata_json?.score ?? '?' }}/5
+                  <span class="eval-toggle">{{ evalCollapsed[msg.id] ? '▸ 展开' : '▾ 收起' }}</span>
+                </div>
+                <div v-if="!evalCollapsed[msg.id]" class="eval-detail">
+                  <div class="eval-text">{{ msg.content }}</div>
+                  <div v-if="msg.metadata_json?.missing_points?.length" class="eval-missing">
+                    <strong>缺失点:</strong>
+                    <ul><li v-for="mp in msg.metadata_json.missing_points" :key="mp">{{ mp }}</li></ul>
+                  </div>
+                  <div v-if="msg.metadata_json?.risk_tip" class="eval-risk">
+                    <strong>风险提示:</strong> {{ msg.metadata_json.risk_tip }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Normal user/assistant messages -->
+            <div v-else class="message-row" :class="msg.role.toLowerCase()">
+              <div class="message-bubble">
+                <span v-if="msg.metadata_json?.source" class="message-source-badge" :style="{ background: sourceColor(msg.metadata_json.source) }">
                   {{ sourceLabel(msg.metadata_json.source) }}
                 </span>
-              </div>
-              <!-- Evidence -->
-              <div
-                v-if="msg.metadata_json?.evidence && msg.metadata_json.evidence.length > 0"
-                class="evidence-section"
-              >
-                <details>
-                  <summary>引用来源 ({{ msg.metadata_json.evidence.length }})</summary>
-                  <div
-                    v-for="(ev, i) in msg.metadata_json.evidence"
-                    :key="i"
-                    class="evidence-item"
-                  >
-                    <span class="evidence-title">{{ ev.title }}</span>
-                    <span class="evidence-score">{{ (ev.score * 100).toFixed(0) }}%</span>
-                    <p class="evidence-preview">{{ ev.preview }}</p>
-                  </div>
-                </details>
+                <div class="message-content" v-html="formatContent(msg.content)"></div>
               </div>
             </div>
-          </div>
+          </template>
 
           <!-- Streaming bubble -->
           <div v-if="streaming" class="message-row assistant">
@@ -1112,4 +1139,25 @@ loadSessions()
   white-space: pre-wrap;
   color: #303133;
 }
+.followup { background: #e6a23c !important; }
+.dynamic { background: #f56c6c !important; }
+
+/* Evaluation collapsible card */
+.eval-bubble {
+  background: #fdf6ec !important;
+  border: 1px solid #faecd8 !important;
+  cursor: pointer;
+  max-width: 90% !important;
+}
+.eval-summary {
+  font-size: 13px;
+  color: #e6a23c;
+  font-weight: 600;
+}
+.eval-toggle { float: right; color: #909399; font-weight: 400; font-size: 12px; }
+.eval-detail { margin-top: 10px; }
+.eval-text { font-size: 14px; color: #303133; line-height: 1.6; }
+.eval-missing { margin-top: 8px; font-size: 13px; color: #e6a23c; }
+.eval-missing ul { margin: 4px 0 0 16px; }
+.eval-risk { margin-top: 8px; font-size: 13px; color: #f56c6c; }
 </style>
