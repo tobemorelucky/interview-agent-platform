@@ -388,9 +388,17 @@ async function handleSend() {
     },
     // onQuestionTransition — noop
     () => {},
-    // onInterviewComplete
+    // onInterviewComplete — show as chat card, not alert
     (data) => {
-      alert(`面试结束！已回答 ${data.answered_count} / ${data.question_budget || data.total_questions || questionBudget.value} 题`)
+      const mid = Date.now()
+      const answered = data.answered_count || 0
+      const budget = data.question_budget || data.total_questions || questionBudget.value || 0
+      messages.value.push({
+        id: mid, role: "ASSISTANT",
+        content: budget > 1 ? `面试结束。已回答 ${answered} 题，计划 ${budget} 题。` : `面试结束。`,
+        metadata_json: { type: "INTERVIEW_COMPLETE", answered_count: answered, question_budget: budget },
+        turn_index: messages.value.length, created_at: new Date().toISOString(),
+      })
       sending.value = false
       streaming.value = false
     }
@@ -619,6 +627,13 @@ loadSessions()
                     <strong>风险提示:</strong> {{ msg.metadata_json.risk_tip }}
                   </div>
                 </div>
+              </div>
+            </div>
+
+            <!-- INTERVIEW_COMPLETE card -->
+            <div v-else-if="msg.metadata_json?.type === 'INTERVIEW_COMPLETE'" class="message-row assistant">
+              <div class="message-bubble complete-bubble">
+                <div class="complete-text">🎉 {{ msg.content }}</div>
               </div>
             </div>
 
@@ -1160,4 +1175,6 @@ loadSessions()
 .eval-missing { margin-top: 8px; font-size: 13px; color: #e6a23c; }
 .eval-missing ul { margin: 4px 0 0 16px; }
 .eval-risk { margin-top: 8px; font-size: 13px; color: #f56c6c; }
+.complete-bubble { background: #f0f9eb !important; border: 1px solid #c2e7b0 !important; text-align: center; }
+.complete-text { font-size: 15px; color: #67c23a; font-weight: 600; }
 </style>

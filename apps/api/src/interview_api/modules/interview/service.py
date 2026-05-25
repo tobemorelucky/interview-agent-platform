@@ -892,6 +892,53 @@ class InterviewChatService:
             structured = report.summary_json if report else None
             raw_text = resume.raw_text or ""
 
+            # Phase 3.6: Rule-based SKIP_QUESTION detection
+            skip_patterns = [
+                "不熟", "不会", "这个不会", "换一个", "换个问题", "下一个问题",
+                "跳过", "这个问题我不太了解", "能不能问别的", "换一题", "不知道",
+                "不太清楚", "不了解", "没做过", "没接触过", "换一题吧",
+            ]
+            user_wants_skip = any(p in content for p in skip_patterns)
+            if user_wants_skip:
+                await self.question_repo.update_status(q.id, "SKIPPED")
+                await self.question_repo.update_evaluation(
+                    q.id, status="SKIPPED",
+                    evaluation_json={"action": "SKIP_QUESTION", "reason": "user_requested_skip"},
+                )
+                # Generate next question
+                yield _sse("status", {"stage": "generating_next_question"})
+                next_q_data = await self.generate_next_question(
+                    session_id, user_answer=content,
+                )
+                if next_q_data:
+                    new_index = session.current_question_index + 1
+                    await self.session_repo.update_current_question_index(session_id, new_index)
+                    await self.question_repo.update_status(next_q_data["question_id"], "ASKED")
+                    await self.session_repo.update_question_generation_status(session_id, "READY")
+                    total_budget = session.question_count or 20
+                    yield _sse("question_transition", {"from_index": session.current_question_index, "to_index": new_index, "preview": ""})
+                    yield _sse("question", {
+                        "question_id": next_q_data["question_id"], "question_index": new_index,
+                        "total_questions": total_budget, "question": next_q_data["question"],
+                        "source": next_q_data["source"], "dimension": next_q_data["dimension"],
+                        "difficulty": next_q_data["difficulty"], "evidence": next_q_data.get("evidence"),
+                    })
+                    await self.msg_repo.create(
+                        session_id=session_id, role="ASSISTANT",
+                        content=next_q_data["question"],
+                        metadata_json={"source": "QUESTION_DRIVEN", "type": "QUESTION",
+                                       "question_id": next_q_data["question_id"],
+                                       "dimension": next_q_data["dimension"],
+                                       "difficulty": next_q_data["difficulty"]},
+                        turn_index=new_turn,
+                    )
+                else:
+                    yield _sse("error", {"code": "QUESTION_GENERATION_FAILED", "message": "下一题生成失败，请重试"})
+                await self.session_repo.increment_turn(session_id)
+                await self.db.commit()
+                yield _sse("done", {"message_id": 0, "turn_index": new_turn, "action": "SKIP_QUESTION"})
+                return
+
             recent_msgs = await self.msg_repo.get_recent_messages(session_id, limit=20)
 
             # Determine mode: follow-up or first-answer evaluation
@@ -1084,7 +1131,8 @@ class InterviewChatService:
                         turn_index=new_turn,
                     )
                 else:
-                    action = "COMPLETE"
+                    yield _sse("error", {"code": "QUESTION_GENERATION_FAILED", "message": "下一题生成失败，请重试"})
+                    action = "NONE"
 
             if action == "COMPLETE":
                 await self.question_repo.update_evaluation(
