@@ -56,7 +56,8 @@
       "Bash(curl -v http://localhost:8000/api/v1/auth/me)",
       "Bash(curl:*)",
       "Bash(python3:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(ls -la /e/work/code/python/interview-agent-platform/logs/dev/api*.log)"
     ]
   }
 }

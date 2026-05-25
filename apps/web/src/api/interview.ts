@@ -112,6 +112,7 @@ export function sendMessageStream(
   onStatus: (stage: string) => void,
   // Phase 3.6: New SSE event callbacks
   onEvaluation?: (data: {
+    question_id?: number;
     score: number;
     evaluation: string;
     covered_points?: string[];

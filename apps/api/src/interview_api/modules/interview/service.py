@@ -707,7 +707,11 @@ class InterviewChatService:
             q = {
                 "question_index": next_index,
                 "question": data["question"],
-                "standard_answer": data.get("standard_answer", ""),
+                "standard_answer": (
+                    "\n".join(data["standard_answer"])
+                    if isinstance(data.get("standard_answer"), list)
+                    else data.get("standard_answer", "")
+                ),
                 "dimension": data.get("dimension", dim_name),
                 "difficulty": data.get("difficulty", "MEDIUM"),
                 "source": data.get("source", "LLM_GENERATED"),
@@ -928,8 +932,11 @@ class InterviewChatService:
                         content=next_q_data["question"],
                         metadata_json={"source": "QUESTION_DRIVEN", "type": "QUESTION",
                                        "question_id": next_q_data["question_id"],
+                                       "question_index": next_q_data.get("question_index", 0),
+                                       "question_budget": total_budget,
                                        "dimension": next_q_data["dimension"],
-                                       "difficulty": next_q_data["difficulty"]},
+                                       "difficulty": next_q_data["difficulty"],
+                                       "display_order": 3},
                         turn_index=new_turn,
                     )
                 else:
@@ -1037,6 +1044,7 @@ class InterviewChatService:
                 "missing_points": decision.get("missing_points", []),
                 "risk_tip": decision.get("risk_tip"),
                 "action": action,
+                "question_id": q.id,
             })
 
             # Handle actions
@@ -1048,6 +1056,7 @@ class InterviewChatService:
                     new_count = q.follow_up_count + 1
                     follow_up_q = decision.get("follow_up_question", "请进一步说明")
                     yield _sse("follow_up", {
+                        "question_id": q.id,
                         "question": follow_up_q,
                         "follow_up_count": new_count,
                         "max_follow_ups": settings.interview_max_follow_ups_per_question,
@@ -1122,9 +1131,12 @@ class InterviewChatService:
                         metadata_json={
                             "source": "QUESTION_DRIVEN", "type": "QUESTION",
                             "question_id": next_q_data["question_id"],
+                            "question_index": next_q_data.get("question_index", 0),
+                            "question_budget": total_budget,
                             "dimension": next_q_data["dimension"],
                             "difficulty": next_q_data["difficulty"],
                             "source_label": next_q_data["source"],
+                            "display_order": 3,
                         },
                         turn_index=new_turn,
                     )
@@ -1168,6 +1180,7 @@ class InterviewChatService:
                     "missing_points": decision.get("missing_points", []),
                     "risk_tip": decision.get("risk_tip"),
                     "collapsed_default": True,
+                    "display_order": 1,
                 },
                 turn_index=new_turn,
             )
@@ -1182,6 +1195,7 @@ class InterviewChatService:
                         "question_id": q.id,
                         "follow_up_count": q.follow_up_count + 1,
                         "max_follow_ups": settings.interview_max_follow_ups_per_question,
+                        "display_order": 2,
                     },
                     turn_index=new_turn,
                 )
@@ -1421,8 +1435,11 @@ class InterviewChatService:
                         metadata_json={
                             "source": "QUESTION_DRIVEN", "type": "QUESTION",
                             "question_id": q1_data["question_id"],
+                            "question_index": 0,
+                            "question_budget": session.question_count,
                             "dimension": q1_data["dimension"],
                             "difficulty": q1_data["difficulty"],
+                            "display_order": 3,
                         },
                         turn_index=turn_index,
                     )

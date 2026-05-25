@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick, watch, onUnmounted } from "vue"
+import { ref, computed, nextTick, watch, onUnmounted } from "vue"
 import {
   createSession,
   listSessions,
@@ -26,6 +26,10 @@ const standardAnswerMap = ref<Record<number, string>>({})
 const evalCollapsed = ref<Record<number, boolean>>({})
 const questionBudget = ref(20)
 const generatedCount = ref(0)
+const generationStage = ref<"idle" | "generating_first_question" | "generating_next_question" | "evaluating">("idle")
+
+// Phase 3.8: Stable-sorted display items (use this, not messages directly)
+const displayItems = computed(() => buildDisplayItems(messages.value))
 const inputText = ref("")
 const loading = ref(false)
 const sending = ref(false)
@@ -278,8 +282,9 @@ async function handleSend() {
   abortController = sendMessageStream(
     activeSessionId.value,
     text,
-    // onToken — accumulate for messages display
+    // onToken — only accumulate when not in generation stage (ignore LLM JSON tokens)
     (token) => {
+      if (generationStage.value === "generating_first_question" || generationStage.value === "generating_next_question") return
       streamingContent.value += token
     },
     // onRetrieval
@@ -288,18 +293,14 @@ async function handleSend() {
     },
     // onCitation
     () => {},
-    // onDone — reload authoritative messages from server, then clear state
-    (data: any) => {
+    // onDone — clear streaming state. SSE events already built the UI.
+    () => {
       streamingContent.value = ""
       streaming.value = false
       sending.value = false
       streamingSource.value = ""
       abortController = null
       loadSessions()
-      // Phase 3.7: Reload messages from server to get proper message types/metadata
-      if (activeSessionId.value) {
-        selectSession(activeSessionId.value, true).catch(() => {})
-      }
     },
     // onCompressed
     (data) => {
@@ -326,7 +327,7 @@ async function handleSend() {
         content: data.evaluation || "",
         metadata_json: {
           type: "EVALUATION",
-          question_id: (data as any).question_id,
+          question_id: data.question_id,
           score: data.score,
           missing_points: data.missing_points || [],
           risk_tip: data.risk_tip,
@@ -457,10 +458,22 @@ function formatContent(text: string): string {
     .replace(/\n/g, "<br>")
 }
 
-// Phase 3.7: buildDisplayItems for refresh-proof rendering
+// Phase 3.8: Stable-sorted display items for refresh-proof rendering
 function buildDisplayItems(msgs: InterviewMessage[]) {
+  const sorted = [...msgs].sort((a, b) => {
+    const ta = a.turn_index ?? 0
+    const tb = b.turn_index ?? 0
+    if (ta !== tb) return ta - tb
+    const oa = (a.metadata_json as any)?.display_order ?? 99
+    const ob = (b.metadata_json as any)?.display_order ?? 99
+    if (oa !== ob) return oa - ob
+    const ca = new Date(a.created_at || 0).getTime()
+    const cb = new Date(b.created_at || 0).getTime()
+    if (ca !== cb) return ca - cb
+    return (a.id as number) - (b.id as number)
+  })
   const items: any[] = []
-  for (const msg of msgs) {
+  for (const msg of sorted) {
     const t = msg.metadata_json?.type
     if (msg.role === "USER") {
       items.push({ id: msg.id, type: "USER", content: msg.content, raw: msg })
@@ -517,6 +530,24 @@ async function toggleAnswerForMsg(msg: InterviewMessage) {
   } catch {
     standardAnswerMap.value[msg.id] = "获取答案失败"
     answerVisibleMap.value[msg.id] = true
+  }
+}
+
+// Phase 3.8: Toggle answer for display item (uses item.question_id directly)
+async function toggleAnswerForItem(item: any) {
+  if (!activeSessionId.value || !item.question_id) return
+  const itemId = item.id
+  if (answerVisibleMap.value[itemId]) {
+    answerVisibleMap.value[itemId] = false
+    return
+  }
+  try {
+    const detail = await getQuestionDetail(activeSessionId.value, item.question_id)
+    standardAnswerMap.value[itemId] = detail.standard_answer || "暂无答案"
+    answerVisibleMap.value[itemId] = true
+  } catch {
+    standardAnswerMap.value[itemId] = "获取答案失败"
+    answerVisibleMap.value[itemId] = true
   }
 }
 
@@ -629,7 +660,19 @@ loadSessions()
 
         <!-- Messages -->
         <div ref="chatContainer" class="chat-messages" v-if="!loading">
-          <div v-if="messages.length === 0 && !streaming" class="chat-empty">
+          <!-- Phase 3.8: Loading card for question generation stages -->
+          <div v-if="generationStage === 'generating_first_question' && !streaming" class="message-row assistant">
+            <div class="message-bubble" style="background:#f0f7ff;text-align:center;padding:20px;">
+              ⏳ 正在根据你的岗位和简历生成第一题...
+            </div>
+          </div>
+          <div v-if="generationStage === 'generating_next_question' && !streaming" class="message-row assistant">
+            <div class="message-bubble" style="background:#f0f7ff;text-align:center;padding:20px;">
+              ⏳ 正在根据你的回答生成下一题...
+            </div>
+          </div>
+
+          <div v-if="messages.length === 0 && !streaming && generationStage === 'idle'" class="chat-empty">
             <p v-if="isActiveResumeReady() && !activeSession()?.target_position_confirmed">简历已就绪，请确认面试岗位后开始</p>
             <p v-else-if="isActiveResumeReady()">简历已就绪，面试即将开始...</p>
             <p v-else-if="isActiveResumeFailed()">简历处理失败，请重新上传简历</p>
@@ -637,67 +680,70 @@ loadSessions()
             <p v-else>请先上传简历</p>
           </div>
 
-          <!-- Phase 3.6 final: Render by metadata_json.type -->
-          <template v-for="msg in messages" :key="msg.id">
+          <!-- Phase 3.8: Render from stable-sorted displayItems -->
+          <template v-for="item in displayItems" :key="item.id">
             <!-- QUESTION / FOLLOW_UP / DYNAMIC_QUESTION bubbles -->
-            <div v-if="isQuestionType(msg)" class="message-row assistant">
+            <!-- QUESTION / FOLLOW_UP / DYNAMIC_QUESTION bubbles -->
+            <div v-if="item.type === 'QUESTION' || item.type === 'FOLLOW_UP' || item.type === 'DYNAMIC_QUESTION'" class="message-row assistant">
               <div class="message-bubble question-bubble">
                 <div class="q-header">
-                  <span class="q-badge" v-if="msg.metadata_json?.type === 'QUESTION'">
-                    Q{{ msg.metadata_json?.question_index ?? '?' }} / {{ questionBudget }}
+                  <span class="q-badge" v-if="item.type === 'QUESTION'">
+                    Q{{ (item.question_index ?? 0) + 1 }} / {{ item.question_budget || questionBudget }}
                   </span>
-                  <span class="q-badge followup" v-else-if="msg.metadata_json?.type === 'FOLLOW_UP'">
-                    追问 {{ msg.metadata_json?.follow_up_count ?? '' }}
+                  <span class="q-badge followup" v-else-if="item.type === 'FOLLOW_UP'">
+                    追问 {{ item.follow_up_count ?? '' }}{{ item.max_follow_ups ? ' / ' + item.max_follow_ups : '' }}
                   </span>
                   <span class="q-badge dynamic" v-else>⚡ 临时追问</span>
-                  <span class="q-dimension" v-if="msg.metadata_json?.dimension">{{ msg.metadata_json.dimension }}</span>
-                  <span class="q-difficulty" v-if="msg.metadata_json?.difficulty">{{ msg.metadata_json.difficulty }}</span>
-                  <span class="q-source" v-if="msg.metadata_json?.source_label || msg.metadata_json?.source">
-                    {{ sourceLabel(msg.metadata_json?.source_label || msg.metadata_json?.source || '') }}
-                  </span>
+                  <span class="q-dimension" v-if="item.dimension">{{ item.dimension }}</span>
+                  <span class="q-difficulty" v-if="item.difficulty">{{ item.difficulty }}</span>
+                  <span class="q-source" v-if="item.source">{{ sourceLabel(item.source) }}</span>
                 </div>
-                <div class="q-body">{{ msg.content }}</div>
-                <button class="q-answer-btn" @click="toggleAnswerForMsg(msg)">
-                  {{ answerVisibleMap[msg.id] ? '收起答案' : '展开参考答案' }}
+                <div class="q-body">{{ item.content }}</div>
+                <button v-if="item.question_id" class="q-answer-btn" @click="toggleAnswerForItem(item)">
+                  {{ answerVisibleMap[item.id] ? '收起答案' : '展开参考答案' }}
                 </button>
-                <div v-if="answerVisibleMap[msg.id]" class="q-answer">{{ standardAnswerMap[msg.id] || '加载中...' }}</div>
+                <div v-if="answerVisibleMap[item.id]" class="q-answer">{{ standardAnswerMap[item.id] || '加载中...' }}</div>
               </div>
             </div>
 
             <!-- EVALUATION: collapsible card -->
-            <div v-else-if="msg.metadata_json?.type === 'EVALUATION'" class="message-row assistant">
-              <div class="message-bubble eval-bubble" @click="toggleEvalCollapse(msg.id)">
+            <div v-else-if="item.type === 'EVALUATION'" class="message-row assistant">
+              <div class="message-bubble eval-bubble" @click="toggleEvalCollapse(item.id)">
                 <div class="eval-summary">
-                  面试官点评 · 得分 {{ msg.metadata_json?.score ?? '?' }}/5
-                  <span class="eval-toggle">{{ evalCollapsed[msg.id] !== false ? '▸ 展开' : '▾ 收起' }}</span>
+                  面试官点评 · 得分 {{ item.score ?? '?' }}/5
+                  <span class="eval-toggle">{{ evalCollapsed[item.id] !== false ? '▸ 展开' : '▾ 收起' }}</span>
                 </div>
-                <div v-if="evalCollapsed[msg.id] === false" class="eval-detail">
-                  <div class="eval-text">{{ msg.content }}</div>
-                  <div v-if="msg.metadata_json?.missing_points?.length" class="eval-missing">
+                <div v-if="evalCollapsed[item.id] === false" class="eval-detail">
+                  <div class="eval-text" v-html="formatContent(item.content)"></div>
+                  <div v-if="item.missing_points?.length" class="eval-missing">
                     <strong>缺失点:</strong>
-                    <ul><li v-for="mp in msg.metadata_json.missing_points" :key="mp">{{ mp }}</li></ul>
+                    <ul><li v-for="mp in item.missing_points" :key="mp">{{ mp }}</li></ul>
                   </div>
-                  <div v-if="msg.metadata_json?.risk_tip" class="eval-risk">
-                    <strong>风险提示:</strong> {{ msg.metadata_json.risk_tip }}
+                  <div v-if="item.risk_tip" class="eval-risk">
+                    <strong>风险提示:</strong> {{ item.risk_tip }}
                   </div>
                 </div>
               </div>
             </div>
 
             <!-- INTERVIEW_COMPLETE card -->
-            <div v-else-if="msg.metadata_json?.type === 'INTERVIEW_COMPLETE'" class="message-row assistant">
+            <div v-else-if="item.type === 'INTERVIEW_COMPLETE'" class="message-row assistant">
               <div class="message-bubble complete-bubble">
-                <div class="complete-text">🎉 {{ msg.content }}</div>
+                <div class="complete-text">🎉 {{ item.content }}</div>
               </div>
             </div>
 
-            <!-- Normal user/assistant messages -->
-            <div v-else class="message-row" :class="msg.role.toLowerCase()">
+            <!-- USER messages -->
+            <div v-else-if="item.type === 'USER'" class="message-row user">
               <div class="message-bubble">
-                <span v-if="msg.metadata_json?.source" class="message-source-badge" :style="{ background: sourceColor(msg.metadata_json.source) }">
-                  {{ sourceLabel(msg.metadata_json.source) }}
-                </span>
-                <div class="message-content" v-html="formatContent(msg.content)"></div>
+                <div class="message-content">{{ item.content }}</div>
+              </div>
+            </div>
+
+            <!-- Normal/legacy messages -->
+            <div v-else class="message-row" :class="item.role?.toLowerCase() || 'assistant'">
+              <div class="message-bubble">
+                <div class="message-content" v-html="formatContent(item.content)"></div>
               </div>
             </div>
           </template>
@@ -1207,7 +1253,10 @@ loadSessions()
   line-height: 1.6;
   white-space: pre-wrap;
   color: #303133;
+  max-height: 220px;
+  overflow-y: auto;
 }
+.question-bubble { contain: layout; }
 .followup { background: #e6a23c !important; }
 .dynamic { background: #f56c6c !important; }
 
