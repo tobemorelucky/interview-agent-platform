@@ -17,3 +17,11 @@ from interview_api.modules.interview.models import (  # noqa: F401
     InterviewSessionQuestion,
     InterviewMessage,
 )
+from interview_api.modules.experience.models import (  # noqa: F401
+    ExperienceKeywordPreset,
+    ExperienceCollectionTask,
+    ExperienceSourceItem,
+    InterviewExperience,
+    InterviewQuestion,
+    ExperienceRecentSummary,
+)
