@@ -184,9 +184,21 @@
 
 ---
 
-## 5.4 模块 D：多源面经采集、审核、发布与查询
+## 5.4 模块 D：管理员触发的近期面经更新与整理 Agent 工作流（Phase 4）
+
+> Phase 4 重新定义。核心：管理员创建更新任务 → SearXNG 搜索 → Agent 抽取/路由/评分 → 审核 → 可配置入库 → 用户查询。
 
 ### 5.4.1 核心原则
+
+- 不使用付费搜索 API；
+- 第一版使用真实数据，不使用 Mock；
+- 默认 SearchProvider 为自托管 SearXNG；
+- 默认 ContentFetcher 为 httpx + trafilatura；
+- Extraction/Routing/Reliability 三 Agent 为核心；
+- 默认人工审核，可配置自动审核；
+- 默认用户端只展示总结+题目+可信度+原帖 URL；
+- 默认不写入 Milvus，可配置开启；
+- 默认简历模拟面试不使用面经题库，可配置开启。
 
 - 管理员触发采集；
 - 普通用户只查已发布内容；

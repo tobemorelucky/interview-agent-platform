@@ -219,3 +219,106 @@ LLM 只输出评分特征，最终分数由程序聚合。
 - 降低调试复杂度；
 - 先跑通状态机和审核发布；
 - 避免一开始陷入平台采集细节。
+
+---
+
+## Decision 016：Phase 4 不使用付费搜索 API
+
+### 结论
+不使用 Google Custom Search API、Bing Search API 等付费搜索服务。
+
+### 原因
+- 避免 API 费用和配额限制；
+- 面经搜索量在可控范围内；
+- 自托管 SearXNG 可满足需求。
+
+---
+
+## Decision 017：Phase 4 默认 SearchProvider 使用自托管 SearXNG
+
+### 结论
+默认搜索提供方使用自托管 SearXNG 实例。
+
+### 原因
+- 免费、无配额限制；
+- 支持多引擎聚合；
+- Docker Compose 可一键部署；
+- 通过 EXPERIENCE_SEARCH_PROVIDER 配置可替换。
+
+---
+
+## Decision 018：Phase 4 默认 ContentFetcher 使用 httpx + trafilatura
+
+### 结论
+默认网页内容抓取使用 httpx + trafilatura/readability 库。
+
+### 原因
+- 轻量、快速；
+- 对静态 HTML 页面效果好；
+- Playwright / Crawl4AI / CloakBrowser 仅作为可选 BrowserFetcher；
+- 通过 EXPERIENCE_FETCHER 配置可切换。
+
+---
+
+## Decision 019：Phase 4 不做人工文本导入
+
+### 结论
+不支持管理员手动粘贴面经文本或上传文件导入面经。
+
+### 原因
+- 保持系统自动化程度；
+- 避免人工数据质量问题；
+- 如果后续需要，可以作为独立小功能加入。
+
+---
+
+## Decision 020：Phase 4 重点实现三个 Agent
+
+### 结论
+Agent 工作流核心由三个 Agent 组成：
+- **Extraction Agent**：从网页正文抽取面经、题目、答案；
+- **Routing Agent**：判断题目路由（题库、方向、分类、是否入向量库）；
+- **Reliability Agent**：判断内容可信度、广告/卖课风险。
+
+### 原因
+- 三个 Agent 覆盖了"抽取-分类-评分"的核心流程；
+- 每个 Agent 职责单一，可独立测试和优化；
+- Query Planner Agent 和 Summary Agent 暂缓，后续按需加入。
+
+---
+
+## Decision 021：Phase 4 默认人工审核，可配置自动审核
+
+### 结论
+默认所有候选面经需要管理员人工审核后才能发布。管理员可选择开启自动审核。
+
+### 条件
+自动审核必须满足：
+- reliability_score >= EXPERIENCE_AUTO_APPROVE_MIN_SCORE
+- is_advertising = false
+- is_course_selling = false
+- question_count >= 1
+
+---
+
+## Decision 022：Phase 4 默认不写入向量库
+
+### 结论
+默认 EXPERIENCE_WRITE_TO_VECTOR_INDEX = false，不将面经写入 Milvus。
+
+### 原因
+- 避免污染现有 kb_chunks_current 集合；
+- 面经数据量在初期较小，结构化查询即够用；
+- 后续可按需开启。
+
+---
+
+## Decision 023：Phase 4 默认不接入简历模拟面试
+
+### 结论
+默认 INTERVIEW_USE_EXPERIENCE_QUESTION_BANK = false。
+
+### 原因
+- 简历面试当前使用 kb_chunks_current，已可工作；
+- 面经题库的质量需要积累和验证；
+- 后续 Phase 4.4 完成后再评估是否接入。

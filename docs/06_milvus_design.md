@@ -112,6 +112,41 @@ alias -> experience_questions_current
 | reliability_score | 所属面经可信度 |
 | dense_vector | 向量 |
 
+## 3.4 `interview_questions_current`（Phase 4.4 预留）
+
+目标：
+
+- Phase 4 面经题目独立向量库，与 `experience_questions_current` 分离。
+
+真实 collection：
+
+```text
+interview_questions_v1
+alias -> interview_questions_current
+```
+
+字段建议：
+
+| 字段 | 说明 |
+|---|---|
+| id | 主键 |
+| question_id | interview_questions.id |
+| experience_id | interview_experiences.id |
+| question_text | 题目文本 |
+| standard_answer | 参考答案 |
+| dimension | 维度 |
+| difficulty | 难度 |
+| company | 公司 |
+| position | 岗位方向 |
+| reliability_score | 可信度 |
+| dense_vector | 向量 |
+
+**配置控制：**
+
+- `EXPERIENCE_WRITE_TO_VECTOR_INDEX=false`（默认）：不写入此 collection
+- `INTERVIEW_USE_EXPERIENCE_QUESTION_BANK=false`（默认）：简历面试不使用面经题库
+- 仅当两个配置都开启时，面经题目才会进入简历面试检索路径
+
 ---
 
 # 4. 暂不进入 Milvus 的数据

@@ -286,3 +286,89 @@ reliability_ai_score_v1.md
 - 结构化任务优先返回 JSON；
 - 业务层可记录 prompt version；
 - 文本生成与事实抽取明确区分。
+
+---
+
+# 15. Phase 4：面经 Agent 工作流 Prompt
+
+## 15.1 experience_extraction_v1.md — 面经抽取
+
+**目标**：从网页正文中抽取面试经验、题目和答案。
+
+**输入**：
+- `{page_content}`：网页正文（trafilatura 提取后的 Markdown/纯文本）
+- `{source_url}`：原帖 URL
+- `{platform}`：平台标识
+
+**输出 JSON**：
+```json
+{
+  "is_experience": true,
+  "experience_text": "面经正文摘要",
+  "questions": [
+    {
+      "question": "面试问题",
+      "answer_clue": "原文中的回答线索或答案",
+      "standard_answer": "LLM 补充的参考答案（如原文无答案）",
+      "dimension": "考察维度",
+      "difficulty": "EASY/MEDIUM/HARD",
+      "source": "EXTRACTED/LLM_SUPPLEMENTED"
+    }
+  ],
+  "position": "岗位方向",
+  "company": "公司",
+  "stage": "面试轮次",
+  "tags": ["标签1", "标签2"]
+}
+```
+
+**关键规则**：
+- 如果 `is_experience=false`，说明内容不是面经，后续跳过；
+- 如果原文没有答案，`source=LLM_SUPPLEMENTED` 并由 LLM 补充 standard_answer；
+- 如果原文有答案，`source=EXTRACTED`。
+
+## 15.2 experience_question_routing_v1.md — 题目路由
+
+**目标**：判断题目应进入哪些题库分类和技术方向。
+
+**输入**：
+- `{question}`：题目文本
+- `{experience_position}`：面经岗位
+- `{experience_company}`：公司
+
+**输出 JSON**：
+```json
+{
+  "routes": [
+    {
+      "target": "INTERVIEW_QUESTION_DB",
+      "category": "backend/ai_application/system_design",
+      "tech_tags": ["Python", "Redis", "RAG"],
+      "should_index": true
+    }
+  ],
+  "primary_dimension": "后端工程",
+  "position_relevance": "HIGH/MEDIUM/LOW"
+}
+```
+
+## 15.3 experience_reliability_scoring_v1.md — 可靠性评分
+
+**目标**：判断面经内容可信度，识别广告/卖课。
+
+**输入**：
+- `{page_content}`：网页内容
+- `{source_url}`：来源 URL
+- `{platform}`：平台
+
+**输出 JSON**：
+```json
+{
+  "reliability_score": 0.75,
+  "is_advertising": false,
+  "is_course_selling": false,
+  "quality_issues": ["内容过于简短", "缺乏具体技术细节"],
+  "recommendation": "APPROVE/MANUAL_REVIEW/REJECT",
+  "reason": "评分依据"
+}
+```

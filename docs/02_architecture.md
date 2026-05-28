@@ -394,3 +394,33 @@ User UI
 - 任务仪表板；
 - 使用独立消息队列升级 Worker 系统；
 - 若规模扩大，再评估局部微服务拆分。
+
+---
+
+# 12. Phase 4：面经采集 Agent 工作流架构
+
+## 12.1 Experience 模块组件
+
+| 组件 | 职责 |
+|------|------|
+| `SearchProvider` | 搜索面经 URL。默认 SearXNG，可替换 |
+| `ContentFetcher` | 抓取网页正文。默认 httpx + trafilatura，可选 BrowserFetcher |
+| `Extraction Agent` | 从正文抽取面经/题目/答案 |
+| `Routing Agent` | 题目路由（题库分类/方向/技术标签） |
+| `Reliability Agent` | 内容可信度/广告/卖课风险评分 |
+| `Review Workflow` | 管理员审核流程 |
+| `Optional Vector Indexer` | 可配置的 Milvus 入索引 |
+
+## 12.2 模块目录
+
+```
+apps/api/src/interview_api/modules/experience/
+  models.py / schemas.py / repository.py / router.py / service.py
+  search/ (SearchProvider)
+  fetchers/ (ContentFetcher, BrowserFetcher)
+  agents/ (ExtractionAgent, RoutingAgent, ReliabilityAgent)
+  dedup.py
+  indexing.py
+
+apps/worker/src/interview_worker/tasks/experience_tasks.py
+```

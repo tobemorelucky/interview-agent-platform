@@ -411,7 +411,40 @@ MinIO: 容器或对象存储服务
 
 ---
 
-# 16. 验收
+# 16. Phase 4：面经采集 Agent 工作流配置
+
+Phase 4 本地开发需要 SearXNG 实例。在 `docker-compose.yml` 中添加：
+
+```yaml
+searxng:
+  image: searxng/searxng:latest
+  ports:
+    - "8080:8080"
+  environment:
+    - SEARXNG_BASE_URL=http://localhost:8080
+```
+
+`.env` 新增配置：
+
+```env
+# Experience Collection (Phase 4)
+EXPERIENCE_SEARCH_PROVIDER=searxng
+SEARXNG_BASE_URL=http://localhost:8080
+EXPERIENCE_SEARCH_MAX_RESULTS=20
+EXPERIENCE_FETCHER=httpx
+EXPERIENCE_ENABLE_BROWSER_FETCH=false
+EXPERIENCE_BROWSER_FETCHER=none
+EXPERIENCE_DEFAULT_REVIEW_MODE=MANUAL
+EXPERIENCE_AUTO_APPROVE_MIN_SCORE=0.8
+EXPERIENCE_WRITE_TO_QUESTION_DB=false
+EXPERIENCE_WRITE_TO_VECTOR_INDEX=false
+EXPERIENCE_UPDATE_PUBLIC_SUMMARY=true
+INTERVIEW_USE_EXPERIENCE_QUESTION_BANK=false
+```
+
+---
+
+# 17. 验收
 
 Phase 0 完成后必须满足：
 

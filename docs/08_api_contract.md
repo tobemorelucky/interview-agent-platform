@@ -379,3 +379,30 @@ INDEX_JOB_FAILED
 3. 前端与后端字段应共识后调整；
 4. Phase 0 只需健康检查 API；
 5. Phase 1 起逐步落地正式接口。
+
+---
+
+# 12. Phase 4：面经采集与查询 API
+
+## 12.1 管理员 API
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/v1/admin/experience/tasks` | 创建面经采集任务 |
+| GET | `/api/v1/admin/experience/tasks` | 任务列表 |
+| GET | `/api/v1/admin/experience/tasks/{id}` | 任务详情（含 source items） |
+| GET | `/api/v1/admin/experience/sources` | Source item 列表（按状态筛选） |
+| GET | `/api/v1/admin/experience/reviews` | 待审核面经列表 |
+| POST | `/api/v1/admin/experience/reviews/{id}/approve` | 审核通过 |
+| POST | `/api/v1/admin/experience/reviews/{id}/reject` | 审核拒绝 |
+| GET | `/api/v1/admin/experience/keywords` | 关键词预设列表 |
+| POST | `/api/v1/admin/experience/keywords` | 新增关键词预设 |
+| PATCH | `/api/v1/admin/experience/keywords/{id}` | 更新关键词预设 |
+| DELETE | `/api/v1/admin/experience/keywords/{id}` | 删除关键词预设 |
+
+## 12.2 用户 API
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/v1/experiences/recent` | 近期面经总结列表（岗位+时间筛选） |
+| GET | `/api/v1/experiences/recent/{id}` | 面经详情（总结+题目+可信度+原帖 URL） |

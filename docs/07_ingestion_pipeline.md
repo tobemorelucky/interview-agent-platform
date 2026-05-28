@@ -1,8 +1,27 @@
-# 07 多源面经采集与处理流水线
+# 07 多源面经采集与处理流水线（Phase 4 更新）
+
+> Phase 4 重新定义：管理员触发 + SearXNG 搜索 + Agent 工作流 + 审核 + 可配置入库。
 
 ## 1. 目标
 
 该流水线用于由管理员触发内容采集，并将多平台内容沉淀为正式可检索面经库。
+
+## 1.1 Phase 4 简化流程
+
+```
+Admin creates update task (keywords + time range + platform filter)
+  → SearXNG SearchProvider (自托管, 默认)
+  → Candidate URL filter (去重、黑名单)
+  → ContentFetcher (httpx + trafilatura, 默认)
+  → Extraction Agent (抽取面经/题目/答案)
+  → Routing Agent (题库分类/方向/技术标签)
+  → Reliability Agent (可信度/广告/卖课评分)
+  → Dedup (与已有面经去重)
+  → Review (管理员审核，默认手动)
+  → Optional DB insert (EXPERIENCE_WRITE_TO_QUESTION_DB)
+  → Optional Milvus indexing (EXPERIENCE_WRITE_TO_VECTOR_INDEX)
+  → Optional recent summary update (EXPERIENCE_UPDATE_PUBLIC_SUMMARY)
+```
 
 来源平台分阶段支持：
 

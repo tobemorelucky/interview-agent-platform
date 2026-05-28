@@ -215,6 +215,50 @@ report_repository.py
 
 ---
 
+## 4.8 experience 模块（Phase 4）
+
+职责：
+
+- 管理员创建面经采集任务（时间范围+关键词+平台）
+- SearXNG SearchProvider 搜索 URL
+- ContentFetcher（httpx+trafilatura）抓取网页正文
+- Extraction Agent 抽取面经/题目/答案
+- Routing Agent 题目分类与路由
+- Reliability Agent 可信度与广告/卖课检测
+- 与已有面经去重
+- 管理员审核（通过/拒绝）
+- 可选写入结构化题库
+- 可选写入 Milvus 向量索引
+- 用户查询已发布面经总结
+
+模块目录：
+
+```
+apps/api/src/interview_api/modules/experience/
+  models.py
+  schemas.py
+  repository.py
+  router.py
+  service.py
+  search/
+    provider.py          # SearchProvider 抽象
+    searxng_provider.py  # SearXNG 实现
+  fetchers/
+    provider.py          # ContentFetcher 抽象
+    httpx_fetcher.py     # httpx + trafilatura
+    browser_fetcher.py   # Playwright/Crawl4AI（可选）
+  agents/
+    extraction.py        # Extraction Agent
+    routing.py           # Routing Agent
+    reliability.py       # Reliability Agent
+  dedup.py               # 去重
+  indexing.py            # Milvus 索引
+
+apps/worker/src/interview_worker/tasks/experience_tasks.py
+```
+
+---
+
 # 5. 数据访问模式
 
 ## 5.1 Repository 模式

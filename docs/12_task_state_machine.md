@@ -230,3 +230,38 @@ PENDING
 - 失败能定位；
 - 重试不会乱写；
 - 前端不自行推测任务阶段。
+
+---
+
+# 12. Phase 4：面经采集任务状态机
+
+## 12.1 Collection Task 状态（experience_collection_tasks）
+
+| 状态 | 说明 |
+|------|------|
+| `PENDING` | 初始，等待 Worker 执行 |
+| `SEARCHING` | SearXNG 搜索中 |
+| `FETCHING` | 抓取搜索结果 URL 正文 |
+| `EXTRACTING` | Extraction Agent 处理 |
+| `ROUTING` | Routing Agent 分类 |
+| `SCORING` | Reliability Agent 评分 |
+| `DEDUPING` | 与已有面经去重 |
+| `WAITING_REVIEW` | 等待管理员审核 |
+| `APPROVED` | 审核通过 |
+| `INDEXING` | 写入 Milvus（如配置开启） |
+| `COMPLETED` | 完成 |
+| `FAILED` | 失败（可重试） |
+
+## 12.2 Source Item 状态（experience_source_items）
+
+| 状态 | 说明 |
+|------|------|
+| `DISCOVERED` | SearXNG 搜索结果，URL 已发现 |
+| `FETCHED` | 网页内容已抓取 |
+| `FETCH_FAILED` | 抓取失败 |
+| `EXTRACTED` | Extraction Agent 已处理 |
+| `NOT_EXPERIENCE` | 判定为非面经内容 |
+| `WAITING_REVIEW` | 等待管理员审核 |
+| `APPROVED` | 审核通过 |
+| `REJECTED` | 审核拒绝 |
+| `INDEXED` | 已写入向量库 |

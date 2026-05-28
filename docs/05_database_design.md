@@ -483,13 +483,16 @@ Phase 3：
 - resume_analysis_reports
 - resume_questions
 
-Phase 4：
+Phase 4（重新定义）：
 
-- crawl_plans
-- crawl_runs
-- crawl_tasks
+- experience_keyword_presets（岗位/公司关键词预设）
+- experience_collection_tasks（管理员创建的采集任务：时间范围+关键词+平台范围）
+- experience_source_items（搜索结果 URL → 抓取 → 解析 → 审核状态追踪）
+- interview_experiences（抽取/审核通过的面经记录）
+- interview_questions（从面经中抽取的题目和答案）
+- experience_recent_summaries（用户端近期面经总结，聚合展示）
 
-Phase 5：
+Phase 5（合并至 Phase 4.6）：
 
 - raw_contents
 - raw_assets
