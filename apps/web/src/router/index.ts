@@ -51,6 +51,12 @@ const routes = [
     meta: { requiresAuth: true, requiresAdmin: true },
   },
   {
+    path: "/admin/experiences",
+    name: "AdminExperiences",
+    component: () => import("../pages/AdminExperiencesPage.vue"),
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
+  {
     path: "/",
     redirect: "/dashboard",
   },

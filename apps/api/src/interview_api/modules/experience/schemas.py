@@ -14,6 +14,12 @@ class ExperienceKeywordPresetCreate(BaseModel):
     enabled: bool = True
 
 
+class ExperienceKeywordPresetUpdate(BaseModel):
+    name: str | None = Field(None, max_length=128)
+    aliases_json: list[str] | None = None
+    enabled: bool | None = None
+
+
 class ExperienceKeywordPresetRead(BaseModel):
     id: int
     preset_type: str
