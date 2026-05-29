@@ -95,9 +95,10 @@ async function loadPresets() {
   jobPresets.value = jobs.items || []
   companyPresets.value = companies.items || []
   platformPresets.value = platforms.items || []
-  // Default select all platforms
+  // Default to broad search. Users can add 牛客 / 小红书 / 抖音 without removing 全网.
   if (taskForm.value.selected_platforms.length === 0) {
-    taskForm.value.selected_platforms = platformPresets.value.map(p => p.name)
+    const allWeb = platformPresets.value.find(p => p.name === "全网" || p.aliases_json?.includes("全网"))
+    taskForm.value.selected_platforms = allWeb ? [allWeb.name] : platformPresets.value.map(p => p.name)
   }
 }
 

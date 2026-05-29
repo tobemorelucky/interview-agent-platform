@@ -50,12 +50,14 @@ def build_search_queries(
                 )
 
         if _has_platform(platforms, "牛客"):
-            templates = (
-                ["site:nowcoder.com {kw} 面经", "site:nowcoder.com {kw} 面试经验"]
-                if scope == "JOB"
-                else ["site:nowcoder.com {kw} 面经"]
-            )
-            for template in templates:
+            nowcoder_templates = [
+                "site:nowcoder.com {kw} 面经",
+                "site:nowcoder.com {kw} 面试经验",
+                "牛客 {kw} 面经",
+                "牛客 {kw} 面试经验",
+                "{kw} 牛客 面经",
+            ]
+            for template in nowcoder_templates:
                 queries.append(
                     SearchQuery(
                         query=template.format(kw=keyword),

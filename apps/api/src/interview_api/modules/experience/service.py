@@ -1,6 +1,7 @@
 """Phase 4: Experience keyword presets service."""
 
 from datetime import datetime, timezone
+import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,6 +24,7 @@ from interview_api.modules.experience.search.filters import is_relevant_candidat
 from interview_api.modules.experience.search.url_utils import hash_url, normalize_url
 
 VALID_PRESET_TYPES = {"COMPANY", "JOB", "PLATFORM"}
+logger = logging.getLogger(__name__)
 
 
 class ExperienceKeywordService:
@@ -255,19 +257,33 @@ class ExperienceTaskService:
             except RuntimeError as exc:
                 query_failed_count += 1
                 error_messages.append(f"{query.query}: {exc}")
+                logger.info(
+                    "experience_search_query task_id=%s query=%r raw_result_count=0 "
+                    "accepted_count=0 filtered_count=0 duplicate_count=0 error=%r",
+                    task.id,
+                    query.query,
+                    str(exc),
+                )
                 continue
 
+            raw_result_count = len(results)
+            accepted_count = 0
+            filtered_count = 0
+            duplicate_count = 0
             for result in results:
                 if not is_relevant_candidate(result, keyword=query.keyword):
+                    filtered_count += 1
                     continue
                 normalized_url = normalize_url(result.url)
                 if not normalized_url:
+                    filtered_count += 1
                     continue
                 normalized_url_hash = hash_url(normalized_url)
                 exists = await self.source_repo.exists_by_task_and_url_hash(
                     task.id, normalized_url_hash
                 )
                 if exists:
+                    duplicate_count += 1
                     continue
                 await self.source_repo.create_source_item(
                     ExperienceSourceItem(
@@ -279,6 +295,18 @@ class ExperienceTaskService:
                         fetch_status="DISCOVERED",
                     )
                 )
+                accepted_count += 1
+
+            logger.info(
+                "experience_search_query task_id=%s query=%r raw_result_count=%s "
+                "accepted_count=%s filtered_count=%s duplicate_count=%s",
+                task.id,
+                query.query,
+                raw_result_count,
+                accepted_count,
+                filtered_count,
+                duplicate_count,
+            )
 
             progress = min(95, 5 + int(index / len(queries) * 90))
             await self.repo.update(task_id, progress=progress)
@@ -291,13 +319,16 @@ class ExperienceTaskService:
                 task_id, error_message, failed_count=query_failed_count
             )
         else:
+            final_error_message = "；".join(error_messages[:3]) if error_messages else None
+            if found_url_count == 0:
+                final_error_message = "搜索完成但未发现候选 URL，请尝试选择全网或放宽关键词。"
             task = await self.repo.update(
                 task_id,
                 status="SEARCH_COMPLETED",
                 progress=100,
                 found_url_count=found_url_count,
                 failed_count=query_failed_count,
-                error_message="；".join(error_messages[:3]) if error_messages else None,
+                error_message=final_error_message,
                 finished_at=datetime.now(timezone.utc),
             )
             await self.db.commit()
