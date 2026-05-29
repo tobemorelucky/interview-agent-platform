@@ -55,10 +55,11 @@ const tasks = ref<ExperienceCollectionTask[]>([])
 const taskTotal = ref(0)
 const showTaskForm = ref(false)
 const taskForm = ref({
+  search_scope: "JOB" as "JOB" | "COMPANY",
   time_window_hours: 24,
-  job_keywords_text: "",
-  company_keywords_text: "",
-  platforms_text: "",
+  selected_job_keywords: [] as string[],
+  selected_company_keywords: [] as string[],
+  selected_platforms: [] as string[],
   max_results: 20,
   review_mode: "MANUAL",
   write_to_question_db: false,
@@ -70,8 +71,33 @@ const timePresets = [
   { label: "24 小时", value: 24 },
   { label: "3 天", value: 72 },
   { label: "7 天", value: 168 },
-  { label: "自定义", value: 0 },
 ]
+
+// Load enabled keyword presets for multi-select
+const jobPresets = ref<ExperienceKeywordPreset[]>([])
+const companyPresets = ref<ExperienceKeywordPreset[]>([])
+const platformPresets = ref<ExperienceKeywordPreset[]>([])
+
+async function loadPresets() {
+  const [jobs, companies, platforms] = await Promise.all([
+    listExperienceKeywords({ preset_type: "JOB", enabled: true }),
+    listExperienceKeywords({ preset_type: "COMPANY", enabled: true }),
+    listExperienceKeywords({ preset_type: "PLATFORM", enabled: true }),
+  ])
+  jobPresets.value = jobs.items || []
+  companyPresets.value = companies.items || []
+  platformPresets.value = platforms.items || []
+  // Default select all platforms
+  if (taskForm.value.selected_platforms.length === 0) {
+    taskForm.value.selected_platforms = platformPresets.value.map(p => p.name)
+  }
+}
+
+function toggleScope(scope: "JOB" | "COMPANY") {
+  taskForm.value.search_scope = scope
+  taskForm.value.selected_job_keywords = []
+  taskForm.value.selected_company_keywords = []
+}
 
 async function loadTasks() {
   const res = await listExperienceTasks()
@@ -80,22 +106,29 @@ async function loadTasks() {
 }
 
 async function handleCreateTask() {
-  if (!taskForm.value.job_keywords_text && !taskForm.value.company_keywords_text && !taskForm.value.platforms_text) {
-    alert("请至少填写一个关键词字段")
-    return
+  const f = taskForm.value
+  if (f.search_scope === "JOB" && f.selected_job_keywords.length === 0) {
+    alert("请至少选择一个岗位关键词"); return
+  }
+  if (f.search_scope === "COMPANY" && f.selected_company_keywords.length === 0) {
+    alert("请至少选择一个公司关键词"); return
+  }
+  if (f.selected_platforms.length === 0) {
+    alert("请至少选择一个平台"); return
   }
   creating.value = true
   try {
     await createExperienceTask({
-      time_window_hours: taskForm.value.time_window_hours,
-      job_keywords_json: taskForm.value.job_keywords_text.split(/[,，、]/).map(s => s.trim()).filter(s => s),
-      company_keywords_json: taskForm.value.company_keywords_text.split(/[,，、]/).map(s => s.trim()).filter(s => s),
-      platforms_json: taskForm.value.platforms_text.split(/[,，、]/).map(s => s.trim()).filter(s => s),
-      max_results: taskForm.value.max_results,
-      review_mode: taskForm.value.review_mode,
-      write_to_question_db: taskForm.value.write_to_question_db,
-      write_to_vector_index: taskForm.value.write_to_vector_index,
-      update_public_summary: taskForm.value.update_public_summary,
+      search_scope: f.search_scope,
+      time_window_hours: f.time_window_hours,
+      job_keywords_json: f.search_scope === "JOB" ? f.selected_job_keywords : [],
+      company_keywords_json: f.search_scope === "COMPANY" ? f.selected_company_keywords : [],
+      platforms_json: f.selected_platforms,
+      max_results: f.max_results,
+      review_mode: f.review_mode,
+      write_to_question_db: f.write_to_question_db,
+      write_to_vector_index: f.write_to_vector_index,
+      update_public_summary: f.update_public_summary,
     })
     showTaskForm.value = false
     await loadTasks()
@@ -110,7 +143,7 @@ const statusLabel: Record<string, string> = {
   APPROVED: "已通过", INDEXING: "索引入库", COMPLETED: "已完成", FAILED: "失败",
 }
 
-onMounted(() => { loadTasks(); loadKeywords() })
+onMounted(() => { loadTasks(); loadKeywords(); loadPresets() })
 </script>
 
 <template>
@@ -131,12 +164,17 @@ onMounted(() => { loadTasks(); loadKeywords() })
       <!-- Create form -->
       <div v-if="showTaskForm" class="task-form">
         <div class="form-row">
+          <label>搜索维度
+            <select v-model="taskForm.search_scope" @change="toggleScope(taskForm.search_scope)">
+              <option value="JOB">按岗位搜索</option>
+              <option value="COMPANY">按公司搜索</option>
+            </select>
+          </label>
           <label>时间范围
             <select v-model.number="taskForm.time_window_hours">
               <option v-for="p in timePresets" :key="p.value" :value="p.value">{{ p.label }}</option>
             </select>
           </label>
-          <input v-if="taskForm.time_window_hours === 0" v-model.number="taskForm.time_window_hours" placeholder="自定义小时数" type="number" min="1" />
           <label>最大结果数 <input v-model.number="taskForm.max_results" type="number" min="1" max="100" /></label>
           <label>审核模式
             <select v-model="taskForm.review_mode">
@@ -145,10 +183,32 @@ onMounted(() => { loadTasks(); loadKeywords() })
             </select>
           </label>
         </div>
-        <div class="form-row">
-          <label>岗位关键词 <input v-model="taskForm.job_keywords_text" placeholder="Java, 后端（逗号分隔）" /></label>
-          <label>公司关键词 <input v-model="taskForm.company_keywords_text" placeholder="腾讯, 字节（逗号分隔）" /></label>
-          <label>平台 <input v-model="taskForm.platforms_text" placeholder="牛客, 全网（逗号分隔）" /></label>
+        <!-- Job keywords (only when JOB scope) -->
+        <div v-if="taskForm.search_scope === 'JOB'" class="kw-select">
+          <label>岗位关键词（多选）</label>
+          <div class="checkbox-group">
+            <label v-for="j in jobPresets" :key="j.id" class="cb-label">
+              <input type="checkbox" :value="j.name" v-model="taskForm.selected_job_keywords" /> {{ j.name }}
+            </label>
+          </div>
+        </div>
+        <!-- Company keywords (only when COMPANY scope) -->
+        <div v-if="taskForm.search_scope === 'COMPANY'" class="kw-select">
+          <label>公司关键词（多选）</label>
+          <div class="checkbox-group">
+            <label v-for="c in companyPresets" :key="c.id" class="cb-label">
+              <input type="checkbox" :value="c.name" v-model="taskForm.selected_company_keywords" /> {{ c.name }}
+            </label>
+          </div>
+        </div>
+        <!-- Platforms (always shown) -->
+        <div class="kw-select">
+          <label>平台（多选）</label>
+          <div class="checkbox-group">
+            <label v-for="p in platformPresets" :key="p.id" class="cb-label">
+              <input type="checkbox" :value="p.name" v-model="taskForm.selected_platforms" /> {{ p.name }}
+            </label>
+          </div>
         </div>
         <div class="form-row checks">
           <label><input type="checkbox" v-model="taskForm.write_to_question_db" /> 写入题库</label>
@@ -165,8 +225,9 @@ onMounted(() => { loadTasks(); loadKeywords() })
         <thead>
           <tr>
             <th>ID</th>
+            <th>维度</th>
             <th>时间</th>
-            <th>岗位/公司/平台</th>
+            <th>关键词/平台</th>
             <th>状态</th>
             <th>进度</th>
             <th>发现/抓取/抽取/问题/通过/失败</th>
@@ -176,6 +237,7 @@ onMounted(() => { loadTasks(); loadKeywords() })
         <tbody>
           <tr v-for="t in tasks" :key="t.id">
             <td>{{ t.id }}</td>
+            <td>{{ t.search_scope === "COMPANY" ? "按公司" : "按岗位" }}</td>
             <td>{{ t.time_window_hours }}h</td>
             <td class="kw-cell">
               <span v-if="t.job_keywords_json?.length">岗位: {{ t.job_keywords_json.join(", ") }}<br/></span>
@@ -276,4 +338,9 @@ onMounted(() => { loadTasks(); loadKeywords() })
 .modal-actions button { padding: 8px 20px; border: none; border-radius: 6px; cursor: pointer; }
 .modal-actions button:first-child { background: #409eff; color: #fff; }
 .btn-cancel { background: #f0f0f0 !important; color: #333 !important; }
+.kw-select { margin-bottom: 12px; }
+.kw-select > label { font-size: 13px; font-weight: 600; display: block; margin-bottom: 6px; }
+.checkbox-group { display: flex; flex-wrap: wrap; gap: 6px; }
+.cb-label { display: flex; align-items: center; gap: 4px; font-size: 13px; padding: 4px 10px; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer; }
+.cb-label input { width: auto; }
 </style>

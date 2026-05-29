@@ -36,6 +36,7 @@ class ExperienceKeywordPresetRead(BaseModel):
 # ── Collection Task ──
 
 class ExperienceCollectionTaskCreate(BaseModel):
+    search_scope: str = Field(default="JOB", pattern="^(JOB|COMPANY)$")
     time_window_hours: int = Field(default=24, gt=0, le=720)
     job_keywords_json: list[str] = Field(default_factory=list)
     company_keywords_json: list[str] = Field(default_factory=list)
@@ -54,6 +55,7 @@ class ExperienceCollectionTaskRead(BaseModel):
     job_keywords_json: list = []
     company_keywords_json: list = []
     platforms_json: list = []
+    search_scope: str = "JOB"
     max_results: int
     review_mode: str
     write_to_question_db: bool

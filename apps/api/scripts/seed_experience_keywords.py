@@ -31,6 +31,7 @@ SEEDS = [
     {"preset_type": "PLATFORM", "name": "牛客", "aliases": ["牛客", "nowcoder"]},
     {"preset_type": "PLATFORM", "name": "小红书", "aliases": ["小红书", "xiaohongshu", "xhs"]},
     {"preset_type": "PLATFORM", "name": "抖音", "aliases": ["抖音", "douyin", "TikTok"]},
+    {"preset_type": "PLATFORM", "name": "全网", "aliases": ["web", "all", "全网公开网页"]},
 ]
 
 

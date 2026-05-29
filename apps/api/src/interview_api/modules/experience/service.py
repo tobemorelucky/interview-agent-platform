@@ -112,6 +112,9 @@ class ExperienceTaskService:
         self.repo = ExperienceCollectionTaskRepository(db)
 
     async def create_task(self, data: dict, user_id: int | None = None) -> dict:
+        search_scope = data.get("search_scope", "JOB")
+        if search_scope not in ("JOB", "COMPANY"):
+            raise ValueError("search_scope 必须是 JOB 或 COMPANY")
         time_window = data.get("time_window_hours", 24)
         if not isinstance(time_window, int) or time_window <= 0:
             raise ValueError("time_window_hours 必须 > 0")
@@ -121,22 +124,33 @@ class ExperienceTaskService:
         review_mode = data.get("review_mode", "MANUAL")
         if review_mode not in ("MANUAL", "AUTO_PUBLISH"):
             raise ValueError("review_mode 必须是 MANUAL 或 AUTO_PUBLISH")
-        for field in ["job_keywords_json", "company_keywords_json", "platforms_json"]:
-            val = data.get(field, [])
-            if not isinstance(val, list):
-                raise ValueError(f"{field} 必须是数组")
-        has_criteria = any(
-            data.get(k) for k in ["job_keywords_json", "company_keywords_json", "platforms_json"]
-        )
-        if not has_criteria:
-            raise ValueError("至少需要 job/company/platform 关键词之一")
+        platforms = data.get("platforms_json", [])
+        if not isinstance(platforms, list) or not platforms:
+            raise ValueError("至少需要选择一个平台")
+        job_kw = data.get("job_keywords_json", [])
+        company_kw = data.get("company_keywords_json", [])
+        if not isinstance(job_kw, list):
+            raise ValueError("job_keywords_json 必须是数组")
+        if not isinstance(company_kw, list):
+            raise ValueError("company_keywords_json 必须是数组")
+        if search_scope == "JOB":
+            if not job_kw:
+                raise ValueError("按岗位搜索时，必须至少选择一个岗位关键词")
+            if company_kw:
+                raise ValueError("按岗位搜索时，公司关键词必须为空")
+        elif search_scope == "COMPANY":
+            if not company_kw:
+                raise ValueError("按公司搜索时，必须至少选择一个公司关键词")
+            if job_kw:
+                raise ValueError("按公司搜索时，岗位关键词必须为空")
 
         task = ExperienceCollectionTask(
             created_by=user_id,
+            search_scope=search_scope,
             time_window_hours=time_window,
-            job_keywords_json=data.get("job_keywords_json", []),
-            company_keywords_json=data.get("company_keywords_json", []),
-            platforms_json=data.get("platforms_json", []),
+            job_keywords_json=job_kw,
+            company_keywords_json=company_kw,
+            platforms_json=platforms,
             max_results=max_results,
             review_mode=review_mode,
             write_to_question_db=bool(data.get("write_to_question_db", False)),
@@ -165,6 +179,7 @@ class ExperienceTaskService:
             "id": task.id,
             "created_by": task.created_by,
             "time_window_hours": task.time_window_hours,
+            "search_scope": task.search_scope,
             "job_keywords_json": task.job_keywords_json,
             "company_keywords_json": task.company_keywords_json,
             "platforms_json": task.platforms_json,

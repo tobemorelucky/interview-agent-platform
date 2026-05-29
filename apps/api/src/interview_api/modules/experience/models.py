@@ -54,6 +54,9 @@ class ExperienceCollectionTask(Base):
     job_keywords_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=list)
     company_keywords_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=list)
     platforms_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=list)
+    search_scope: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="JOB", server_default="JOB"
+    )
     max_results: Mapped[int] = mapped_column(Integer, nullable=False, default=20)
     review_mode: Mapped[str] = mapped_column(
         String(32), nullable=False, default="MANUAL"

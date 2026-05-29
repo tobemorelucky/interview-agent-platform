@@ -67,6 +67,7 @@ export async function deleteExperienceKeyword(id: number): Promise<void> {
 
 export interface ExperienceCollectionTask {
   id: number
+  search_scope: string
   time_window_hours: number
   job_keywords_json: string[]
   company_keywords_json: string[]
@@ -98,6 +99,7 @@ export async function listExperienceTasks(params?: {
 }
 
 export async function createExperienceTask(data: {
+  search_scope: string
   time_window_hours: number
   job_keywords_json: string[]
   company_keywords_json: string[]
