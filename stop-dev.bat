@@ -33,12 +33,12 @@ taskkill /FI "WINDOWTITLE eq IAP_DEV_WORKER_EXITED" /T /F 2>nul
 echo   Dev windows closed
 
 REM ---- Docker ----
-echo [4/4] Stopping Docker containers...
+echo [4/4] Stopping Docker containers (including SearXNG)...
 docker info >nul 2>&1
 if !errorlevel!==0 (
     docker compose down >nul 2>&1
     if !errorlevel!==0 (
-        echo   Docker containers stopped
+        echo   Docker containers stopped (including SearXNG)
     ) else (
         echo   Docker compose down returned error (containers may already be stopped^)
     )

@@ -96,6 +96,7 @@ class Settings(BaseSettings):
     experience_search_provider: str = "searxng"
     searxng_base_url: str = "http://localhost:8080"
     searxng_timeout_seconds: float = 20.0
+    searxng_engines: str = ""
     experience_search_max_results: int = 20
     experience_search_language: str = "zh-CN"
     experience_search_safesearch: int = 0

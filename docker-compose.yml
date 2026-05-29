@@ -27,6 +27,17 @@ services:
       timeout: 5s
       retries: 5
 
+  searxng:
+    image: searxng/searxng:latest
+    container_name: interview-searxng
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./docker/searxng/settings.yml:/etc/searxng/settings.yml:ro
+    environment:
+      - BASE_URL=http://localhost:8080/
+    restart: unless-stopped
+
   etcd:
     image: quay.io/coreos/etcd:v3.5.16
     environment:

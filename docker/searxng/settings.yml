@@ -1,0 +1,18 @@
+use_default_settings:
+  engines:
+    keep_only:
+      - bing
+
+search:
+  formats:
+    - html
+    - json
+
+server:
+  bind_address: "0.0.0.0"
+  port: 8080
+  secret_key: "change-me-dev-secret"
+
+outgoing:
+  request_timeout: 10.0
+  max_request_timeout: 15.0

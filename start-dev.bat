@@ -27,7 +27,7 @@ taskkill /FI "WINDOWTITLE eq IAP_DEV_WORKER" /T /F 2>nul
 taskkill /FI "WINDOWTITLE eq IAP_DEV_WORKER_EXITED" /T /F 2>nul
 
 REM ---- Docker ----
-echo [1/4] Starting Docker infrastructure (PG + Redis + MinIO + Milvus)...
+echo [1/4] Starting Docker infrastructure (PG + Redis + MinIO + Milvus + SearXNG)...
 cd /d "%ROOT%"
 for /f %%a in ('powershell -NoProfile -Command "Get-Date -Format yyyy-MM-dd"') do set "DATESTAMP=%%a"
 docker compose up -d >> "%LOGDIR%\docker-%DATESTAMP%.log" 2>&1
@@ -51,7 +51,12 @@ echo ============================================
 echo.
 echo   API:       http://localhost:8000/docs
 echo   Web:       http://localhost:5173
+echo   SearXNG:   http://localhost:8080
 echo   Logs:      logs\dev\*-%DATESTAMP%.log
+echo.
+echo   SearXNG check:
+echo      cd apps\api
+echo      uv run python scripts\check_searxng.py "github"
 echo.
 echo   Stop all:  stop-dev.bat
 echo   Status:    status-dev.bat

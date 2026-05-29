@@ -180,6 +180,7 @@ docker-compose.yml
 - Redis
 - Milvus Standalone
 - MinIO
+- SearXNG（Phase 4 URL 搜索发现）
 
 ## 6.1 启动基础设施
 
@@ -203,6 +204,43 @@ docker compose down
 
 ```bash
 docker compose down -v
+```
+
+---
+
+## 6.4 Windows 一键开发脚本
+
+主项目根目录保留现有 bat 使用方式：
+
+```bat
+start-dev.bat
+stop-dev.bat
+status-dev.bat
+```
+
+- `start-dev.bat` 会执行 `docker compose up -d`，启动 PostgreSQL、Redis、MinIO、Milvus 和 SearXNG，然后启动 API、Worker、Web。
+- `stop-dev.bat` 会停止 API / Worker / Web，并通过 `docker compose down` 停止 Docker 容器，包括 SearXNG。
+- `status-dev.bat` 会检查 API、Worker、Redis、Web、SearXNG，并保留 `docker compose ps` 输出。
+
+如果之前外部目录 `E:\work\code\python\searxng` 还在运行，8080 端口可能被旧容器占用。先停止旧实例：
+
+```powershell
+cd E:\work\code\python\searxng
+docker compose down
+```
+
+或者停止旧容器：
+
+```powershell
+docker stop searxng-core searxng-valkey
+```
+
+SearXNG JSON API 检查：
+
+```bash
+cd apps/api
+uv run python scripts/check_searxng.py "github"
+uv run python scripts/check_searxng.py "腾讯 面经"
 ```
 
 ---
@@ -413,37 +451,43 @@ MinIO: 容器或对象存储服务
 
 # 16. Phase 4：面经采集 Agent 工作流配置
 
-Phase 4 本地开发需要 SearXNG 实例。在 `docker-compose.yml` 中添加：
+Phase 4 Step 5 本地开发需要主项目 Docker Compose 中的 SearXNG 实例。当前主项目已内置：
 
 ```yaml
 searxng:
   image: searxng/searxng:latest
+  container_name: interview-searxng
   ports:
     - "8080:8080"
+  volumes:
+    - ./docker/searxng/settings.yml:/etc/searxng/settings.yml:ro
   environment:
-    - SEARXNG_BASE_URL=http://localhost:8080
+    - BASE_URL=http://localhost:8080/
 ```
 
-`.env` 新增配置：
+`docker/searxng/settings.yml` 已启用 JSON output：
+
+```yaml
+search:
+  formats:
+    - html
+    - json
+```
+
+`.env` 配置：
 
 ```env
 # Experience Collection (Phase 4)
 EXPERIENCE_SEARCH_PROVIDER=searxng
 SEARXNG_BASE_URL=http://localhost:8080
 SEARXNG_TIMEOUT_SECONDS=20
+SEARXNG_ENGINES=
 EXPERIENCE_SEARCH_MAX_RESULTS=20
 EXPERIENCE_SEARCH_LANGUAGE=zh-CN
 EXPERIENCE_SEARCH_SAFESEARCH=0
-EXPERIENCE_FETCHER=httpx
-EXPERIENCE_ENABLE_BROWSER_FETCH=false
-EXPERIENCE_BROWSER_FETCHER=none
-EXPERIENCE_DEFAULT_REVIEW_MODE=MANUAL
-EXPERIENCE_AUTO_APPROVE_MIN_SCORE=0.8
-EXPERIENCE_WRITE_TO_QUESTION_DB=false
-EXPERIENCE_WRITE_TO_VECTOR_INDEX=false
-EXPERIENCE_UPDATE_PUBLIC_SUMMARY=true
-INTERVIEW_USE_EXPERIENCE_QUESTION_BANK=false
 ```
+
+`SEARXNG_ENGINES` 默认留空，表示使用 SearXNG 默认配置。不要默认写入 Brave；本地可能触发 Too Many Requests。
 
 ---
 

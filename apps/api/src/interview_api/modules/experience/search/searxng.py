@@ -33,6 +33,8 @@ class SearxngSearchProvider:
             "safesearch": settings.experience_search_safesearch,
             "time_range": _time_range(time_window_hours),
         }
+        if settings.searxng_engines.strip():
+            params["engines"] = settings.searxng_engines.strip()
 
         try:
             async with httpx.AsyncClient(
@@ -46,7 +48,10 @@ class SearxngSearchProvider:
             raise RuntimeError(f"SearXNG request failed: {exc}") from exc
 
         if response.status_code == 403:
-            raise RuntimeError("SearXNG returned 403. 请确认 SearXNG 已启用 json output format。")
+            raise RuntimeError(
+                "SearXNG returned 403. Ensure docker/searxng/settings.yml "
+                "search.formats includes json."
+            )
         if response.status_code >= 400:
             raise RuntimeError(
                 f"SearXNG returned HTTP {response.status_code}: {response.text[:300]}"

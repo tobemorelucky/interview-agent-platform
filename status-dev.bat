@@ -38,6 +38,14 @@ if %errorlevel%==0 (
     echo   [STOPPED]  Web
 )
 
+REM ---- SearXNG (port 8080) ----
+netstat -ano | findstr ":8080 " | findstr "LISTENING" >nul
+if %errorlevel%==0 (
+    echo   [RUNNING]  SearXNG http://localhost:8080
+) else (
+    echo   [STOPPED]  SearXNG
+)
+
 echo.
 echo --- Docker ---
 docker info >nul 2>&1
