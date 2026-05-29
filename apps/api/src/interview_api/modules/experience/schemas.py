@@ -36,12 +36,12 @@ class ExperienceKeywordPresetRead(BaseModel):
 # ── Collection Task ──
 
 class ExperienceCollectionTaskCreate(BaseModel):
-    time_window_hours: int = 24
+    time_window_hours: int = Field(default=24, gt=0, le=720)
     job_keywords_json: list[str] = Field(default_factory=list)
     company_keywords_json: list[str] = Field(default_factory=list)
     platforms_json: list[str] = Field(default_factory=list)
-    max_results: int = 20
-    review_mode: str = "MANUAL"
+    max_results: int = Field(default=20, ge=1, le=100)
+    review_mode: str = Field(default="MANUAL", pattern="^(MANUAL|AUTO_PUBLISH)$")
     write_to_question_db: bool = False
     write_to_vector_index: bool = False
     update_public_summary: bool = True
@@ -74,6 +74,11 @@ class ExperienceCollectionTaskRead(BaseModel):
     finished_at: datetime | None = None
 
     model_config = {"from_attributes": True}
+
+
+class ExperienceCollectionTaskListResponse(BaseModel):
+    items: list[ExperienceCollectionTaskRead]
+    total: int
 
 
 # ── Source Item ──

@@ -62,3 +62,55 @@ export async function updateExperienceKeyword(
 export async function deleteExperienceKeyword(id: number): Promise<void> {
   return client.delete(`/admin/experience/keywords/${id}`)
 }
+
+// ── Phase 4 Step 4: Collection Tasks ──
+
+export interface ExperienceCollectionTask {
+  id: number
+  time_window_hours: number
+  job_keywords_json: string[]
+  company_keywords_json: string[]
+  platforms_json: string[]
+  max_results: number
+  review_mode: string
+  write_to_question_db: boolean
+  write_to_vector_index: boolean
+  update_public_summary: boolean
+  status: string
+  progress: number
+  found_url_count: number
+  fetched_count: number
+  extracted_count: number
+  question_count: number
+  approved_count: number
+  failed_count: number
+  error_message?: string
+  created_at?: string
+  finished_at?: string
+}
+
+export async function listExperienceTasks(params?: {
+  status?: string
+  offset?: number
+  limit?: number
+}): Promise<{ items: ExperienceCollectionTask[]; total: number }> {
+  return client.get("/admin/experience/tasks", { params })
+}
+
+export async function createExperienceTask(data: {
+  time_window_hours: number
+  job_keywords_json: string[]
+  company_keywords_json: string[]
+  platforms_json: string[]
+  max_results?: number
+  review_mode?: string
+  write_to_question_db?: boolean
+  write_to_vector_index?: boolean
+  update_public_summary?: boolean
+}): Promise<ExperienceCollectionTask> {
+  return client.post("/admin/experience/tasks", data)
+}
+
+export async function getExperienceTask(id: number): Promise<ExperienceCollectionTask> {
+  return client.get(`/admin/experience/tasks/${id}`)
+}

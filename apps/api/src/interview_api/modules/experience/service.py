@@ -2,8 +2,14 @@
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from interview_api.modules.experience.models import ExperienceKeywordPreset
-from interview_api.modules.experience.repository import ExperienceKeywordPresetRepository
+from interview_api.modules.experience.models import (
+    ExperienceKeywordPreset,
+    ExperienceCollectionTask,
+)
+from interview_api.modules.experience.repository import (
+    ExperienceKeywordPresetRepository,
+    ExperienceCollectionTaskRepository,
+)
 
 VALID_PRESET_TYPES = {"COMPANY", "JOB", "PLATFORM"}
 
@@ -97,4 +103,87 @@ class ExperienceKeywordService:
             "created_by": preset.created_by,
             "created_at": preset.created_at.isoformat() if preset.created_at else None,
             "updated_at": preset.updated_at.isoformat() if preset.updated_at else None,
+        }
+
+
+class ExperienceTaskService:
+    def __init__(self, db: AsyncSession):
+        self.db = db
+        self.repo = ExperienceCollectionTaskRepository(db)
+
+    async def create_task(self, data: dict, user_id: int | None = None) -> dict:
+        time_window = data.get("time_window_hours", 24)
+        if not isinstance(time_window, int) or time_window <= 0:
+            raise ValueError("time_window_hours 必须 > 0")
+        max_results = data.get("max_results", 20)
+        if not isinstance(max_results, int) or max_results < 1 or max_results > 100:
+            raise ValueError("max_results 必须在 1-100 之间")
+        review_mode = data.get("review_mode", "MANUAL")
+        if review_mode not in ("MANUAL", "AUTO_PUBLISH"):
+            raise ValueError("review_mode 必须是 MANUAL 或 AUTO_PUBLISH")
+        for field in ["job_keywords_json", "company_keywords_json", "platforms_json"]:
+            val = data.get(field, [])
+            if not isinstance(val, list):
+                raise ValueError(f"{field} 必须是数组")
+        has_criteria = any(
+            data.get(k) for k in ["job_keywords_json", "company_keywords_json", "platforms_json"]
+        )
+        if not has_criteria:
+            raise ValueError("至少需要 job/company/platform 关键词之一")
+
+        task = ExperienceCollectionTask(
+            created_by=user_id,
+            time_window_hours=time_window,
+            job_keywords_json=data.get("job_keywords_json", []),
+            company_keywords_json=data.get("company_keywords_json", []),
+            platforms_json=data.get("platforms_json", []),
+            max_results=max_results,
+            review_mode=review_mode,
+            write_to_question_db=bool(data.get("write_to_question_db", False)),
+            write_to_vector_index=bool(data.get("write_to_vector_index", False)),
+            update_public_summary=bool(data.get("update_public_summary", True)),
+        )
+        created = await self.repo.create(task)
+        return self._task_to_dict(created)
+
+    async def list_tasks(
+        self, status: str | None = None, offset: int = 0, limit: int = 50
+    ) -> dict:
+        items, total = await self.repo.list_tasks(status=status, offset=offset, limit=limit)
+        return {
+            "items": [self._task_to_dict(t) for t in items],
+            "total": total,
+        }
+
+    async def get_task(self, task_id: int) -> dict | None:
+        task = await self.repo.get_by_id(task_id)
+        return self._task_to_dict(task) if task else None
+
+    @staticmethod
+    def _task_to_dict(task: ExperienceCollectionTask) -> dict:
+        return {
+            "id": task.id,
+            "created_by": task.created_by,
+            "time_window_hours": task.time_window_hours,
+            "job_keywords_json": task.job_keywords_json,
+            "company_keywords_json": task.company_keywords_json,
+            "platforms_json": task.platforms_json,
+            "max_results": task.max_results,
+            "review_mode": task.review_mode,
+            "write_to_question_db": task.write_to_question_db,
+            "write_to_vector_index": task.write_to_vector_index,
+            "update_public_summary": task.update_public_summary,
+            "status": task.status,
+            "progress": task.progress,
+            "found_url_count": task.found_url_count,
+            "fetched_count": task.fetched_count,
+            "extracted_count": task.extracted_count,
+            "question_count": task.question_count,
+            "approved_count": task.approved_count,
+            "failed_count": task.failed_count,
+            "error_message": task.error_message,
+            "created_at": task.created_at.isoformat() if task.created_at else None,
+            "updated_at": task.updated_at.isoformat() if task.updated_at else None,
+            "started_at": task.started_at.isoformat() if task.started_at else None,
+            "finished_at": task.finished_at.isoformat() if task.finished_at else None,
         }

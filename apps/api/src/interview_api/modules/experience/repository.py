@@ -3,7 +3,10 @@
 from sqlalchemy import select, update, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from interview_api.modules.experience.models import ExperienceKeywordPreset
+from interview_api.modules.experience.models import (
+    ExperienceKeywordPreset,
+    ExperienceCollectionTask,
+)
 
 
 class ExperienceKeywordPresetRepository:
@@ -76,3 +79,37 @@ class ExperienceKeywordPresetRepository:
         )
         await self.db.flush()
         return result.rowcount > 0
+
+
+class ExperienceCollectionTaskRepository:
+    def __init__(self, db: AsyncSession):
+        self.db = db
+
+    async def create(self, task: ExperienceCollectionTask) -> ExperienceCollectionTask:
+        self.db.add(task)
+        await self.db.flush()
+        return task
+
+    async def list_tasks(
+        self,
+        status: str | None = None,
+        offset: int = 0,
+        limit: int = 50,
+    ) -> tuple[list[ExperienceCollectionTask], int]:
+        query = select(ExperienceCollectionTask)
+        count_query = select(func.count(ExperienceCollectionTask.id))
+        if status:
+            query = query.where(ExperienceCollectionTask.status == status)
+            count_query = count_query.where(ExperienceCollectionTask.status == status)
+        total = (await self.db.execute(count_query)).scalar() or 0
+        result = await self.db.execute(
+            query.order_by(desc(ExperienceCollectionTask.created_at))
+            .offset(offset).limit(limit)
+        )
+        return list(result.scalars().all()), total
+
+    async def get_by_id(self, task_id: int) -> ExperienceCollectionTask | None:
+        result = await self.db.execute(
+            select(ExperienceCollectionTask).where(ExperienceCollectionTask.id == task_id)
+        )
+        return result.scalar_one_or_none()
