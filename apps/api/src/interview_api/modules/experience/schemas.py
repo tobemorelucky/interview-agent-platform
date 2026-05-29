@@ -101,6 +101,11 @@ class ExperienceSourceItemRead(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ExperienceSourceItemListResponse(BaseModel):
+    items: list[ExperienceSourceItemRead]
+    total: int
+
+
 # ── Interview Experience ──
 
 class InterviewExperienceRead(BaseModel):

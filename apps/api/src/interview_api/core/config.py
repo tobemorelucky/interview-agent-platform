@@ -92,6 +92,14 @@ class Settings(BaseSettings):
     ocr_provider: str = ""
     asr_provider: str = ""
 
+    # Experience Search
+    experience_search_provider: str = "searxng"
+    searxng_base_url: str = "http://localhost:8080"
+    searxng_timeout_seconds: float = 20.0
+    experience_search_max_results: int = 20
+    experience_search_language: str = "zh-CN"
+    experience_search_safesearch: int = 0
+
     # Resume
     resume_max_file_size_mb: int = 10
     resume_allowed_types: str = "pdf,docx,txt"

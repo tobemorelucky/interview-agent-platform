@@ -8,7 +8,10 @@ import {
   type ExperienceKeywordPreset,
   listExperienceTasks,
   createExperienceTask,
+  runExperienceTaskSearch,
+  listExperienceTaskSources,
   type ExperienceCollectionTask,
+  type ExperienceSourceItem,
 } from "../api/admin"
 
 const activeTab = ref<"tasks" | "keywords">("tasks")
@@ -53,6 +56,11 @@ async function handleDelete(id: number) { if (!confirm("确认删除？")) retur
 // ── Tasks state ──
 const tasks = ref<ExperienceCollectionTask[]>([])
 const taskTotal = ref(0)
+const runningTaskId = ref<number | null>(null)
+const expandedTaskId = ref<number | null>(null)
+const sourceItems = ref<ExperienceSourceItem[]>([])
+const sourceTotal = ref(0)
+const sourcesLoading = ref(false)
 const showTaskForm = ref(false)
 const taskForm = ref({
   search_scope: "JOB" as "JOB" | "COMPANY",
@@ -105,6 +113,48 @@ async function loadTasks() {
   taskTotal.value = res.total || 0
 }
 
+function canRunSearch(status: string) {
+  return ["PENDING", "FAILED", "SEARCH_COMPLETED"].includes(status)
+}
+
+async function handleRunSearch(task: ExperienceCollectionTask) {
+  runningTaskId.value = task.id
+  try {
+    const result = await runExperienceTaskSearch(task.id)
+    await loadTasks()
+    if (expandedTaskId.value === task.id) {
+      await loadSources(task.id)
+    }
+    alert(`搜索完成，当前发现 ${result.found_url_count || 0} 个 URL`)
+  } catch (e: any) {
+    alert(e?.message || "搜索执行失败")
+  } finally {
+    runningTaskId.value = null
+  }
+}
+
+async function loadSources(taskId: number) {
+  sourcesLoading.value = true
+  try {
+    const res = await listExperienceTaskSources(taskId, { offset: 0, limit: 50 })
+    sourceItems.value = res.items || []
+    sourceTotal.value = res.total || 0
+  } finally {
+    sourcesLoading.value = false
+  }
+}
+
+async function toggleSources(taskId: number) {
+  if (expandedTaskId.value === taskId) {
+    expandedTaskId.value = null
+    sourceItems.value = []
+    sourceTotal.value = 0
+    return
+  }
+  expandedTaskId.value = taskId
+  await loadSources(taskId)
+}
+
 async function handleCreateTask() {
   const f = taskForm.value
   if (f.search_scope === "JOB" && f.selected_job_keywords.length === 0) {
@@ -138,7 +188,7 @@ async function handleCreateTask() {
 }
 
 const statusLabel: Record<string, string> = {
-  PENDING: "待执行", SEARCHING: "搜索中", FETCHING: "抓取中", EXTRACTING: "抽取中",
+  PENDING: "待执行", SEARCHING: "搜索中", SEARCH_COMPLETED: "搜索完成", FETCHING: "抓取中", EXTRACTING: "抽取中",
   ROUTING: "分类中", SCORING: "评分中", DEDUPING: "去重中", WAITING_REVIEW: "待审核",
   APPROVED: "已通过", INDEXING: "索引入库", COMPLETED: "已完成", FAILED: "失败",
 }
@@ -232,23 +282,60 @@ onMounted(() => { loadTasks(); loadKeywords(); loadPresets() })
             <th>进度</th>
             <th>发现/抓取/抽取/问题/通过/失败</th>
             <th>创建时间</th>
+            <th>操作</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="t in tasks" :key="t.id">
-            <td>{{ t.id }}</td>
-            <td>{{ t.search_scope === "COMPANY" ? "按公司" : "按岗位" }}</td>
-            <td>{{ t.time_window_hours }}h</td>
-            <td class="kw-cell">
-              <span v-if="t.job_keywords_json?.length">岗位: {{ t.job_keywords_json.join(", ") }}<br/></span>
-              <span v-if="t.company_keywords_json?.length">公司: {{ t.company_keywords_json.join(", ") }}<br/></span>
-              <span v-if="t.platforms_json?.length">平台: {{ t.platforms_json.join(", ") }}</span>
-            </td>
-            <td><span class="status-tag">{{ statusLabel[t.status] || t.status }}</span></td>
-            <td>{{ t.progress }}%</td>
-            <td class="counts">{{ t.found_url_count }} / {{ t.fetched_count }} / {{ t.extracted_count }} / {{ t.question_count }} / {{ t.approved_count }} / {{ t.failed_count }}</td>
-            <td>{{ t.created_at?.slice(0, 16) || "" }}</td>
-          </tr>
+          <template v-for="t in tasks" :key="t.id">
+            <tr>
+              <td>{{ t.id }}</td>
+              <td>{{ t.search_scope === "COMPANY" ? "按公司" : "按岗位" }}</td>
+              <td>{{ t.time_window_hours }}h</td>
+              <td class="kw-cell">
+                <span v-if="t.job_keywords_json?.length">岗位: {{ t.job_keywords_json.join(", ") }}<br/></span>
+                <span v-if="t.company_keywords_json?.length">公司: {{ t.company_keywords_json.join(", ") }}<br/></span>
+                <span v-if="t.platforms_json?.length">平台: {{ t.platforms_json.join(", ") }}</span>
+              </td>
+              <td><span class="status-tag">{{ statusLabel[t.status] || t.status }}</span></td>
+              <td>{{ t.progress }}%</td>
+              <td class="counts">{{ t.found_url_count }} / {{ t.fetched_count }} / {{ t.extracted_count }} / {{ t.question_count }} / {{ t.approved_count }} / {{ t.failed_count }}</td>
+              <td>{{ t.created_at?.slice(0, 16) || "" }}</td>
+              <td class="actions">
+                <button v-if="canRunSearch(t.status)" @click="handleRunSearch(t)" :disabled="runningTaskId === t.id">
+                  {{ runningTaskId === t.id ? "搜索中..." : "执行搜索" }}
+                </button>
+                <button @click="toggleSources(t.id)">
+                  {{ expandedTaskId === t.id ? "收起来源" : "查看来源" }}
+                </button>
+              </td>
+            </tr>
+            <tr v-if="expandedTaskId === t.id" class="source-row">
+              <td colspan="9">
+                <div class="sources-panel">
+                  <div class="sources-head">
+                    <strong>发现来源</strong>
+                    <span>{{ sourcesLoading ? "加载中..." : `共 ${sourceTotal} 条` }}</span>
+                  </div>
+                  <table v-if="sourceItems.length" class="source-table">
+                    <thead>
+                      <tr><th>标题</th><th>URL</th><th>平台</th><th>状态</th><th>错误信息</th><th>创建时间</th></tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="item in sourceItems" :key="item.id">
+                        <td>{{ item.title || "-" }}</td>
+                        <td class="url-cell"><a :href="item.source_url" target="_blank" rel="noopener noreferrer">{{ item.source_url }}</a></td>
+                        <td>{{ item.platform || "-" }}</td>
+                        <td>{{ item.fetch_status }}</td>
+                        <td>{{ item.error_message || "-" }}</td>
+                        <td>{{ item.created_at?.slice(0, 16) || "" }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <p v-else class="empty compact">{{ sourcesLoading ? "加载中..." : "暂无来源 URL" }}</p>
+                </div>
+              </td>
+            </tr>
+          </template>
         </tbody>
       </table>
       <p v-else class="empty">暂无任务，点击"创建采集任务"开始。</p>
@@ -318,6 +405,14 @@ onMounted(() => { loadTasks(); loadKeywords(); loadPresets() })
 .status-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; background: #ecf5ff; color: #409eff; }
 .kw-cell { font-size: 12px; line-height: 1.5; max-width: 200px; }
 .counts { font-size: 11px; color: #666; }
+.source-row > td { background: #fbfcff; padding: 0 12px 12px; }
+.sources-panel { border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; }
+.sources-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; color: #555; }
+.source-table { width: 100%; border-collapse: collapse; }
+.source-table th, .source-table td { padding: 8px; border-bottom: 1px solid #eee; text-align: left; font-size: 12px; vertical-align: top; }
+.url-cell { max-width: 320px; word-break: break-all; }
+.url-cell a { color: #409eff; }
+.compact { padding: 12px; }
 
 .task-form { background: #f8f9fc; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; margin-bottom: 16px; }
 .form-row { display: flex; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }

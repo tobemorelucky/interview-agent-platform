@@ -90,6 +90,20 @@ export interface ExperienceCollectionTask {
   finished_at?: string
 }
 
+export interface ExperienceSourceItem {
+  id: number
+  task_id: number
+  source_url: string
+  normalized_url_hash: string
+  platform?: string
+  title?: string
+  fetched_at?: string
+  fetch_status: string
+  extract_status?: string
+  error_message?: string
+  created_at?: string
+}
+
 export async function listExperienceTasks(params?: {
   status?: string
   offset?: number
@@ -115,4 +129,20 @@ export async function createExperienceTask(data: {
 
 export async function getExperienceTask(id: number): Promise<ExperienceCollectionTask> {
   return client.get(`/admin/experience/tasks/${id}`)
+}
+
+export async function runExperienceTaskSearch(id: number): Promise<{
+  task: ExperienceCollectionTask
+  found_url_count: number
+  query_count: number
+  query_failed_count: number
+}> {
+  return client.post(`/admin/experience/tasks/${id}/search`, undefined, { timeout: 180000 })
+}
+
+export async function listExperienceTaskSources(
+  id: number,
+  params?: { offset?: number; limit?: number; fetch_status?: string }
+): Promise<{ items: ExperienceSourceItem[]; total: number }> {
+  return client.get(`/admin/experience/tasks/${id}/sources`, { params })
 }

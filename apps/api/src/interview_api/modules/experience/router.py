@@ -140,3 +140,41 @@ async def get_task(
     if result is None:
         raise HTTPException(status_code=404, detail="任务不存在")
     return success(data=result)
+
+
+@router.post("/tasks/{task_id}/search")
+async def run_task_search(
+    task_id: int,
+    _admin=Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    svc = _task_service(db)
+    try:
+        result = await svc.run_search(task_id)
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return success(data=result, message="搜索执行完成")
+
+
+@router.get("/tasks/{task_id}/sources")
+async def list_task_sources(
+    task_id: int,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    fetch_status: str | None = Query(None),
+    _admin=Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    svc = _task_service(db)
+    try:
+        result = await svc.list_source_items(
+            task_id,
+            offset=offset,
+            limit=limit,
+            fetch_status=fetch_status,
+        )
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return success(data=result)

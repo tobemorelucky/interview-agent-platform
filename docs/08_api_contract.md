@@ -390,8 +390,9 @@ INDEX_JOB_FAILED
 |------|------|------|
 | POST | `/api/v1/admin/experience/tasks` | 创建面经采集任务 |
 | GET | `/api/v1/admin/experience/tasks` | 任务列表 |
-| GET | `/api/v1/admin/experience/tasks/{id}` | 任务详情（含 source items） |
-| GET | `/api/v1/admin/experience/sources` | Source item 列表（按状态筛选） |
+| GET | `/api/v1/admin/experience/tasks/{id}` | 任务详情 |
+| POST | `/api/v1/admin/experience/tasks/{id}/search` | 对 PENDING/FAILED/SEARCH_COMPLETED 任务执行 SearXNG 搜索 |
+| GET | `/api/v1/admin/experience/tasks/{id}/sources` | 查看任务发现到的 Source item 列表（可按 fetch_status 筛选） |
 | GET | `/api/v1/admin/experience/reviews` | 待审核面经列表 |
 | POST | `/api/v1/admin/experience/reviews/{id}/approve` | 审核通过 |
 | POST | `/api/v1/admin/experience/reviews/{id}/reject` | 审核拒绝 |

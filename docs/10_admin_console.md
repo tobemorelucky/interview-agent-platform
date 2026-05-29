@@ -246,17 +246,18 @@ Phase 7：
 
 ## 12.3 任务列表
 
-- 任务状态（PENDING/SEARCHING/FETCHING/.../COMPLETED/FAILED）
+- 任务状态（PENDING/SEARCHING/SEARCH_COMPLETED/FETCHING/.../COMPLETED/FAILED）
 - 发现 URL 数量
 - 提取面经数量
 - 通过审核数量
-- 重试按钮
+- 对 PENDING / FAILED / SEARCH_COMPLETED 任务显示“执行搜索”
+- 每个任务显示“查看来源”，展开 source item 列表
 
 ## 12.4 Source Item 状态
 
-- URL 列表，按状态筛选
-- 每条显示：URL、平台、状态、提取结果预览
-- 抓取失败的显示错误信息
+- URL 列表，按任务查看，支持按状态筛选
+- Step 5 每条显示：标题、URL、平台、fetch_status、错误信息、创建时间
+- Step 5 只写入 `DISCOVERED` URL，不抓取网页正文、不执行 Agent 抽取
 
 ## 12.5 待审核面经
 

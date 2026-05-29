@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from interview_api.modules.experience.models import (
     ExperienceKeywordPreset,
     ExperienceCollectionTask,
+    ExperienceSourceItem,
 )
 
 
@@ -113,3 +114,81 @@ class ExperienceCollectionTaskRepository:
             select(ExperienceCollectionTask).where(ExperienceCollectionTask.id == task_id)
         )
         return result.scalar_one_or_none()
+
+    async def update(
+        self, task_id: int, **values
+    ) -> ExperienceCollectionTask | None:
+        await self.db.execute(
+            update(ExperienceCollectionTask)
+            .where(ExperienceCollectionTask.id == task_id)
+            .values(**values)
+        )
+        await self.db.flush()
+        return await self.get_by_id(task_id)
+
+
+class ExperienceSourceItemRepository:
+    def __init__(self, db: AsyncSession):
+        self.db = db
+
+    async def create_source_item(
+        self, item: ExperienceSourceItem
+    ) -> ExperienceSourceItem:
+        self.db.add(item)
+        await self.db.flush()
+        return item
+
+    async def bulk_create_source_items(
+        self, items: list[ExperienceSourceItem]
+    ) -> list[ExperienceSourceItem]:
+        self.db.add_all(items)
+        await self.db.flush()
+        return items
+
+    async def exists_by_task_and_url_hash(
+        self, task_id: int, normalized_url_hash: str
+    ) -> bool:
+        result = await self.db.execute(
+            select(ExperienceSourceItem.id).where(
+                ExperienceSourceItem.task_id == task_id,
+                ExperienceSourceItem.normalized_url_hash == normalized_url_hash,
+            )
+        )
+        return result.first() is not None
+
+    async def list_source_items_by_task(
+        self,
+        task_id: int,
+        *,
+        offset: int = 0,
+        limit: int = 50,
+        fetch_status: str | None = None,
+    ) -> tuple[list[ExperienceSourceItem], int]:
+        query = select(ExperienceSourceItem).where(ExperienceSourceItem.task_id == task_id)
+        count_query = select(func.count(ExperienceSourceItem.id)).where(
+            ExperienceSourceItem.task_id == task_id
+        )
+        if fetch_status:
+            query = query.where(ExperienceSourceItem.fetch_status == fetch_status)
+            count_query = count_query.where(ExperienceSourceItem.fetch_status == fetch_status)
+
+        total = (await self.db.execute(count_query)).scalar() or 0
+        result = await self.db.execute(
+            query.order_by(desc(ExperienceSourceItem.created_at))
+            .offset(offset)
+            .limit(limit)
+        )
+        return list(result.scalars().all()), total
+
+    async def count_source_items_by_task(
+        self,
+        task_id: int,
+        *,
+        fetch_status: str | None = None,
+    ) -> int:
+        query = select(func.count(ExperienceSourceItem.id)).where(
+            ExperienceSourceItem.task_id == task_id
+        )
+        if fetch_status:
+            query = query.where(ExperienceSourceItem.fetch_status == fetch_status)
+        return (await self.db.execute(query)).scalar() or 0

@@ -10,6 +10,7 @@ class ExperiencePresetType:
 class ExperienceTaskStatus:
     PENDING = "PENDING"
     SEARCHING = "SEARCHING"
+    SEARCH_COMPLETED = "SEARCH_COMPLETED"
     FETCHING = "FETCHING"
     EXTRACTING = "EXTRACTING"
     ROUTING = "ROUTING"

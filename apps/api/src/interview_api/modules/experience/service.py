@@ -1,15 +1,26 @@
 """Phase 4: Experience keyword presets service."""
 
+from datetime import datetime, timezone
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from interview_api.core.config import settings
 from interview_api.modules.experience.models import (
     ExperienceKeywordPreset,
     ExperienceCollectionTask,
+    ExperienceSourceItem,
 )
 from interview_api.modules.experience.repository import (
     ExperienceKeywordPresetRepository,
     ExperienceCollectionTaskRepository,
+    ExperienceSourceItemRepository,
 )
+from interview_api.modules.experience.search import (
+    SearxngSearchProvider,
+    build_search_queries,
+)
+from interview_api.modules.experience.search.filters import is_relevant_candidate
+from interview_api.modules.experience.search.url_utils import hash_url, normalize_url
 
 VALID_PRESET_TYPES = {"COMPANY", "JOB", "PLATFORM"}
 
@@ -110,6 +121,7 @@ class ExperienceTaskService:
     def __init__(self, db: AsyncSession):
         self.db = db
         self.repo = ExperienceCollectionTaskRepository(db)
+        self.source_repo = ExperienceSourceItemRepository(db)
 
     async def create_task(self, data: dict, user_id: int | None = None) -> dict:
         search_scope = data.get("search_scope", "JOB")
@@ -173,6 +185,172 @@ class ExperienceTaskService:
         task = await self.repo.get_by_id(task_id)
         return self._task_to_dict(task) if task else None
 
+    async def run_search(self, task_id: int) -> dict:
+        task = await self.repo.get_by_id(task_id)
+        if not task:
+            raise LookupError("任务不存在")
+
+        if task.status not in {"PENDING", "FAILED", "SEARCH_COMPLETED"}:
+            raise ValueError(
+                f"当前任务状态为 {task.status}，只允许 PENDING / FAILED / SEARCH_COMPLETED 执行搜索"
+            )
+
+        started_at = task.started_at or datetime.now(timezone.utc)
+        task = await self.repo.update(
+            task_id,
+            status="SEARCHING",
+            progress=5,
+            failed_count=0,
+            error_message=None,
+            started_at=started_at,
+            finished_at=None,
+        )
+        await self.db.commit()
+
+        if settings.experience_search_provider.lower() != "searxng":
+            error_message = "当前阶段仅支持 EXPERIENCE_SEARCH_PROVIDER=searxng"
+            task = await self._finish_task_failed(task_id, error_message, failed_count=1)
+            return {
+                "task": self._task_to_dict(task),
+                "found_url_count": task.found_url_count,
+                "query_count": 0,
+                "query_failed_count": 1,
+            }
+
+        queries = build_search_queries(
+            search_scope=task.search_scope,
+            job_keywords_json=task.job_keywords_json or [],
+            company_keywords_json=task.company_keywords_json or [],
+            platforms_json=task.platforms_json or [],
+            time_window_hours=task.time_window_hours,
+        )
+        if not queries:
+            task = await self._finish_task_failed(task_id, "没有生成可执行的搜索 query", failed_count=1)
+            return {
+                "task": self._task_to_dict(task),
+                "found_url_count": task.found_url_count,
+                "query_count": 0,
+                "query_failed_count": 1,
+            }
+
+        provider = SearxngSearchProvider()
+        max_results = min(task.max_results, settings.experience_search_max_results)
+        query_failed_count = 0
+        query_success_count = 0
+        error_messages: list[str] = []
+
+        for index, query in enumerate(queries, start=1):
+            current_count = await self.source_repo.count_source_items_by_task(task.id)
+            remaining = max_results - current_count
+            if remaining <= 0:
+                break
+
+            try:
+                results = await provider.search(
+                    query.query,
+                    time_window_hours=task.time_window_hours,
+                    max_results=remaining,
+                )
+                query_success_count += 1
+            except RuntimeError as exc:
+                query_failed_count += 1
+                error_messages.append(f"{query.query}: {exc}")
+                continue
+
+            for result in results:
+                if not is_relevant_candidate(result, keyword=query.keyword):
+                    continue
+                normalized_url = normalize_url(result.url)
+                if not normalized_url:
+                    continue
+                normalized_url_hash = hash_url(normalized_url)
+                exists = await self.source_repo.exists_by_task_and_url_hash(
+                    task.id, normalized_url_hash
+                )
+                if exists:
+                    continue
+                await self.source_repo.create_source_item(
+                    ExperienceSourceItem(
+                        task_id=task.id,
+                        source_url=normalized_url,
+                        normalized_url_hash=normalized_url_hash,
+                        platform=query.platform,
+                        title=result.title or None,
+                        fetch_status="DISCOVERED",
+                    )
+                )
+
+            progress = min(95, 5 + int(index / len(queries) * 90))
+            await self.repo.update(task_id, progress=progress)
+            await self.db.flush()
+
+        found_url_count = await self.source_repo.count_source_items_by_task(task.id)
+        if query_success_count == 0:
+            error_message = "；".join(error_messages[:5]) or "所有搜索 query 均执行失败"
+            task = await self._finish_task_failed(
+                task_id, error_message, failed_count=query_failed_count
+            )
+        else:
+            task = await self.repo.update(
+                task_id,
+                status="SEARCH_COMPLETED",
+                progress=100,
+                found_url_count=found_url_count,
+                failed_count=query_failed_count,
+                error_message="；".join(error_messages[:3]) if error_messages else None,
+                finished_at=datetime.now(timezone.utc),
+            )
+            await self.db.commit()
+
+        return {
+            "task": self._task_to_dict(task),
+            "found_url_count": found_url_count,
+            "query_count": len(queries),
+            "query_failed_count": query_failed_count,
+        }
+
+    async def list_source_items(
+        self,
+        task_id: int,
+        *,
+        offset: int = 0,
+        limit: int = 50,
+        fetch_status: str | None = None,
+    ) -> dict:
+        task = await self.repo.get_by_id(task_id)
+        if not task:
+            raise LookupError("任务不存在")
+        items, total = await self.source_repo.list_source_items_by_task(
+            task_id,
+            offset=offset,
+            limit=limit,
+            fetch_status=fetch_status,
+        )
+        return {
+            "items": [self._source_item_to_dict(item) for item in items],
+            "total": total,
+        }
+
+    async def _finish_task_failed(
+        self,
+        task_id: int,
+        error_message: str,
+        *,
+        failed_count: int,
+    ) -> ExperienceCollectionTask:
+        found_url_count = await self.source_repo.count_source_items_by_task(task_id)
+        task = await self.repo.update(
+            task_id,
+            status="FAILED",
+            progress=100,
+            found_url_count=found_url_count,
+            failed_count=failed_count,
+            error_message=error_message[:2000],
+            finished_at=datetime.now(timezone.utc),
+        )
+        await self.db.commit()
+        return task
+
     @staticmethod
     def _task_to_dict(task: ExperienceCollectionTask) -> dict:
         return {
@@ -201,4 +379,20 @@ class ExperienceTaskService:
             "updated_at": task.updated_at.isoformat() if task.updated_at else None,
             "started_at": task.started_at.isoformat() if task.started_at else None,
             "finished_at": task.finished_at.isoformat() if task.finished_at else None,
+        }
+
+    @staticmethod
+    def _source_item_to_dict(item: ExperienceSourceItem) -> dict:
+        return {
+            "id": item.id,
+            "task_id": item.task_id,
+            "source_url": item.source_url,
+            "normalized_url_hash": item.normalized_url_hash,
+            "platform": item.platform,
+            "title": item.title,
+            "fetched_at": item.fetched_at.isoformat() if item.fetched_at else None,
+            "fetch_status": item.fetch_status,
+            "extract_status": item.extract_status,
+            "error_message": item.error_message,
+            "created_at": item.created_at.isoformat() if item.created_at else None,
         }
