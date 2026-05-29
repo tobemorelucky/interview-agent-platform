@@ -1,6 +1,6 @@
 """Phase 4: Experience keyword presets repository."""
 
-from sqlalchemy import select, update, delete, func
+from sqlalchemy import select, update, delete, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from interview_api.modules.experience.models import (

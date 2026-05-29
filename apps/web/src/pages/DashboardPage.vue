@@ -27,6 +27,9 @@ function goInterview() {
 function goAdminKb() {
   router.push("/admin/kb/documents");
 }
+function goAdminExperiences() {
+  router.push("/admin/experiences");
+}
 </script>
 
 <template>
@@ -40,6 +43,10 @@ function goAdminKb() {
         <div class="feature-card admin-card" @click="goAdminKb">
           <h3>知识库管理</h3>
           <p>上传、查看、删除、重新索引知识库文档。修改分块/embedding配置后需在此重新索引。</p>
+        </div>
+        <div class="feature-card admin-card" @click="goAdminExperiences">
+          <h3>面经更新管理</h3>
+          <p>维护公司、岗位、平台关键词，创建近期面经采集任务，审核和发布面经内容。</p>
         </div>
       </div>
     </div>
