@@ -62,6 +62,7 @@ const sourceItems = ref<ExperienceSourceItem[]>([])
 const sourceTotal = ref(0)
 const sourcesLoading = ref(false)
 const showTaskForm = ref(false)
+const createStatus = ref("")
 const taskForm = ref({
   search_scope: "JOB" as "JOB" | "COMPANY",
   time_window_hours: 24,
@@ -126,7 +127,7 @@ async function handleRunSearch(task: ExperienceCollectionTask) {
     if (expandedTaskId.value === task.id) {
       await loadSources(task.id)
     }
-    alert(`搜索完成，当前发现 ${result.found_url_count || 0} 个 URL`)
+    alert(formatSearchResultMessage(result))
   } catch (e: any) {
     alert(e?.message || "搜索执行失败")
   } finally {
@@ -168,8 +169,9 @@ async function handleCreateTask() {
     alert("请至少选择一个平台"); return
   }
   creating.value = true
+  createStatus.value = ""
   try {
-    await createExperienceTask({
+    const task = await createExperienceTask({
       search_scope: f.search_scope,
       time_window_hours: f.time_window_hours,
       job_keywords_json: f.search_scope === "JOB" ? f.selected_job_keywords : [],
@@ -182,10 +184,43 @@ async function handleCreateTask() {
       update_public_summary: f.update_public_summary,
     })
     showTaskForm.value = false
+    createStatus.value = "任务已创建，正在自动搜索..."
     await loadTasks()
-    alert("任务已创建，等待后续搜索执行")
+    runningTaskId.value = task.id
+    try {
+      const result = await runExperienceTaskSearch(task.id)
+      await loadTasks()
+      expandedTaskId.value = task.id
+      await loadSources(task.id)
+      createStatus.value = formatSearchResultMessage(result)
+      alert(createStatus.value)
+    } catch (searchError: any) {
+      await loadTasks()
+      createStatus.value = searchError?.message || "自动搜索失败，任务已保留在采集历史中"
+      alert(createStatus.value)
+    } finally {
+      runningTaskId.value = null
+    }
   } catch (e: any) { alert(e?.message || "创建失败") }
   finally { creating.value = false }
+}
+
+function formatSearchResultMessage(result: {
+  found_url_count: number
+  raw_result_count?: number
+  accepted_count?: number
+  filtered_count?: number
+  duplicate_count?: number
+}) {
+  const found = result.found_url_count || 0
+  const raw = result.raw_result_count || 0
+  const accepted = result.accepted_count || 0
+  const filtered = result.filtered_count || 0
+  const duplicate = result.duplicate_count || 0
+  if (found === 0) {
+    return `搜索完成，发现 0 个 URL（raw=${raw}, accepted=${accepted}, filtered=${filtered}, duplicate=${duplicate}）`
+  }
+  return `搜索完成，当前发现 ${found} 个 URL（raw=${raw}, accepted=${accepted}, filtered=${filtered}, duplicate=${duplicate}）`
 }
 
 const statusLabel: Record<string, string> = {
@@ -204,7 +239,7 @@ onMounted(() => { loadTasks(); loadKeywords(); loadPresets() })
 
     <!-- Main tabs -->
     <div class="main-tabs">
-      <button :class="{ active: activeTab === 'tasks' }" @click="activeTab = 'tasks'">更新任务</button>
+      <button :class="{ active: activeTab === 'tasks' }" @click="activeTab = 'tasks'">采集历史</button>
       <button :class="{ active: activeTab === 'keywords' }" @click="activeTab = 'keywords'">关键词预设</button>
     </div>
 
@@ -271,17 +306,21 @@ onMounted(() => { loadTasks(); loadKeywords(); loadPresets() })
         </button>
       </div>
 
+      <p v-if="createStatus" class="status-message">{{ createStatus }}</p>
+
       <!-- Task list -->
       <table class="kw-table" v-if="tasks.length">
         <thead>
           <tr>
             <th>ID</th>
             <th>维度</th>
-            <th>时间</th>
-            <th>关键词/平台</th>
+            <th>关键词</th>
+            <th>平台</th>
+            <th>时间范围</th>
             <th>状态</th>
-            <th>进度</th>
-            <th>发现/抓取/抽取/问题/通过/失败</th>
+            <th>发现</th>
+            <th>失败</th>
+            <th>错误信息</th>
             <th>创建时间</th>
             <th>操作</th>
           </tr>
@@ -291,19 +330,20 @@ onMounted(() => { loadTasks(); loadKeywords(); loadPresets() })
             <tr>
               <td>{{ t.id }}</td>
               <td>{{ t.search_scope === "COMPANY" ? "按公司" : "按岗位" }}</td>
-              <td>{{ t.time_window_hours }}h</td>
               <td class="kw-cell">
                 <span v-if="t.job_keywords_json?.length">岗位: {{ t.job_keywords_json.join(", ") }}<br/></span>
-                <span v-if="t.company_keywords_json?.length">公司: {{ t.company_keywords_json.join(", ") }}<br/></span>
-                <span v-if="t.platforms_json?.length">平台: {{ t.platforms_json.join(", ") }}</span>
+                <span v-if="t.company_keywords_json?.length">公司: {{ t.company_keywords_json.join(", ") }}</span>
               </td>
+              <td class="kw-cell">{{ t.platforms_json?.join(", ") }}</td>
+              <td>{{ t.time_window_hours }}h</td>
               <td><span class="status-tag">{{ statusLabel[t.status] || t.status }}</span></td>
-              <td>{{ t.progress }}%</td>
-              <td class="counts">{{ t.found_url_count }} / {{ t.fetched_count }} / {{ t.extracted_count }} / {{ t.question_count }} / {{ t.approved_count }} / {{ t.failed_count }}</td>
+              <td class="counts">{{ t.found_url_count }}</td>
+              <td class="counts">{{ t.failed_count }}</td>
+              <td class="error-cell">{{ t.error_message || "-" }}</td>
               <td>{{ t.created_at?.slice(0, 16) || "" }}</td>
               <td class="actions">
                 <button v-if="canRunSearch(t.status)" @click="handleRunSearch(t)" :disabled="runningTaskId === t.id">
-                  {{ runningTaskId === t.id ? "搜索中..." : "执行搜索" }}
+                  {{ runningTaskId === t.id ? "搜索中..." : "重新搜索" }}
                 </button>
                 <button @click="toggleSources(t.id)">
                   {{ expandedTaskId === t.id ? "收起来源" : "查看来源" }}
@@ -311,7 +351,7 @@ onMounted(() => { loadTasks(); loadKeywords(); loadPresets() })
               </td>
             </tr>
             <tr v-if="expandedTaskId === t.id" class="source-row">
-              <td colspan="9">
+              <td colspan="10">
                 <div class="sources-panel">
                   <div class="sources-head">
                     <strong>发现来源</strong>
@@ -319,15 +359,18 @@ onMounted(() => { loadTasks(); loadKeywords(); loadPresets() })
                   </div>
                   <table v-if="sourceItems.length" class="source-table">
                     <thead>
-                      <tr><th>标题</th><th>URL</th><th>平台</th><th>状态</th><th>错误信息</th><th>创建时间</th></tr>
+                      <tr><th>标题</th><th>URL</th><th>平台</th><th>Query</th><th>摘要</th><th>引擎</th><th>保留原因</th><th>状态</th><th>创建时间</th></tr>
                     </thead>
                     <tbody>
                       <tr v-for="item in sourceItems" :key="item.id">
                         <td>{{ item.title || "-" }}</td>
                         <td class="url-cell"><a :href="item.source_url" target="_blank" rel="noopener noreferrer">{{ item.source_url }}</a></td>
                         <td>{{ item.platform || "-" }}</td>
+                        <td>{{ item.query_text || "-" }}</td>
+                        <td class="snippet-cell">{{ item.snippet || "-" }}</td>
+                        <td>{{ item.engine || "-" }}</td>
+                        <td>{{ item.matched_reason || "-" }}</td>
                         <td>{{ item.fetch_status }}</td>
-                        <td>{{ item.error_message || "-" }}</td>
                         <td>{{ item.created_at?.slice(0, 16) || "" }}</td>
                       </tr>
                     </tbody>
@@ -406,6 +449,8 @@ onMounted(() => { loadTasks(); loadKeywords(); loadPresets() })
 .status-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; background: #ecf5ff; color: #409eff; }
 .kw-cell { font-size: 12px; line-height: 1.5; max-width: 200px; }
 .counts { font-size: 11px; color: #666; }
+.error-cell { max-width: 220px; font-size: 12px; color: #a94442; word-break: break-word; }
+.status-message { padding: 8px 12px; background: #f6ffed; border: 1px solid #b7eb8f; color: #389e0d; border-radius: 6px; margin: 8px 0 12px; }
 .source-row > td { background: #fbfcff; padding: 0 12px 12px; }
 .sources-panel { border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; }
 .sources-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; color: #555; }
@@ -413,6 +458,7 @@ onMounted(() => { loadTasks(); loadKeywords(); loadPresets() })
 .source-table th, .source-table td { padding: 8px; border-bottom: 1px solid #eee; text-align: left; font-size: 12px; vertical-align: top; }
 .url-cell { max-width: 320px; word-break: break-all; }
 .url-cell a { color: #409eff; }
+.snippet-cell { max-width: 220px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .compact { padding: 12px; }
 
 .task-form { background: #f8f9fc; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; margin-bottom: 16px; }

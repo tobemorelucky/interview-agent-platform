@@ -20,7 +20,7 @@ from interview_api.modules.experience.search import (
     SearxngSearchProvider,
     build_search_queries,
 )
-from interview_api.modules.experience.search.filters import is_relevant_candidate
+from interview_api.modules.experience.search.filters import evaluate_candidate
 from interview_api.modules.experience.search.url_utils import hash_url, normalize_url
 
 VALID_PRESET_TYPES = {"COMPANY", "JOB", "PLATFORM"}
@@ -239,6 +239,10 @@ class ExperienceTaskService:
         max_results = min(task.max_results, settings.experience_search_max_results)
         query_failed_count = 0
         query_success_count = 0
+        raw_result_count_total = 0
+        accepted_count_total = 0
+        filtered_count_total = 0
+        duplicate_count_total = 0
         error_messages: list[str] = []
 
         for index, query in enumerate(queries, start=1):
@@ -258,10 +262,11 @@ class ExperienceTaskService:
                 query_failed_count += 1
                 error_messages.append(f"{query.query}: {exc}")
                 logger.info(
-                    "experience_search_query task_id=%s query=%r raw_result_count=0 "
-                    "accepted_count=0 filtered_count=0 duplicate_count=0 error=%r",
+                    "[experience-search] task=%s query=%r platform=%s raw=0 "
+                    "accepted=0 filtered=0 duplicate=0 error=%r",
                     task.id,
                     query.query,
+                    query.platform,
                     str(exc),
                 )
                 continue
@@ -270,8 +275,14 @@ class ExperienceTaskService:
             accepted_count = 0
             filtered_count = 0
             duplicate_count = 0
+            raw_result_count_total += raw_result_count
             for result in results:
-                if not is_relevant_candidate(result, keyword=query.keyword):
+                filter_result = evaluate_candidate(
+                    result,
+                    keyword=query.keyword,
+                    platform=query.platform,
+                )
+                if not filter_result.accepted:
                     filtered_count += 1
                     continue
                 normalized_url = normalize_url(result.url)
@@ -292,16 +303,24 @@ class ExperienceTaskService:
                         normalized_url_hash=normalized_url_hash,
                         platform=query.platform,
                         title=result.title or None,
+                        query_text=query.query,
+                        snippet=result.snippet,
+                        engine=result.engine,
+                        matched_reason=filter_result.reason,
                         fetch_status="DISCOVERED",
                     )
                 )
                 accepted_count += 1
 
+            accepted_count_total += accepted_count
+            filtered_count_total += filtered_count
+            duplicate_count_total += duplicate_count
             logger.info(
-                "experience_search_query task_id=%s query=%r raw_result_count=%s "
-                "accepted_count=%s filtered_count=%s duplicate_count=%s",
+                "[experience-search] task=%s query=%r platform=%s raw=%s "
+                "accepted=%s filtered=%s duplicate=%s",
                 task.id,
                 query.query,
+                query.platform,
                 raw_result_count,
                 accepted_count,
                 filtered_count,
@@ -321,7 +340,10 @@ class ExperienceTaskService:
         else:
             final_error_message = "；".join(error_messages[:3]) if error_messages else None
             if found_url_count == 0:
-                final_error_message = "搜索完成但未发现候选 URL，请尝试选择全网或放宽关键词。"
+                if raw_result_count_total > 0:
+                    final_error_message = "搜索完成但候选过滤后为 0，请检查平台或标题过滤规则。"
+                else:
+                    final_error_message = "搜索完成但 SearXNG 未返回结果，请尝试扩大时间范围或调整关键词。"
             task = await self.repo.update(
                 task_id,
                 status="SEARCH_COMPLETED",
@@ -335,9 +357,14 @@ class ExperienceTaskService:
 
         return {
             "task": self._task_to_dict(task),
-            "found_url_count": found_url_count,
             "query_count": len(queries),
+            "query_success_count": query_success_count,
             "query_failed_count": query_failed_count,
+            "raw_result_count": raw_result_count_total,
+            "accepted_count": accepted_count_total,
+            "filtered_count": filtered_count_total,
+            "duplicate_count": duplicate_count_total,
+            "found_url_count": found_url_count,
         }
 
     async def list_source_items(
@@ -421,6 +448,11 @@ class ExperienceTaskService:
             "normalized_url_hash": item.normalized_url_hash,
             "platform": item.platform,
             "title": item.title,
+            "query_text": item.query_text,
+            "snippet": item.snippet,
+            "engine": item.engine,
+            "matched_reason": item.matched_reason,
+            "filtered_reason": item.filtered_reason,
             "fetched_at": item.fetched_at.isoformat() if item.fetched_at else None,
             "fetch_status": item.fetch_status,
             "extract_status": item.extract_status,

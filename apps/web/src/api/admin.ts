@@ -97,6 +97,11 @@ export interface ExperienceSourceItem {
   normalized_url_hash: string
   platform?: string
   title?: string
+  query_text?: string
+  snippet?: string
+  engine?: string
+  matched_reason?: string
+  filtered_reason?: string
   fetched_at?: string
   fetch_status: string
   extract_status?: string
@@ -133,9 +138,14 @@ export async function getExperienceTask(id: number): Promise<ExperienceCollectio
 
 export async function runExperienceTaskSearch(id: number): Promise<{
   task: ExperienceCollectionTask
-  found_url_count: number
   query_count: number
+  query_success_count: number
   query_failed_count: number
+  raw_result_count: number
+  accepted_count: number
+  filtered_count: number
+  duplicate_count: number
+  found_url_count: number
 }> {
   return client.post(`/admin/experience/tasks/${id}/search`, undefined, { timeout: 180000 })
 }

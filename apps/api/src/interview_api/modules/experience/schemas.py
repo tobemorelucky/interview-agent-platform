@@ -92,6 +92,11 @@ class ExperienceSourceItemRead(BaseModel):
     normalized_url_hash: str
     platform: str | None = None
     title: str | None = None
+    query_text: str | None = None
+    snippet: str | None = None
+    engine: str | None = None
+    matched_reason: str | None = None
+    filtered_reason: str | None = None
     fetched_at: datetime | None = None
     fetch_status: str
     extract_status: str | None = None
