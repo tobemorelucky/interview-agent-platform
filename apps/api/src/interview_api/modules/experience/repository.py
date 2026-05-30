@@ -126,6 +126,13 @@ class ExperienceCollectionTaskRepository:
         await self.db.flush()
         return await self.get_by_id(task_id)
 
+    async def delete(self, task_id: int) -> bool:
+        result = await self.db.execute(
+            delete(ExperienceCollectionTask).where(ExperienceCollectionTask.id == task_id)
+        )
+        await self.db.flush()
+        return result.rowcount > 0
+
 
 class ExperienceSourceItemRepository:
     def __init__(self, db: AsyncSession):

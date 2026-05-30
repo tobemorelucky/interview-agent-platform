@@ -167,7 +167,7 @@ export interface InterviewMessageMeta {
   source?: string
   evidence?: EvidenceItem[] | unknown[]
   compressed?: boolean
-  type?: "QUESTION" | "EVALUATION" | "FOLLOW_UP" | "DYNAMIC_QUESTION" | "POSITION_CONFIRMED" | "POSITION_SUGGESTION"
+  type?: "QUESTION" | "EVALUATION" | "FOLLOW_UP" | "DYNAMIC_QUESTION" | "POSITION_CONFIRMED" | "POSITION_SUGGESTION" | "INTERVIEW_COMPLETE"
   question_id?: number
   question_index?: number
   action?: string

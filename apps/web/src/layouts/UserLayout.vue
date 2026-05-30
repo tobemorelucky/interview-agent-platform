@@ -14,6 +14,7 @@ const navItems = [
 
 const adminNavItems = [
   { path: "/admin/kb/documents", label: "知识库管理" },
+  { path: "/admin/experiences", label: "面经采集" },
 ];
 
 function handleLogout() {
@@ -74,17 +75,19 @@ function handleLogout() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 56px;
-  padding: 0 24px;
+  min-height: 60px;
+  padding: 10px 24px;
   background: #fff;
   border-bottom: 1px solid #e8e8e8;
   flex-shrink: 0;
+  gap: 20px;
 }
 
 .topbar-left {
   display: flex;
   align-items: center;
   gap: 24px;
+  min-width: 0;
 }
 
 .brand {
@@ -96,6 +99,7 @@ function handleLogout() {
 
 .nav-links {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
 }
 
@@ -129,6 +133,7 @@ function handleLogout() {
   display: flex;
   align-items: center;
   gap: 16px;
+  flex-shrink: 0;
 }
 
 .user-info {
@@ -165,5 +170,29 @@ function handleLogout() {
 .main-content {
   flex: 1;
   padding: 24px;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .topbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .topbar-left {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .topbar-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .main-content {
+    padding: 16px;
+  }
 }
 </style>

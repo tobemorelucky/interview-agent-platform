@@ -187,6 +187,14 @@ class ExperienceTaskService:
         task = await self.repo.get_by_id(task_id)
         return self._task_to_dict(task) if task else None
 
+    async def delete_task(self, task_id: int) -> bool:
+        task = await self.repo.get_by_id(task_id)
+        if not task:
+            raise LookupError("任务不存在")
+        deleted = await self.repo.delete(task_id)
+        await self.db.commit()
+        return deleted
+
     async def run_search(self, task_id: int) -> dict:
         task = await self.repo.get_by_id(task_id)
         if not task:

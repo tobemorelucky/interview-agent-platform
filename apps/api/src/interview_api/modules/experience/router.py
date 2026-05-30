@@ -142,6 +142,22 @@ async def get_task(
     return success(data=result)
 
 
+@router.delete("/tasks/{task_id}")
+async def delete_task(
+    task_id: int,
+    _admin=Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    svc = _task_service(db)
+    try:
+        deleted = await svc.delete_task(task_id)
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    if not deleted:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    return success(message="任务已删除")
+
+
 @router.post("/tasks/{task_id}/search")
 async def run_task_search(
     task_id: int,

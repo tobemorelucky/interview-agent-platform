@@ -508,31 +508,6 @@ function buildDisplayItems(msgs: InterviewMessage[]) {
   return items
 }
 
-function isQuestionType(msg: InterviewMessage): boolean {
-  if (!msg.metadata_json) return false
-  const t = (msg.metadata_json as any).type
-  return t === "QUESTION" || t === "FOLLOW_UP" || t === "DYNAMIC_QUESTION"
-}
-
-async function toggleAnswerForMsg(msg: InterviewMessage) {
-  if (!activeSessionId.value) return
-  if (!msg.metadata_json) return
-  const qid = (msg.metadata_json as Record<string, unknown>).question_id as number | undefined
-  if (!qid) return
-  if (answerVisibleMap.value[msg.id]) {
-    answerVisibleMap.value[msg.id] = false
-    return
-  }
-  try {
-    const detail = await getQuestionDetail(activeSessionId.value, qid)
-    standardAnswerMap.value[msg.id] = detail.standard_answer || "暂无答案"
-    answerVisibleMap.value[msg.id] = true
-  } catch {
-    standardAnswerMap.value[msg.id] = "获取答案失败"
-    answerVisibleMap.value[msg.id] = true
-  }
-}
-
 // Phase 3.8: Toggle answer for display item (uses item.question_id directly)
 async function toggleAnswerForItem(item: any) {
   if (!activeSessionId.value || !item.question_id) return

@@ -136,6 +136,10 @@ export async function getExperienceTask(id: number): Promise<ExperienceCollectio
   return client.get(`/admin/experience/tasks/${id}`)
 }
 
+export async function deleteExperienceTask(id: number): Promise<void> {
+  return client.delete(`/admin/experience/tasks/${id}`)
+}
+
 export async function runExperienceTaskSearch(id: number): Promise<{
   task: ExperienceCollectionTask
   query_count: number
