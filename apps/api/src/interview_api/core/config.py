@@ -100,6 +100,7 @@ class Settings(BaseSettings):
     experience_search_max_results: int = 20
     experience_search_language: str = "zh-CN"
     experience_search_safesearch: int = 0
+    experience_search_enable_time_range: bool = False
 
     # Resume
     resume_max_file_size_mb: int = 10

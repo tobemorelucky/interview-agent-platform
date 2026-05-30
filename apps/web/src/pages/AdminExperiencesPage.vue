@@ -66,6 +66,7 @@ const timePresets = [
   { label: "7 天", value: 168 },
 ]
 
+const allowedPlatformNames = ["牛客", "小红书", "抖音"]
 const jobPresets = ref<ExperienceKeywordPreset[]>([])
 const companyPresets = ref<ExperienceKeywordPreset[]>([])
 const platformPresets = ref<ExperienceKeywordPreset[]>([])
@@ -95,11 +96,16 @@ async function loadPresets() {
   ])
   jobPresets.value = jobs.items || []
   companyPresets.value = companies.items || []
-  platformPresets.value = platforms.items || []
-  if (taskForm.value.selected_platforms.length === 0) {
-    const allWeb = platformPresets.value.find(p => p.name === "全网" || p.aliases_json?.includes("全网"))
-    taskForm.value.selected_platforms = allWeb ? [allWeb.name] : platformPresets.value.map(p => p.name)
-  }
+  const presetMap = new Map((platforms.items || []).map(p => [p.name, p]))
+  platformPresets.value = allowedPlatformNames.map((name, index) => (
+    presetMap.get(name) || {
+      id: -(index + 1),
+      preset_type: "PLATFORM",
+      name,
+      aliases_json: [],
+      enabled: true,
+    }
+  ))
 }
 
 function toggleScope(scope: "JOB" | "COMPANY") {
@@ -119,6 +125,15 @@ function scopeLabel(scope: string) {
 function taskKeywords(task: ExperienceCollectionTask) {
   const values = task.search_scope === "COMPANY" ? task.company_keywords_json : task.job_keywords_json
   return values?.join(", ") || "-"
+}
+
+function taskPlatforms(task: ExperienceCollectionTask) {
+  const values = (task.platforms_json || []).filter(p => p !== "全网")
+  return values.length ? values.join(", ") : "通用搜索"
+}
+
+function sourcePlatform(platform?: string | null) {
+  return platform && platform !== "全网" ? platform : "通用搜索"
 }
 
 function formatSearchResultMessage(result: SearchStats) {
@@ -164,11 +179,6 @@ async function handleCreateTask() {
     alert("请至少选择一个公司关键词")
     return
   }
-  if (f.selected_platforms.length === 0) {
-    alert("请至少选择一个平台")
-    return
-  }
-
   creating.value = true
   createStatus.value = ""
   try {
@@ -380,6 +390,7 @@ onMounted(() => {
 
           <div class="select-section">
             <div class="field-title">平台多选</div>
+            <p class="field-hint">不选择平台时，将进行不限站点的通用网页搜索；选择具体平台时，只保留对应平台官网链接，结果更精准但数量可能更少。</p>
             <div class="checkbox-group">
               <label v-for="p in platformPresets" :key="p.id" class="cb-label">
                 <input type="checkbox" :value="p.name" v-model="taskForm.selected_platforms" />
@@ -425,7 +436,7 @@ onMounted(() => {
                 <td>#{{ t.id }}</td>
                 <td>{{ scopeLabel(t.search_scope) }}</td>
                 <td class="truncate-cell">{{ taskKeywords(t) }}</td>
-                <td class="truncate-cell">{{ t.platforms_json?.join(", ") || "-" }}</td>
+                <td class="truncate-cell">{{ taskPlatforms(t) }}</td>
                 <td>
                   <span class="status-tag">{{ statusLabel[t.status] || t.status }}</span>
                   <div v-if="t.error_message" class="row-error">{{ t.error_message }}</div>
@@ -505,7 +516,7 @@ onMounted(() => {
               <p class="source-snippet">{{ item.snippet || "无摘要" }}</p>
             </div>
             <div class="source-tags">
-              <span>{{ item.platform || "未知平台" }}</span>
+              <span>{{ sourcePlatform(item.platform) }}</span>
               <span>{{ item.query_text || "无 query" }}</span>
               <span>{{ item.engine || "未知引擎" }}</span>
               <span>{{ item.matched_reason || "未记录原因" }}</span>
@@ -656,6 +667,13 @@ onMounted(() => {
   font-weight: 600;
   margin-bottom: 8px;
   color: #344054;
+}
+
+.field-hint {
+  margin: -2px 0 10px;
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 .checkbox-group {

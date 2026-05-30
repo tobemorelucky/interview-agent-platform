@@ -31,8 +31,9 @@ class SearxngSearchProvider:
             "format": "json",
             "language": settings.experience_search_language,
             "safesearch": settings.experience_search_safesearch,
-            "time_range": _time_range(time_window_hours),
         }
+        if settings.experience_search_enable_time_range:
+            params["time_range"] = _time_range(time_window_hours)
         if settings.searxng_engines.strip():
             params["engines"] = settings.searxng_engines.strip()
 

@@ -139,8 +139,12 @@ class ExperienceTaskService:
         if review_mode not in ("MANUAL", "AUTO_PUBLISH"):
             raise ValueError("review_mode 必须是 MANUAL 或 AUTO_PUBLISH")
         platforms = data.get("platforms_json", [])
-        if not isinstance(platforms, list) or not platforms:
-            raise ValueError("至少需要选择一个平台")
+        if not isinstance(platforms, list):
+            raise ValueError("platforms_json 必须是数组")
+        platforms = [
+            item.strip() for item in platforms
+            if isinstance(item, str) and item.strip() and item.strip() != "全网"
+        ]
         job_kw = data.get("job_keywords_json", [])
         company_kw = data.get("company_keywords_json", [])
         if not isinstance(job_kw, list):
