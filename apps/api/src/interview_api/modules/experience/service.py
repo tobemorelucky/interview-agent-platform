@@ -1,6 +1,8 @@
 """Phase 4: Experience keyword presets service."""
 
+import asyncio
 from datetime import datetime, timezone
+import hashlib
 import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,6 +13,7 @@ from interview_api.modules.experience.models import (
     ExperienceCollectionTask,
     ExperienceSourceItem,
 )
+from interview_api.modules.experience.fetchers import FetchResult, HttpxContentFetcher
 from interview_api.modules.experience.repository import (
     ExperienceKeywordPresetRepository,
     ExperienceCollectionTaskRepository,
@@ -401,6 +404,151 @@ class ExperienceTaskService:
             "total": total,
         }
 
+    async def fetch_task_sources(
+        self,
+        task_id: int,
+        *,
+        retry_failed: bool = False,
+        limit: int = 20,
+    ) -> dict:
+        task = await self.repo.get_by_id(task_id)
+        if not task:
+            raise LookupError("任务不存在")
+        if limit < 1 or limit > 100:
+            raise ValueError("limit 必须在 1-100 之间")
+
+        items = await self.source_repo.list_fetchable_source_items(
+            task_id,
+            retry_failed=retry_failed,
+            limit=limit,
+        )
+        task = await self.repo.update(
+            task_id,
+            status="FETCHING",
+            progress=60,
+            error_message=None,
+            finished_at=None,
+        )
+        await self.db.commit()
+
+        if not items:
+            fetched_total = await self.source_repo.count_source_items_by_task(
+                task_id, fetch_status="FETCHED"
+            )
+            failed_total = await self.source_repo.count_source_items_by_task(
+                task_id, fetch_status="FETCH_FAILED"
+            )
+            task = await self.repo.update(
+                task_id,
+                status="FETCH_COMPLETED",
+                progress=100,
+                fetched_count=fetched_total,
+                failed_count=failed_total,
+                finished_at=datetime.now(timezone.utc),
+            )
+            await self.db.commit()
+            return {
+                "task_id": task_id,
+                "total": 0,
+                "fetched_count": 0,
+                "failed_count": 0,
+                "skipped_count": 0,
+                "task": self._task_to_dict(task),
+            }
+
+        fetcher = HttpxContentFetcher()
+        fetch_results = await self._fetch_sources_concurrently(fetcher, items)
+
+        fetched_count = 0
+        failed_count = 0
+        for item, result in fetch_results:
+            fetched_at = datetime.now(timezone.utc)
+            if result.ok and result.raw_text:
+                raw_text = result.raw_text
+                await self.source_repo.update_source_item_fetch_result(
+                    item.id,
+                    raw_text=raw_text,
+                    content_hash=hashlib.sha256(raw_text.encode("utf-8")).hexdigest(),
+                    fetched_at=fetched_at,
+                    fetch_status="FETCHED",
+                    error_message=None,
+                    title=result.title or item.title,
+                )
+                fetched_count += 1
+                logger.info(
+                    "[experience-fetch] source=%s status=FETCHED chars=%s url=%s",
+                    item.id,
+                    len(raw_text),
+                    item.source_url,
+                )
+            else:
+                error_message = (result.error_message or "request_failed")[:2000]
+                await self.source_repo.update_source_item_fetch_result(
+                    item.id,
+                    fetched_at=fetched_at,
+                    fetch_status="FETCH_FAILED",
+                    error_message=error_message,
+                )
+                failed_count += 1
+                logger.info(
+                    "[experience-fetch] source=%s status=FETCH_FAILED error=%r url=%s",
+                    item.id,
+                    error_message,
+                    item.source_url,
+                )
+            await self.db.commit()
+
+        fetched_total = await self.source_repo.count_source_items_by_task(
+            task_id, fetch_status="FETCHED"
+        )
+        failed_total = await self.source_repo.count_source_items_by_task(
+            task_id, fetch_status="FETCH_FAILED"
+        )
+        task = await self.repo.update(
+            task_id,
+            status="FETCH_COMPLETED",
+            progress=100,
+            fetched_count=fetched_total,
+            failed_count=failed_total,
+            error_message=None if fetched_count else "本次抓取未获得可用正文",
+            finished_at=datetime.now(timezone.utc),
+        )
+        await self.db.commit()
+
+        return {
+            "task_id": task_id,
+            "total": len(items),
+            "fetched_count": fetched_count,
+            "failed_count": failed_count,
+            "skipped_count": 0,
+            "task": self._task_to_dict(task),
+        }
+
+    @staticmethod
+    async def _fetch_sources_concurrently(
+        fetcher: HttpxContentFetcher,
+        items: list[ExperienceSourceItem],
+    ) -> list[tuple[ExperienceSourceItem, FetchResult]]:
+        semaphore = asyncio.Semaphore(3)
+
+        async def fetch_one(item: ExperienceSourceItem) -> tuple[ExperienceSourceItem, FetchResult]:
+            async with semaphore:
+                try:
+                    result = await fetcher.fetch(item.source_url)
+                except Exception as exc:  # defensive: one URL must not break the batch
+                    result = FetchResult(
+                        url=item.source_url,
+                        final_url=None,
+                        status_code=None,
+                        content_type=None,
+                        title=None,
+                        raw_text=None,
+                        error_message=f"request_failed: {exc}",
+                    )
+                return item, result
+
+        return await asyncio.gather(*(fetch_one(item) for item in items))
+
     async def _finish_task_failed(
         self,
         task_id: int,
@@ -453,6 +601,7 @@ class ExperienceTaskService:
 
     @staticmethod
     def _source_item_to_dict(item: ExperienceSourceItem) -> dict:
+        raw_text = item.raw_text or ""
         return {
             "id": item.id,
             "task_id": item.task_id,
@@ -465,6 +614,8 @@ class ExperienceTaskService:
             "engine": item.engine,
             "matched_reason": item.matched_reason,
             "filtered_reason": item.filtered_reason,
+            "raw_text_char_count": len(raw_text),
+            "raw_text_preview": raw_text[:2000] if raw_text else None,
             "fetched_at": item.fetched_at.isoformat() if item.fetched_at else None,
             "fetch_status": item.fetch_status,
             "extract_status": item.extract_status,

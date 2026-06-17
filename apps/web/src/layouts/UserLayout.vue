@@ -10,6 +10,7 @@ const navItems = [
   { path: "/dashboard", label: "首页" },
   { path: "/qa", label: "知识问答" },
   { path: "/interview", label: "简历面试" },
+  { path: "/memory", label: "我的记忆" },
 ];
 
 const adminNavItems = [

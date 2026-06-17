@@ -33,6 +33,12 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: "/memory",
+    name: "Memory",
+    component: () => import("../pages/MemoryPage.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
     path: "/resumes",
     name: "ResumeList",
     component: () => import("../pages/ResumeListPage.vue"),

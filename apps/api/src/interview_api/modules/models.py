@@ -25,3 +25,8 @@ from interview_api.modules.experience.models import (  # noqa: F401
     InterviewQuestion,
     ExperienceRecentSummary,
 )
+from interview_api.modules.memory.models import (  # noqa: F401
+    UserMemoryItem,
+    UserSkillProfile,
+    UserMemoryEvent,
+)

@@ -10,6 +10,7 @@ from interview_api.modules.experience.schemas import (
     ExperienceKeywordPresetCreate,
     ExperienceKeywordPresetUpdate,
     ExperienceCollectionTaskCreate,
+    ExperienceTaskFetchRequest,
 )
 from interview_api.modules.experience.service import ExperienceKeywordService, ExperienceTaskService
 
@@ -172,6 +173,28 @@ async def run_task_search(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     return success(data=result, message="搜索执行完成")
+
+
+@router.post("/tasks/{task_id}/fetch")
+async def fetch_task_sources(
+    task_id: int,
+    body: ExperienceTaskFetchRequest | None = None,
+    _admin=Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    svc = _task_service(db)
+    payload = body or ExperienceTaskFetchRequest()
+    try:
+        result = await svc.fetch_task_sources(
+            task_id,
+            retry_failed=payload.retry_failed,
+            limit=payload.limit,
+        )
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return success(data=result, message="正文抓取完成")
 
 
 @router.get("/tasks/{task_id}/sources")

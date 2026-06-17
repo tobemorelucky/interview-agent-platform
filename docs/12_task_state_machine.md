@@ -243,6 +243,7 @@ PENDING
 | `SEARCHING` | SearXNG 搜索中 |
 | `SEARCH_COMPLETED` | 搜索发现完成，source items 已写入，尚未抓取正文 |
 | `FETCHING` | 抓取搜索结果 URL 正文 |
+| `FETCH_COMPLETED` | URL 正文抓取阶段完成，source items 已更新为 FETCHED / FETCH_FAILED |
 | `EXTRACTING` | Extraction Agent 处理 |
 | `ROUTING` | Routing Agent 分类 |
 | `SCORING` | Reliability Agent 评分 |

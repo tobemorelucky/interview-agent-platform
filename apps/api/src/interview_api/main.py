@@ -21,6 +21,7 @@ from interview_api.modules.qa.router import router as qa_router
 from interview_api.modules.resume.router import router as resume_router
 from interview_api.modules.interview.router import router as interview_router
 from interview_api.modules.experience.router import router as experience_router
+from interview_api.modules.memory.router import router as memory_router
 
 
 @asynccontextmanager
@@ -58,6 +59,7 @@ app.include_router(qa_router)
 app.include_router(resume_router)
 app.include_router(interview_router)
 app.include_router(experience_router)
+app.include_router(memory_router)
 
 
 @app.get("/")

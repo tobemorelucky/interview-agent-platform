@@ -102,6 +102,8 @@ export interface ExperienceSourceItem {
   engine?: string
   matched_reason?: string
   filtered_reason?: string
+  raw_text_char_count: number
+  raw_text_preview?: string
   fetched_at?: string
   fetch_status: string
   extract_status?: string
@@ -152,6 +154,20 @@ export async function runExperienceTaskSearch(id: number): Promise<{
   found_url_count: number
 }> {
   return client.post(`/admin/experience/tasks/${id}/search`, undefined, { timeout: 180000 })
+}
+
+export async function fetchExperienceTaskSources(
+  id: number,
+  data?: { retry_failed?: boolean; limit?: number }
+): Promise<{
+  task_id: number
+  total: number
+  fetched_count: number
+  failed_count: number
+  skipped_count: number
+  task: ExperienceCollectionTask
+}> {
+  return client.post(`/admin/experience/tasks/${id}/fetch`, data || {}, { timeout: 180000 })
 }
 
 export async function listExperienceTaskSources(

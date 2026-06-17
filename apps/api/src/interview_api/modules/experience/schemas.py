@@ -97,6 +97,8 @@ class ExperienceSourceItemRead(BaseModel):
     engine: str | None = None
     matched_reason: str | None = None
     filtered_reason: str | None = None
+    raw_text_char_count: int = 0
+    raw_text_preview: str | None = None
     fetched_at: datetime | None = None
     fetch_status: str
     extract_status: str | None = None
@@ -109,6 +111,11 @@ class ExperienceSourceItemRead(BaseModel):
 class ExperienceSourceItemListResponse(BaseModel):
     items: list[ExperienceSourceItemRead]
     total: int
+
+
+class ExperienceTaskFetchRequest(BaseModel):
+    retry_failed: bool = False
+    limit: int = Field(default=20, ge=1, le=100)
 
 
 # ── Interview Experience ──

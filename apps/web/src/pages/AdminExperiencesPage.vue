@@ -10,6 +10,7 @@ import {
   createExperienceTask,
   deleteExperienceTask,
   runExperienceTaskSearch,
+  fetchExperienceTaskSources,
   listExperienceTaskSources,
   type ExperienceCollectionTask,
   type ExperienceSourceItem,
@@ -38,11 +39,13 @@ const types = ["COMPANY", "JOB", "PLATFORM"]
 const tasks = ref<ExperienceCollectionTask[]>([])
 const taskTotal = ref(0)
 const runningTaskId = ref<number | null>(null)
+const fetchingTaskId = ref<number | null>(null)
 const taskStats = ref<Record<number, SearchStats>>({})
 const sourceItems = ref<ExperienceSourceItem[]>([])
 const sourceTotal = ref(0)
 const sourcesLoading = ref(false)
 const sourceModalOpen = ref(false)
+const previewItem = ref<ExperienceSourceItem | null>(null)
 const selectedTask = ref<ExperienceCollectionTask | null>(null)
 const createStatus = ref("")
 const creating = ref(false)
@@ -118,6 +121,10 @@ function canRunSearch(status: string) {
   return ["PENDING", "FAILED", "SEARCH_COMPLETED"].includes(status)
 }
 
+function canFetchSources(task: ExperienceCollectionTask) {
+  return task.found_url_count > 0 && task.status !== "FETCHING"
+}
+
 function scopeLabel(scope: string) {
   return scope === "COMPANY" ? "按公司" : "按岗位"
 }
@@ -166,6 +173,23 @@ async function handleRunSearch(task: ExperienceCollectionTask) {
     alert(e?.message || "搜索执行失败")
   } finally {
     runningTaskId.value = null
+  }
+}
+
+async function handleFetchSources(task: ExperienceCollectionTask) {
+  fetchingTaskId.value = task.id
+  try {
+    const result = await fetchExperienceTaskSources(task.id, { retry_failed: false, limit: 20 })
+    await loadTasks()
+    if (sourceModalOpen.value && selectedTask.value?.id === task.id) {
+      selectedTask.value = tasks.value.find(t => t.id === task.id) || selectedTask.value
+      await loadSources(task.id)
+    }
+    alert(`正文抓取完成：成功 ${result.fetched_count}，失败 ${result.failed_count}`)
+  } catch (e: any) {
+    alert(e?.message || "正文抓取失败")
+  } finally {
+    fetchingTaskId.value = null
   }
 }
 
@@ -238,8 +262,17 @@ async function openSources(task: ExperienceCollectionTask) {
 function closeSources() {
   sourceModalOpen.value = false
   selectedTask.value = null
+  previewItem.value = null
   sourceItems.value = []
   sourceTotal.value = 0
+}
+
+function openPreview(item: ExperienceSourceItem) {
+  previewItem.value = item
+}
+
+function closePreview() {
+  previewItem.value = null
 }
 
 async function handleDeleteTask(task: ExperienceCollectionTask) {
@@ -301,6 +334,7 @@ const statusLabel: Record<string, string> = {
   SEARCHING: "搜索中",
   SEARCH_COMPLETED: "搜索完成",
   FETCHING: "抓取中",
+  FETCH_COMPLETED: "抓取完成",
   EXTRACTING: "抽取中",
   ROUTING: "分类中",
   SCORING: "评分中",
@@ -426,7 +460,7 @@ onMounted(() => {
                 <th>关键词</th>
                 <th>平台</th>
                 <th>状态</th>
-                <th>found / failed</th>
+                <th>found / fetched / failed</th>
                 <th>创建时间</th>
                 <th>操作</th>
               </tr>
@@ -441,12 +475,15 @@ onMounted(() => {
                   <span class="status-tag">{{ statusLabel[t.status] || t.status }}</span>
                   <div v-if="t.error_message" class="row-error">{{ t.error_message }}</div>
                 </td>
-                <td>{{ t.found_url_count }} / {{ t.failed_count }}</td>
+                <td>{{ t.found_url_count }} / {{ t.fetched_count }} / {{ t.failed_count }}</td>
                 <td>{{ t.created_at?.slice(0, 16) || "" }}</td>
                 <td class="actions">
                   <button @click="openSources(t)">查看来源</button>
                   <button v-if="canRunSearch(t.status)" @click="handleRunSearch(t)" :disabled="runningTaskId === t.id">
                     {{ runningTaskId === t.id ? "搜索中..." : "重新搜索" }}
+                  </button>
+                  <button v-if="canFetchSources(t)" @click="handleFetchSources(t)" :disabled="fetchingTaskId === t.id">
+                    {{ fetchingTaskId === t.id ? "抓取中..." : "抓取正文" }}
                   </button>
                   <button class="btn-del" @click="handleDeleteTask(t)">删除</button>
                 </td>
@@ -521,11 +558,27 @@ onMounted(() => {
               <span>{{ item.engine || "未知引擎" }}</span>
               <span>{{ item.matched_reason || "未记录原因" }}</span>
               <span>{{ item.fetch_status }}</span>
-              <span>{{ item.created_at?.slice(0, 16) || "" }}</span>
+              <span>正文 {{ item.raw_text_char_count || 0 }} 字</span>
+              <span>{{ item.fetched_at?.slice(0, 16) || item.created_at?.slice(0, 16) || "" }}</span>
             </div>
+            <div v-if="item.error_message" class="source-error">{{ item.error_message }}</div>
+            <button class="preview-btn" @click="openPreview(item)">查看正文预览</button>
           </article>
         </div>
         <p v-else class="empty compact">{{ sourcesLoading ? "加载中..." : "暂无来源 URL" }}</p>
+      </div>
+    </div>
+
+    <div v-if="previewItem" class="modal-overlay preview-overlay" @click.self="closePreview">
+      <div class="preview-modal">
+        <div class="modal-head">
+          <div>
+            <h3>正文预览</h3>
+            <p>{{ previewItem.title || previewItem.source_url }}</p>
+          </div>
+          <button class="icon-btn" @click="closePreview">×</button>
+        </div>
+        <pre class="raw-preview">{{ previewItem.raw_text_preview || "暂无正文" }}</pre>
       </div>
     </div>
 
@@ -1016,6 +1069,54 @@ onMounted(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.source-error {
+  margin-top: 8px;
+  color: #b42318;
+  font-size: 12px;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.preview-btn {
+  margin-top: 10px;
+  padding: 5px 10px;
+  border: 1px solid #d0d5dd;
+  border-radius: 4px;
+  background: #fff;
+  color: #344054;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.preview-overlay {
+  z-index: 120;
+}
+
+.preview-modal {
+  width: min(820px, 92vw);
+  max-height: 84vh;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.raw-preview {
+  margin: 0;
+  padding: 16px 20px 20px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #344054;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: 13px;
+  line-height: 1.7;
 }
 
 .checkbox-label {

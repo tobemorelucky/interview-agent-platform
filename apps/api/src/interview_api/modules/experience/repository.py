@@ -187,6 +187,46 @@ class ExperienceSourceItemRepository:
         )
         return list(result.scalars().all()), total
 
+    async def list_fetchable_source_items(
+        self,
+        task_id: int,
+        *,
+        retry_failed: bool = False,
+        limit: int = 20,
+    ) -> list[ExperienceSourceItem]:
+        statuses = ["DISCOVERED"]
+        if retry_failed:
+            statuses.append("FETCH_FAILED")
+        result = await self.db.execute(
+            select(ExperienceSourceItem)
+            .where(
+                ExperienceSourceItem.task_id == task_id,
+                ExperienceSourceItem.fetch_status.in_(statuses),
+            )
+            .order_by(ExperienceSourceItem.created_at.asc())
+            .limit(limit)
+        )
+        return list(result.scalars().all())
+
+    async def get_source_item(self, source_id: int) -> ExperienceSourceItem | None:
+        result = await self.db.execute(
+            select(ExperienceSourceItem).where(ExperienceSourceItem.id == source_id)
+        )
+        return result.scalar_one_or_none()
+
+    async def update_source_item_fetch_result(
+        self,
+        source_id: int,
+        **values,
+    ) -> ExperienceSourceItem | None:
+        await self.db.execute(
+            update(ExperienceSourceItem)
+            .where(ExperienceSourceItem.id == source_id)
+            .values(**values)
+        )
+        await self.db.flush()
+        return await self.get_source_item(source_id)
+
     async def count_source_items_by_task(
         self,
         task_id: int,
