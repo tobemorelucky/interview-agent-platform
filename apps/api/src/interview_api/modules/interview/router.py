@@ -137,6 +137,7 @@ async def set_target_position(
     chat_service = _build_chat_service(db)
     result = await chat_service.confirm_and_generate_first_question(
         session_id=session_id,
+        user_id=current_user.id,
         target_position=body.target_position,
         interview_mode=body.interview_mode,
         question_count=body.question_count,

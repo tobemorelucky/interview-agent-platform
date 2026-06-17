@@ -21,6 +21,7 @@ from interview_api.modules.interview.repository import (
 from interview_api.modules.interview.memory import InterviewMemoryManager
 from interview_api.modules.interview.prompt_builder import InterviewPromptBuilder
 from interview_api.modules.interview.question_retrieval import QuestionRetrievalService
+from interview_api.modules.memory.context_builder import MemoryContextBuilder
 from interview_api.modules.resume.repository import ResumeRepository, ResumeReportRepository
 
 logger = logging.getLogger(__name__)
@@ -39,6 +40,7 @@ class InterviewService:
         self.report_repo = ResumeReportRepository(db)
         self.memory_manager = InterviewMemoryManager()
         self.prompt_builder = InterviewPromptBuilder()
+        self.memory_context_builder = MemoryContextBuilder(db)
 
     # ── Session CRUD ──
 
@@ -410,6 +412,28 @@ class InterviewChatService:
         self.resume_repo = resume_repo
         self.prompt_builder = prompt_builder
         self.memory_manager = memory_manager
+        self.memory_context_builder = MemoryContextBuilder(db)
+
+    async def _build_interview_memory_prompt(
+        self,
+        session: InterviewSession,
+    ) -> str:
+        context = await self.memory_context_builder.build_interview_memory_context(
+            user_id=session.user_id,
+            target_position=session.target_position,
+        )
+        counts = context.counts
+        prompt_text = context.to_prompt_text()
+        logger.info(
+            "[interview-memory] user=%s semantic=%s preference=%s skills=%s weaknesses=%s injected=%s",
+            session.user_id,
+            counts.get("semantic", 0),
+            counts.get("preference", 0),
+            counts.get("skills", 0),
+            counts.get("weaknesses", 0),
+            bool(prompt_text),
+        )
+        return prompt_text
 
     # ── Lightweight Interview Plan (rule-based, no LLM) ──
 
@@ -522,6 +546,7 @@ class InterviewChatService:
     async def confirm_and_generate_first_question(
         self,
         session_id: int,
+        user_id: int,
         target_position: str,
         interview_mode: str = "comprehensive",
         question_count: int = 20,
@@ -531,7 +556,7 @@ class InterviewChatService:
         Phase 3.5b: No separate plan generation wait. No "start interview" step.
         Returns Q1 directly so frontend can display it immediately.
         """
-        session = await self.session_repo.get_by_id(session_id)
+        session = await self.session_repo.get_by_id_and_user(session_id, user_id)
         if session is None or session.resume_id is None:
             return {"error": "SESSION_INVALID", "message": "会话不存在或未绑定简历"}
 
@@ -672,6 +697,13 @@ class InterviewChatService:
         if structured:
             resume_text = json.dumps(structured, ensure_ascii=False)[:2000]
 
+        interview_memory_context = await self._build_interview_memory_prompt(session)
+        memory_block = (
+            f"用户长期记忆与能力画像:\n{interview_memory_context[:1200]}\n\n"
+            if interview_memory_context
+            else ""
+        )
+
         # Get completed questions summary
         completed = [q for q in existing if q.status in ("ANSWERED",)]
         completed_text = ""
@@ -680,6 +712,7 @@ class InterviewChatService:
 
         # Build concise prompt (Phase 3.5b: keep it short for fast generation)
         prompt = (
+            f"{memory_block}"
             f"你是技术面试官。为目标岗位「{session.target_position or '未指定'}」的候选人"
             f"出一道「{dim_name}」维度的面试题。\n\n"
             f"简历: {resume_text[:1000]}\n\n"
@@ -961,6 +994,7 @@ class InterviewChatService:
             remaining_text = self.prompt_builder.build_question_summary_text(
                 remaining, "remaining"
             )
+            interview_memory_context = await self._build_interview_memory_prompt(session)
 
             if is_follow_up:
                 # ── Follow-up mode: retrieve KB for deeper questioning ──
@@ -980,6 +1014,7 @@ class InterviewChatService:
                     resume_structured=structured,
                     resume_raw_text=raw_text,
                     memory_summary=session.memory_summary,
+                    interview_memory_context=interview_memory_context,
                     recent_messages=recent_msgs,
                     user_answer=content,
                     retrieved_context=retrieved_chunks,
@@ -997,6 +1032,7 @@ class InterviewChatService:
                     resume_structured=structured,
                     resume_raw_text=raw_text,
                     memory_summary=session.memory_summary,
+                    interview_memory_context=interview_memory_context,
                     recent_messages=recent_msgs,
                     user_answer=content,
                     target_position=session.target_position or "",

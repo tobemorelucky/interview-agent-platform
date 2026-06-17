@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from interview_api.api.deps import get_current_user
 from interview_api.core.response import success
 from interview_api.infrastructure.db.session import get_db
+from interview_api.modules.memory.context_builder import MemoryContextBuilder
 from interview_api.modules.memory.policies import (
     MEMORY_SCOPES,
     MEMORY_STATUSES,
@@ -26,6 +27,20 @@ router = APIRouter(prefix="/api/v1/memory", tags=["memory"])
 
 def _service(db: AsyncSession) -> MemoryService:
     return MemoryService(db)
+
+
+@router.get("/interview-context")
+async def get_interview_memory_context(
+    target_position: str | None = Query(None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    builder = MemoryContextBuilder(db)
+    context = await builder.build_interview_memory_context(
+        current_user.id,
+        target_position=target_position,
+    )
+    return success(data=context.to_dict())
 
 
 @router.get("/items")

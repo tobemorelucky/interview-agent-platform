@@ -24,6 +24,7 @@ class InterviewPromptBuilder:
         memory_summary: str | None,
         recent_messages: list,
         retrieved_context: list[dict] | None,
+        interview_memory_context: str | None = None,
     ) -> str:
         """Build the full system prompt for the interviewer LLM."""
         template = _load_prompt("interview_interviewer_system_v1.md")
@@ -38,8 +39,8 @@ class InterviewPromptBuilder:
             preview = resume_raw_text[: settings.interview_resume_raw_text_preview_chars]
             resume_context = f"候选人简历原文（节选）：\n{preview}"
 
-        # Memory summary
-        memory_text = memory_summary or "（无历史摘要）"
+        # Conversation memory plus read-only user-level memory context.
+        memory_text = self._combine_memory_text(memory_summary, interview_memory_context)
 
         # Retrieved knowledge
         knowledge_text = self._format_retrieved_context(retrieved_context)
@@ -52,7 +53,7 @@ class InterviewPromptBuilder:
         knowledge_alloc = min(len(knowledge_text), max_chars // 4)
         resume_alloc = min(len(resume_context), max_chars // 3)
         conv_alloc = min(len(conv_text), max_chars // 3)
-        memory_alloc = min(len(memory_text), max_chars // 6)
+        memory_alloc = min(len(memory_text), max_chars // 4)
 
         return template.format(
             resume_context=resume_context[:resume_alloc],
@@ -185,6 +186,20 @@ class InterviewPromptBuilder:
 
         return "\n".join(lines)
 
+    def _combine_memory_text(
+        self,
+        conversation_summary: str | None,
+        interview_memory_context: str | None,
+    ) -> str:
+        parts: list[str] = []
+        if interview_memory_context:
+            parts.append(f"【用户长期记忆与能力画像】\n{interview_memory_context}")
+        if conversation_summary:
+            parts.append(f"【本次会话历史摘要】\n{conversation_summary}")
+        if not parts:
+            return "（无历史摘要）"
+        return "\n\n".join(parts)
+
     def _format_retrieved_context(
         self, retrieved: list[dict] | None
     ) -> str:
@@ -230,6 +245,7 @@ class InterviewPromptBuilder:
         resume_structured: dict | None,
         resume_raw_text: str | None,
         memory_summary: str | None,
+        interview_memory_context: str | None,
         recent_messages: list,
         user_answer: str,
         target_position: str = "",
@@ -253,14 +269,14 @@ class InterviewPromptBuilder:
             preview = resume_raw_text[: settings.interview_resume_raw_text_preview_chars]
             resume_context = f"候选人简历原文（节选）：\n{preview}"
 
-        memory_text = memory_summary or "（无历史摘要）"
+        memory_text = self._combine_memory_text(memory_summary, interview_memory_context)
         conv_text = self._format_recent_conversation(recent_messages)
 
         # Cap context sizes
         max_chars = settings.interview_max_context_chars
         resume_alloc = min(len(resume_context), max_chars // 4)
         conv_alloc = min(len(conv_text), max_chars // 3)
-        memory_alloc = min(len(memory_text), max_chars // 6)
+        memory_alloc = min(len(memory_text), max_chars // 4)
 
         enable_dynamic = (
             "true" if (interview_enable_dynamic and settings.interview_enable_dynamic_question)
@@ -288,6 +304,7 @@ class InterviewPromptBuilder:
         resume_structured: dict | None,
         resume_raw_text: str | None,
         memory_summary: str | None,
+        interview_memory_context: str | None,
         recent_messages: list,
         user_answer: str,
         retrieved_context: list[dict] | None,
@@ -311,7 +328,7 @@ class InterviewPromptBuilder:
             preview = resume_raw_text[: settings.interview_resume_raw_text_preview_chars]
             resume_context = f"候选人简历原文（节选）：\n{preview}"
 
-        memory_text = memory_summary or "（无历史摘要）"
+        memory_text = self._combine_memory_text(memory_summary, interview_memory_context)
         conv_text = self._format_recent_conversation(recent_messages)
         knowledge_text = self._format_retrieved_context(retrieved_context)
 
@@ -319,7 +336,7 @@ class InterviewPromptBuilder:
         knowledge_alloc = min(len(knowledge_text), max_chars // 4)
         resume_alloc = min(len(resume_context), max_chars // 4)
         conv_alloc = min(len(conv_text), max_chars // 4)
-        memory_alloc = min(len(memory_text), max_chars // 6)
+        memory_alloc = min(len(memory_text), max_chars // 4)
 
         enable_dynamic = (
             "true" if settings.interview_enable_dynamic_question else "false"
