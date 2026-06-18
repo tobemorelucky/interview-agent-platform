@@ -9,6 +9,7 @@ import {
   sendMessageStream,
   getQuestions,
   getQuestionDetail,
+  consolidateInterviewMemory,
 } from "../api/interview"
 import { uploadResume, getResume as apiGetResume } from "../api/resume"
 import { ApiError } from "../api/client"
@@ -27,6 +28,8 @@ const evalCollapsed = ref<Record<number, boolean>>({})
 const questionBudget = ref(20)
 const generatedCount = ref(0)
 const generationStage = ref<"idle" | "generating_first_question" | "generating_next_question" | "evaluating">("idle")
+const consolidatingMemory = ref(false)
+const memoryConsolidatedMap = ref<Record<number, boolean>>({})
 
 // Phase 3.8: Stable-sorted display items (use this, not messages directly)
 const displayItems = computed(() => buildDisplayItems(messages.value))
@@ -148,6 +151,24 @@ async function handleDeleteSession(id: number) {
     }
   } catch {
     alert("删除失败")
+  }
+}
+
+async function handleConsolidateMemory(sessionId = activeSessionId.value) {
+  if (!sessionId || consolidatingMemory.value) return
+  if (!confirm("是否将本场面试表现沉淀为长期记忆，用于后续个性化面试？")) return
+  consolidatingMemory.value = true
+  try {
+    const result = await consolidateInterviewMemory(sessionId)
+    memoryConsolidatedMap.value[sessionId] = true
+    alert(
+      `已更新你的面试记忆和技能画像。新增偏好 ${result.preferences_created} 条，更新技能 ${result.skills_updated} 项。`
+    )
+  } catch (e) {
+    if (e instanceof ApiError) alert(e.message)
+    else alert("记忆沉淀失败")
+  } finally {
+    consolidatingMemory.value = false
   }
 }
 
@@ -705,6 +726,15 @@ loadSessions()
             <div v-else-if="item.type === 'INTERVIEW_COMPLETE'" class="message-row assistant">
               <div class="message-bubble complete-bubble">
                 <div class="complete-text">🎉 {{ item.content }}</div>
+                <button
+                  v-if="activeSessionId && !memoryConsolidatedMap[activeSessionId]"
+                  class="memory-save-btn"
+                  :disabled="consolidatingMemory"
+                  @click="handleConsolidateMemory(activeSessionId)"
+                >
+                  {{ consolidatingMemory ? '正在沉淀...' : '沉淀为长期记忆' }}
+                </button>
+                <div v-else class="memory-saved-note">已更新你的面试记忆和技能画像</div>
               </div>
             </div>
 
@@ -1255,4 +1285,22 @@ loadSessions()
 .eval-risk { margin-top: 8px; font-size: 13px; color: #f56c6c; }
 .complete-bubble { background: #f0f9eb !important; border: 1px solid #c2e7b0 !important; text-align: center; }
 .complete-text { font-size: 15px; color: #67c23a; font-weight: 600; }
+.memory-save-btn {
+  margin-top: 12px;
+  padding: 6px 14px;
+  border: 1px solid #67c23a;
+  border-radius: 6px;
+  background: #fff;
+  color: #3d8f28;
+  cursor: pointer;
+}
+.memory-save-btn:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+.memory-saved-note {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #529b2e;
+}
 </style>

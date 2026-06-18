@@ -123,6 +123,18 @@ export interface TargetPositionResult {
   }
 }
 
+export interface InterviewMemoryConsolidateResult {
+  session_id: number
+  episodic_memory_created: boolean
+  episodic_memory_updated?: boolean
+  preferences_created: number
+  preferences_updated?: number
+  skills_updated: number
+  events_created: number
+  episodic_memory_id?: number | null
+  existing_memory_id?: number | null
+}
+
 export interface InterviewSessionDetail extends InterviewSession {
   memory_summary: string | null
   messages: InterviewMessage[]

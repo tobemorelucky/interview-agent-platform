@@ -22,6 +22,7 @@ from interview_api.modules.interview.memory import InterviewMemoryManager
 from interview_api.modules.interview.prompt_builder import InterviewPromptBuilder
 from interview_api.modules.interview.question_retrieval import QuestionRetrievalService
 from interview_api.modules.memory.context_builder import MemoryContextBuilder
+from interview_api.modules.memory.interview_writer import InterviewMemoryWriter
 from interview_api.modules.resume.repository import ResumeRepository, ResumeReportRepository
 
 logger = logging.getLogger(__name__)
@@ -872,13 +873,19 @@ class InterviewChatService:
         if not session.target_position_confirmed:
             # Save user message first
             new_turn = session.turn_count + 1
-            await self.msg_repo.create(
+            user_msg = await self.msg_repo.create(
                 session_id=session_id,
                 role="USER",
                 content=content,
                 turn_index=new_turn,
             )
             await self.db.flush()
+            await InterviewMemoryWriter(self.db).capture_explicit_preference_from_message(
+                user_id=user_id,
+                message_id=user_msg.id,
+                text=content,
+                session_id=session_id,
+            )
             # Let LLM handle the position confirmation dialog
             async for evt in self._handle_position_confirmation(
                 session, content, new_turn
@@ -915,13 +922,19 @@ class InterviewChatService:
 
         # Save user message
         new_turn = session.turn_count + 1
-        await self.msg_repo.create(
+        user_msg = await self.msg_repo.create(
             session_id=session_id,
             role="USER",
             content=content,
             turn_index=new_turn,
         )
         await self.db.flush()
+        await InterviewMemoryWriter(self.db).capture_explicit_preference_from_message(
+            user_id=user_id,
+            message_id=user_msg.id,
+            text=content,
+            session_id=session_id,
+        )
 
         try:
             # Get resume data

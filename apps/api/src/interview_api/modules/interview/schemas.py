@@ -24,6 +24,10 @@ class SendMessageRequest(BaseModel):
     content: str
 
 
+class ConsolidateMemoryRequest(BaseModel):
+    force: bool = False
+
+
 # ── Response Schemas ──
 
 

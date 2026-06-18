@@ -4,6 +4,7 @@ import type {
   InterviewSessionDetail,
   InterviewQuestion,
   InterviewQuestionList,
+  InterviewMemoryConsolidateResult,
   StartInterviewResult,
   TargetPositionResult,
 } from "../types/interview";
@@ -85,6 +86,16 @@ export async function skipQuestion(
 ): Promise<unknown> {
   const response = await client.post(`/interview/sessions/${sessionId}/questions/${questionId}/skip`);
   return response;
+}
+
+export async function consolidateInterviewMemory(
+  sessionId: number,
+  force = false
+): Promise<InterviewMemoryConsolidateResult> {
+  const response = await client.post(`/interview/sessions/${sessionId}/memory/consolidate`, {
+    force,
+  });
+  return response as unknown as InterviewMemoryConsolidateResult;
 }
 
 /**

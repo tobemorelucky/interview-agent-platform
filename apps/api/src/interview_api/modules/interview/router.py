@@ -15,6 +15,7 @@ from interview_api.infrastructure.milvus.provider import MilvusVectorStoreProvid
 from interview_api.core.config import settings
 from interview_api.modules.interview.schemas import (
     BindResumeRequest,
+    ConsolidateMemoryRequest,
     CreateSessionRequest,
     SendMessageRequest,
     SetTargetPositionRequest,
@@ -29,6 +30,7 @@ from interview_api.modules.interview.repository import (
 )
 from interview_api.modules.interview.memory import InterviewMemoryManager
 from interview_api.modules.interview.prompt_builder import InterviewPromptBuilder
+from interview_api.modules.memory.interview_writer import InterviewMemoryWriter
 from interview_api.modules.resume.repository import ResumeRepository, ResumeReportRepository
 
 router = APIRouter(prefix="/api/v1/interview", tags=["interview"])
@@ -305,6 +307,26 @@ async def skip_question(
     result = await service.skip_question(session_id, current_user.id, question_id)
     if result is None:
         raise HTTPException(status_code=404, detail="题目不存在")
+    return success(data=result)
+
+
+@router.post("/sessions/{session_id}/memory/consolidate")
+async def consolidate_interview_memory(
+    session_id: int,
+    body: ConsolidateMemoryRequest,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Persist controlled long-term memory after an interview session."""
+    writer = InterviewMemoryWriter(db)
+    try:
+        result = await writer.consolidate_interview_session(
+            user_id=current_user.id,
+            session_id=session_id,
+            force=body.force,
+        )
+    except LookupError:
+        raise HTTPException(status_code=404, detail="会话不存在")
     return success(data=result)
 
 
