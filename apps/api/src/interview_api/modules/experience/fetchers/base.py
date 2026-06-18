@@ -1,4 +1,4 @@
-"""Fetcher abstractions for URL正文抓取."""
+"""Fetcher abstractions for URL content fetching."""
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -13,6 +13,7 @@ class FetchResult:
     title: str | None
     raw_text: str | None
     error_message: str | None = None
+    fetch_method: str = "httpx"
 
     @property
     def ok(self) -> bool:

@@ -6,7 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from interview_api.api.deps import require_admin
 from interview_api.core.errors import ResourceLockedError
 from interview_api.core.locks import redis_lock
-from interview_api.core.rate_limit import experience_task_limit, search_run_limit
+from interview_api.core.rate_limit import (
+    experience_task_limit,
+    fetch_run_limit,
+    search_run_limit,
+)
 from interview_api.core.response import success
 from interview_api.infrastructure.db.session import get_db
 from interview_api.modules.audit.service import AuditService, audit_request_metadata
@@ -269,22 +273,89 @@ async def run_task_search(
 @router.post("/tasks/{task_id}/fetch")
 async def fetch_task_sources(
     task_id: int,
+    request: Request,
     body: ExperienceTaskFetchRequest | None = None,
-    _admin=Depends(require_admin),
+    _limit=Depends(fetch_run_limit),
+    admin_user=Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
     svc = _task_service(db)
+    audit = AuditService(db)
     payload = body or ExperienceTaskFetchRequest()
     try:
-        result = await svc.fetch_task_sources(
-            task_id,
-            retry_failed=payload.retry_failed,
-            limit=payload.limit,
+        async with redis_lock(f"experience:task:{task_id}:fetch", 600):
+            result = await svc.fetch_task_sources(
+                task_id,
+                retry_failed=payload.retry_failed,
+                limit=payload.limit,
+            )
+    except ResourceLockedError as e:
+        await audit.log_event(
+            action="experience.task.fetch",
+            actor_user_id=admin_user.id,
+            actor_role=admin_user.role,
+            resource_type="experience_task",
+            resource_id=str(task_id),
+            metadata_json={
+                "task_id": task_id,
+                "retry_failed": payload.retry_failed,
+                "limit": payload.limit,
+            },
+            status="FAILED",
+            error_message=e.message,
+            **audit_request_metadata(request),
         )
+        raise
     except LookupError as e:
+        await audit.log_event(
+            action="experience.task.fetch",
+            actor_user_id=admin_user.id,
+            actor_role=admin_user.role,
+            resource_type="experience_task",
+            resource_id=str(task_id),
+            metadata_json={
+                "task_id": task_id,
+                "retry_failed": payload.retry_failed,
+                "limit": payload.limit,
+            },
+            status="FAILED",
+            error_message=str(e),
+            **audit_request_metadata(request),
+        )
         raise HTTPException(status_code=404, detail=str(e))
     except ValueError as e:
+        await audit.log_event(
+            action="experience.task.fetch",
+            actor_user_id=admin_user.id,
+            actor_role=admin_user.role,
+            resource_type="experience_task",
+            resource_id=str(task_id),
+            metadata_json={
+                "task_id": task_id,
+                "retry_failed": payload.retry_failed,
+                "limit": payload.limit,
+            },
+            status="FAILED",
+            error_message=str(e),
+            **audit_request_metadata(request),
+        )
         raise HTTPException(status_code=400, detail=str(e))
+    await audit.log_event(
+        action="experience.task.fetch",
+        actor_user_id=admin_user.id,
+        actor_role=admin_user.role,
+        resource_type="experience_task",
+        resource_id=str(task_id),
+        metadata_json={
+            "task_id": task_id,
+            "total": result.get("total"),
+            "fetched_count": result.get("fetched_count"),
+            "failed_count": result.get("failed_count"),
+            "retry_failed": payload.retry_failed,
+            "limit": payload.limit,
+        },
+        **audit_request_metadata(request),
+    )
     return success(data=result, message="Fetch completed")
 
 

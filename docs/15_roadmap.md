@@ -187,3 +187,12 @@ Claude Code 完成每阶段后，需要汇报：
 4. 让 Claude Code 先输出计划，不要直接修改；
 5. 将计划发回 ChatGPT 审查；
 6. 通过后再让 Claude Code 实施。
+
+---
+
+## 13. Current Platform Evolution Notes
+
+- M1 / M2 / M3 memory milestones are complete: layered user memory, read-only interview context injection, and controlled post-interview memory write.
+- G1 governance foundation is complete: request id, unified errors, audit logs, permission guards, Redis rate limits, Redis locks, and SSRF URL safety validation.
+- Next implementation step: Step 6 content fetching for `experience_source_items` with `fetch_status=DISCOVERED`.
+- Later implementation step: Step 7 LangGraph multi-agent extraction with Extraction Agent, Routing Agent, and Reliability Agent.

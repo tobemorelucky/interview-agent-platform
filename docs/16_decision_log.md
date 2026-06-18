@@ -322,3 +322,53 @@ Agent 工作流核心由三个 Agent 组成：
 - 简历面试当前使用 kb_chunks_current，已可工作；
 - 面经题库的质量需要积累和验证；
 - 后续 Phase 4.4 完成后再评估是否接入。
+
+---
+
+## Decision 024: Generic Search Uses Empty Platform
+
+### Conclusion
+The platform field may be empty. Empty platform means generic unrestricted web search. The previous `"全网"` platform option should not be treated as a real platform.
+
+### Reason
+This keeps platform selection semantically clear: empty means no domain restriction, while Nowcoder / Xiaohongshu / Douyin means official-domain-only filtering.
+
+---
+
+## Decision 025: User Memory Uses Layered Storage
+
+### Conclusion
+User memory is stored in layers: working/session context, semantic memory, skill profile, episodic memory, preference memory, and safety / consent memory.
+
+### Reason
+Layering prevents every chat turn from becoming long-term memory and makes prompt injection controllable.
+
+---
+
+## Decision 026: Interview Memory Writes Are Controlled
+
+### Conclusion
+Interview memory writes happen only through controlled consolidation. Each automatic write must have source metadata and memory events.
+
+### Reason
+This preserves auditability and avoids noisy or accidental long-term memory growth.
+
+---
+
+## Decision 027: URL Fetching Requires SSRF Validation
+
+### Conclusion
+All URL fetching must pass public HTTP URL validation before network access.
+
+### Reason
+The ingestion pipeline accepts externally discovered URLs, so it must block localhost, private network, link-local, and unsafe schemes before fetch.
+
+---
+
+## Decision 028: High-cost Tasks Require Rate Limits And Locks
+
+### Conclusion
+High-cost or duplicate-sensitive operations must use Redis rate limits and task locks.
+
+### Reason
+Search runs, fetch runs, interview chat, and memory consolidation can consume external resources or create duplicated state if repeated concurrently.

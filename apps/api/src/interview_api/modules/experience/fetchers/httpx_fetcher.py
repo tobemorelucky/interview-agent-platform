@@ -4,7 +4,7 @@ import httpx
 
 from interview_api.core.errors import ValidationAppError
 from interview_api.core.url_safety import validate_public_http_url
-from interview_api.modules.experience.fetchers.base import FetchResult
+from interview_api.modules.experience.fetchers.base import ContentFetcher, FetchResult
 from interview_api.modules.experience.fetchers.text_extractor import extract_text_from_html
 
 
@@ -15,7 +15,7 @@ DEFAULT_USER_AGENT = (
 )
 
 
-class HttpxContentFetcher:
+class HttpxContentFetcher(ContentFetcher):
     def __init__(
         self,
         *,
@@ -31,7 +31,7 @@ class HttpxContentFetcher:
         try:
             safe_url = validate_public_http_url(url)
         except ValidationAppError as exc:
-            return _failed(url, error_message=exc.code.lower())
+            return _failed(url, error_message=_url_validation_error_code(exc))
 
         headers = {
             "User-Agent": self.user_agent,
@@ -57,7 +57,7 @@ class HttpxContentFetcher:
                             final_url=final_url,
                             status_code=status_code,
                             content_type=content_type,
-                            error_message=exc.code.lower(),
+                            error_message=_url_validation_error_code(exc),
                         )
 
                     if status_code < 200 or status_code >= 300:
@@ -66,7 +66,7 @@ class HttpxContentFetcher:
                             final_url=final_url,
                             status_code=status_code,
                             content_type=content_type,
-                            error_message=f"HTTP {status_code}",
+                            error_message=_http_error_code(status_code),
                         )
 
                     if "text/html" not in (content_type or "").lower():
@@ -116,6 +116,7 @@ class HttpxContentFetcher:
             content_type=content_type,
             title=extracted.title,
             raw_text=extracted.raw_text,
+            fetch_method="httpx",
         )
 
 
@@ -136,4 +137,20 @@ def _failed(
         title=title,
         raw_text=None,
         error_message=error_message,
+        fetch_method="httpx",
     )
+
+
+def _http_error_code(status_code: int) -> str:
+    if status_code == 403:
+        return "http_403"
+    if status_code == 404:
+        return "http_404"
+    return "http_error"
+
+
+def _url_validation_error_code(exc: ValidationAppError) -> str:
+    message = exc.message.lower()
+    if "private" in message or "local" in message or "localhost" in message:
+        return "ssrf_blocked"
+    return "invalid_url"

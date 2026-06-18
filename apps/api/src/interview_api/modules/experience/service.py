@@ -4,6 +4,7 @@ import asyncio
 from datetime import datetime, timezone
 import hashlib
 import logging
+import time
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -411,11 +412,12 @@ class ExperienceTaskService:
         retry_failed: bool = False,
         limit: int = 20,
     ) -> dict:
+        started = time.perf_counter()
         task = await self.repo.get_by_id(task_id)
         if not task:
-            raise LookupError("任务不存在")
+            raise LookupError("?????")
         if limit < 1 or limit > 100:
-            raise ValueError("limit 必须在 1-100 之间")
+            raise ValueError("limit ??? 1-100 ??")
 
         items = await self.source_repo.list_fetchable_source_items(
             task_id,
@@ -447,6 +449,11 @@ class ExperienceTaskService:
                 finished_at=datetime.now(timezone.utc),
             )
             await self.db.commit()
+            logger.info(
+                "[experience-fetch] task=%s total=0 fetched=0 failed=0 duration_ms=%s",
+                task_id,
+                int((time.perf_counter() - started) * 1000),
+            )
             return {
                 "task_id": task_id,
                 "total": 0,
@@ -465,33 +472,32 @@ class ExperienceTaskService:
             fetched_at = datetime.now(timezone.utc)
             if result.ok and result.raw_text:
                 raw_text = result.raw_text
-                await self.source_repo.update_source_item_fetch_result(
+                await self.source_repo.update_source_item_fetch_success(
                     item.id,
                     raw_text=raw_text,
                     content_hash=hashlib.sha256(raw_text.encode("utf-8")).hexdigest(),
                     fetched_at=fetched_at,
-                    fetch_status="FETCHED",
-                    error_message=None,
                     title=result.title or item.title,
                 )
                 fetched_count += 1
                 logger.info(
-                    "[experience-fetch] source=%s status=FETCHED chars=%s url=%s",
+                    "[experience-fetch] task=%s source=%s status=FETCHED chars=%s url=%s",
+                    task_id,
                     item.id,
                     len(raw_text),
                     item.source_url,
                 )
             else:
                 error_message = (result.error_message or "request_failed")[:2000]
-                await self.source_repo.update_source_item_fetch_result(
+                await self.source_repo.update_source_item_fetch_failed(
                     item.id,
                     fetched_at=fetched_at,
-                    fetch_status="FETCH_FAILED",
                     error_message=error_message,
                 )
                 failed_count += 1
                 logger.info(
-                    "[experience-fetch] source=%s status=FETCH_FAILED error=%r url=%s",
+                    "[experience-fetch] task=%s source=%s status=FETCH_FAILED error=%r url=%s",
+                    task_id,
                     item.id,
                     error_message,
                     item.source_url,
@@ -510,10 +516,19 @@ class ExperienceTaskService:
             progress=100,
             fetched_count=fetched_total,
             failed_count=failed_total,
-            error_message=None if fetched_count else "本次抓取未获得可用正文",
+            error_message=None if fetched_count else "???????????",
             finished_at=datetime.now(timezone.utc),
         )
         await self.db.commit()
+        duration_ms = int((time.perf_counter() - started) * 1000)
+        logger.info(
+            "[experience-fetch] task=%s total=%s fetched=%s failed=%s duration_ms=%s",
+            task_id,
+            len(items),
+            fetched_count,
+            failed_count,
+            duration_ms,
+        )
 
         return {
             "task_id": task_id,
@@ -544,6 +559,7 @@ class ExperienceTaskService:
                         title=None,
                         raw_text=None,
                         error_message=f"request_failed: {exc}",
+                        fetch_method="httpx",
                     )
                 return item, result
 

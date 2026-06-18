@@ -1,4 +1,4 @@
-"""HTML正文提取工具."""
+"""HTML text extraction helpers."""
 
 import re
 from dataclasses import dataclass
@@ -29,8 +29,10 @@ def extract_text_from_html(html: str, *, url: str | None = None) -> ExtractedTex
     )
     text = _clean_text(text or "")
 
-    if not text:
-        text = _extract_with_bs4(html)
+    if not text or len(text) < MIN_TEXT_CHARS:
+        fallback_text = _extract_with_bs4(html)
+        if len(fallback_text) > len(text):
+            text = fallback_text
 
     if not text:
         return ExtractedText(title=title, raw_text=None, error_message="empty_text")
@@ -48,8 +50,18 @@ def _extract_title(html: str) -> str | None:
 
 def _extract_with_bs4(html: str) -> str:
     soup = BeautifulSoup(html, "lxml")
-    for tag in soup(["script", "style", "noscript", "svg", "nav", "footer", "header", "form"]):
-        tag.decompose()
+    for tag in [
+        "script",
+        "style",
+        "noscript",
+        "svg",
+        "nav",
+        "footer",
+        "header",
+        "form",
+    ]:
+        for node in soup.find_all(tag):
+            node.decompose()
     text = soup.get_text("\n")
     return _clean_text(text)
 

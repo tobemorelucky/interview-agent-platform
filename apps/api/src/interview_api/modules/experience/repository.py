@@ -227,6 +227,40 @@ class ExperienceSourceItemRepository:
         await self.db.flush()
         return await self.get_source_item(source_id)
 
+    async def update_source_item_fetch_success(
+        self,
+        source_id: int,
+        *,
+        raw_text: str,
+        content_hash: str,
+        fetched_at,
+        title: str | None = None,
+    ) -> ExperienceSourceItem | None:
+        values = {
+            "raw_text": raw_text,
+            "content_hash": content_hash,
+            "fetched_at": fetched_at,
+            "fetch_status": "FETCHED",
+            "error_message": None,
+        }
+        if title:
+            values["title"] = title
+        return await self.update_source_item_fetch_result(source_id, **values)
+
+    async def update_source_item_fetch_failed(
+        self,
+        source_id: int,
+        *,
+        fetched_at,
+        error_message: str,
+    ) -> ExperienceSourceItem | None:
+        return await self.update_source_item_fetch_result(
+            source_id,
+            fetched_at=fetched_at,
+            fetch_status="FETCH_FAILED",
+            error_message=error_message,
+        )
+
     async def count_source_items_by_task(
         self,
         task_id: int,
