@@ -63,6 +63,12 @@ const routes = [
     meta: { requiresAuth: true, requiresAdmin: true },
   },
   {
+    path: "/admin/audit",
+    name: "AdminAuditLogs",
+    component: () => import("../pages/admin/AdminAuditLogsPage.vue"),
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
+  {
     path: "/",
     redirect: "/dashboard",
   },

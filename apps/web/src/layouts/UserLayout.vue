@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "../stores/auth";
-import { useRouter, useRoute } from "vue-router";
 
 const auth = useAuthStore();
 const router = useRouter();
@@ -16,6 +16,7 @@ const navItems = [
 const adminNavItems = [
   { path: "/admin/kb/documents", label: "知识库管理" },
   { path: "/admin/experiences", label: "面经采集" },
+  { path: "/admin/audit", label: "审计日志" },
 ];
 
 function handleLogout() {
@@ -123,7 +124,7 @@ function handleLogout() {
 }
 
 .nav-link.nav-admin {
-  color: #e6a23c;
+  color: #b7791f;
 }
 
 .nav-link.nav-admin.active {

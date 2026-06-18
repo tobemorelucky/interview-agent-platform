@@ -1,11 +1,13 @@
 """User memory API routes."""
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from interview_api.api.deps import get_current_user
+from interview_api.core.rate_limit import memory_write_limit
 from interview_api.core.response import success
 from interview_api.infrastructure.db.session import get_db
+from interview_api.modules.audit.service import AuditService, audit_request_metadata
 from interview_api.modules.memory.context_builder import MemoryContextBuilder
 from interview_api.modules.memory.policies import (
     MEMORY_SCOPES,
@@ -73,6 +75,8 @@ async def list_memory_items(
 @router.post("/items", status_code=status.HTTP_201_CREATED)
 async def create_memory_item(
     body: UserMemoryItemCreate,
+    request: Request,
+    _limit=Depends(memory_write_limit),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -82,6 +86,20 @@ async def create_memory_item(
         body.model_dump(),
         MemoryActor(actor_type="USER", actor_id=current_user.id),
     )
+    await AuditService(db).log_event(
+        action="memory.item.create",
+        actor_user_id=current_user.id,
+        actor_role=current_user.role,
+        resource_type="memory_item",
+        resource_id=str(result.get("id")),
+        after_json={
+            "memory_type": result.get("memory_type"),
+            "scope": result.get("scope"),
+            "key": result.get("key"),
+            "content_length": len(result.get("content") or ""),
+        },
+        **audit_request_metadata(request),
+    )
     return success(data=result, message="记忆已创建")
 
 
@@ -89,6 +107,8 @@ async def create_memory_item(
 async def update_memory_item(
     memory_id: int,
     body: UserMemoryItemUpdate,
+    request: Request,
+    _limit=Depends(memory_write_limit),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -104,12 +124,28 @@ async def update_memory_item(
         raise HTTPException(status_code=404, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    await AuditService(db).log_event(
+        action="memory.item.update",
+        actor_user_id=current_user.id,
+        actor_role=current_user.role,
+        resource_type="memory_item",
+        resource_id=str(memory_id),
+        after_json={
+            "memory_type": result.get("memory_type"),
+            "scope": result.get("scope"),
+            "key": result.get("key"),
+            "status": result.get("status"),
+        },
+        **audit_request_metadata(request),
+    )
     return success(data=result, message="记忆已更新")
 
 
 @router.delete("/items/{memory_id}")
 async def delete_memory_item(
     memory_id: int,
+    request: Request,
+    _limit=Depends(memory_write_limit),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -122,6 +158,15 @@ async def delete_memory_item(
         )
     except LookupError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    await AuditService(db).log_event(
+        action="memory.item.delete",
+        actor_user_id=current_user.id,
+        actor_role=current_user.role,
+        resource_type="memory_item",
+        resource_id=str(memory_id),
+        after_json={"status": "DELETED"},
+        **audit_request_metadata(request),
+    )
     return success(message="记忆已删除")
 
 

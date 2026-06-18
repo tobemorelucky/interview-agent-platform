@@ -1,18 +1,25 @@
 """Phase 4: Experience admin API router."""
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from interview_api.api.deps import require_admin
+from interview_api.core.errors import ResourceLockedError
+from interview_api.core.locks import redis_lock
+from interview_api.core.rate_limit import experience_task_limit, search_run_limit
 from interview_api.core.response import success
 from interview_api.infrastructure.db.session import get_db
+from interview_api.modules.audit.service import AuditService, audit_request_metadata
 from interview_api.modules.experience.schemas import (
+    ExperienceCollectionTaskCreate,
     ExperienceKeywordPresetCreate,
     ExperienceKeywordPresetUpdate,
-    ExperienceCollectionTaskCreate,
     ExperienceTaskFetchRequest,
 )
-from interview_api.modules.experience.service import ExperienceKeywordService, ExperienceTaskService
+from interview_api.modules.experience.service import (
+    ExperienceKeywordService,
+    ExperienceTaskService,
+)
 
 router = APIRouter(prefix="/api/v1/admin/experience", tags=["admin_experience"])
 
@@ -23,9 +30,6 @@ def _kw_service(db: AsyncSession) -> ExperienceKeywordService:
 
 def _task_service(db: AsyncSession) -> ExperienceTaskService:
     return ExperienceTaskService(db)
-
-
-# ── Keywords CRUD ──
 
 
 @router.get("/keywords")
@@ -59,7 +63,7 @@ async def create_keyword(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
     await db.commit()
-    return success(data=result, message="关键词已创建")
+    return success(data=result, message="Keyword created")
 
 
 @router.patch("/keywords/{keyword_id}")
@@ -78,7 +82,7 @@ async def update_keyword(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     await db.commit()
-    return success(data=result, message="关键词已更新")
+    return success(data=result, message="Keyword updated")
 
 
 @router.delete("/keywords/{keyword_id}")
@@ -94,12 +98,9 @@ async def delete_keyword(
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     if not deleted:
-        raise HTTPException(status_code=404, detail="关键词不存在")
+        raise HTTPException(status_code=404, detail="Keyword not found")
     await db.commit()
-    return success(message="关键词已删除")
-
-
-# ── Collection Tasks ──
+    return success(message="Keyword deleted")
 
 
 @router.get("/tasks")
@@ -118,6 +119,8 @@ async def list_tasks(
 @router.post("/tasks", status_code=status.HTTP_201_CREATED)
 async def create_task(
     body: ExperienceCollectionTaskCreate,
+    request: Request,
+    _limit=Depends(experience_task_limit),
     admin_user=Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
@@ -127,7 +130,22 @@ async def create_task(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     await db.commit()
-    return success(data=result, message="任务已创建")
+    await AuditService(db).log_event(
+        action="experience.task.create",
+        actor_user_id=admin_user.id,
+        actor_role=admin_user.role,
+        resource_type="experience_task",
+        resource_id=str(result["id"]),
+        after_json={
+            "search_scope": result.get("search_scope"),
+            "time_window_hours": result.get("time_window_hours"),
+            "job_keyword_count": len(result.get("job_keywords_json") or []),
+            "company_keyword_count": len(result.get("company_keywords_json") or []),
+            "platforms": result.get("platforms_json") or [],
+        },
+        **audit_request_metadata(request),
+    )
+    return success(data=result, message="Task created")
 
 
 @router.get("/tasks/{task_id}")
@@ -139,40 +157,113 @@ async def get_task(
     svc = _task_service(db)
     result = await svc.get_task(task_id)
     if result is None:
-        raise HTTPException(status_code=404, detail="任务不存在")
+        raise HTTPException(status_code=404, detail="Task not found")
     return success(data=result)
 
 
 @router.delete("/tasks/{task_id}")
 async def delete_task(
     task_id: int,
-    _admin=Depends(require_admin),
+    request: Request,
+    admin_user=Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
     svc = _task_service(db)
+    audit = AuditService(db)
     try:
         deleted = await svc.delete_task(task_id)
     except LookupError as e:
+        await audit.log_event(
+            action="experience.task.delete",
+            actor_user_id=admin_user.id,
+            actor_role=admin_user.role,
+            resource_type="experience_task",
+            resource_id=str(task_id),
+            status="FAILED",
+            error_message=str(e),
+            **audit_request_metadata(request),
+        )
         raise HTTPException(status_code=404, detail=str(e))
     if not deleted:
-        raise HTTPException(status_code=404, detail="任务不存在")
-    return success(message="任务已删除")
+        raise HTTPException(status_code=404, detail="Task not found")
+    await audit.log_event(
+        action="experience.task.delete",
+        actor_user_id=admin_user.id,
+        actor_role=admin_user.role,
+        resource_type="experience_task",
+        resource_id=str(task_id),
+        **audit_request_metadata(request),
+    )
+    return success(message="Task deleted")
 
 
 @router.post("/tasks/{task_id}/search")
 async def run_task_search(
     task_id: int,
-    _admin=Depends(require_admin),
+    request: Request,
+    _limit=Depends(search_run_limit),
+    admin_user=Depends(require_admin),
     db: AsyncSession = Depends(get_db),
 ):
     svc = _task_service(db)
+    audit = AuditService(db)
     try:
-        result = await svc.run_search(task_id)
+        async with redis_lock(f"task:{task_id}:search", 120):
+            result = await svc.run_search(task_id)
+    except ResourceLockedError as e:
+        await audit.log_event(
+            action="experience.task.search",
+            actor_user_id=admin_user.id,
+            actor_role=admin_user.role,
+            resource_type="experience_task",
+            resource_id=str(task_id),
+            status="FAILED",
+            error_message=e.message,
+            **audit_request_metadata(request),
+        )
+        raise
     except LookupError as e:
+        await audit.log_event(
+            action="experience.task.search",
+            actor_user_id=admin_user.id,
+            actor_role=admin_user.role,
+            resource_type="experience_task",
+            resource_id=str(task_id),
+            status="FAILED",
+            error_message=str(e),
+            **audit_request_metadata(request),
+        )
         raise HTTPException(status_code=404, detail=str(e))
     except ValueError as e:
+        await audit.log_event(
+            action="experience.task.search",
+            actor_user_id=admin_user.id,
+            actor_role=admin_user.role,
+            resource_type="experience_task",
+            resource_id=str(task_id),
+            status="FAILED",
+            error_message=str(e),
+            **audit_request_metadata(request),
+        )
         raise HTTPException(status_code=400, detail=str(e))
-    return success(data=result, message="搜索执行完成")
+    await audit.log_event(
+        action="experience.task.search",
+        actor_user_id=admin_user.id,
+        actor_role=admin_user.role,
+        resource_type="experience_task",
+        resource_id=str(task_id),
+        after_json={
+            "query_count": result.get("query_count"),
+            "query_failed_count": result.get("query_failed_count"),
+            "raw_result_count": result.get("raw_result_count"),
+            "accepted_count": result.get("accepted_count"),
+            "filtered_count": result.get("filtered_count"),
+            "duplicate_count": result.get("duplicate_count"),
+            "found_url_count": result.get("found_url_count"),
+        },
+        **audit_request_metadata(request),
+    )
+    return success(data=result, message="Search completed")
 
 
 @router.post("/tasks/{task_id}/fetch")
@@ -194,7 +285,7 @@ async def fetch_task_sources(
         raise HTTPException(status_code=404, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    return success(data=result, message="正文抓取完成")
+    return success(data=result, message="Fetch completed")
 
 
 @router.get("/tasks/{task_id}/sources")

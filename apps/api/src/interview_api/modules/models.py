@@ -30,3 +30,4 @@ from interview_api.modules.memory.models import (  # noqa: F401
     UserSkillProfile,
     UserMemoryEvent,
 )
+from interview_api.modules.audit.models import AuditLog  # noqa: F401

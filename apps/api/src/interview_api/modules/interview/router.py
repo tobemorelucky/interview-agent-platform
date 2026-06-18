@@ -1,10 +1,13 @@
 """Interview API router."""
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from interview_api.api.deps import get_current_user
+from interview_api.core.errors import ResourceLockedError
+from interview_api.core.locks import redis_lock
+from interview_api.core.rate_limit import interview_chat_limit, memory_write_limit
 from interview_api.core.response import success
 from interview_api.infrastructure.db.session import get_db
 from interview_api.infrastructure.embedding.provider import (
@@ -30,6 +33,7 @@ from interview_api.modules.interview.repository import (
 )
 from interview_api.modules.interview.memory import InterviewMemoryManager
 from interview_api.modules.interview.prompt_builder import InterviewPromptBuilder
+from interview_api.modules.audit.service import AuditService, audit_request_metadata
 from interview_api.modules.memory.interview_writer import InterviewMemoryWriter
 from interview_api.modules.resume.repository import ResumeRepository, ResumeReportRepository
 
@@ -158,6 +162,7 @@ async def set_target_position(
 async def send_message_stream(
     session_id: int,
     body: SendMessageRequest,
+    _limit=Depends(interview_chat_limit),
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -314,19 +319,58 @@ async def skip_question(
 async def consolidate_interview_memory(
     session_id: int,
     body: ConsolidateMemoryRequest,
+    request: Request,
+    _limit=Depends(memory_write_limit),
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Persist controlled long-term memory after an interview session."""
     writer = InterviewMemoryWriter(db)
     try:
-        result = await writer.consolidate_interview_session(
-            user_id=current_user.id,
-            session_id=session_id,
-            force=body.force,
+        async with redis_lock(f"interview:{session_id}:memory_consolidate", 60):
+            result = await writer.consolidate_interview_session(
+                user_id=current_user.id,
+                session_id=session_id,
+                force=body.force,
+            )
+    except ResourceLockedError as e:
+        await AuditService(db).log_event(
+            action="memory.interview.consolidate",
+            actor_user_id=current_user.id,
+            actor_role=current_user.role,
+            resource_type="interview_session",
+            resource_id=str(session_id),
+            status="FAILED",
+            error_message=e.message,
+            **audit_request_metadata(request),
         )
+        raise
     except LookupError:
+        await AuditService(db).log_event(
+            action="memory.interview.consolidate",
+            actor_user_id=current_user.id,
+            actor_role=current_user.role,
+            resource_type="interview_session",
+            resource_id=str(session_id),
+            status="FAILED",
+            error_message="session not found",
+            **audit_request_metadata(request),
+        )
         raise HTTPException(status_code=404, detail="会话不存在")
+    await AuditService(db).log_event(
+        action="memory.interview.consolidate",
+        actor_user_id=current_user.id,
+        actor_role=current_user.role,
+        resource_type="interview_session",
+        resource_id=str(session_id),
+        after_json={
+            "episodic_memory_created": result.get("episodic_memory_created"),
+            "episodic_memory_updated": result.get("episodic_memory_updated"),
+            "preferences_created": result.get("preferences_created"),
+            "skills_updated": result.get("skills_updated"),
+        },
+        **audit_request_metadata(request),
+    )
     return success(data=result)
 
 

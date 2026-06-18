@@ -2,6 +2,8 @@
 
 import httpx
 
+from interview_api.core.errors import ValidationAppError
+from interview_api.core.url_safety import validate_public_http_url
 from interview_api.modules.experience.fetchers.base import FetchResult
 from interview_api.modules.experience.fetchers.text_extractor import extract_text_from_html
 
@@ -26,6 +28,11 @@ class HttpxContentFetcher:
         self.user_agent = user_agent
 
     async def fetch(self, url: str) -> FetchResult:
+        try:
+            safe_url = validate_public_http_url(url)
+        except ValidationAppError as exc:
+            return _failed(url, error_message=exc.code.lower())
+
         headers = {
             "User-Agent": self.user_agent,
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -37,10 +44,21 @@ class HttpxContentFetcher:
                 follow_redirects=True,
                 headers=headers,
             ) as client:
-                async with client.stream("GET", url) as response:
+                async with client.stream("GET", safe_url) as response:
                     status_code = response.status_code
                     final_url = str(response.url)
                     content_type = response.headers.get("content-type")
+
+                    try:
+                        validate_public_http_url(final_url)
+                    except ValidationAppError as exc:
+                        return _failed(
+                            url,
+                            final_url=final_url,
+                            status_code=status_code,
+                            content_type=content_type,
+                            error_message=exc.code.lower(),
+                        )
 
                     if status_code < 200 or status_code >= 300:
                         return _failed(

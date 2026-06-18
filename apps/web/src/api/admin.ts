@@ -176,3 +176,33 @@ export async function listExperienceTaskSources(
 ): Promise<{ items: ExperienceSourceItem[]; total: number }> {
   return client.get(`/admin/experience/tasks/${id}/sources`, { params })
 }
+
+export interface AuditLog {
+  id: number
+  request_id?: string
+  actor_user_id?: number
+  actor_role?: string
+  action: string
+  resource_type?: string
+  resource_id?: string
+  ip_address?: string
+  user_agent?: string
+  before_json?: Record<string, unknown>
+  after_json?: Record<string, unknown>
+  metadata_json?: Record<string, unknown>
+  status: string
+  error_message?: string
+  created_at?: string
+}
+
+export async function listAuditLogs(params?: {
+  actor_user_id?: number
+  action?: string
+  resource_type?: string
+  resource_id?: string
+  request_id?: string
+  offset?: number
+  limit?: number
+}): Promise<{ items: AuditLog[]; total: number }> {
+  return client.get("/admin/audit/logs", { params })
+}
