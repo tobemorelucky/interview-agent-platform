@@ -101,6 +101,8 @@ class ExperienceSourceItemRead(BaseModel):
     raw_text_preview: str | None = None
     fetched_at: datetime | None = None
     fetch_status: str
+    fetch_status_label: str | None = None
+    fetch_quality: str | None = None
     extract_status: str | None = None
     error_message: str | None = None
     created_at: datetime | None = None
@@ -116,6 +118,10 @@ class ExperienceSourceItemListResponse(BaseModel):
 class ExperienceTaskFetchRequest(BaseModel):
     retry_failed: bool = False
     limit: int = Field(default=20, ge=1, le=100)
+
+
+class ExperienceSourceFetchRequest(BaseModel):
+    force: bool = False
 
 
 # ── Interview Experience ──

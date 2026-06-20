@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue"
+import { computed, ref, onMounted } from "vue"
 import {
   listExperienceKeywords,
   createExperienceKeyword,
@@ -11,9 +11,14 @@ import {
   deleteExperienceTask,
   runExperienceTaskSearch,
   fetchExperienceTaskSources,
+  fetchExperienceSource,
+  getExperienceSourcePreview,
+  getExperienceTaskFetchStats,
   listExperienceTaskSources,
   type ExperienceCollectionTask,
+  type ExperienceFetchStats,
   type ExperienceSourceItem,
+  type ExperienceSourcePreview,
 } from "../api/admin"
 
 type SearchStats = {
@@ -40,12 +45,16 @@ const tasks = ref<ExperienceCollectionTask[]>([])
 const taskTotal = ref(0)
 const runningTaskId = ref<number | null>(null)
 const fetchingTaskId = ref<number | null>(null)
+const fetchingSourceId = ref<number | null>(null)
 const taskStats = ref<Record<number, SearchStats>>({})
+const taskFetchStats = ref<Record<number, ExperienceFetchStats>>({})
 const sourceItems = ref<ExperienceSourceItem[]>([])
 const sourceTotal = ref(0)
 const sourcesLoading = ref(false)
+const sourceFilter = ref<"ALL" | "FETCHED" | "FETCH_FAILED" | "DISCOVERED" | "SHORT">("ALL")
 const sourceModalOpen = ref(false)
-const previewItem = ref<ExperienceSourceItem | null>(null)
+const previewItem = ref<ExperienceSourcePreview | null>(null)
+const previewLoading = ref(false)
 const selectedTask = ref<ExperienceCollectionTask | null>(null)
 const createStatus = ref("")
 const creating = ref(false)
@@ -89,6 +98,22 @@ async function loadTasks() {
   if (selectedTask.value) {
     selectedTask.value = tasks.value.find(t => t.id === selectedTask.value?.id) || selectedTask.value
   }
+  await loadTaskFetchStats()
+}
+
+async function loadTaskFetchStats() {
+  const candidates = tasks.value.filter(t => t.found_url_count > 0).slice(0, 50)
+  const results = await Promise.allSettled(
+    candidates.map(async (task) => [task.id, await getExperienceTaskFetchStats(task.id)] as const)
+  )
+  const next = { ...taskFetchStats.value }
+  for (const result of results) {
+    if (result.status === "fulfilled") {
+      const [taskId, stats] = result.value
+      next[taskId] = stats
+    }
+  }
+  taskFetchStats.value = next
 }
 
 async function loadPresets() {
@@ -125,6 +150,10 @@ function canFetchSources(task: ExperienceCollectionTask) {
   return task.found_url_count > 0 && task.status !== "FETCHING"
 }
 
+function canRetryFailed(task: ExperienceCollectionTask) {
+  return (task.failed_count || 0) > 0 && task.status !== "FETCHING"
+}
+
 function scopeLabel(scope: string) {
   return scope === "COMPANY" ? "按公司" : "按岗位"
 }
@@ -159,6 +188,19 @@ function statValue(key: keyof SearchStats) {
   return stats ? String(stats[key] || 0) : "-"
 }
 
+const activeFetchStats = computed(() => {
+  const task = selectedTask.value
+  return task ? taskFetchStats.value[task.id] : null
+})
+
+const filteredSourceItems = computed(() => {
+  if (sourceFilter.value === "ALL") return sourceItems.value
+  if (sourceFilter.value === "SHORT") {
+    return sourceItems.value.filter(item => item.fetch_quality === "SHORT")
+  }
+  return sourceItems.value.filter(item => item.fetch_status === sourceFilter.value)
+})
+
 async function handleRunSearch(task: ExperienceCollectionTask) {
   runningTaskId.value = task.id
   try {
@@ -176,18 +218,19 @@ async function handleRunSearch(task: ExperienceCollectionTask) {
   }
 }
 
-async function handleFetchSources(task: ExperienceCollectionTask) {
+async function handleFetchSources(task: ExperienceCollectionTask, retryFailed = false) {
   fetchingTaskId.value = task.id
   try {
-    const result = await fetchExperienceTaskSources(task.id, { retry_failed: false, limit: 20 })
+    const result = await fetchExperienceTaskSources(task.id, { retry_failed: retryFailed, limit: 20 })
     await loadTasks()
     if (sourceModalOpen.value && selectedTask.value?.id === task.id) {
       selectedTask.value = tasks.value.find(t => t.id === task.id) || selectedTask.value
       await loadSources(task.id)
+      await loadFetchStats(task.id)
     }
-    alert(`正文抓取完成：成功 ${result.fetched_count}，失败 ${result.failed_count}`)
+    alert(`${retryFailed ? "失败项重试" : "正文抓取"}完成：成功 ${result.fetched_count}，失败 ${result.failed_count}`)
   } catch (e: any) {
-    alert(e?.message || "正文抓取失败")
+    alert(e?.message || (retryFailed ? "失败项重试失败" : "正文抓取失败"))
   } finally {
     fetchingTaskId.value = null
   }
@@ -253,10 +296,16 @@ async function loadSources(taskId: number) {
   }
 }
 
+async function loadFetchStats(taskId: number) {
+  const stats = await getExperienceTaskFetchStats(taskId)
+  taskFetchStats.value = { ...taskFetchStats.value, [taskId]: stats }
+}
+
 async function openSources(task: ExperienceCollectionTask) {
   selectedTask.value = task
   sourceModalOpen.value = true
-  await loadSources(task.id)
+  sourceFilter.value = "ALL"
+  await Promise.all([loadSources(task.id), loadFetchStats(task.id)])
 }
 
 function closeSources() {
@@ -267,12 +316,35 @@ function closeSources() {
   sourceTotal.value = 0
 }
 
-function openPreview(item: ExperienceSourceItem) {
-  previewItem.value = item
+async function openPreview(item: ExperienceSourceItem) {
+  previewLoading.value = true
+  try {
+    previewItem.value = await getExperienceSourcePreview(item.id)
+  } catch (e: any) {
+    alert(e?.message || "正文预览加载失败")
+  } finally {
+    previewLoading.value = false
+  }
 }
 
 function closePreview() {
   previewItem.value = null
+}
+
+async function handleFetchSource(item: ExperienceSourceItem) {
+  fetchingSourceId.value = item.id
+  try {
+    const result = await fetchExperienceSource(item.id, { force: true })
+    if (selectedTask.value) {
+      await Promise.all([loadSources(selectedTask.value.id), loadFetchStats(selectedTask.value.id)])
+      await loadTasks()
+    }
+    alert(result.fetch_status === "FETCHED" ? "重新抓取成功" : `重新抓取失败：${result.error_message || "未知错误"}`)
+  } catch (e: any) {
+    alert(e?.message || "重新抓取失败")
+  } finally {
+    fetchingSourceId.value = null
+  }
 }
 
 async function handleDeleteTask(task: ExperienceCollectionTask) {
@@ -344,6 +416,13 @@ const statusLabel: Record<string, string> = {
   INDEXING: "索引入库",
   COMPLETED: "已完成",
   FAILED: "失败",
+}
+
+const fetchQualityLabel: Record<string, string> = {
+  GOOD: "正文正常",
+  SHORT: "正文较短",
+  FAILED: "抓取失败",
+  PENDING: "待抓取",
 }
 
 onMounted(() => {
@@ -460,7 +539,7 @@ onMounted(() => {
                 <th>关键词</th>
                 <th>平台</th>
                 <th>状态</th>
-                <th>found / fetched / failed</th>
+                <th>URL / 已抓取 / 失败 / 平均字数</th>
                 <th>创建时间</th>
                 <th>操作</th>
               </tr>
@@ -475,7 +554,10 @@ onMounted(() => {
                   <span class="status-tag">{{ statusLabel[t.status] || t.status }}</span>
                   <div v-if="t.error_message" class="row-error">{{ t.error_message }}</div>
                 </td>
-                <td>{{ t.found_url_count }} / {{ t.fetched_count }} / {{ t.failed_count }}</td>
+                <td>
+                  {{ t.found_url_count }} / {{ t.fetched_count }} / {{ t.failed_count }} /
+                  {{ taskFetchStats[t.id]?.avg_raw_text_chars ?? "-" }}
+                </td>
                 <td>{{ t.created_at?.slice(0, 16) || "" }}</td>
                 <td class="actions">
                   <button @click="openSources(t)">查看来源</button>
@@ -484,6 +566,9 @@ onMounted(() => {
                   </button>
                   <button v-if="canFetchSources(t)" @click="handleFetchSources(t)" :disabled="fetchingTaskId === t.id">
                     {{ fetchingTaskId === t.id ? "抓取中..." : "抓取正文" }}
+                  </button>
+                  <button v-if="canRetryFailed(t)" @click="handleFetchSources(t, true)" :disabled="fetchingTaskId === t.id">
+                    {{ fetchingTaskId === t.id ? "重试中..." : "重试失败项" }}
                   </button>
                   <button class="btn-del" @click="handleDeleteTask(t)">删除</button>
                 </td>
@@ -538,15 +623,32 @@ onMounted(() => {
           <button class="icon-btn" @click="closeSources">×</button>
         </div>
 
-        <div class="stat-strip">
-          <div><span>found</span><strong>{{ statValue("found_url_count") }}</strong></div>
-          <div><span>raw</span><strong>{{ statValue("raw_result_count") }}</strong></div>
-          <div><span>accepted</span><strong>{{ statValue("accepted_count") }}</strong></div>
-          <div><span>filtered</span><strong>{{ statValue("filtered_count") }}</strong></div>
+        <div class="stat-strip fetch-stat-strip">
+          <div><span>总数</span><strong>{{ activeFetchStats?.total ?? statValue("found_url_count") }}</strong></div>
+          <div><span>成功</span><strong>{{ activeFetchStats?.fetched_count ?? selectedTask?.fetched_count ?? 0 }}</strong></div>
+          <div><span>失败</span><strong>{{ activeFetchStats?.failed_count ?? selectedTask?.failed_count ?? 0 }}</strong></div>
+          <div><span>待抓取</span><strong>{{ activeFetchStats?.pending_count ?? 0 }}</strong></div>
+          <div><span>平均字数</span><strong>{{ activeFetchStats?.avg_raw_text_chars ?? "-" }}</strong></div>
         </div>
 
-        <div class="source-list" v-if="sourceItems.length">
-          <article v-for="item in sourceItems" :key="item.id" class="source-item">
+        <div class="fetch-tools">
+          <div class="source-filters">
+            <button :class="{ active: sourceFilter === 'ALL' }" @click="sourceFilter = 'ALL'">全部</button>
+            <button :class="{ active: sourceFilter === 'FETCHED' }" @click="sourceFilter = 'FETCHED'">已抓取</button>
+            <button :class="{ active: sourceFilter === 'FETCH_FAILED' }" @click="sourceFilter = 'FETCH_FAILED'">抓取失败</button>
+            <button :class="{ active: sourceFilter === 'DISCOVERED' }" @click="sourceFilter = 'DISCOVERED'">待抓取</button>
+            <button :class="{ active: sourceFilter === 'SHORT' }" @click="sourceFilter = 'SHORT'">正文较短</button>
+          </div>
+          <div v-if="activeFetchStats?.failure_reasons?.length" class="failure-reasons">
+            <strong>失败原因</strong>
+            <span v-for="reason in activeFetchStats.failure_reasons" :key="reason.reason">
+              {{ reason.reason }}：{{ reason.count }}
+            </span>
+          </div>
+        </div>
+
+        <div class="source-list" v-if="filteredSourceItems.length">
+          <article v-for="item in filteredSourceItems" :key="item.id" class="source-item">
             <div class="source-main">
               <a class="source-title" :href="item.source_url" target="_blank" rel="noopener noreferrer">{{ item.title || item.source_url }}</a>
               <a class="source-url" :href="item.source_url" target="_blank" rel="noopener noreferrer">{{ item.source_url }}</a>
@@ -557,15 +659,24 @@ onMounted(() => {
               <span>{{ item.query_text || "无 query" }}</span>
               <span>{{ item.engine || "未知引擎" }}</span>
               <span>{{ item.matched_reason || "未记录原因" }}</span>
-              <span>{{ item.fetch_status }}</span>
+              <span>{{ item.fetch_status_label || item.fetch_status }}</span>
+              <span :class="['quality-tag', (item.fetch_quality || '').toLowerCase()]">
+                {{ fetchQualityLabel[item.fetch_quality || ''] || item.fetch_quality || "-" }}
+              </span>
               <span>正文 {{ item.raw_text_char_count || 0 }} 字</span>
               <span>{{ item.fetched_at?.slice(0, 16) || item.created_at?.slice(0, 16) || "" }}</span>
             </div>
             <div v-if="item.error_message" class="source-error">{{ item.error_message }}</div>
-            <button class="preview-btn" @click="openPreview(item)">查看正文预览</button>
+            <div class="source-actions">
+              <a class="preview-btn" :href="item.source_url" target="_blank" rel="noopener noreferrer">打开原网页</a>
+              <button class="preview-btn" @click="openPreview(item)" :disabled="previewLoading">查看正文预览</button>
+              <button class="preview-btn" @click="handleFetchSource(item)" :disabled="fetchingSourceId === item.id">
+                {{ fetchingSourceId === item.id ? "抓取中..." : "重新抓取" }}
+              </button>
+            </div>
           </article>
         </div>
-        <p v-else class="empty compact">{{ sourcesLoading ? "加载中..." : "暂无来源 URL" }}</p>
+        <p v-else class="empty compact">{{ sourcesLoading ? "加载中..." : "暂无匹配来源 URL" }}</p>
       </div>
     </div>
 
@@ -575,6 +686,7 @@ onMounted(() => {
           <div>
             <h3>正文预览</h3>
             <p>{{ previewItem.title || previewItem.source_url }}</p>
+            <p>{{ previewItem.fetch_status_label || previewItem.fetch_status }} · {{ previewItem.raw_text_char_count }} 字</p>
           </div>
           <button class="icon-btn" @click="closePreview">×</button>
         </div>
@@ -1004,6 +1116,63 @@ onMounted(() => {
   font-size: 20px;
 }
 
+.fetch-stat-strip {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.fetch-tools {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fff;
+}
+
+.source-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.source-filters button {
+  padding: 6px 10px;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  background: #fff;
+  color: #344054;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.source-filters button.active {
+  border-color: #2e7d6f;
+  background: #eef8f5;
+  color: #155e52;
+  font-weight: 600;
+}
+
+.failure-reasons {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  color: #667085;
+  font-size: 12px;
+}
+
+.failure-reasons strong {
+  color: #344054;
+}
+
+.failure-reasons span {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #fff4ed;
+  color: #b54708;
+}
+
 .source-list {
   overflow: auto;
   padding: 14px 20px 18px;
@@ -1071,6 +1240,26 @@ onMounted(() => {
   text-overflow: ellipsis;
 }
 
+.source-tags .quality-tag.good {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.source-tags .quality-tag.short {
+  background: #fffaeb;
+  color: #b54708;
+}
+
+.source-tags .quality-tag.failed {
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.source-tags .quality-tag.pending {
+  background: #eef4ff;
+  color: #3538cd;
+}
+
 .source-error {
   margin-top: 8px;
   color: #b42318;
@@ -1082,8 +1271,17 @@ onMounted(() => {
   overflow: hidden;
 }
 
-.preview-btn {
+.source-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-top: 10px;
+}
+
+.preview-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 5px 10px;
   border: 1px solid #d0d5dd;
   border-radius: 4px;
@@ -1091,6 +1289,13 @@ onMounted(() => {
   color: #344054;
   cursor: pointer;
   font-size: 13px;
+  line-height: 1.4;
+  text-decoration: none;
+}
+
+.preview-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .preview-overlay {

@@ -18,6 +18,7 @@ from interview_api.modules.experience.schemas import (
     ExperienceCollectionTaskCreate,
     ExperienceKeywordPresetCreate,
     ExperienceKeywordPresetUpdate,
+    ExperienceSourceFetchRequest,
     ExperienceTaskFetchRequest,
 )
 from interview_api.modules.experience.service import (
@@ -162,6 +163,20 @@ async def get_task(
     result = await svc.get_task(task_id)
     if result is None:
         raise HTTPException(status_code=404, detail="Task not found")
+    return success(data=result)
+
+
+@router.get("/tasks/{task_id}/fetch-stats")
+async def get_task_fetch_stats(
+    task_id: int,
+    _admin=Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    svc = _task_service(db)
+    try:
+        result = await svc.get_fetch_stats(task_id)
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     return success(data=result)
 
 
@@ -379,3 +394,79 @@ async def list_task_sources(
     except LookupError as e:
         raise HTTPException(status_code=404, detail=str(e))
     return success(data=result)
+
+
+@router.get("/sources/{source_id}/preview")
+async def preview_source_text(
+    source_id: int,
+    _admin=Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    svc = _task_service(db)
+    try:
+        result = await svc.get_source_preview(source_id)
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return success(data=result)
+
+
+@router.post("/sources/{source_id}/fetch")
+async def fetch_single_source(
+    source_id: int,
+    request: Request,
+    body: ExperienceSourceFetchRequest | None = None,
+    _limit=Depends(fetch_run_limit),
+    admin_user=Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    svc = _task_service(db)
+    audit = AuditService(db)
+    payload = body or ExperienceSourceFetchRequest()
+    try:
+        async with redis_lock(f"experience:source:{source_id}:fetch", 600):
+            result = await svc.fetch_source_item(source_id, force=payload.force)
+    except ResourceLockedError as e:
+        await audit.log_event(
+            action="experience.source.fetch",
+            actor_user_id=admin_user.id,
+            actor_role=admin_user.role,
+            resource_type="experience_source_item",
+            resource_id=str(source_id),
+            metadata_json={"source_id": source_id, "force": payload.force},
+            status="FAILED",
+            error_message=e.message,
+            **audit_request_metadata(request),
+        )
+        raise
+    except LookupError as e:
+        await audit.log_event(
+            action="experience.source.fetch",
+            actor_user_id=admin_user.id,
+            actor_role=admin_user.role,
+            resource_type="experience_source_item",
+            resource_id=str(source_id),
+            metadata_json={"source_id": source_id, "force": payload.force},
+            status="FAILED",
+            error_message=str(e),
+            **audit_request_metadata(request),
+        )
+        raise HTTPException(status_code=404, detail=str(e))
+
+    await audit.log_event(
+        action="experience.source.fetch",
+        actor_user_id=admin_user.id,
+        actor_role=admin_user.role,
+        resource_type="experience_source_item",
+        resource_id=str(source_id),
+        metadata_json={
+            "source_id": source_id,
+            "task_id": result.get("task_id"),
+            "force": payload.force,
+            "skipped": result.get("skipped"),
+            "fetch_status": result.get("fetch_status"),
+            "raw_text_char_count": result.get("raw_text_char_count"),
+            "error_message": result.get("error_message"),
+        },
+        **audit_request_metadata(request),
+    )
+    return success(data=result, message="Source fetch completed")

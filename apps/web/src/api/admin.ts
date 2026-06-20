@@ -106,9 +106,37 @@ export interface ExperienceSourceItem {
   raw_text_preview?: string
   fetched_at?: string
   fetch_status: string
+  fetch_status_label?: string
+  fetch_quality?: "GOOD" | "SHORT" | "FAILED" | "PENDING" | string
   extract_status?: string
   error_message?: string
   created_at?: string
+}
+
+export interface ExperienceFetchStats {
+  task_id: number
+  total: number
+  discovered_count: number
+  fetched_count: number
+  failed_count: number
+  pending_count: number
+  avg_raw_text_chars: number
+  max_raw_text_chars: number
+  min_raw_text_chars: number
+  failure_reasons: Array<{ reason: string; count: number }>
+  platform_stats: Array<{ platform: string; total: number; fetched: number; failed: number }>
+}
+
+export interface ExperienceSourcePreview {
+  source_id: number
+  title?: string
+  source_url: string
+  fetch_status: string
+  fetch_status_label?: string
+  fetch_quality?: string
+  raw_text_char_count: number
+  raw_text_preview: string
+  message?: string
 }
 
 export async function listExperienceTasks(params?: {
@@ -175,6 +203,29 @@ export async function listExperienceTaskSources(
   params?: { offset?: number; limit?: number; fetch_status?: string }
 ): Promise<{ items: ExperienceSourceItem[]; total: number }> {
   return client.get(`/admin/experience/tasks/${id}/sources`, { params })
+}
+
+export async function getExperienceTaskFetchStats(id: number): Promise<ExperienceFetchStats> {
+  return client.get(`/admin/experience/tasks/${id}/fetch-stats`)
+}
+
+export async function getExperienceSourcePreview(id: number): Promise<ExperienceSourcePreview> {
+  return client.get(`/admin/experience/sources/${id}/preview`)
+}
+
+export async function fetchExperienceSource(
+  id: number,
+  data?: { force?: boolean }
+): Promise<{
+  source_id: number
+  task_id: number
+  skipped: boolean
+  fetch_status: string
+  error_message?: string
+  raw_text_char_count: number
+  item?: ExperienceSourceItem
+}> {
+  return client.post(`/admin/experience/sources/${id}/fetch`, data || {}, { timeout: 180000 })
 }
 
 export interface AuditLog {

@@ -1,6 +1,6 @@
 """Phase 4: Experience keyword presets repository."""
 
-from sqlalchemy import select, update, delete, func, desc
+from sqlalchemy import case, select, update, delete, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from interview_api.modules.experience.models import (
@@ -194,9 +194,7 @@ class ExperienceSourceItemRepository:
         retry_failed: bool = False,
         limit: int = 20,
     ) -> list[ExperienceSourceItem]:
-        statuses = ["DISCOVERED"]
-        if retry_failed:
-            statuses.append("FETCH_FAILED")
+        statuses = ["FETCH_FAILED"] if retry_failed else ["DISCOVERED"]
         result = await self.db.execute(
             select(ExperienceSourceItem)
             .where(
@@ -207,6 +205,85 @@ class ExperienceSourceItemRepository:
             .limit(limit)
         )
         return list(result.scalars().all())
+
+    async def get_fetch_stats_by_task(self, task_id: int) -> dict:
+        result = await self.db.execute(
+            select(
+                func.count(ExperienceSourceItem.id),
+                func.coalesce(
+                    func.sum(case((ExperienceSourceItem.fetch_status == "DISCOVERED", 1), else_=0)),
+                    0,
+                ),
+                func.coalesce(
+                    func.sum(case((ExperienceSourceItem.fetch_status == "FETCHED", 1), else_=0)),
+                    0,
+                ),
+                func.coalesce(
+                    func.sum(case((ExperienceSourceItem.fetch_status == "FETCH_FAILED", 1), else_=0)),
+                    0,
+                ),
+                func.avg(func.length(ExperienceSourceItem.raw_text)),
+                func.max(func.length(ExperienceSourceItem.raw_text)),
+                func.min(func.length(ExperienceSourceItem.raw_text)),
+            ).where(ExperienceSourceItem.task_id == task_id)
+        )
+        row = result.one()
+        return {
+            "total": int(row[0] or 0),
+            "discovered_count": int(row[1] or 0),
+            "fetched_count": int(row[2] or 0),
+            "failed_count": int(row[3] or 0),
+            "avg_raw_text_chars": int(row[4] or 0),
+            "max_raw_text_chars": int(row[5] or 0),
+            "min_raw_text_chars": int(row[6] or 0),
+        }
+
+    async def list_failure_reasons_by_task(self, task_id: int) -> list[dict]:
+        result = await self.db.execute(
+            select(
+                ExperienceSourceItem.error_message,
+                func.count(ExperienceSourceItem.id),
+            )
+            .where(
+                ExperienceSourceItem.task_id == task_id,
+                ExperienceSourceItem.fetch_status == "FETCH_FAILED",
+            )
+            .group_by(ExperienceSourceItem.error_message)
+            .order_by(desc(func.count(ExperienceSourceItem.id)))
+        )
+        return [
+            {"reason": row[0] or "unknown", "count": int(row[1] or 0)}
+            for row in result.all()
+        ]
+
+    async def list_platform_fetch_stats_by_task(self, task_id: int) -> list[dict]:
+        platform_expr = func.coalesce(ExperienceSourceItem.platform, "通用搜索")
+        result = await self.db.execute(
+            select(
+                platform_expr,
+                func.count(ExperienceSourceItem.id),
+                func.coalesce(
+                    func.sum(case((ExperienceSourceItem.fetch_status == "FETCHED", 1), else_=0)),
+                    0,
+                ),
+                func.coalesce(
+                    func.sum(case((ExperienceSourceItem.fetch_status == "FETCH_FAILED", 1), else_=0)),
+                    0,
+                ),
+            )
+            .where(ExperienceSourceItem.task_id == task_id)
+            .group_by(platform_expr)
+            .order_by(platform_expr)
+        )
+        return [
+            {
+                "platform": row[0] or "通用搜索",
+                "total": int(row[1] or 0),
+                "fetched": int(row[2] or 0),
+                "failed": int(row[3] or 0),
+            }
+            for row in result.all()
+        ]
 
     async def get_source_item(self, source_id: int) -> ExperienceSourceItem | None:
         result = await self.db.execute(
