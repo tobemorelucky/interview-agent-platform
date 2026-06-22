@@ -237,6 +237,11 @@ export async function extractExperienceSource(
   is_interview_experience: boolean
   experience_id: number | null
   question_count: number
+  indexable_question_count: number
+  reliability_score?: number | null
+  review_status?: string | null
+  risk_flags?: string[]
+  quality_gate_reasons?: string[]
   status?: string
   extract_status?: string
   skipped?: boolean

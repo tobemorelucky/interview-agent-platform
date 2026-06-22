@@ -1,27 +1,29 @@
 <script setup lang="ts">
-import { computed, ref, onMounted } from "vue"
+import { computed, onMounted, ref } from "vue"
 import {
-  listExperienceKeywords,
   createExperienceKeyword,
-  updateExperienceKeyword,
-  deleteExperienceKeyword,
-  type ExperienceKeywordPreset,
-  listExperienceTasks,
   createExperienceTask,
+  deleteExperienceKeyword,
   deleteExperienceTask,
-  runExperienceTaskSearch,
-  fetchExperienceTaskSources,
-  fetchExperienceSource,
   extractExperienceSource,
+  fetchExperienceSource,
+  fetchExperienceTaskSources,
   getExperienceSourcePreview,
   getExperienceTaskFetchStats,
+  listExperienceKeywords,
   listExperienceTaskSources,
+  listExperienceTasks,
+  runExperienceTaskSearch,
+  updateExperienceKeyword,
   type ExperienceCollectionTask,
   type ExperienceFetchStats,
+  type ExperienceKeywordPreset,
   type ExperienceSourceItem,
   type ExperienceSourcePreview,
 } from "../api/admin"
 
+type TabKey = "tasks" | "keywords"
+type SourceFilter = "ALL" | "FETCHED" | "FETCH_FAILED" | "DISCOVERED" | "SHORT"
 type SearchStats = {
   raw_result_count: number
   accepted_count: number
@@ -30,36 +32,38 @@ type SearchStats = {
   found_url_count: number
 }
 
-const activeTab = ref<"tasks" | "keywords">("tasks")
-
-const keywords = ref<ExperienceKeywordPreset[]>([])
-const kwTotal = ref(0)
-const filterType = ref("")
-const showForm = ref(false)
-const editingId = ref<number | null>(null)
-const kwForm = ref({ preset_type: "COMPANY", name: "", aliases_text: "", enabled: true })
-
-const typeLabel: Record<string, string> = { COMPANY: "公司", JOB: "岗位", PLATFORM: "平台" }
-const types = ["COMPANY", "JOB", "PLATFORM"]
-
+const activeTab = ref<TabKey>("tasks")
 const tasks = ref<ExperienceCollectionTask[]>([])
 const taskTotal = ref(0)
+const taskStats = ref<Record<number, SearchStats>>({})
+const taskFetchStats = ref<Record<number, ExperienceFetchStats>>({})
 const runningTaskId = ref<number | null>(null)
 const fetchingTaskId = ref<number | null>(null)
 const fetchingSourceId = ref<number | null>(null)
 const extractingSourceId = ref<number | null>(null)
-const taskStats = ref<Record<number, SearchStats>>({})
-const taskFetchStats = ref<Record<number, ExperienceFetchStats>>({})
+const creating = ref(false)
+const createStatus = ref("")
+
+const selectedTask = ref<ExperienceCollectionTask | null>(null)
+const sourceModalOpen = ref(false)
+const sourcesLoading = ref(false)
 const sourceItems = ref<ExperienceSourceItem[]>([])
 const sourceTotal = ref(0)
-const sourcesLoading = ref(false)
-const sourceFilter = ref<"ALL" | "FETCHED" | "FETCH_FAILED" | "DISCOVERED" | "SHORT">("ALL")
-const sourceModalOpen = ref(false)
+const sourceFilter = ref<SourceFilter>("ALL")
 const previewItem = ref<ExperienceSourcePreview | null>(null)
 const previewLoading = ref(false)
-const selectedTask = ref<ExperienceCollectionTask | null>(null)
-const createStatus = ref("")
-const creating = ref(false)
+
+const keywords = ref<ExperienceKeywordPreset[]>([])
+const kwTotal = ref(0)
+const filterType = ref("")
+const showKeywordForm = ref(false)
+const editingKeywordId = ref<number | null>(null)
+const kwForm = ref({ preset_type: "COMPANY", name: "", aliases_text: "", enabled: true })
+
+const jobPresets = ref<ExperienceKeywordPreset[]>([])
+const companyPresets = ref<ExperienceKeywordPreset[]>([])
+const platformPresets = ref<ExperienceKeywordPreset[]>([])
+const allowedPlatformNames = ["牛客", "小红书", "抖音"]
 
 const taskForm = ref({
   search_scope: "JOB" as "JOB" | "COMPANY",
@@ -80,35 +84,66 @@ const timePresets = [
   { label: "7 天", value: 168 },
 ]
 
-const allowedPlatformNames = ["牛客", "小红书", "抖音"]
-const jobPresets = ref<ExperienceKeywordPreset[]>([])
-const companyPresets = ref<ExperienceKeywordPreset[]>([])
-const platformPresets = ref<ExperienceKeywordPreset[]>([])
-
-async function loadKeywords() {
-  const params: any = {}
-  if (filterType.value) params.preset_type = filterType.value
-  const res = await listExperienceKeywords(params)
-  keywords.value = res.items || []
-  kwTotal.value = res.total || 0
+const typeLabel: Record<string, string> = {
+  COMPANY: "公司",
+  JOB: "岗位",
+  PLATFORM: "平台",
 }
+const statusLabel: Record<string, string> = {
+  PENDING: "待执行",
+  SEARCHING: "搜索中",
+  SEARCH_COMPLETED: "搜索完成",
+  FETCHING: "抓取中",
+  FETCH_COMPLETED: "抓取完成",
+  EXTRACTING: "抽取中",
+  WAITING_REVIEW: "待审核",
+  NEEDS_MANUAL_CHECK: "需人工确认",
+  REJECTED: "已拒绝",
+  FAILED: "失败",
+}
+const fetchQualityLabel: Record<string, string> = {
+  GOOD: "正文正常",
+  SHORT: "正文较短",
+  FAILED: "抓取失败",
+  PENDING: "待抓取",
+}
+const sourceFilters: Array<{ key: SourceFilter; label: string }> = [
+  { key: "ALL", label: "全部" },
+  { key: "FETCHED", label: "已抓取" },
+  { key: "FETCH_FAILED", label: "抓取失败" },
+  { key: "DISCOVERED", label: "待抓取" },
+  { key: "SHORT", label: "正文较短" },
+]
+
+const activeFetchStats = computed(() => {
+  const task = selectedTask.value
+  return task ? taskFetchStats.value[task.id] : null
+})
+
+const filteredSourceItems = computed(() => {
+  if (sourceFilter.value === "ALL") return sourceItems.value
+  if (sourceFilter.value === "SHORT") {
+    return sourceItems.value.filter((item) => item.fetch_quality === "SHORT")
+  }
+  return sourceItems.value.filter((item) => item.fetch_status === sourceFilter.value)
+})
 
 async function loadTasks() {
   const res = await listExperienceTasks()
   tasks.value = res.items || []
   taskTotal.value = res.total || 0
   if (selectedTask.value) {
-    selectedTask.value = tasks.value.find(t => t.id === selectedTask.value?.id) || selectedTask.value
+    selectedTask.value = tasks.value.find((task) => task.id === selectedTask.value?.id) || selectedTask.value
   }
   await loadTaskFetchStats()
 }
 
 async function loadTaskFetchStats() {
-  const candidates = tasks.value.filter(t => t.found_url_count > 0).slice(0, 50)
+  const next = { ...taskFetchStats.value }
+  const candidates = tasks.value.filter((task) => task.found_url_count > 0).slice(0, 50)
   const results = await Promise.allSettled(
     candidates.map(async (task) => [task.id, await getExperienceTaskFetchStats(task.id)] as const)
   )
-  const next = { ...taskFetchStats.value }
   for (const result of results) {
     if (result.status === "fulfilled") {
       const [taskId, stats] = result.value
@@ -116,6 +151,14 @@ async function loadTaskFetchStats() {
     }
   }
   taskFetchStats.value = next
+}
+
+async function loadKeywords() {
+  const params: { preset_type?: string } = {}
+  if (filterType.value) params.preset_type = filterType.value
+  const res = await listExperienceKeywords(params)
+  keywords.value = res.items || []
+  kwTotal.value = res.total || 0
 }
 
 async function loadPresets() {
@@ -126,7 +169,7 @@ async function loadPresets() {
   ])
   jobPresets.value = jobs.items || []
   companyPresets.value = companies.items || []
-  const presetMap = new Map((platforms.items || []).map(p => [p.name, p]))
+  const presetMap = new Map((platforms.items || []).map((preset) => [preset.name, preset]))
   platformPresets.value = allowedPlatformNames.map((name, index) => (
     presetMap.get(name) || {
       id: -(index + 1),
@@ -144,6 +187,24 @@ function toggleScope(scope: "JOB" | "COMPANY") {
   taskForm.value.selected_company_keywords = []
 }
 
+function scopeLabel(scope: string) {
+  return scope === "COMPANY" ? "按公司" : "按岗位"
+}
+
+function taskKeywords(task: ExperienceCollectionTask) {
+  const values = task.search_scope === "COMPANY" ? task.company_keywords_json : task.job_keywords_json
+  return values?.join(", ") || "-"
+}
+
+function taskPlatforms(task: ExperienceCollectionTask) {
+  const values = task.platforms_json || []
+  return values.length ? values.join(", ") : "通用搜索"
+}
+
+function sourcePlatform(platform?: string | null) {
+  return platform || "通用搜索"
+}
+
 function canRunSearch(status: string) {
   return ["PENDING", "FAILED", "SEARCH_COMPLETED"].includes(status)
 }
@@ -156,52 +217,68 @@ function canRetryFailed(task: ExperienceCollectionTask) {
   return (task.failed_count || 0) > 0 && task.status !== "FETCHING"
 }
 
-function scopeLabel(scope: string) {
-  return scope === "COMPANY" ? "按公司" : "按岗位"
-}
-
-function taskKeywords(task: ExperienceCollectionTask) {
-  const values = task.search_scope === "COMPANY" ? task.company_keywords_json : task.job_keywords_json
-  return values?.join(", ") || "-"
-}
-
-function taskPlatforms(task: ExperienceCollectionTask) {
-  const values = (task.platforms_json || []).filter(p => p !== "全网")
-  return values.length ? values.join(", ") : "通用搜索"
-}
-
-function sourcePlatform(platform?: string | null) {
-  return platform && platform !== "全网" ? platform : "通用搜索"
-}
-
-function formatSearchResultMessage(result: SearchStats) {
-  return `搜索完成，发现 ${result.found_url_count || 0} 个 URL（raw=${result.raw_result_count || 0}, accepted=${result.accepted_count || 0}, filtered=${result.filtered_count || 0}, duplicate=${result.duplicate_count || 0}）`
-}
-
 function rememberStats(taskId: number, result: SearchStats) {
   taskStats.value = { ...taskStats.value, [taskId]: result }
 }
 
-function statValue(key: keyof SearchStats) {
-  const task = selectedTask.value
-  if (!task) return "-"
-  if (key === "found_url_count") return String(task.found_url_count || 0)
-  const stats = taskStats.value[task.id]
-  return stats ? String(stats[key] || 0) : "-"
+function searchStat(taskId: number, key: keyof SearchStats) {
+  return taskStats.value[taskId]?.[key] ?? "-"
 }
 
-const activeFetchStats = computed(() => {
-  const task = selectedTask.value
-  return task ? taskFetchStats.value[task.id] : null
-})
+function formatSearchMessage(result: SearchStats) {
+  return `搜索完成，发现 ${result.found_url_count || 0} 个 URL（raw=${result.raw_result_count || 0}, accepted=${result.accepted_count || 0}, filtered=${result.filtered_count || 0}, duplicate=${result.duplicate_count || 0}）`
+}
 
-const filteredSourceItems = computed(() => {
-  if (sourceFilter.value === "ALL") return sourceItems.value
-  if (sourceFilter.value === "SHORT") {
-    return sourceItems.value.filter(item => item.fetch_quality === "SHORT")
+async function handleCreateTask() {
+  const form = taskForm.value
+  if (form.search_scope === "JOB" && form.selected_job_keywords.length === 0) {
+    alert("请至少选择一个岗位关键词")
+    return
   }
-  return sourceItems.value.filter(item => item.fetch_status === sourceFilter.value)
-})
+  if (form.search_scope === "COMPANY" && form.selected_company_keywords.length === 0) {
+    alert("请至少选择一个公司关键词")
+    return
+  }
+  creating.value = true
+  createStatus.value = "正在创建任务..."
+  try {
+    const task = await createExperienceTask({
+      search_scope: form.search_scope,
+      time_window_hours: form.time_window_hours,
+      job_keywords_json: form.search_scope === "JOB" ? form.selected_job_keywords : [],
+      company_keywords_json: form.search_scope === "COMPANY" ? form.selected_company_keywords : [],
+      platforms_json: form.selected_platforms,
+      max_results: form.max_results,
+      review_mode: form.review_mode,
+      write_to_question_db: form.write_to_question_db,
+      write_to_vector_index: form.write_to_vector_index,
+      update_public_summary: form.update_public_summary,
+    })
+    createStatus.value = "任务已创建，正在自动搜索..."
+    await loadTasks()
+    runningTaskId.value = task.id
+    try {
+      const result = await runExperienceTaskSearch(task.id)
+      rememberStats(task.id, result)
+      await loadTasks()
+      selectedTask.value = tasks.value.find((item) => item.id === task.id) || task
+      await loadSources(task.id)
+      await loadFetchStats(task.id)
+      sourceModalOpen.value = true
+      createStatus.value = formatSearchMessage(result)
+    } catch (error: any) {
+      await loadTasks()
+      createStatus.value = error?.message || "自动搜索失败，任务已保留在采集历史中"
+    } finally {
+      runningTaskId.value = null
+    }
+  } catch (error: any) {
+    createStatus.value = ""
+    alert(error?.message || "创建失败")
+  } finally {
+    creating.value = false
+  }
+}
 
 async function handleRunSearch(task: ExperienceCollectionTask) {
   runningTaskId.value = task.id
@@ -211,10 +288,11 @@ async function handleRunSearch(task: ExperienceCollectionTask) {
     await loadTasks()
     if (sourceModalOpen.value && selectedTask.value?.id === task.id) {
       await loadSources(task.id)
+      await loadFetchStats(task.id)
     }
-    alert(formatSearchResultMessage(result))
-  } catch (e: any) {
-    alert(e?.message || "搜索执行失败")
+    alert(formatSearchMessage(result))
+  } catch (error: any) {
+    alert(error?.message || "搜索执行失败")
   } finally {
     runningTaskId.value = null
   }
@@ -226,71 +304,22 @@ async function handleFetchSources(task: ExperienceCollectionTask, retryFailed = 
     const result = await fetchExperienceTaskSources(task.id, { retry_failed: retryFailed, limit: 20 })
     await loadTasks()
     if (sourceModalOpen.value && selectedTask.value?.id === task.id) {
-      selectedTask.value = tasks.value.find(t => t.id === task.id) || selectedTask.value
+      selectedTask.value = tasks.value.find((item) => item.id === task.id) || selectedTask.value
       await loadSources(task.id)
       await loadFetchStats(task.id)
     }
     alert(`${retryFailed ? "失败项重试" : "正文抓取"}完成：成功 ${result.fetched_count}，失败 ${result.failed_count}`)
-  } catch (e: any) {
-    alert(e?.message || (retryFailed ? "失败项重试失败" : "正文抓取失败"))
+  } catch (error: any) {
+    alert(error?.message || (retryFailed ? "失败项重试失败" : "正文抓取失败"))
   } finally {
     fetchingTaskId.value = null
-  }
-}
-
-async function handleCreateTask() {
-  const f = taskForm.value
-  if (f.search_scope === "JOB" && f.selected_job_keywords.length === 0) {
-    alert("请至少选择一个岗位关键词")
-    return
-  }
-  if (f.search_scope === "COMPANY" && f.selected_company_keywords.length === 0) {
-    alert("请至少选择一个公司关键词")
-    return
-  }
-  creating.value = true
-  createStatus.value = ""
-  try {
-    const task = await createExperienceTask({
-      search_scope: f.search_scope,
-      time_window_hours: f.time_window_hours,
-      job_keywords_json: f.search_scope === "JOB" ? f.selected_job_keywords : [],
-      company_keywords_json: f.search_scope === "COMPANY" ? f.selected_company_keywords : [],
-      platforms_json: f.selected_platforms,
-      max_results: f.max_results,
-      review_mode: f.review_mode,
-      write_to_question_db: f.write_to_question_db,
-      write_to_vector_index: f.write_to_vector_index,
-      update_public_summary: f.update_public_summary,
-    })
-    createStatus.value = "任务已创建，正在自动搜索..."
-    await loadTasks()
-    runningTaskId.value = task.id
-    try {
-      const result = await runExperienceTaskSearch(task.id)
-      rememberStats(task.id, result)
-      await loadTasks()
-      selectedTask.value = tasks.value.find(t => t.id === task.id) || task
-      await loadSources(task.id)
-      sourceModalOpen.value = true
-      createStatus.value = formatSearchResultMessage(result)
-    } catch (searchError: any) {
-      await loadTasks()
-      createStatus.value = searchError?.message || "自动搜索失败，任务已保留在采集历史中"
-    } finally {
-      runningTaskId.value = null
-    }
-  } catch (e: any) {
-    alert(e?.message || "创建失败")
-  } finally {
-    creating.value = false
   }
 }
 
 async function loadSources(taskId: number) {
   sourcesLoading.value = true
   try {
-    const res = await listExperienceTaskSources(taskId, { offset: 0, limit: 50 })
+    const res = await listExperienceTaskSources(taskId, { offset: 0, limit: 100 })
     sourceItems.value = res.items || []
     sourceTotal.value = res.total || 0
   } finally {
@@ -305,8 +334,9 @@ async function loadFetchStats(taskId: number) {
 
 async function openSources(task: ExperienceCollectionTask) {
   selectedTask.value = task
-  sourceModalOpen.value = true
   sourceFilter.value = "ALL"
+  previewItem.value = null
+  sourceModalOpen.value = true
   await Promise.all([loadSources(task.id), loadFetchStats(task.id)])
 }
 
@@ -322,15 +352,11 @@ async function openPreview(item: ExperienceSourceItem) {
   previewLoading.value = true
   try {
     previewItem.value = await getExperienceSourcePreview(item.id)
-  } catch (e: any) {
-    alert(e?.message || "正文预览加载失败")
+  } catch (error: any) {
+    alert(error?.message || "正文预览加载失败")
   } finally {
     previewLoading.value = false
   }
-}
-
-function closePreview() {
-  previewItem.value = null
 }
 
 async function handleFetchSource(item: ExperienceSourceItem) {
@@ -342,8 +368,8 @@ async function handleFetchSource(item: ExperienceSourceItem) {
       await loadTasks()
     }
     alert(result.fetch_status === "FETCHED" ? "重新抓取成功" : `重新抓取失败：${result.error_message || "未知错误"}`)
-  } catch (e: any) {
-    alert(e?.message || "重新抓取失败")
+  } catch (error: any) {
+    alert(error?.message || "重新抓取失败")
   } finally {
     fetchingSourceId.value = null
   }
@@ -359,93 +385,76 @@ async function handleExtractSource(item: ExperienceSourceItem) {
     }
     alert(
       `抽取完成：${result.is_interview_experience ? "是面经" : "非面经"}；` +
-      `问题数 ${result.question_count || 0}；` +
-      `agent_run_id ${result.agent_run_id || "-"}；` +
-      `状态 ${result.extract_status || result.status || "-"}`
+      `问题数 ${result.question_count || 0}，可索引 ${result.indexable_question_count || 0}；` +
+      `可靠性 ${result.reliability_score ?? "-"}；` +
+      `审核状态 ${result.review_status || result.status || "-"}；` +
+      `质量门 ${result.quality_gate_reasons?.join(", ") || "-"}`
     )
-  } catch (e: any) {
-    alert(e?.message || "抽取面经失败")
+  } catch (error: any) {
+    alert(error?.message || "抽取面经失败")
   } finally {
     extractingSourceId.value = null
   }
 }
 
 async function handleDeleteTask(task: ExperienceCollectionTask) {
-  if (!confirm(`确认删除采集任务 #${task.id}？相关来源 URL 也会一并删除。`)) return
+  if (!confirm(`确认删除采集任务 #${task.id}？相关来源 URL 也会一起删除。`)) return
   await deleteExperienceTask(task.id)
   if (selectedTask.value?.id === task.id) closeSources()
   await loadTasks()
 }
 
-function openCreate() {
-  editingId.value = null
+function openCreateKeyword() {
+  editingKeywordId.value = null
   kwForm.value = { preset_type: "COMPANY", name: "", aliases_text: "", enabled: true }
-  showForm.value = true
+  showKeywordForm.value = true
 }
 
-function openEdit(kw: ExperienceKeywordPreset) {
-  editingId.value = kw.id
+function openEditKeyword(keyword: ExperienceKeywordPreset) {
+  editingKeywordId.value = keyword.id
   kwForm.value = {
-    preset_type: kw.preset_type,
-    name: kw.name,
-    aliases_text: (kw.aliases_json || []).join(", "),
-    enabled: kw.enabled,
+    preset_type: keyword.preset_type,
+    name: keyword.name,
+    aliases_text: (keyword.aliases_json || []).join(", "),
+    enabled: keyword.enabled,
   }
-  showForm.value = true
+  showKeywordForm.value = true
 }
 
-function closeForm() {
-  showForm.value = false
-  editingId.value = null
+function closeKeywordForm() {
+  showKeywordForm.value = false
+  editingKeywordId.value = null
 }
 
 async function handleSaveKeyword() {
-  const aliases = kwForm.value.aliases_text.split(/[,，、]/).map(s => s.trim()).filter(Boolean)
+  const aliases = kwForm.value.aliases_text
+    .split(/[,，、]/)
+    .map((item) => item.trim())
+    .filter(Boolean)
   const data = {
     preset_type: kwForm.value.preset_type,
     name: kwForm.value.name,
     aliases_json: aliases,
     enabled: kwForm.value.enabled,
   }
-  if (editingId.value) await updateExperienceKeyword(editingId.value, data)
-  else await createExperienceKeyword(data)
-  closeForm()
-  await loadKeywords()
+  if (editingKeywordId.value) {
+    await updateExperienceKeyword(editingKeywordId.value, data)
+  } else {
+    await createExperienceKeyword(data)
+  }
+  closeKeywordForm()
+  await Promise.all([loadKeywords(), loadPresets()])
 }
 
-async function handleToggleKeyword(kw: ExperienceKeywordPreset) {
-  await updateExperienceKeyword(kw.id, { enabled: !kw.enabled })
-  await loadKeywords()
+async function handleToggleKeyword(keyword: ExperienceKeywordPreset) {
+  await updateExperienceKeyword(keyword.id, { enabled: !keyword.enabled })
+  await Promise.all([loadKeywords(), loadPresets()])
 }
 
 async function handleDeleteKeyword(id: number) {
-  if (!confirm("确认删除？")) return
+  if (!confirm("确认删除该关键词？")) return
   await deleteExperienceKeyword(id)
-  await loadKeywords()
-}
-
-const statusLabel: Record<string, string> = {
-  PENDING: "待执行",
-  SEARCHING: "搜索中",
-  SEARCH_COMPLETED: "搜索完成",
-  FETCHING: "抓取中",
-  FETCH_COMPLETED: "抓取完成",
-  EXTRACTING: "抽取中",
-  ROUTING: "分类中",
-  SCORING: "评分中",
-  DEDUPING: "去重中",
-  WAITING_REVIEW: "待审核",
-  APPROVED: "已通过",
-  INDEXING: "索引入库",
-  COMPLETED: "已完成",
-  FAILED: "失败",
-}
-
-const fetchQualityLabel: Record<string, string> = {
-  GOOD: "正文正常",
-  SHORT: "正文较短",
-  FAILED: "抓取失败",
-  PENDING: "待抓取",
+  await Promise.all([loadKeywords(), loadPresets()])
 }
 
 onMounted(() => {
@@ -460,18 +469,18 @@ onMounted(() => {
     <header class="page-heading">
       <div>
         <h2>面经采集</h2>
-        <p class="desc">创建搜索任务、自动发现候选 URL，并在进入正文抓取前完成来源检查。</p>
+        <p>创建采集任务、查看来源、抓取正文，并对正文运行面经抽取质量链路。</p>
       </div>
     </header>
 
-    <div class="main-tabs">
+    <div class="tabs">
       <button :class="{ active: activeTab === 'tasks' }" @click="activeTab = 'tasks'">采集历史</button>
       <button :class="{ active: activeTab === 'keywords' }" @click="activeTab = 'keywords'">关键词预设</button>
     </div>
 
-    <div v-if="activeTab === 'tasks'" class="tasks-view">
-      <section class="section-block">
-        <div class="section-title">
+    <main v-if="activeTab === 'tasks'" class="task-layout">
+      <section class="panel">
+        <div class="panel-title">
           <h3>创建采集任务</h3>
           <span v-if="createStatus">{{ createStatus }}</span>
         </div>
@@ -481,14 +490,16 @@ onMounted(() => {
             <label>
               搜索维度
               <select v-model="taskForm.search_scope" @change="toggleScope(taskForm.search_scope)">
-                <option value="JOB">按岗位搜索</option>
-                <option value="COMPANY">按公司搜索</option>
+                <option value="JOB">按岗位</option>
+                <option value="COMPANY">按公司</option>
               </select>
             </label>
             <label>
               时间范围
               <select v-model.number="taskForm.time_window_hours">
-                <option v-for="p in timePresets" :key="p.value" :value="p.value">{{ p.label }}</option>
+                <option v-for="preset in timePresets" :key="preset.value" :value="preset.value">
+                  {{ preset.label }}
+                </option>
               </select>
             </label>
             <label>
@@ -504,57 +515,57 @@ onMounted(() => {
             </label>
           </div>
 
-          <div v-if="taskForm.search_scope === 'JOB'" class="select-section">
-            <div class="field-title">关键词多选</div>
-            <div class="checkbox-group">
-              <label v-for="j in jobPresets" :key="j.id" class="cb-label">
-                <input type="checkbox" :value="j.name" v-model="taskForm.selected_job_keywords" />
-                {{ j.name }}
+          <div class="field-group" v-if="taskForm.search_scope === 'JOB'">
+            <div class="field-title">岗位关键词</div>
+            <div class="check-grid">
+              <label v-for="item in jobPresets" :key="item.id">
+                <input v-model="taskForm.selected_job_keywords" type="checkbox" :value="item.name" />
+                {{ item.name }}
               </label>
             </div>
           </div>
 
-          <div v-if="taskForm.search_scope === 'COMPANY'" class="select-section">
-            <div class="field-title">关键词多选</div>
-            <div class="checkbox-group">
-              <label v-for="c in companyPresets" :key="c.id" class="cb-label">
-                <input type="checkbox" :value="c.name" v-model="taskForm.selected_company_keywords" />
-                {{ c.name }}
+          <div class="field-group" v-if="taskForm.search_scope === 'COMPANY'">
+            <div class="field-title">公司关键词</div>
+            <div class="check-grid">
+              <label v-for="item in companyPresets" :key="item.id">
+                <input v-model="taskForm.selected_company_keywords" type="checkbox" :value="item.name" />
+                {{ item.name }}
               </label>
             </div>
           </div>
 
-          <div class="select-section">
-            <div class="field-title">平台多选</div>
-            <p class="field-hint">不选择平台时，将进行不限站点的通用网页搜索；选择具体平台时，只保留对应平台官网链接，结果更精准但数量可能更少。</p>
-            <div class="checkbox-group">
-              <label v-for="p in platformPresets" :key="p.id" class="cb-label">
-                <input type="checkbox" :value="p.name" v-model="taskForm.selected_platforms" />
-                {{ p.name }}
+          <div class="field-group">
+            <div class="field-title">平台</div>
+            <p class="hint">不选择平台时进行不限站点的通用网页搜索；选择平台时只保留对应官方链接。</p>
+            <div class="check-grid">
+              <label v-for="item in platformPresets" :key="item.id">
+                <input v-model="taskForm.selected_platforms" type="checkbox" :value="item.name" />
+                {{ item.name }}
               </label>
             </div>
           </div>
 
           <div class="write-options">
-            <label><input type="checkbox" v-model="taskForm.write_to_question_db" /> 写入题库</label>
-            <label><input type="checkbox" v-model="taskForm.write_to_vector_index" /> 写入向量库</label>
-            <label><input type="checkbox" v-model="taskForm.update_public_summary" /> 更新公开总结</label>
+            <label><input v-model="taskForm.write_to_question_db" type="checkbox" /> 写入题库</label>
+            <label><input v-model="taskForm.write_to_vector_index" type="checkbox" /> 写入向量库</label>
+            <label><input v-model="taskForm.update_public_summary" type="checkbox" /> 更新公开摘要</label>
           </div>
 
-          <button class="btn-primary" @click="handleCreateTask" :disabled="creating">
-            {{ creating ? "创建并搜索中..." : "创建更新任务" }}
+          <button class="primary" :disabled="creating" @click="handleCreateTask">
+            {{ creating ? "创建并搜索中..." : "创建采集任务" }}
           </button>
         </div>
       </section>
 
-      <section class="section-block">
-        <div class="section-title">
+      <section class="panel">
+        <div class="panel-title">
           <h3>历史任务列表</h3>
           <span>共 {{ taskTotal }} 条</span>
         </div>
 
-        <div class="history-table-wrap" v-if="tasks.length">
-          <table class="history-table">
+        <div v-if="tasks.length" class="table-wrap">
+          <table>
             <thead>
               <tr>
                 <th>ID</th>
@@ -562,71 +573,81 @@ onMounted(() => {
                 <th>关键词</th>
                 <th>平台</th>
                 <th>状态</th>
-                <th>URL / 已抓取 / 失败 / 平均字数</th>
+                <th>URL / raw / accepted / filtered</th>
+                <th>抓取摘要</th>
                 <th>创建时间</th>
                 <th>操作</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="t in tasks" :key="t.id">
-                <td>#{{ t.id }}</td>
-                <td>{{ scopeLabel(t.search_scope) }}</td>
-                <td class="truncate-cell">{{ taskKeywords(t) }}</td>
-                <td class="truncate-cell">{{ taskPlatforms(t) }}</td>
+              <tr v-for="task in tasks" :key="task.id">
+                <td>#{{ task.id }}</td>
+                <td>{{ scopeLabel(task.search_scope) }}</td>
+                <td class="clip">{{ taskKeywords(task) }}</td>
+                <td class="clip">{{ taskPlatforms(task) }}</td>
                 <td>
-                  <span class="status-tag">{{ statusLabel[t.status] || t.status }}</span>
-                  <div v-if="t.error_message" class="row-error">{{ t.error_message }}</div>
+                  <span class="tag">{{ statusLabel[task.status] || task.status }}</span>
+                  <div v-if="task.error_message" class="error-line">{{ task.error_message }}</div>
                 </td>
                 <td>
-                  {{ t.found_url_count }} / {{ t.fetched_count }} / {{ t.failed_count }} /
-                  {{ taskFetchStats[t.id]?.avg_raw_text_chars ?? "-" }}
+                  {{ task.found_url_count }} /
+                  {{ searchStat(task.id, "raw_result_count") }} /
+                  {{ searchStat(task.id, "accepted_count") }} /
+                  {{ searchStat(task.id, "filtered_count") }}
                 </td>
-                <td>{{ t.created_at?.slice(0, 16) || "" }}</td>
+                <td>
+                  {{ task.fetched_count }} 成功 / {{ task.failed_count }} 失败 /
+                  {{ taskFetchStats[task.id]?.avg_raw_text_chars ?? "-" }} 字
+                </td>
+                <td>{{ task.created_at?.slice(0, 16) || "-" }}</td>
                 <td class="actions">
-                  <button @click="openSources(t)">查看来源</button>
-                  <button v-if="canRunSearch(t.status)" @click="handleRunSearch(t)" :disabled="runningTaskId === t.id">
-                    {{ runningTaskId === t.id ? "搜索中..." : "重新搜索" }}
+                  <button @click="openSources(task)">查看来源</button>
+                  <button v-if="canRunSearch(task.status)" :disabled="runningTaskId === task.id" @click="handleRunSearch(task)">
+                    {{ runningTaskId === task.id ? "搜索中..." : "重新搜索" }}
                   </button>
-                  <button v-if="canFetchSources(t)" @click="handleFetchSources(t)" :disabled="fetchingTaskId === t.id">
-                    {{ fetchingTaskId === t.id ? "抓取中..." : "抓取正文" }}
+                  <button v-if="canFetchSources(task)" :disabled="fetchingTaskId === task.id" @click="handleFetchSources(task)">
+                    {{ fetchingTaskId === task.id ? "抓取中..." : "抓取正文" }}
                   </button>
-                  <button v-if="canRetryFailed(t)" @click="handleFetchSources(t, true)" :disabled="fetchingTaskId === t.id">
-                    {{ fetchingTaskId === t.id ? "重试中..." : "重试失败项" }}
+                  <button v-if="canRetryFailed(task)" :disabled="fetchingTaskId === task.id" @click="handleFetchSources(task, true)">
+                    重试失败项
                   </button>
-                  <button class="btn-del" @click="handleDeleteTask(t)">删除</button>
+                  <button class="danger" @click="handleDeleteTask(task)">删除</button>
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
-        <p v-else class="empty">暂无任务，先创建一个采集任务。</p>
+        <p v-else class="empty">暂无采集任务。</p>
       </section>
-    </div>
+    </main>
 
-    <div v-if="activeTab === 'keywords'">
-      <section class="section-block">
-        <div class="section-title">
+    <main v-else class="keyword-layout">
+      <section class="panel">
+        <div class="panel-title">
           <h3>关键词预设</h3>
-          <button class="btn-primary small" @click="openCreate">新增关键词</button>
+          <button class="primary small" @click="openCreateKeyword">新增关键词</button>
         </div>
-        <div class="tabs">
-          <button :class="{ active: !filterType }" @click="filterType = ''; loadKeywords()">全部 ({{ kwTotal }})</button>
-          <button v-for="t in types" :key="t" :class="{ active: filterType === t }" @click="filterType = t; loadKeywords()">{{ typeLabel[t] || t }}</button>
+        <div class="filter-tabs">
+          <button :class="{ active: !filterType }" @click="filterType = ''; loadKeywords()">全部</button>
+          <button v-for="type in ['COMPANY', 'JOB', 'PLATFORM']" :key="type" :class="{ active: filterType === type }" @click="filterType = type; loadKeywords()">
+            {{ typeLabel[type] }}
+          </button>
         </div>
-
-        <div class="history-table-wrap" v-if="keywords.length">
-          <table class="keyword-table">
-            <thead><tr><th>类型</th><th>名称</th><th>别名</th><th>启用</th><th>操作</th></tr></thead>
+        <div v-if="keywords.length" class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>类型</th><th>名称</th><th>别名</th><th>启用</th><th>操作</th></tr>
+            </thead>
             <tbody>
-              <tr v-for="kw in keywords" :key="kw.id" :class="{ disabled: !kw.enabled }">
-                <td>{{ typeLabel[kw.preset_type] || kw.preset_type }}</td>
-                <td>{{ kw.name }}</td>
-                <td class="truncate-cell">{{ (kw.aliases_json || []).join(", ") }}</td>
-                <td><span :class="kw.enabled ? 'enabled' : 'disabled-tag'">{{ kw.enabled ? "是" : "否" }}</span></td>
+              <tr v-for="item in keywords" :key="item.id">
+                <td>{{ typeLabel[item.preset_type] || item.preset_type }}</td>
+                <td>{{ item.name }}</td>
+                <td class="clip">{{ (item.aliases_json || []).join(", ") || "-" }}</td>
+                <td>{{ item.enabled ? "是" : "否" }}</td>
                 <td class="actions">
-                  <button @click="openEdit(kw)">编辑</button>
-                  <button @click="handleToggleKeyword(kw)">{{ kw.enabled ? "禁用" : "启用" }}</button>
-                  <button class="btn-del" @click="handleDeleteKeyword(kw.id)">删除</button>
+                  <button @click="openEditKeyword(item)">编辑</button>
+                  <button @click="handleToggleKeyword(item)">{{ item.enabled ? "禁用" : "启用" }}</button>
+                  <button class="danger" @click="handleDeleteKeyword(item.id)">删除</button>
                 </td>
               </tr>
             </tbody>
@@ -634,774 +655,473 @@ onMounted(() => {
         </div>
         <p v-else class="empty">暂无关键词。</p>
       </section>
-    </div>
+    </main>
 
-    <div v-if="sourceModalOpen" class="modal-overlay drawer-overlay" @click.self="closeSources">
-      <div class="source-modal">
-        <div class="modal-head">
+    <div v-if="sourceModalOpen" class="overlay" @click.self="closeSources">
+      <section class="drawer">
+        <header class="drawer-head">
           <div>
             <h3>来源 URL</h3>
             <p v-if="selectedTask">任务 #{{ selectedTask.id }} · {{ scopeLabel(selectedTask.search_scope) }} · {{ taskKeywords(selectedTask) }}</p>
           </div>
-          <button class="icon-btn" @click="closeSources">×</button>
-        </div>
+          <button class="icon" @click="closeSources">×</button>
+        </header>
 
-        <div class="stat-strip fetch-stat-strip">
-          <div><span>总数</span><strong>{{ activeFetchStats?.total ?? statValue("found_url_count") }}</strong></div>
-          <div><span>成功</span><strong>{{ activeFetchStats?.fetched_count ?? selectedTask?.fetched_count ?? 0 }}</strong></div>
-          <div><span>失败</span><strong>{{ activeFetchStats?.failed_count ?? selectedTask?.failed_count ?? 0 }}</strong></div>
+        <div class="stats">
+          <div><span>总数</span><strong>{{ activeFetchStats?.total ?? sourceTotal }}</strong></div>
+          <div><span>成功</span><strong>{{ activeFetchStats?.fetched_count ?? 0 }}</strong></div>
+          <div><span>失败</span><strong>{{ activeFetchStats?.failed_count ?? 0 }}</strong></div>
           <div><span>待抓取</span><strong>{{ activeFetchStats?.pending_count ?? 0 }}</strong></div>
           <div><span>平均字数</span><strong>{{ activeFetchStats?.avg_raw_text_chars ?? "-" }}</strong></div>
         </div>
 
-        <div class="fetch-tools">
-          <div class="source-filters">
-            <button :class="{ active: sourceFilter === 'ALL' }" @click="sourceFilter = 'ALL'">全部</button>
-            <button :class="{ active: sourceFilter === 'FETCHED' }" @click="sourceFilter = 'FETCHED'">已抓取</button>
-            <button :class="{ active: sourceFilter === 'FETCH_FAILED' }" @click="sourceFilter = 'FETCH_FAILED'">抓取失败</button>
-            <button :class="{ active: sourceFilter === 'DISCOVERED' }" @click="sourceFilter = 'DISCOVERED'">待抓取</button>
-            <button :class="{ active: sourceFilter === 'SHORT' }" @click="sourceFilter = 'SHORT'">正文较短</button>
+        <div class="source-toolbar">
+          <div class="filter-tabs">
+            <button v-for="filter in sourceFilters" :key="filter.key" :class="{ active: sourceFilter === filter.key }" @click="sourceFilter = filter.key">
+              {{ filter.label }}
+            </button>
           </div>
-          <div v-if="activeFetchStats?.failure_reasons?.length" class="failure-reasons">
-            <strong>失败原因</strong>
-            <span v-for="reason in activeFetchStats.failure_reasons" :key="reason.reason">
-              {{ reason.reason }}：{{ reason.count }}
-            </span>
+          <div v-if="activeFetchStats?.failure_reasons?.length" class="failure-list">
+            <span v-for="reason in activeFetchStats.failure_reasons" :key="reason.reason">{{ reason.reason }}：{{ reason.count }}</span>
           </div>
         </div>
 
-        <div class="source-list" v-if="filteredSourceItems.length">
+        <div v-if="filteredSourceItems.length" class="source-list">
           <article v-for="item in filteredSourceItems" :key="item.id" class="source-item">
-            <div class="source-main">
+            <div class="source-content">
               <a class="source-title" :href="item.source_url" target="_blank" rel="noopener noreferrer">{{ item.title || item.source_url }}</a>
               <a class="source-url" :href="item.source_url" target="_blank" rel="noopener noreferrer">{{ item.source_url }}</a>
-              <p class="source-snippet">{{ item.snippet || "无摘要" }}</p>
+              <p>{{ item.snippet || "无摘要" }}</p>
+              <div v-if="item.error_message" class="error-line">{{ item.error_message }}</div>
             </div>
             <div class="source-tags">
               <span>{{ sourcePlatform(item.platform) }}</span>
               <span>{{ item.query_text || "无 query" }}</span>
               <span>{{ item.engine || "未知引擎" }}</span>
-              <span>{{ item.matched_reason || "未记录原因" }}</span>
+              <span>{{ item.matched_reason || "无匹配原因" }}</span>
               <span>{{ item.fetch_status_label || item.fetch_status }}</span>
               <span v-if="item.extract_status">抽取 {{ item.extract_status }}</span>
-              <span :class="['quality-tag', (item.fetch_quality || '').toLowerCase()]">
-                {{ fetchQualityLabel[item.fetch_quality || ''] || item.fetch_quality || "-" }}
+              <span :class="['quality', (item.fetch_quality || '').toLowerCase()]">
+                {{ fetchQualityLabel[item.fetch_quality || ""] || item.fetch_quality || "-" }}
               </span>
-              <span>正文 {{ item.raw_text_char_count || 0 }} 字</span>
-              <span>{{ item.fetched_at?.slice(0, 16) || item.created_at?.slice(0, 16) || "" }}</span>
+              <span>{{ item.raw_text_char_count || 0 }} 字</span>
             </div>
-            <div v-if="item.error_message" class="source-error">{{ item.error_message }}</div>
             <div class="source-actions">
-              <a class="preview-btn" :href="item.source_url" target="_blank" rel="noopener noreferrer">打开原网页</a>
-              <button class="preview-btn" @click="openPreview(item)" :disabled="previewLoading">查看正文预览</button>
-              <button class="preview-btn" @click="handleFetchSource(item)" :disabled="fetchingSourceId === item.id">
+              <a :href="item.source_url" target="_blank" rel="noopener noreferrer">打开原网页</a>
+              <button :disabled="previewLoading" @click="openPreview(item)">查看正文预览</button>
+              <button :disabled="fetchingSourceId === item.id" @click="handleFetchSource(item)">
                 {{ fetchingSourceId === item.id ? "抓取中..." : "重新抓取" }}
               </button>
-              <button
-                v-if="item.fetch_status === 'FETCHED'"
-                class="preview-btn"
-                @click="handleExtractSource(item)"
-                :disabled="extractingSourceId === item.id"
-              >
+              <button v-if="item.fetch_status === 'FETCHED'" :disabled="extractingSourceId === item.id" @click="handleExtractSource(item)">
                 {{ extractingSourceId === item.id ? "抽取中..." : "抽取面经" }}
               </button>
             </div>
           </article>
         </div>
-        <p v-else class="empty compact">{{ sourcesLoading ? "加载中..." : "暂无匹配来源 URL" }}</p>
-      </div>
+        <p v-else class="empty">{{ sourcesLoading ? "加载中..." : "暂无匹配来源 URL" }}</p>
+      </section>
     </div>
 
-    <div v-if="previewItem" class="modal-overlay preview-overlay" @click.self="closePreview">
-      <div class="preview-modal">
-        <div class="modal-head">
+    <div v-if="previewItem" class="overlay" @click.self="previewItem = null">
+      <section class="preview">
+        <header class="drawer-head">
           <div>
             <h3>正文预览</h3>
             <p>{{ previewItem.title || previewItem.source_url }}</p>
             <p>{{ previewItem.fetch_status_label || previewItem.fetch_status }} · {{ previewItem.raw_text_char_count }} 字</p>
           </div>
-          <button class="icon-btn" @click="closePreview">×</button>
-        </div>
-        <pre class="raw-preview">{{ previewItem.raw_text_preview || "暂无正文" }}</pre>
-      </div>
+          <button class="icon" @click="previewItem = null">×</button>
+        </header>
+        <pre>{{ previewItem.raw_text_preview || "暂无正文" }}</pre>
+      </section>
     </div>
 
-    <div v-if="showForm" class="modal-overlay" @click.self="closeForm">
-      <div class="keyword-modal">
-        <h3>{{ editingId ? "编辑关键词" : "新增关键词" }}</h3>
-        <label>类型 <select v-model="kwForm.preset_type" :disabled="!!editingId"><option v-for="t in types" :key="t" :value="t">{{ typeLabel[t] || t }}</option></select></label>
-        <label>名称 <input v-model="kwForm.name" placeholder="例如: 快手" /></label>
-        <label>别名（逗号分隔）<input v-model="kwForm.aliases_text" placeholder="例如: 快手电商, Kuaishou" /></label>
-        <label class="checkbox-label"><input type="checkbox" v-model="kwForm.enabled" /> 启用</label>
-        <div class="modal-actions"><button @click="handleSaveKeyword">保存</button><button class="btn-cancel" @click="closeForm">取消</button></div>
-      </div>
+    <div v-if="showKeywordForm" class="overlay" @click.self="closeKeywordForm">
+      <section class="keyword-modal">
+        <h3>{{ editingKeywordId ? "编辑关键词" : "新增关键词" }}</h3>
+        <label>
+          类型
+          <select v-model="kwForm.preset_type" :disabled="!!editingKeywordId">
+            <option value="COMPANY">公司</option>
+            <option value="JOB">岗位</option>
+            <option value="PLATFORM">平台</option>
+          </select>
+        </label>
+        <label>名称 <input v-model="kwForm.name" /></label>
+        <label>别名 <input v-model="kwForm.aliases_text" placeholder="用逗号分隔" /></label>
+        <label class="inline"><input v-model="kwForm.enabled" type="checkbox" /> 启用</label>
+        <div class="modal-actions">
+          <button class="primary" @click="handleSaveKeyword">保存</button>
+          <button @click="closeKeywordForm">取消</button>
+        </div>
+      </section>
     </div>
   </div>
 </template>
 
 <style scoped>
 .admin-experiences {
-  max-width: 1180px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 8px 0 32px;
-  color: #20242a;
+  padding: 12px 0 36px;
+  color: #1f2933;
 }
 
 .page-heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  margin-bottom: 18px;
-}
-
-.page-heading h2 {
-  margin: 0;
-  font-size: 24px;
-  letter-spacing: 0;
-}
-
-.desc {
-  color: #667085;
-  margin: 8px 0 0;
-  line-height: 1.6;
-}
-
-.main-tabs {
-  display: inline-flex;
-  gap: 4px;
-  padding: 4px;
-  margin-bottom: 18px;
-  background: #eef2f6;
-  border-radius: 8px;
-}
-
-.main-tabs button {
-  min-width: 112px;
-  padding: 8px 16px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-size: 14px;
-  color: #475467;
-  border-radius: 6px;
-}
-
-.main-tabs button.active {
-  color: #0f172a;
-  background: #fff;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.08);
-}
-
-.tasks-view {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.section-block {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 18px;
-  background: #fff;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
-}
-
-.section-title {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
   margin-bottom: 16px;
 }
 
-.section-title h3 {
+.page-heading h2,
+.panel-title h3,
+.drawer-head h3 {
   margin: 0;
-  font-size: 16px;
 }
 
-.section-title span {
-  font-size: 13px;
+.page-heading p,
+.drawer-head p,
+.hint {
+  margin: 6px 0 0;
+  color: #667085;
+}
+
+.tabs,
+.filter-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tabs {
+  margin-bottom: 16px;
+}
+
+button,
+.source-actions a {
+  border: 1px solid #cfd8e3;
+  background: #fff;
+  border-radius: 6px;
+  padding: 7px 10px;
+  color: #263445;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+button.active,
+.primary {
+  border-color: #1f6feb;
+  background: #1f6feb;
+  color: #fff;
+}
+
+.small {
+  padding: 6px 9px;
+}
+
+.danger {
+  border-color: #f3b4b4;
+  color: #b42318;
+}
+
+.task-layout,
+.keyword-layout {
+  display: grid;
+  gap: 16px;
+}
+
+.panel {
+  border: 1px solid #d9e2ec;
+  border-radius: 8px;
+  background: #fff;
+  padding: 18px;
+}
+
+.panel-title,
+.drawer-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.panel-title span {
   color: #667085;
 }
 
 .task-form {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
+  display: grid;
+  gap: 16px;
 }
 
 .form-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  gap: 12px;
 }
 
-.form-grid label,
-.keyword-modal label {
-  font-size: 13px;
-  color: #344054;
+label {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
 }
 
-.form-grid input,
-.form-grid select,
-.keyword-modal input,
-.keyword-modal select {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 8px 10px;
-  border: 1px solid #d0d5dd;
+select,
+input {
+  min-height: 34px;
+  border: 1px solid #cfd8e3;
   border-radius: 6px;
-  margin-top: 6px;
+  padding: 0 8px;
   background: #fff;
-}
-
-.select-section {
-  padding-top: 2px;
 }
 
 .field-title {
-  font-size: 13px;
-  font-weight: 600;
   margin-bottom: 8px;
-  color: #344054;
+  font-weight: 700;
 }
 
-.field-hint {
-  margin: -2px 0 10px;
-  color: #667085;
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.checkbox-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.cb-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  padding: 6px 10px;
-  border: 1px solid #d0d5dd;
-  border-radius: 6px;
-  cursor: pointer;
-  background: #fff;
-}
-
-.cb-label:has(input:checked) {
-  border-color: #2e7d6f;
-  background: #eef8f5;
-}
-
+.check-grid,
 .write-options {
   display: flex;
   flex-wrap: wrap;
-  gap: 18px;
-  padding-top: 2px;
-  font-size: 13px;
-  color: #344054;
+  gap: 10px 16px;
 }
 
-.btn-primary {
-  align-self: flex-start;
-  padding: 8px 18px;
-  background: #2e7d6f;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
+.check-grid label,
+.write-options label,
+.inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.btn-primary.small {
-  padding: 7px 14px;
-}
-
-.btn-primary:disabled,
-.actions button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.history-table-wrap {
+.table-wrap {
   overflow-x: auto;
-  border: 1px solid #eef2f6;
-  border-radius: 8px;
 }
 
-.history-table,
-.keyword-table {
+table {
   width: 100%;
   border-collapse: collapse;
+  min-width: 920px;
 }
 
-.history-table th,
-.history-table td,
-.keyword-table th,
-.keyword-table td {
-  padding: 11px 12px;
-  border-bottom: 1px solid #eef2f6;
+th,
+td {
+  border-bottom: 1px solid #e6edf5;
+  padding: 10px 8px;
   text-align: left;
-  font-size: 13px;
   vertical-align: top;
+  font-size: 14px;
 }
 
-.history-table th,
-.keyword-table th {
-  color: #667085;
-  font-weight: 600;
-  background: #f8fafc;
-  white-space: nowrap;
+th {
+  color: #52616f;
+  font-weight: 700;
 }
 
-.history-table tr:last-child td,
-.keyword-table tr:last-child td {
-  border-bottom: none;
-}
-
-.truncate-cell {
-  max-width: 200px;
-  white-space: nowrap;
+.clip {
+  max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.row-error {
-  max-width: 260px;
-  color: #b42318;
-  font-size: 12px;
-  margin-top: 4px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.status-tag {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  background: #eef8f5;
-  color: #2e7d6f;
   white-space: nowrap;
 }
 
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  min-width: 190px;
+.tag,
+.quality {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: #eef4ff;
+  color: #1d4ed8;
+  font-size: 12px;
 }
 
-.actions button {
-  padding: 5px 10px;
-  border: 1px solid #d0d5dd;
-  border-radius: 4px;
-  background: #fff;
-  cursor: pointer;
-  font-size: 13px;
+.quality.short {
+  background: #fff7cc;
+  color: #8a5a00;
 }
 
-.btn-del {
+.quality.failed {
+  background: #ffe7e7;
   color: #b42318;
-  border-color: #fecdca !important;
+}
+
+.error-line {
+  margin-top: 6px;
+  color: #b42318;
+  font-size: 12px;
+}
+
+.actions,
+.source-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .empty {
-  color: #98a2b3;
-  text-align: center;
-  padding: 32px;
+  color: #667085;
 }
 
-.compact {
-  padding: 18px;
-}
-
-.tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.tabs button {
-  padding: 6px 14px;
-  border: 1px solid #d0d5dd;
-  border-radius: 6px;
-  background: #fff;
-  cursor: pointer;
-}
-
-.tabs button.active {
-  background: #2e7d6f;
-  color: #fff;
-  border-color: #2e7d6f;
-}
-
-.enabled {
-  color: #12b76a;
-  font-weight: 600;
-}
-
-.disabled-tag {
-  color: #b42318;
-}
-
-.disabled {
-  opacity: 0.55;
-}
-
-.modal-overlay {
+.overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.45);
+  z-index: 40;
+  background: rgba(15, 23, 42, 0.38);
   display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-  padding: 24px;
+  justify-content: flex-end;
 }
 
-.drawer-overlay {
-  align-items: stretch;
-  justify-content: flex-end;
+.drawer {
+  width: min(980px, 94vw);
+  height: 100vh;
+  overflow: auto;
+  background: #fff;
+  padding: 20px;
+}
+
+.preview,
+.keyword-modal {
+  width: min(760px, 92vw);
+  max-height: 86vh;
+  overflow: auto;
+  margin: auto;
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.icon {
+  font-size: 20px;
+  line-height: 1;
+  width: 34px;
+  height: 34px;
   padding: 0;
 }
 
-.source-modal {
-  width: min(820px, 100vw);
-  height: 100vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  background: #fff;
-  box-shadow: -10px 0 28px rgba(15, 23, 42, 0.16);
-}
-
-.keyword-modal {
-  background: #fff;
-  border-radius: 8px;
-  padding: 22px;
-  width: 430px;
-  max-width: 92vw;
-}
-
-.modal-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 18px 20px;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.modal-head h3 {
-  margin: 0;
-  font-size: 18px;
-}
-
-.modal-head p {
-  margin: 5px 0 0;
-  color: #667085;
-  font-size: 13px;
-}
-
-.icon-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 1px solid #d0d5dd;
-  background: #fff;
-  cursor: pointer;
-  font-size: 20px;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
-.stat-strip {
+.stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, minmax(120px, 1fr));
   gap: 10px;
-  padding: 14px 20px;
-  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 14px;
+}
+
+.stats div {
+  border: 1px solid #e1e8f0;
+  border-radius: 8px;
+  padding: 10px;
   background: #f8fafc;
 }
 
-.stat-strip div {
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  padding: 10px;
-  background: #fff;
-}
-
-.stat-strip span {
+.stats span {
   display: block;
-  font-size: 12px;
   color: #667085;
+  font-size: 12px;
 }
 
-.stat-strip strong {
+.stats strong {
   display: block;
   margin-top: 4px;
   font-size: 20px;
 }
 
-.fetch-stat-strip {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-}
-
-.fetch-tools {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 20px;
-  border-bottom: 1px solid #e5e7eb;
-  background: #fff;
-}
-
-.source-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.source-filters button {
-  padding: 6px 10px;
-  border: 1px solid #d0d5dd;
-  border-radius: 6px;
-  background: #fff;
-  color: #344054;
-  cursor: pointer;
-  font-size: 12px;
-}
-
-.source-filters button.active {
-  border-color: #2e7d6f;
-  background: #eef8f5;
-  color: #155e52;
-  font-weight: 600;
-}
-
-.failure-reasons {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 6px;
-  color: #667085;
-  font-size: 12px;
-}
-
-.failure-reasons strong {
-  color: #344054;
-}
-
-.failure-reasons span {
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: #fff4ed;
-  color: #b54708;
-}
-
-.source-list {
-  overflow: auto;
-  padding: 14px 20px 18px;
-  display: flex;
-  flex-direction: column;
+.source-toolbar {
+  display: grid;
   gap: 10px;
+  margin-bottom: 14px;
 }
 
-.source-item {
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  padding: 12px;
-}
-
-.source-title {
-  color: #1f2937;
-  font-weight: 600;
-  text-decoration: none;
-  line-height: 1.45;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.source-url {
-  display: block;
-  max-width: 100%;
-  margin-top: 5px;
-  color: #1f6feb;
-  font-size: 12px;
-  text-decoration: none;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.source-snippet {
-  margin: 8px 0 0;
-  color: #667085;
-  font-size: 13px;
-  line-height: 1.45;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
+.failure-list,
 .source-tags {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 10px;
 }
 
+.failure-list span,
 .source-tags span {
-  font-size: 12px;
-  color: #475467;
-  background: #f2f4f7;
   border-radius: 999px;
+  background: #f1f5f9;
   padding: 3px 8px;
-  max-width: 280px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.source-tags .quality-tag.good {
-  background: #ecfdf3;
-  color: #027a48;
-}
-
-.source-tags .quality-tag.short {
-  background: #fffaeb;
-  color: #b54708;
-}
-
-.source-tags .quality-tag.failed {
-  background: #fef3f2;
-  color: #b42318;
-}
-
-.source-tags .quality-tag.pending {
-  background: #eef4ff;
-  color: #3538cd;
-}
-
-.source-error {
-  margin-top: 8px;
-  color: #b42318;
+  color: #475569;
   font-size: 12px;
-  line-height: 1.5;
+}
+
+.source-list {
+  display: grid;
+  gap: 12px;
+}
+
+.source-item {
+  border: 1px solid #e1e8f0;
+  border-radius: 8px;
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.source-title {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-}
-
-.source-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.preview-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 5px 10px;
-  border: 1px solid #d0d5dd;
-  border-radius: 4px;
-  background: #fff;
-  color: #344054;
-  cursor: pointer;
-  font-size: 13px;
-  line-height: 1.4;
+  color: #0f172a;
+  font-weight: 700;
   text-decoration: none;
 }
 
-.preview-btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.preview-overlay {
-  z-index: 120;
-}
-
-.preview-modal {
-  width: min(820px, 92vw);
-  max-height: 84vh;
-  display: flex;
-  flex-direction: column;
-  background: #fff;
-  border-radius: 8px;
+.source-url {
+  display: block;
+  margin-top: 4px;
+  max-width: 100%;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #1f6feb;
+  text-decoration: none;
 }
 
-.raw-preview {
-  margin: 0;
-  padding: 16px 20px 20px;
-  overflow: auto;
+.source-content p {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 8px 0 0;
+  color: #52616f;
+}
+
+pre {
   white-space: pre-wrap;
-  word-break: break-word;
-  color: #344054;
-  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
-  font-size: 13px;
   line-height: 1.7;
+  border: 1px solid #e1e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 14px;
 }
 
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.keyword-modal {
+  display: grid;
+  gap: 12px;
 }
 
 .modal-actions {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   justify-content: flex-end;
-  margin-top: 16px;
 }
 
-.modal-actions button {
-  padding: 8px 18px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.modal-actions button:first-child {
-  background: #2e7d6f;
-  color: #fff;
-}
-
-.btn-cancel {
-  background: #f2f4f7 !important;
-  color: #344054 !important;
-}
-
-@media (max-width: 760px) {
-  .page-heading,
-  .section-title {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
+@media (max-width: 860px) {
   .form-grid,
-  .stat-strip {
+  .stats {
     grid-template-columns: 1fr;
   }
 
-  .main-tabs {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    width: 100%;
+  .drawer {
+    width: 100vw;
   }
 }
 </style>

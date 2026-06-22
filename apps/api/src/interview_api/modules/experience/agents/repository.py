@@ -105,6 +105,15 @@ class ExperienceAgentRepository:
         )
         return int(result.scalar() or 0)
 
+    async def count_indexable_questions_for_experience(self, experience_id: int) -> int:
+        result = await self.db.execute(
+            select(func.count(InterviewQuestion.id)).where(
+                InterviewQuestion.experience_id == experience_id,
+                InterviewQuestion.should_index.is_(True),
+            )
+        )
+        return int(result.scalar() or 0)
+
     async def delete_extraction_drafts_for_source(self, source_item_id: int) -> None:
         await self.db.execute(
             delete(InterviewExperience).where(
@@ -119,10 +128,17 @@ class ExperienceAgentRepository:
         source: ExperienceSourceItem,
         company: str | None,
         position: str | None,
+        job_direction: str | None = None,
         round_name: str | None,
         summary: str,
         extraction_confidence: float,
         extraction_output_json: dict,
+        routing_json: dict | None = None,
+        reliability_json: dict | None = None,
+        quality_gate_json: dict | None = None,
+        reliability_score: float | None = None,
+        quality_flags_json: list | None = None,
+        review_status: str = "WAITING_REVIEW",
     ) -> InterviewExperience:
         experience = InterviewExperience(
             source_item_id=source.id,
@@ -131,12 +147,19 @@ class ExperienceAgentRepository:
             platform=source.platform,
             company=company,
             position=position,
+            job_direction=job_direction,
             interview_round=round_name,
             summary=summary,
             content_text=source.raw_text,
+            tags_json=(routing_json or {}).get("suggested_tags") or [],
+            reliability_score=reliability_score,
             extraction_confidence=extraction_confidence,
             extraction_output_json=extraction_output_json,
-            review_status="WAITING_REVIEW",
+            routing_json=routing_json,
+            reliability_json=reliability_json,
+            quality_gate_json=quality_gate_json,
+            quality_flags_json=quality_flags_json or [],
+            review_status=review_status,
         )
         self.db.add(experience)
         await self.db.flush()
@@ -147,24 +170,42 @@ class ExperienceAgentRepository:
         *,
         experience: InterviewExperience,
         questions: list[dict],
+        routing_result: dict | None = None,
+        review_status: str = "WAITING_REVIEW",
+        reliability_score: float | None = None,
     ) -> list[InterviewQuestion]:
         created: list[InterviewQuestion] = []
+        route_by_index = {
+            item.get("question_index"): item
+            for item in (routing_result or {}).get("question_results", [])
+            if isinstance(item, dict)
+        }
         for item in questions:
+            route = route_by_index.get(len(created), {})
             question = InterviewQuestion(
                 experience_id=experience.id,
-                question=item["question"],
+                question=route.get("normalized_question") or item["question"],
                 original_answer=item.get("original_answer"),
                 standard_answer=item.get("standard_answer"),
                 answer_source=item.get("answer_source") or "NONE",
                 evidence=item.get("evidence"),
-                question_type=item.get("question_type"),
-                category=item.get("question_type"),
+                question_type=route.get("question_type") or item.get("question_type"),
+                category=(
+                    (route.get("technical_categories") or [None])[0]
+                    or item.get("question_type")
+                ),
+                difficulty=route.get("difficulty"),
                 company=experience.company,
                 position=experience.position,
                 interview_round=experience.interview_round,
                 source_url=experience.source_url,
+                reliability_score=reliability_score,
                 confidence=item.get("confidence"),
-                review_status="WAITING_REVIEW",
+                technical_categories_json=route.get("technical_categories") or [],
+                should_index=bool(route.get("should_index", True)),
+                tags_json=route.get("target_banks") or [],
+                routing_json=route or {},
+                review_status=review_status,
                 index_status="NOT_INDEXED",
             )
             self.db.add(question)

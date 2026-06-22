@@ -40,7 +40,51 @@ SHORT_TEXT = "太短了"
 
 class FakeLLM:
     async def chat(self, messages: list[dict], **kwargs) -> str:
+        system = messages[0]["content"]
         prompt = messages[-1]["content"]
+        if "Reliability Agent" in system:
+            return json.dumps(
+                {
+                    "is_reliable": True,
+                    "reliability_score": 0.72,
+                    "content_quality_score": 0.74,
+                    "source_quality_score": 0.7,
+                    "spam_risk_score": 0.1,
+                    "ad_or_training_risk": False,
+                    "outdated_risk": False,
+                    "hallucination_risk_note": None,
+                    "risk_flags": [],
+                    "quality_flags": ["legacy_smoke"],
+                    "publish_recommendation": "NEEDS_REVIEW",
+                    "reason": "legacy smoke reliability",
+                },
+                ensure_ascii=False,
+            )
+        if "target_banks" in prompt:
+            return json.dumps(
+                {
+                    "overall_job_direction": "BACKEND",
+                    "company": "腾讯",
+                    "position": "后端",
+                    "question_results": [
+                        {
+                            "question_index": 0,
+                            "normalized_question": "Redis 缓存穿透怎么解决？",
+                            "job_direction": "BACKEND",
+                            "technical_categories": ["Redis"],
+                            "question_type": "BASIC_KNOWLEDGE",
+                            "difficulty": "MEDIUM",
+                            "target_banks": ["backend", "redis"],
+                            "should_index": True,
+                            "routing_confidence": 0.75,
+                        }
+                    ],
+                    "suggested_tags": ["后端", "Redis"],
+                    "routing_summary": "legacy smoke routing",
+                    "routing_confidence": 0.75,
+                },
+                ensure_ascii=False,
+            )
         if "non-experience" in prompt:
             return json.dumps(
                 {
@@ -304,7 +348,10 @@ async def check_success_and_idempotency(data: dict) -> None:
         ).scalars().all()
         assert_true(len(experiences) == 1, f"force rerun should replace draft, got {len(experiences)}")
         experience = experiences[0]
-        assert_true(experience.review_status == "WAITING_REVIEW", "experience review_status mismatch")
+        assert_true(
+            experience.review_status in {"WAITING_REVIEW", "NEEDS_MANUAL_CHECK"},
+            "experience review_status mismatch",
+        )
         assert_true(experience.extraction_confidence == 0.9, "extraction_confidence mismatch")
         questions = (
             await db.execute(
@@ -315,7 +362,7 @@ async def check_success_and_idempotency(data: dict) -> None:
         question = questions[0]
         assert_true(question.original_answer is not None, "original_answer missing")
         assert_true(question.evidence is not None, "evidence missing")
-        assert_true(question.question_type == "TECHNICAL", "question_type mismatch")
+        assert_true(question.question_type == "BASIC_KNOWLEDGE", "question_type mismatch")
         steps = (
             await db.execute(
                 select(ExperienceAgentStepRun).join(
@@ -325,7 +372,7 @@ async def check_success_and_idempotency(data: dict) -> None:
             )
         ).scalars().all()
         assert_true(len(steps) >= 6, "expected step traces for first and forced runs")
-    print_ok("valid extraction saves WAITING_REVIEW experience/question and is idempotent")
+    print_ok("valid extraction saves review draft experience/question and is idempotent")
 
 
 async def check_non_experience_and_validation_failed(data: dict) -> None:

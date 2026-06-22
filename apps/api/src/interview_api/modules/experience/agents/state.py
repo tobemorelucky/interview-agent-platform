@@ -12,8 +12,14 @@ class ExperienceAgentState(TypedDict, total=False):
     platform: str | None
     raw_text: str
     extraction_result: dict[str, Any] | None
+    routing_result: dict[str, Any] | None
+    reliability_result: dict[str, Any] | None
+    quality_gate_result: dict[str, Any] | None
     validation_errors: list[str]
     is_valid: bool
     run_id: int | None
     status: str
+    final_review_status: str | None
+    should_create_review_item: bool
+    should_reject: bool
     saved_result: dict[str, Any] | None

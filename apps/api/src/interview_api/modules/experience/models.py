@@ -156,6 +156,9 @@ class InterviewExperience(Base):
     reliability_level: Mapped[str | None] = mapped_column(String(32), nullable=True)
     extraction_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     extraction_output_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    routing_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    reliability_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    quality_gate_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     quality_flags_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=list)
     review_status: Mapped[str] = mapped_column(
         String(32), nullable=False, default="PENDING"
@@ -197,6 +200,8 @@ class InterviewQuestion(Base):
     source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     reliability_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    technical_categories_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    should_index: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     tags_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=list)
     routing_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     review_status: Mapped[str] = mapped_column(
