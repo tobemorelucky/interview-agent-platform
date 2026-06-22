@@ -228,6 +228,23 @@ export async function fetchExperienceSource(
   return client.post(`/admin/experience/sources/${id}/fetch`, data || {}, { timeout: 180000 })
 }
 
+export async function extractExperienceSource(
+  id: number,
+  data?: { force?: boolean }
+): Promise<{
+  source_id: number
+  agent_run_id: number | null
+  is_interview_experience: boolean
+  experience_id: number | null
+  question_count: number
+  status?: string
+  extract_status?: string
+  skipped?: boolean
+  error_message?: string | null
+}> {
+  return client.post(`/admin/experience/sources/${id}/extract`, data || {}, { timeout: 180000 })
+}
+
 export interface AuditLog {
   id: number
   request_id?: string

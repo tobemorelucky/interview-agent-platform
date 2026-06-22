@@ -8,6 +8,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     JSON,
     String,
@@ -136,6 +137,13 @@ class InterviewExperience(Base):
         ForeignKey("experience_source_items.id", ondelete="SET NULL"),
         nullable=True,
     )
+    task_id: Mapped[int | None] = mapped_column(
+        BigInteger,
+        ForeignKey("experience_collection_tasks.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    platform: Mapped[str | None] = mapped_column(String(64), nullable=True)
     company: Mapped[str | None] = mapped_column(String(128), nullable=True)
     position: Mapped[str | None] = mapped_column(String(128), nullable=True)
     job_direction: Mapped[str | None] = mapped_column(String(128), nullable=True)
@@ -146,6 +154,8 @@ class InterviewExperience(Base):
     tags_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=list)
     reliability_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     reliability_level: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    extraction_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    extraction_output_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     quality_flags_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=list)
     review_status: Mapped[str] = mapped_column(
         String(32), nullable=False, default="PENDING"
@@ -172,10 +182,13 @@ class InterviewQuestion(Base):
         nullable=True,
     )
     question: Mapped[str] = mapped_column(Text, nullable=False)
+    original_answer: Mapped[str | None] = mapped_column(Text, nullable=True)
     standard_answer: Mapped[str | None] = mapped_column(Text, nullable=True)
     answer_source: Mapped[str] = mapped_column(
         String(32), nullable=False, default="LLM_GENERATED"
     )
+    evidence: Mapped[str | None] = mapped_column(Text, nullable=True)
+    question_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
     category: Mapped[str | None] = mapped_column(String(128), nullable=True)
     difficulty: Mapped[str | None] = mapped_column(String(32), nullable=True)
     company: Mapped[str | None] = mapped_column(String(128), nullable=True)
@@ -183,6 +196,7 @@ class InterviewQuestion(Base):
     interview_round: Mapped[str | None] = mapped_column(String(64), nullable=True)
     source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     reliability_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     tags_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=list)
     routing_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     review_status: Mapped[str] = mapped_column(
@@ -197,6 +211,73 @@ class InterviewQuestion(Base):
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class ExperienceAgentRun(Base):
+    __tablename__ = "experience_agent_runs"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    source_item_id: Mapped[int] = mapped_column(
+        BigInteger,
+        ForeignKey("experience_source_items.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    task_id: Mapped[int | None] = mapped_column(
+        BigInteger,
+        ForeignKey("experience_collection_tasks.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    graph_name: Mapped[str] = mapped_column(
+        String(100), nullable=False, default="experience_extraction_graph"
+    )
+    graph_version: Mapped[str] = mapped_column(String(50), nullable=False, default="v1")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="RUNNING")
+    input_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    output_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (
+        Index("idx_experience_agent_runs_source_item_id", "source_item_id"),
+        Index("idx_experience_agent_runs_task_id", "task_id"),
+        Index("idx_experience_agent_runs_status", "status"),
+        Index("idx_experience_agent_runs_created_at", "created_at"),
+    )
+
+
+class ExperienceAgentStepRun(Base):
+    __tablename__ = "experience_agent_step_runs"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    agent_run_id: Mapped[int] = mapped_column(
+        BigInteger,
+        ForeignKey("experience_agent_runs.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    step_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    input_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    output_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    model_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    token_usage_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    __table_args__ = (
+        Index("idx_experience_agent_step_runs_agent_run_id", "agent_run_id"),
+        Index("idx_experience_agent_step_runs_step_name", "step_name"),
+        Index("idx_experience_agent_step_runs_status", "status"),
     )
 
 

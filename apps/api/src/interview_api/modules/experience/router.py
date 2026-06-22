@@ -4,10 +4,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from interview_api.api.deps import require_admin
-from interview_api.core.errors import ResourceLockedError
+from interview_api.core.errors import AppError, ResourceLockedError
 from interview_api.core.locks import redis_lock
 from interview_api.core.rate_limit import (
     experience_task_limit,
+    extraction_run_limit,
     fetch_run_limit,
     search_run_limit,
 )
@@ -21,6 +22,8 @@ from interview_api.modules.experience.schemas import (
     ExperienceSourceFetchRequest,
     ExperienceTaskFetchRequest,
 )
+from interview_api.modules.experience.agents.schemas import ExperienceSourceExtractRequest
+from interview_api.modules.experience.agents.service import ExperienceAgentService
 from interview_api.modules.experience.service import (
     ExperienceKeywordService,
     ExperienceTaskService,
@@ -35,6 +38,10 @@ def _kw_service(db: AsyncSession) -> ExperienceKeywordService:
 
 def _task_service(db: AsyncSession) -> ExperienceTaskService:
     return ExperienceTaskService(db)
+
+
+def _agent_service(db: AsyncSession) -> ExperienceAgentService:
+    return ExperienceAgentService(db)
 
 
 @router.get("/keywords")
@@ -470,3 +477,108 @@ async def fetch_single_source(
         **audit_request_metadata(request),
     )
     return success(data=result, message="Source fetch completed")
+
+
+@router.post("/sources/{source_id}/extract")
+async def extract_single_source(
+    source_id: int,
+    request: Request,
+    body: ExperienceSourceExtractRequest | None = None,
+    _limit=Depends(extraction_run_limit),
+    admin_user=Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    svc = _agent_service(db)
+    audit = AuditService(db)
+    payload = body or ExperienceSourceExtractRequest()
+    try:
+        async with redis_lock(f"experience:source:{source_id}:extract", 900):
+            result = await svc.run_extraction_for_source(
+                source_id,
+                force=payload.force,
+            )
+    except ResourceLockedError as e:
+        await audit.log_event(
+            action="experience.source.extract",
+            actor_user_id=admin_user.id,
+            actor_role=admin_user.role,
+            resource_type="experience_source_item",
+            resource_id=str(source_id),
+            metadata_json={"source_id": source_id, "force": payload.force},
+            status="FAILED",
+            error_message=e.message,
+            **audit_request_metadata(request),
+        )
+        raise
+    except LookupError as e:
+        await audit.log_event(
+            action="experience.source.extract",
+            actor_user_id=admin_user.id,
+            actor_role=admin_user.role,
+            resource_type="experience_source_item",
+            resource_id=str(source_id),
+            metadata_json={"source_id": source_id, "force": payload.force},
+            status="FAILED",
+            error_message=str(e),
+            **audit_request_metadata(request),
+        )
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        await audit.log_event(
+            action="experience.source.extract",
+            actor_user_id=admin_user.id,
+            actor_role=admin_user.role,
+            resource_type="experience_source_item",
+            resource_id=str(source_id),
+            metadata_json={"source_id": source_id, "force": payload.force},
+            status="FAILED",
+            error_message=str(e),
+            **audit_request_metadata(request),
+        )
+        raise HTTPException(status_code=400, detail=str(e))
+    except AppError as e:
+        await audit.log_event(
+            action="experience.source.extract",
+            actor_user_id=admin_user.id,
+            actor_role=admin_user.role,
+            resource_type="experience_source_item",
+            resource_id=str(source_id),
+            metadata_json={"source_id": source_id, "force": payload.force},
+            status="FAILED",
+            error_message=e.message,
+            **audit_request_metadata(request),
+        )
+        raise
+    except Exception as e:
+        await audit.log_event(
+            action="experience.source.extract",
+            actor_user_id=admin_user.id,
+            actor_role=admin_user.role,
+            resource_type="experience_source_item",
+            resource_id=str(source_id),
+            metadata_json={"source_id": source_id, "force": payload.force},
+            status="FAILED",
+            error_message=str(e)[:2000],
+            **audit_request_metadata(request),
+        )
+        raise
+
+    await audit.log_event(
+        action="experience.source.extract",
+        actor_user_id=admin_user.id,
+        actor_role=admin_user.role,
+        resource_type="experience_source_item",
+        resource_id=str(source_id),
+        metadata_json={
+            "source_id": source_id,
+            "force": payload.force,
+            "agent_run_id": result.get("agent_run_id"),
+            "is_interview_experience": result.get("is_interview_experience"),
+            "experience_id": result.get("experience_id"),
+            "question_count": result.get("question_count"),
+            "extract_status": result.get("extract_status"),
+            "skipped": result.get("skipped"),
+        },
+        **audit_request_metadata(request),
+    )
+    return success(data=result, message="Extraction completed")

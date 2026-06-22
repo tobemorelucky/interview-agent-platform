@@ -12,6 +12,7 @@ import {
   runExperienceTaskSearch,
   fetchExperienceTaskSources,
   fetchExperienceSource,
+  extractExperienceSource,
   getExperienceSourcePreview,
   getExperienceTaskFetchStats,
   listExperienceTaskSources,
@@ -46,6 +47,7 @@ const taskTotal = ref(0)
 const runningTaskId = ref<number | null>(null)
 const fetchingTaskId = ref<number | null>(null)
 const fetchingSourceId = ref<number | null>(null)
+const extractingSourceId = ref<number | null>(null)
 const taskStats = ref<Record<number, SearchStats>>({})
 const taskFetchStats = ref<Record<number, ExperienceFetchStats>>({})
 const sourceItems = ref<ExperienceSourceItem[]>([])
@@ -344,6 +346,27 @@ async function handleFetchSource(item: ExperienceSourceItem) {
     alert(e?.message || "重新抓取失败")
   } finally {
     fetchingSourceId.value = null
+  }
+}
+
+async function handleExtractSource(item: ExperienceSourceItem) {
+  extractingSourceId.value = item.id
+  try {
+    const result = await extractExperienceSource(item.id, { force: false })
+    if (selectedTask.value) {
+      await Promise.all([loadSources(selectedTask.value.id), loadFetchStats(selectedTask.value.id)])
+      await loadTasks()
+    }
+    alert(
+      `抽取完成：${result.is_interview_experience ? "是面经" : "非面经"}；` +
+      `问题数 ${result.question_count || 0}；` +
+      `agent_run_id ${result.agent_run_id || "-"}；` +
+      `状态 ${result.extract_status || result.status || "-"}`
+    )
+  } catch (e: any) {
+    alert(e?.message || "抽取面经失败")
+  } finally {
+    extractingSourceId.value = null
   }
 }
 
@@ -660,6 +683,7 @@ onMounted(() => {
               <span>{{ item.engine || "未知引擎" }}</span>
               <span>{{ item.matched_reason || "未记录原因" }}</span>
               <span>{{ item.fetch_status_label || item.fetch_status }}</span>
+              <span v-if="item.extract_status">抽取 {{ item.extract_status }}</span>
               <span :class="['quality-tag', (item.fetch_quality || '').toLowerCase()]">
                 {{ fetchQualityLabel[item.fetch_quality || ''] || item.fetch_quality || "-" }}
               </span>
@@ -672,6 +696,14 @@ onMounted(() => {
               <button class="preview-btn" @click="openPreview(item)" :disabled="previewLoading">查看正文预览</button>
               <button class="preview-btn" @click="handleFetchSource(item)" :disabled="fetchingSourceId === item.id">
                 {{ fetchingSourceId === item.id ? "抓取中..." : "重新抓取" }}
+              </button>
+              <button
+                v-if="item.fetch_status === 'FETCHED'"
+                class="preview-btn"
+                @click="handleExtractSource(item)"
+                :disabled="extractingSourceId === item.id"
+              >
+                {{ extractingSourceId === item.id ? "抽取中..." : "抽取面经" }}
               </button>
             </div>
           </article>

@@ -129,6 +129,9 @@ class ExperienceSourceFetchRequest(BaseModel):
 class InterviewExperienceRead(BaseModel):
     id: int
     source_item_id: int | None = None
+    task_id: int | None = None
+    source_url: str | None = None
+    platform: str | None = None
     company: str | None = None
     position: str | None = None
     job_direction: str | None = None
@@ -138,6 +141,8 @@ class InterviewExperienceRead(BaseModel):
     tags_json: list = []
     reliability_score: float | None = None
     reliability_level: str | None = None
+    extraction_confidence: float | None = None
+    extraction_output_json: dict | None = None
     review_status: str
     created_at: datetime | None = None
     reviewed_by: int | None = None
@@ -152,13 +157,17 @@ class InterviewQuestionRead(BaseModel):
     id: int
     experience_id: int | None = None
     question: str
+    original_answer: str | None = None
     standard_answer: str | None = None
     answer_source: str
+    evidence: str | None = None
+    question_type: str | None = None
     category: str | None = None
     difficulty: str | None = None
     company: str | None = None
     position: str | None = None
     reliability_score: float | None = None
+    confidence: float | None = None
     tags_json: list = []
     review_status: str
     index_status: str
