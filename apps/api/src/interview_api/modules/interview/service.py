@@ -28,6 +28,21 @@ from interview_api.modules.resume.repository import ResumeRepository, ResumeRepo
 logger = logging.getLogger(__name__)
 
 
+def retired_interview_mutation(method):
+    """Legacy reads/context helpers remain; no legacy writer can advance M4 state."""
+    import functools
+    if __import__("inspect").isasyncgenfunction(method):
+        @functools.wraps(method)
+        async def stream(*args, **kwargs):
+            yield _sse("error", {"code": "LEGACY_READ_ONLY", "message": "请使用 M4 SessionController；旧面试写入已停用"})
+        return stream
+    @functools.wraps(method)
+    async def disabled(*args, **kwargs):
+        from interview_api.core.exceptions import AppError
+        raise AppError("LEGACY_READ_ONLY", "旧面试写入已停用，请使用 M4 SessionController", 409)
+    return disabled
+
+
 class InterviewService:
     def __init__(self, db: AsyncSession, embedding, vector_store, llm):
         self.db = db
@@ -45,6 +60,7 @@ class InterviewService:
 
     # ── Session CRUD ──
 
+    @retired_interview_mutation
     async def create_session(
         self, user_id: int, title: str | None = None
     ) -> InterviewSession:
@@ -98,6 +114,7 @@ class InterviewService:
 
     # ── Resume Binding ──
 
+    @retired_interview_mutation
     async def bind_resume(
         self, session_id: int, user_id: int, resume_id: int
     ) -> None:
@@ -177,6 +194,7 @@ class InterviewService:
 
     # ── Target Position ──
 
+    @retired_interview_mutation
     async def set_target_position(
         self,
         session_id: int,
@@ -344,6 +362,7 @@ def _sse(event: str, data: dict | list) -> str:
 # ── Background question generation (with fresh DB session) ──
 
 
+@retired_interview_mutation
 async def _generate_questions_background(
     session_id: int,
     llm,
@@ -438,6 +457,7 @@ class InterviewChatService:
 
     # ── Lightweight Interview Plan (rule-based, no LLM) ──
 
+    @retired_interview_mutation
     async def _init_lightweight_plan(self, session_id: int) -> dict:
         """Initialize interview_plan_json from resume data without LLM.
 
@@ -515,6 +535,7 @@ class InterviewChatService:
 
     # ── Interview Plan Generation (legacy compat) ──
 
+    @retired_interview_mutation
     async def generate_plan(self, session_id: int) -> None:
         """Generate lightweight interview plan (rule-based, no LLM).
 
@@ -544,6 +565,7 @@ class InterviewChatService:
 
     # ── Confirm Position + Generate Q1 ──
 
+    @retired_interview_mutation
     async def confirm_and_generate_first_question(
         self,
         session_id: int,
@@ -630,6 +652,7 @@ class InterviewChatService:
                 pass
             return {"error": "GENERATION_FAILED", "message": "生成失败，请重试"}
 
+    @retired_interview_mutation
     async def generate_next_question(
         self,
         session_id: int,
@@ -782,12 +805,14 @@ class InterviewChatService:
             return None
 
     # ── Legacy: trigger from router ──
+    @retired_interview_mutation
     async def generate_questions(self, session_id: int) -> None:
         """Legacy compat: calls generate_plan (Phase 3.5 on-demand mode)."""
         await self.generate_plan(session_id)
 
     # ── Start Interview ──
 
+    @retired_interview_mutation
     async def start_interview(
         self, session_id: int, user_id: int
     ) -> dict | None:
@@ -848,6 +873,7 @@ class InterviewChatService:
 
     # ── Chat Stream (Question-Driven) ──
 
+    @retired_interview_mutation
     async def chat_stream(
         self,
         session_id: int,
@@ -1357,6 +1383,7 @@ class InterviewChatService:
             "evidence_json": q.evidence_json,
         }
 
+    @retired_interview_mutation
     async def skip_question(
         self, session_id: int, user_id: int, question_id: int
     ) -> dict | None:
@@ -1396,6 +1423,7 @@ class InterviewChatService:
 
     # ── Internal helpers ──
 
+    @retired_interview_mutation
     async def _handle_position_confirmation(
         self, session: InterviewSession, user_message: str, turn_index: int
     ):
@@ -1787,14 +1815,8 @@ class InterviewChatService:
                 return json.loads(match.group())
         except (json.JSONDecodeError, ValueError):
             pass
-        logger.warning("Failed to parse LLM decision, using default")
-        return {
-            "evaluation": llm_response[:200],
-            "score": 3,
-            "action": "NEXT_QUESTION",
-            "follow_up_question": None,
-            "next_question_preview": None,
-        }
+        # Retired legacy path must not disguise provider failure as candidate performance.
+        raise ValueError("INTERVIEW_STRUCTURED_OUTPUT_INVALID")
 
     @staticmethod
     def _parse_json_response(response: str) -> list[dict]:

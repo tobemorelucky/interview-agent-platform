@@ -505,3 +505,122 @@ Phase 5（合并至 Phase 4.6）：
 - published_experiences
 - published_experience_questions
 - vector_index_jobs
+
+---
+
+# 17. M1 公共职业数据域（2026-09-30）
+
+M1 将公司、岗位、JD、来源和证据建模为共享公共数据。以下公共表均禁止
+`user_id`：
+
+```text
+Company -> CompanyAlias
+Company -> Job -> JobDescriptionVersion -> JobRequirement
+              -> JobTag
+Source -> SourceSnapshot -> ClaimEvidence -> Claim
+Claim -> JobRequirement
+Job -> InterviewExperience / InterviewQuestion
+```
+
+## 17.1 Company 与 Job
+
+- `companies.normalized_name` 全局唯一；规范名使用确定性 NFKC、空白归一化和
+  casefold 处理。
+- 公司别名存放在独立的 `company_aliases` 表，
+  `(company_id, normalized_alias)` 唯一；别名不要求全局唯一。
+- `jobs.company_id` 非空，`(company_id, normalized_title)` 唯一。
+- M1 的 `job_family`、`campus_type`、`level` 均为可空文本，不引入复杂枚举。
+
+## 17.2 JD 版本与要求
+
+- `job_description_versions` 只追加版本，不原地覆盖历史正文。
+- `(job_id, version_number)` 与 `(job_id, content_fingerprint)` 均唯一。
+- JD 可选关联 `source_snapshot_id`，并保留结构化数据、元数据和观察/有效时间。
+- `job_requirements.claim_id` 可空；存在时通过
+  `Claim -> ClaimEvidence -> SourceSnapshot` 追溯，不复制 Evidence 正文。
+
+## 17.3 来源与证据
+
+- `sources.url_hash` 唯一，canonical URL 的跟踪参数会在 hash 前移除。
+- `source_snapshots` 以 `(source_id, content_hash)` 去重。
+- `content_hash` 另建非唯一全局索引，用于识别不同 URL 的镜像或转载；跨 Source
+  相同 hash 可以同时保留。
+- `claims`、`claim_evidence` 是纯公共 provenance 层，不依赖 ResearchRun、Artifact
+  或用户实体。
+
+## 17.4 面经兼容与指纹
+
+- `interview_experiences` 和 `interview_questions` 新增可空 `company_id`、`job_id`。
+- 原 `company`、`position` 字符串继续保留，历史数据无需强制关联。
+- `interview_experiences.content_fingerprint` 和
+  `interview_questions.question_fingerprint` 使用统一的确定性文本归一化 + SHA-256。
+- 同时写入 company/job 外键时，应用层必须验证 `Job.company_id == company_id`。
+
+## 17.5 Backfill
+
+M1 backfill 只允许：
+
+1. 从已有正文和问题确定性生成 fingerprint；
+2. 对 canonical name 与 alias 建立规范化名称候选集合；
+3. 只有名称唯一指向一个 Company 时才关联；
+4. 只有 Company 已唯一确定、且岗位标题精确匹配时才关联 Job。
+
+歧义或无法精确匹配的记录保留旧字符串，外键保持 `NULL`。禁止使用 LLM、
+embedding 或模糊匹配推测归属。
+
+---
+
+# 18. M2A 公共采集审计（2026-09-30）
+
+- `tool_invocations` 审计每一次 Gateway 调用（成功和失败），并以非空
+  `refresh_task_id` 关联 `public_data_refresh_tasks`。
+- Search 结果只创建/复用 `sources`，搜索标题、snippet、engine 等保存在
+  `sources.metadata_json`；Search 不创建 `source_snapshots`。
+- Fetch 成功后才按 `(source_id, content_hash)` 创建/复用 `source_snapshots`；
+  `created_by_tool_invocation_id` 记录首次创建该快照的调用。
+- `experience_collection_tasks.public_refresh_task_id` 一对一绑定公共刷新任务；旧表
+  继续承担管理 UI 兼容字段，不再独立维护同一轮网络采集状态。
+- 以上变更由 Alembic `0019` 引入，`0017`/`0018` 保持不变。
+
+---
+
+# 19. M3 私有 Candidate Profile
+
+当前实现的 Resume 源材料是 `resumes.raw_text` + `resume_reports.summary_json`，
+不是前文早期规划中的 parse_results 表。M3 保留实现，不新增 ResumeVersion。
+`candidate_profiles.user_id` 唯一，current_version_id 可空且只能指向本聚合根版本。
+Version 是 immutable 全量快照，version number 与 generation key 有唯一约束。
+ResumeEvidence 确定性生成；UserConfirmedEvidence 区分本人确认。
+规范化经历/技能通过 CandidateFactEvidence 的真实 FK 溯源；历史由 immutable/sealed
+triggers 保护，Resume 来源 FK 为 RESTRICT。只新增 `0021`。
+详见 [M3 数据模型、事务和删除保护](21_candidate_profile_m3.md)。
+
+# 20. M4 面试上下文与回答评价
+
+`interview_context_snapshots` 固定私有 CandidateProfileVersion、公共 Company/Job/JD、
+Requirement、批准题目/面经的实际内容与 fingerprint。Snapshot 禁止 UPDATE，Session
+禁止换 Snapshot；选中公共 refs 不可删除。历史 Session 保持 legacy，不猜测关联。
+`interview_answers` 独立保存回答/幂等键，`interview_evaluations` 每 Answer 唯一且五维
+CHECK 1–5；`interview_agent_calls` 关联共享 ExperienceAgentRun/StepRun。
+active_question_id + status/sequence 是状态真相源，index 只由 Controller 同步。
+只新增 0022；详见 [M4 数据模型与验收](22_mock_interview_core_m4.md)。
+
+# 21. M5 Report / Observation / MemoryProposal
+
+`final_interview_reports` 为每场保存 generation/key、固定 Snapshot、数据库统计和独立
+Coach synthesis；partial unique 保证最多一个成功 current。`interview_report_attempts`
+保留失败/重试审计。成功内容 immutable，完整发布事务最后切换 current。
+`interview_performance_observations` 与 Evaluation FK junction 保存单场表现，不修改
+CandidateProfile/UserSkill。`memory_proposals` 和支持 junction 保存 PENDING 建议、原文/
+修正文、USER 确认来源；批准后单事务写现有 UserMemoryItem/Event，没有第二套 Memory。
+Report/Session/支持评价采用 RESTRICT provenance 保护，只新增 0023，不补历史报告。
+详见 [M5 schema、事务与验收](23_interview_coach_m5.md)。
+
+# 22. M6 Frozen Job Matching
+
+`job_match_runs` 固定私有 ProfileVersion、显式过滤、本人确认 preference/goal、公共 Job/JD
+版本/Requirement/Fingerprint、实际 Evidence 输入和 policy/prompt。`job_match_candidates`
+保存确定性 Eligibility/Matrix/排序组成、pre/agent/final；NOT_SATISFIED 不允许有 rank。
+`job_match_recommendations` 每候选唯一，`job_match_attempts` 关联共享 Agent audit。
+数据库触发器保护 Run 输入和已完成历史；完整发布前不得 COMPLETED。来源 FK RESTRICT。
+只新增 0024，不补历史 Run，不修改 0017–0023。详见 [M6 schema](24_job_matching_m6.md)。

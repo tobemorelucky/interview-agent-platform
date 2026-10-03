@@ -9,23 +9,39 @@ import time
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from interview_api.core.config import settings
+from interview_api.infrastructure.db.session import async_session_factory
 from interview_api.modules.experience.models import (
     ExperienceKeywordPreset,
     ExperienceCollectionTask,
     ExperienceSourceItem,
 )
-from interview_api.modules.experience.fetchers import FetchResult, HttpxContentFetcher
+from interview_api.modules.experience.fetchers import FetchResult
 from interview_api.modules.experience.repository import (
     ExperienceKeywordPresetRepository,
     ExperienceCollectionTaskRepository,
     ExperienceSourceItemRepository,
 )
 from interview_api.modules.experience.search import (
-    SearxngSearchProvider,
+    SearchResult,
     build_search_queries,
 )
 from interview_api.modules.experience.search.filters import evaluate_candidate
 from interview_api.modules.experience.search.url_utils import hash_url, normalize_url
+from interview_api.modules.public_career.compat import ExperienceRefreshTaskAdapter
+from interview_api.modules.public_career.models import PublicDataRefreshTask
+from interview_api.modules.public_career.repository import PublicDataRefreshTaskRepository
+from interview_api.modules.public_career.refresh_service import (
+    PublicDataRefreshService,
+    RefreshTaskStatus,
+)
+from interview_api.modules.public_career.tools.contracts import ToolContext
+from interview_api.modules.public_career.tools.errors import ToolExecutionError
+from interview_api.modules.public_career.tools.factory import (
+    FETCH_TOOL_NAME,
+    SEARCH_TOOL_NAME,
+    build_live_tool_gateway,
+)
+from interview_api.modules.public_career.tools.gateway import ToolGateway
 
 VALID_PRESET_TYPES = {"COMPANY", "JOB", "PLATFORM"}
 logger = logging.getLogger(__name__)
@@ -124,10 +140,14 @@ class ExperienceKeywordService:
 
 
 class ExperienceTaskService:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession, gateway: ToolGateway | None = None):
         self.db = db
         self.repo = ExperienceCollectionTaskRepository(db)
         self.source_repo = ExperienceSourceItemRepository(db)
+        self.gateway = gateway or build_live_tool_gateway(async_session_factory)
+        self.public_task_repo = PublicDataRefreshTaskRepository(db)
+        self.refresh_adapter = ExperienceRefreshTaskAdapter(self.public_task_repo)
+        self.refresh_service = PublicDataRefreshService(db, self.gateway)
 
     async def create_task(self, data: dict, user_id: int | None = None) -> dict:
         search_scope = data.get("search_scope", "JOB")
@@ -180,6 +200,8 @@ class ExperienceTaskService:
             update_public_summary=bool(data.get("update_public_summary", True)),
         )
         created = await self.repo.create(task)
+        await self.refresh_adapter.get_or_create(created)
+        await self.db.refresh(created)
         return self._task_to_dict(created)
 
     async def list_tasks(
@@ -223,11 +245,21 @@ class ExperienceTaskService:
             started_at=started_at,
             finished_at=None,
         )
+        refresh_task = await self.refresh_adapter.get_or_create(task)
+        if refresh_task.status in {
+            RefreshTaskStatus.PENDING.value,
+            RefreshTaskStatus.FAILED.value,
+            RefreshTaskStatus.READY_FOR_EXTRACTION.value,
+        }:
+            await self.refresh_service.transition(
+                refresh_task, RefreshTaskStatus.SEARCHING
+            )
         await self.db.commit()
 
         if settings.experience_search_provider.lower() != "searxng":
             error_message = "当前阶段仅支持 EXPERIENCE_SEARCH_PROVIDER=searxng"
             task = await self._finish_task_failed(task_id, error_message, failed_count=1)
+            await self._mark_public_refresh_failed(refresh_task, error_message)
             return {
                 "task": self._task_to_dict(task),
                 "found_url_count": task.found_url_count,
@@ -243,7 +275,9 @@ class ExperienceTaskService:
             time_window_hours=task.time_window_hours,
         )
         if not queries:
-            task = await self._finish_task_failed(task_id, "没有生成可执行的搜索 query", failed_count=1)
+            error_message = "没有生成可执行的搜索 query"
+            task = await self._finish_task_failed(task_id, error_message, failed_count=1)
+            await self._mark_public_refresh_failed(refresh_task, error_message)
             return {
                 "task": self._task_to_dict(task),
                 "found_url_count": task.found_url_count,
@@ -251,7 +285,6 @@ class ExperienceTaskService:
                 "query_failed_count": 1,
             }
 
-        provider = SearxngSearchProvider()
         max_results = min(task.max_results, settings.experience_search_max_results)
         query_failed_count = 0
         query_success_count = 0
@@ -268,22 +301,37 @@ class ExperienceTaskService:
                 break
 
             try:
-                results = await provider.search(
-                    query.query,
-                    time_window_hours=task.time_window_hours,
-                    max_results=remaining,
+                tool_result = await self.gateway.invoke(
+                    SEARCH_TOOL_NAME,
+                    {
+                        "query": query.query,
+                        "time_window_hours": task.time_window_hours,
+                        "max_results": remaining,
+                    },
+                    ToolContext(refresh_task_id=refresh_task.id),
                 )
+                results = [
+                    SearchResult(
+                        title=item.get("title") or "",
+                        url=item["url"],
+                        snippet=item.get("snippet"),
+                        engine=item.get("engine"),
+                        published_at=item.get("published_at"),
+                        metadata=item.get("metadata") or {},
+                    )
+                    for item in tool_result.data.get("results", [])
+                ]
                 query_success_count += 1
-            except RuntimeError as exc:
+            except ToolExecutionError as exc:
                 query_failed_count += 1
-                error_messages.append(f"{query.query}: {exc}")
+                error_messages.append(f"{query.query}: {exc.code}: {exc.message}")
                 logger.info(
                     "[experience-search] task=%s query=%r platform=%s raw=0 "
                     "accepted=0 filtered=0 duplicate=0 error=%r",
                     task.id,
                     query.query,
                     query.platform,
-                    str(exc),
+                    exc.message,
                 )
                 continue
 
@@ -353,6 +401,7 @@ class ExperienceTaskService:
             task = await self._finish_task_failed(
                 task_id, error_message, failed_count=query_failed_count
             )
+            await self._mark_public_refresh_failed(refresh_task, error_message)
         else:
             final_error_message = "；".join(error_messages[:3]) if error_messages else None
             if found_url_count == 0:
@@ -459,8 +508,10 @@ class ExperienceTaskService:
                 "raw_text_char_count": len(item.raw_text or ""),
             }
 
-        fetcher = HttpxContentFetcher()
-        result = await fetcher.fetch(item.source_url)
+        refresh_task = await self._prepare_public_fetch(item.task_id)
+        result = await self._invoke_public_fetch(
+            item.source_url, refresh_task_id=refresh_task.id
+        )
         fetched_at = datetime.now(timezone.utc)
         if result.ok and result.raw_text:
             raw_text = result.raw_text
@@ -478,6 +529,7 @@ class ExperienceTaskService:
                 len(raw_text),
             )
             await self._refresh_task_fetch_counts(item.task_id)
+            await self._sync_public_refresh_after_fetch(refresh_task)
             return {
                 "source_id": source_id,
                 "task_id": item.task_id,
@@ -501,6 +553,7 @@ class ExperienceTaskService:
             error_message,
         )
         await self._refresh_task_fetch_counts(item.task_id)
+        await self._sync_public_refresh_after_fetch(refresh_task)
         return {
             "source_id": source_id,
             "task_id": item.task_id,
@@ -537,6 +590,7 @@ class ExperienceTaskService:
             error_message=None,
             finished_at=None,
         )
+        refresh_task = await self._prepare_public_fetch(task_id)
         await self.db.commit()
 
         if not items:
@@ -555,6 +609,7 @@ class ExperienceTaskService:
                 finished_at=datetime.now(timezone.utc),
             )
             await self.db.commit()
+            await self._sync_public_refresh_after_fetch(refresh_task)
             logger.info(
                 "[experience-fetch] task=%s total=0 fetched=0 failed=0 duration_ms=%s",
                 task_id,
@@ -569,8 +624,9 @@ class ExperienceTaskService:
                 "task": self._task_to_dict(task),
             }
 
-        fetcher = HttpxContentFetcher()
-        fetch_results = await self._fetch_sources_concurrently(fetcher, items)
+        fetch_results = await self._fetch_sources_concurrently(
+            items, refresh_task_id=refresh_task.id
+        )
 
         fetched_count = 0
         failed_count = 0
@@ -626,6 +682,7 @@ class ExperienceTaskService:
             finished_at=datetime.now(timezone.utc),
         )
         await self.db.commit()
+        await self._sync_public_refresh_after_fetch(refresh_task)
         duration_ms = int((time.perf_counter() - started) * 1000)
         logger.info(
             "[experience-fetch] task=%s total=%s fetched=%s failed=%s duration_ms=%s",
@@ -645,17 +702,20 @@ class ExperienceTaskService:
             "task": self._task_to_dict(task),
         }
 
-    @staticmethod
     async def _fetch_sources_concurrently(
-        fetcher: HttpxContentFetcher,
+        self,
         items: list[ExperienceSourceItem],
+        *,
+        refresh_task_id: int,
     ) -> list[tuple[ExperienceSourceItem, FetchResult]]:
         semaphore = asyncio.Semaphore(3)
 
         async def fetch_one(item: ExperienceSourceItem) -> tuple[ExperienceSourceItem, FetchResult]:
             async with semaphore:
                 try:
-                    result = await fetcher.fetch(item.source_url)
+                    result = await self._invoke_public_fetch(
+                        item.source_url, refresh_task_id=refresh_task_id
+                    )
                 except Exception as exc:  # defensive: one URL must not break the batch
                     result = FetchResult(
                         url=item.source_url,
@@ -664,12 +724,114 @@ class ExperienceTaskService:
                         content_type=None,
                         title=None,
                         raw_text=None,
+                        error_code="request_failed",
                         error_message=f"request_failed: {exc}",
                         fetch_method="httpx",
                     )
                 return item, result
 
         return await asyncio.gather(*(fetch_one(item) for item in items))
+
+    async def _prepare_public_fetch(
+        self, task_id: int
+    ) -> PublicDataRefreshTask:
+        legacy_task = await self.repo.get_by_id(task_id)
+        if legacy_task is None:
+            raise LookupError("任务不存在")
+        refresh_task = await self.refresh_adapter.get_or_create(legacy_task)
+        if refresh_task.status in {
+            RefreshTaskStatus.PENDING.value,
+            RefreshTaskStatus.FAILED.value,
+        }:
+            await self.refresh_service.transition(
+                refresh_task, RefreshTaskStatus.SEARCHING
+            )
+        if refresh_task.status in {
+            RefreshTaskStatus.SEARCHING.value,
+            RefreshTaskStatus.READY_FOR_EXTRACTION.value,
+        }:
+            await self.refresh_service.transition(
+                refresh_task, RefreshTaskStatus.FETCHING
+            )
+        await self.db.commit()
+        return refresh_task
+
+    async def _invoke_public_fetch(
+        self, url: str, *, refresh_task_id: int
+    ) -> FetchResult:
+        try:
+            tool_result = await self.gateway.invoke(
+                FETCH_TOOL_NAME,
+                {"url": url},
+                ToolContext(refresh_task_id=refresh_task_id),
+            )
+        except ToolExecutionError as exc:
+            return FetchResult(
+                url=url,
+                final_url=None,
+                status_code=exc.details.get("status_code"),
+                content_type=exc.details.get("content_type"),
+                title=None,
+                raw_text=None,
+                error_code=exc.code,
+                error_message=exc.message,
+                fetch_method="gateway",
+            )
+        data = tool_result.data
+        return FetchResult(
+            url=data.get("url") or url,
+            final_url=data.get("final_url"),
+            status_code=data.get("status_code"),
+            content_type=data.get("content_type"),
+            title=data.get("title"),
+            raw_text=data.get("content"),
+            fetch_method=data.get("fetch_method") or "gateway",
+            metadata=data.get("metadata") or {},
+        )
+
+    async def _sync_public_refresh_after_fetch(
+        self, refresh_task: PublicDataRefreshTask
+    ) -> None:
+        legacy_task_id = int(refresh_task.target_ref or 0)
+        discovered = await self.source_repo.count_source_items_by_task(
+            legacy_task_id, fetch_status="DISCOVERED"
+        )
+        if discovered > 0:
+            return
+        fetched = await self.source_repo.count_source_items_by_task(
+            legacy_task_id, fetch_status="FETCHED"
+        )
+        await self.db.refresh(refresh_task)
+        if refresh_task.status != RefreshTaskStatus.FETCHING.value:
+            return
+        if fetched > 0:
+            await self.refresh_service.transition(
+                refresh_task, RefreshTaskStatus.READY_FOR_EXTRACTION
+            )
+        else:
+            await self.refresh_service.transition(
+                refresh_task,
+                RefreshTaskStatus.FAILED,
+                error_message="All compatibility fetches failed",
+            )
+        await self.db.commit()
+
+    async def _mark_public_refresh_failed(
+        self,
+        refresh_task: PublicDataRefreshTask,
+        error_message: str,
+    ) -> None:
+        await self.db.refresh(refresh_task)
+        if refresh_task.status not in {
+            RefreshTaskStatus.COMPLETED.value,
+            RefreshTaskStatus.FAILED.value,
+        }:
+            await self.refresh_service.transition(
+                refresh_task,
+                RefreshTaskStatus.FAILED,
+                error_message=error_message[:2000],
+            )
+            await self.db.commit()
 
     async def _refresh_task_fetch_counts(self, task_id: int) -> None:
         fetched_total = await self.source_repo.count_source_items_by_task(
@@ -709,6 +871,7 @@ class ExperienceTaskService:
     def _task_to_dict(task: ExperienceCollectionTask) -> dict:
         return {
             "id": task.id,
+            "public_refresh_task_id": task.public_refresh_task_id,
             "created_by": task.created_by,
             "time_window_hours": task.time_window_hours,
             "search_scope": task.search_scope,

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from "vue";
+import { displayLabel, userError } from "../i18n/zh-CN";
 import { useRoute, useRouter } from "vue-router";
 import { getResume, getResumeReport } from "../api/resume";
 import { ApiError } from "../api/client";
@@ -86,7 +87,7 @@ onUnmounted(() => {
     <!-- Failed -->
     <div v-else-if="resume && resume.status === 'FAILED'" class="state-box error">
       <h3>分析失败</h3>
-      <p v-if="resume.error_message">{{ resume.error_message }}</p>
+      <p v-if="resume.error_message">{{ userError(resume.error_message) }}</p>
     </div>
 
     <!-- Report -->
@@ -124,7 +125,7 @@ onUnmounted(() => {
         <div v-if="report.summary_json.risk_points?.length" class="info-card">
           <h4>风险点</h4>
           <div v-for="r in report.summary_json.risk_points" :key="r.area" class="risk-item">
-            <span class="risk-badge" :class="'risk-' + r.severity.toLowerCase()">{{ r.severity }}</span>
+            <span class="risk-badge" :class="'risk-' + r.severity.toLowerCase()">{{ displayLabel(r.severity) }}</span>
             <strong>{{ r.area }}</strong>
             <p>{{ r.description }}</p>
           </div>
@@ -132,7 +133,7 @@ onUnmounted(() => {
       </section>
 
       <!-- 2. Retrieval Process -->
-      <section v-if="report.retrieved_context_json" class="section">
+      <details v-if="report.retrieved_context_json" class="section ux-technical"><summary>检索技术详情</summary>
         <h3>检索过程</h3>
         <p class="retrieval-summary">
           知识库检索状态：
@@ -143,7 +144,7 @@ onUnmounted(() => {
         </p>
 
         <div v-if="!report.retrieved_context_json.queries?.length" class="no-kb-hint">
-          KB 检索未启用或未生成检索查询。
+          知识库检索未启用或未生成检索查询。
         </div>
 
         <div v-for="(qr, i) in report.retrieved_context_json.queries" :key="i" class="query-result">
@@ -163,7 +164,7 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
-      </section>
+      </details>
 
       <!-- 3. Interview Questions -->
       <section v-if="report.questions_json?.questions?.length" class="section">
@@ -180,8 +181,8 @@ onUnmounted(() => {
             <span class="source-badge" :style="{ background: sourceColor(q.source) }">
               {{ sourceLabel(q.source) }}
             </span>
-            <span class="category-badge">{{ q.category }}</span>
-            <span class="difficulty-badge" :class="'diff-' + q.difficulty.toLowerCase()">{{ q.difficulty }}</span>
+            <span class="category-badge">{{ displayLabel(q.category, "技术 / 项目") }}</span>
+            <span class="difficulty-badge" :class="'diff-' + q.difficulty.toLowerCase()">{{ displayLabel(q.difficulty) }}</span>
           </div>
 
           <div v-if="expandedQuestion === i" class="question-detail">

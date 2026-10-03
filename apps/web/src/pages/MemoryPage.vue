@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue"
+import { displayLabel } from "../i18n/zh-CN"
+const error = ref("")
+import { confidenceLabel } from "../types/interview-report"
 import {
   createMemoryItem,
   deleteMemoryItem,
@@ -27,7 +30,7 @@ const form = ref({
 const memoryTypes = [
   { value: "", label: "全部" },
   { value: "SEMANTIC", label: "长期事实" },
-  { value: "SKILL", label: "能力画像" },
+  { value: "SKILL", label: "历史能力估计" },
   { value: "EPISODIC", label: "历史事件" },
   { value: "PROCEDURAL", label: "流程记忆" },
   { value: "PREFERENCE", label: "偏好" },
@@ -36,11 +39,20 @@ const memoryTypes = [
 
 const typeLabel: Record<string, string> = {
   SEMANTIC: "长期事实",
-  SKILL: "能力画像",
+  SKILL: "历史能力估计",
   EPISODIC: "历史事件",
   PROCEDURAL: "流程记忆",
   PREFERENCE: "偏好",
   SAFETY: "安全/同意",
+}
+
+function memoryLabel(item: UserMemoryItem): string {
+  if (item.source_type === "MEMORY_PROPOSAL") {
+    const labels: Record<string, string> = { GOAL: "本人确认目标", PREFERENCE: "本人确认偏好",
+      EXPERIENCE: "本人确认面试经历", SKILL_OBSERVATION: "本人确认本场表现观察", PREPARATION_FOCUS: "本人确认准备重点" }
+    return labels[String(item.metadata_json?.proposal_type)] || "本人确认面试记忆"
+  }
+  return typeLabel[item.memory_type] || item.memory_type
 }
 
 async function loadMemories() {
@@ -52,14 +64,14 @@ async function loadMemories() {
     const res = await listMemoryItems(params)
     memories.value = res.items || []
     total.value = res.total || 0
-  } finally {
+  } catch (e) { error.value = e instanceof Error ? e.message : "成长记录读取失败，请重试"; } finally {
     loading.value = false
   }
 }
 
 async function loadSkills() {
-  const res = await listSkillProfiles()
-  skills.value = res.items || []
+  try { const res = await listSkillProfiles(); skills.value = res.items || [] }
+  catch (e) { error.value = e instanceof Error ? e.message : "历史表现读取失败，请重试" }
 }
 
 async function handleCreatePreference() {
@@ -114,18 +126,20 @@ onMounted(() => {
   <div class="memory-page">
     <header class="page-head">
       <div>
-        <h2>我的记忆</h2>
-        <p>查看和管理系统为你保留的长期事实、偏好和能力画像。</p>
+        <h2>成长记录</h2>
+        <p>查看和管理本人确认的 长期成长记忆 与偏好；面试表现观察不等同于简历事实或稳定能力。</p>
       </div>
     </header>
 
+    <p v-if="error" role="alert">{{ error }}</p>
     <section class="panel create-panel">
       <div>
         <h3>新增偏好记忆</h3>
-        <p>第一版只支持手动新增偏好，自动抽取会在后续阶段接入。</p>
+        <p>可以手动新增偏好；面试报告产生的记忆提案必须先由本人批准或修正确认。</p>
+        <router-link to="/interview/reports">查看面试报告与待确认提案</router-link>
       </div>
       <div class="create-form">
-        <input v-model="form.key" placeholder="key，例如 interview_preference" />
+        <input v-model="form.key" placeholder="偏好标识（可使用默认值）" />
         <textarea
           v-model="form.content"
           rows="3"
@@ -158,7 +172,7 @@ onMounted(() => {
           </select>
           <input
             v-model="keyword"
-            placeholder="搜索 key / 内容 / 摘要"
+            placeholder="搜索标识 / 内容 / 摘要"
             @keyup.enter="loadMemories"
           />
           <button @click="loadMemories">搜索</button>
@@ -170,14 +184,20 @@ onMounted(() => {
         <article v-for="item in memories" :key="item.id" class="memory-item">
           <div class="memory-main">
             <div class="memory-meta">
-              <span>{{ typeLabel[item.memory_type] || item.memory_type }}</span>
-              <span>{{ item.scope }}</span>
-              <span>{{ item.key || "无 key" }}</span>
-              <span>confidence {{ scorePercent(item.confidence) }}</span>
-              <span>importance {{ scorePercent(item.importance) }}</span>
+              <span>{{ memoryLabel(item) }}</span>
+              <span>{{ displayLabel(item.scope) }}</span>
+              <span>偏好 / 记录</span>
+              <span v-if="item.source_type === 'MEMORY_PROPOSAL'">{{ confidenceLabel(String(item.metadata_json?.confidence_semantics || '')) }}</span>
+              <span v-else>支持信号：{{ item.confidence >= 0.8 ? "较充分" : "待确认" }}</span>
+              <span>关注程度：{{ item.importance >= 0.7 ? "重点" : "一般" }}</span>
             </div>
             <p class="memory-content">{{ item.content }}</p>
             <p v-if="item.summary" class="memory-summary">{{ item.summary }}</p>
+            <p v-if="item.source_type" class="memory-summary">来源：{{ displayLabel(item.source_type, "历史记录") }}</p>
+            <details v-if="item.metadata_json" class="memory-summary">
+              <summary>技术详情 / 本人确认记录</summary>
+              <pre>{{ JSON.stringify(item.metadata_json, null, 2) }}</pre>
+            </details>
           </div>
           <button class="danger-btn" :disabled="deletingId === item.id" @click="handleDelete(item)">
             {{ deletingId === item.id ? "删除中..." : "删除" }}
@@ -190,8 +210,9 @@ onMounted(() => {
     <section class="panel">
       <div class="section-title">
         <div>
-          <h3>技能画像</h3>
+          <h3>历史面试动态表现估计（旧数据）</h3>
           <span>当前 {{ skills.length }} 项</span>
+          <p>历史面试表现不等同于简历事实，也不是稳定能力认证。</p>
         </div>
       </div>
       <div v-if="skills.length" class="skill-grid">
@@ -203,12 +224,12 @@ onMounted(() => {
           <div class="score-bar">
             <div :style="{ width: scorePercent(skill.level_score) }"></div>
           </div>
-          <p>掌握度 {{ scorePercent(skill.level_score) }} · 证据 {{ skill.evidence_count }}</p>
+          <p>历史表现估计 {{ scorePercent(skill.level_score) }} · 记录 {{ skill.evidence_count }}</p>
           <p v-if="skill.strength_summary">优势：{{ skill.strength_summary }}</p>
           <p v-if="skill.weakness_summary">薄弱：{{ skill.weakness_summary }}</p>
         </article>
       </div>
-      <div v-else class="empty">暂无技能画像。后续面试 Agent 接入后会逐步生成。</div>
+      <div v-else class="empty">暂无历史表现估计。新的表现观察与记忆建议请在面试报告中查看。</div>
     </section>
   </div>
 </template>
@@ -367,6 +388,12 @@ button:disabled {
 .memory-content {
   margin: 0;
   line-height: 1.6;
+}
+
+.memory-summary pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 12px;
 }
 
 .memory-summary {

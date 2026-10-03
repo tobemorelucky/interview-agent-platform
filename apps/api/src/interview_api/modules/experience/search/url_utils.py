@@ -1,43 +1,14 @@
 """URL normalization helpers for source item de-duplication."""
 
 from hashlib import sha256
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
-
-
-TRACKING_PARAMS = {
-    "utm_source",
-    "utm_medium",
-    "utm_campaign",
-    "utm_term",
-    "utm_content",
-    "spm",
-    "fbclid",
-    "gclid",
-    "share_source",
-}
+from interview_api.core.url_safety import URLSafetyError, canonicalize_public_url
 
 
 def normalize_url(url: str) -> str:
-    text = (url or "").strip()
-    if not text:
+    try:
+        return canonicalize_public_url(url)
+    except URLSafetyError:
         return ""
-
-    parsed = urlsplit(text)
-    if not parsed.netloc:
-        return ""
-
-    query_items = []
-    for key, value in parse_qsl(parsed.query, keep_blank_values=True):
-        lower_key = key.lower()
-        if lower_key.startswith("utm_") or lower_key in TRACKING_PARAMS:
-            continue
-        query_items.append((key, value))
-
-    normalized_query = urlencode(query_items, doseq=True)
-    scheme = parsed.scheme.lower() or "https"
-    netloc = parsed.netloc.lower()
-    path = parsed.path or "/"
-    return urlunsplit((scheme, netloc, path, normalized_query, ""))
 
 
 def hash_url(url: str) -> str:

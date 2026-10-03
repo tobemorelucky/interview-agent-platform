@@ -1,0 +1,8 @@
+{
+  "https://example.com/replay-career-source": {
+    "title": "Replay public career source",
+    "content": "This deterministic offline fixture describes a fictional graduate software engineering role. The role requires Python, SQL, API design, testing, observability, and clear technical communication. It exists only to verify the public data search, fetch, persistence, deduplication, and refresh state flow without accessing the network.",
+    "content_type": "text/html",
+    "status_code": 200
+  }
+}

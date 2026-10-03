@@ -2,6 +2,7 @@ temp/
 
 # Python
 __pycache__/
+.pytest_cache/
 *.py[cod]
 *.egg-info/
 dist/
@@ -37,3 +38,20 @@ interview_agent_formal_docs_pack.zip
 
 
 test*.py
+!apps/api/tests/test*.py
+
+# Local browser QA artifacts (not product data)
+.playwright-cli/
+output/playwright/
+
+# Private/local delivery artifacts
+*.dump
+*.backup
+*.pid
+*.log
+.env.*.local
+.env.*
+!.env.example
+backups/
+uploads/
+private_resumes/

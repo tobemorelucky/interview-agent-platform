@@ -53,6 +53,10 @@ def dispatch_process_resume(resume_id: int) -> str:
     return task_id
 
 
+def dispatch_generate_candidate_profile(resume_id: int, regeneration_token: str | None = None) -> str:
+    return _app.send_task("generate_candidate_profile", args=[resume_id, regeneration_token]).id
+
+
 def _mask_url(url: str) -> str:
     """Mask password in a Redis URL for safe logging."""
     if "@" in url:

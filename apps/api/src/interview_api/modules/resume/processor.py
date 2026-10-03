@@ -51,6 +51,20 @@ async def process_resume_async(resume_id: int, task_id: str | None = None) -> No
             )
             return
 
+        # Celery redelivery reuses a completed report, avoiding another legacy LLM extraction.
+        from interview_api.infrastructure.db.session import async_session_factory
+        from interview_api.modules.resume.models import Resume, ResumeReport
+        from interview_api.modules.candidate_profile.agent import generate_profile_best_effort
+        from sqlalchemy import select
+        async with async_session_factory() as db:
+            saved = await db.get(Resume, resume_id)
+            ready = saved is not None and saved.status == "COMPLETED" and await db.scalar(
+                select(ResumeReport.id).where(ResumeReport.resume_id == resume_id)
+            ) is not None
+        if ready:
+            await generate_profile_best_effort(resume_id)
+            return
+
         await _mark_processing_started(resume_id)
         logger.info("[resume %s] Status -> PROCESSING", resume_id)
 
@@ -66,19 +80,13 @@ async def process_resume_async(resume_id: int, task_id: str | None = None) -> No
 
 
 async def _run_pipeline(resume_id: int) -> None:
-    from interview_api.infrastructure.embedding.provider import (
-        OpenAICompatibleEmbeddingProvider,
-    )
     from interview_api.infrastructure.llm.provider import OpenAICompatibleLLMProvider
-    from interview_api.infrastructure.milvus.provider import MilvusVectorStoreProvider
     from interview_api.infrastructure.storage.provider import MinioObjectStorageProvider
     from interview_api.modules.resume.parser import ResumeParser
-    from interview_api.modules.resume.retrieval import ResumeRetrievalService
 
     storage = MinioObjectStorageProvider()
     llm = OpenAICompatibleLLMProvider()
-    embedding = OpenAICompatibleEmbeddingProvider()
-    vector_store = MilvusVectorStoreProvider(embedding_dim=settings.embedding_dim)
+    # Retrieval is skipped below: don't instantiate unused embedding/Milvus clients.
 
     resume = await _get_resume_snapshot(resume_id)
     if resume is None:
@@ -131,6 +139,8 @@ async def _run_pipeline(resume_id: int) -> None:
         questions_json=questions_json,
     )
     logger.info("[resume %s] SUCCESS status COMPLETED", resume_id)
+    from interview_api.modules.candidate_profile.agent import generate_profile_best_effort
+    await generate_profile_best_effort(resume_id)
 
 
 async def _is_stale_task(resume_id: int, task_id: str | None) -> bool:

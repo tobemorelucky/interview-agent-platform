@@ -15,6 +15,10 @@ from interview_api.modules.experience.models import (
     InterviewExperience,
     InterviewQuestion,
 )
+from interview_api.modules.public_career.fingerprints import (
+    compute_content_fingerprint,
+    compute_question_fingerprint,
+)
 
 
 class ExperienceAgentRepository:
@@ -151,6 +155,11 @@ class ExperienceAgentRepository:
             interview_round=round_name,
             summary=summary,
             content_text=source.raw_text,
+            content_fingerprint=(
+                compute_content_fingerprint(source.raw_text)
+                if source.raw_text
+                else None
+            ),
             tags_json=(routing_json or {}).get("suggested_tags") or [],
             reliability_score=reliability_score,
             extraction_confidence=extraction_confidence,
@@ -182,9 +191,12 @@ class ExperienceAgentRepository:
         }
         for item in questions:
             route = route_by_index.get(len(created), {})
+            question_text = route.get("normalized_question") or item["question"]
             question = InterviewQuestion(
                 experience_id=experience.id,
-                question=route.get("normalized_question") or item["question"],
+                company_id=experience.company_id,
+                job_id=experience.job_id,
+                question=question_text,
                 original_answer=item.get("original_answer"),
                 standard_answer=item.get("standard_answer"),
                 answer_source=item.get("answer_source") or "NONE",
@@ -207,6 +219,7 @@ class ExperienceAgentRepository:
                 routing_json=route or {},
                 review_status=review_status,
                 index_status="NOT_INDEXED",
+                question_fingerprint=compute_question_fingerprint(question_text),
             )
             self.db.add(question)
             created.append(question)

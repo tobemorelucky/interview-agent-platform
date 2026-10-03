@@ -12,6 +12,7 @@ from interview_api.modules.users.models import User  # noqa: F401
 from interview_api.modules.kb.models import KbDocument, KbChunk  # noqa: F401
 from interview_api.modules.qa.models import ChatSession, ChatMessage  # noqa: F401
 from interview_api.modules.resume.models import Resume, ResumeReport  # noqa: F401
+from interview_api.modules.candidate_profile import models as candidate_profile_models  # noqa: F401
 from interview_api.modules.interview.models import (  # noqa: F401
     InterviewSession,
     InterviewSessionQuestion,
@@ -25,9 +26,26 @@ from interview_api.modules.experience.models import (  # noqa: F401
     InterviewQuestion,
     ExperienceRecentSummary,
 )
+from interview_api.modules.public_career.models import (  # noqa: F401
+    Claim,
+    ClaimEvidence,
+    Company,
+    CompanyAlias,
+    Job,
+    JobDescriptionVersion,
+    JobRequirement,
+    JobTag,
+    PublicDataRefreshTask,
+    Source,
+    SourceSnapshot,
+)
+from interview_api.modules.public_career.tool_models import ToolInvocation  # noqa: F401
 from interview_api.modules.memory.models import (  # noqa: F401
     UserMemoryItem,
     UserSkillProfile,
     UserMemoryEvent,
 )
+from interview_api.modules.memory import proposal_models as memory_proposal_models  # noqa: F401
+from interview_api.modules.interview_report import models as interview_report_models  # noqa: F401
 from interview_api.modules.audit.models import AuditLog  # noqa: F401
+from interview_api.modules.job_matching import models as job_matching_models  # noqa: F401

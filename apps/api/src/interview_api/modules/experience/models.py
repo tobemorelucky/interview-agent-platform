@@ -51,6 +51,11 @@ class ExperienceCollectionTask(Base):
     created_by: Mapped[int | None] = mapped_column(
         BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
+    public_refresh_task_id: Mapped[int | None] = mapped_column(
+        BigInteger,
+        ForeignKey("public_data_refresh_tasks.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     time_window_hours: Mapped[int] = mapped_column(Integer, nullable=False, default=24)
     job_keywords_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=list)
     company_keywords_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=list)
@@ -84,6 +89,13 @@ class ExperienceCollectionTask(Base):
     )
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "public_refresh_task_id",
+            name="uq_experience_collection_tasks_public_refresh",
+        ),
+    )
 
 
 class ExperienceSourceItem(Base):
@@ -132,6 +144,12 @@ class InterviewExperience(Base):
     __tablename__ = "interview_experiences"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    source_snapshot_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("source_snapshots.id", ondelete="SET NULL"), nullable=True
+    )
+    claim_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("claims.id", ondelete="SET NULL"), nullable=True
+    )
     source_item_id: Mapped[int | None] = mapped_column(
         BigInteger,
         ForeignKey("experience_source_items.id", ondelete="SET NULL"),
@@ -142,6 +160,12 @@ class InterviewExperience(Base):
         ForeignKey("experience_collection_tasks.id", ondelete="SET NULL"),
         nullable=True,
     )
+    company_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("companies.id", ondelete="SET NULL"), nullable=True
+    )
+    job_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("jobs.id", ondelete="SET NULL"), nullable=True
+    )
     source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     platform: Mapped[str | None] = mapped_column(String(64), nullable=True)
     company: Mapped[str | None] = mapped_column(String(128), nullable=True)
@@ -151,6 +175,7 @@ class InterviewExperience(Base):
     experience_date: Mapped[str | None] = mapped_column(String(64), nullable=True)
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     content_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    content_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
     tags_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=list)
     reliability_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     reliability_level: Mapped[str | None] = mapped_column(String(32), nullable=True)
@@ -163,6 +188,8 @@ class InterviewExperience(Base):
     review_status: Mapped[str] = mapped_column(
         String(32), nullable=False, default="PENDING"
     )
+    review_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reject_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -174,15 +201,32 @@ class InterviewExperience(Base):
     )
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    __table_args__ = (
+        Index("idx_interview_experiences_company_id", "company_id"),
+        Index("idx_interview_experiences_job_id", "job_id"),
+        Index(
+            "idx_interview_experiences_content_fingerprint", "content_fingerprint"
+        ),
+    )
+
 
 class InterviewQuestion(Base):
     __tablename__ = "interview_questions"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    claim_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("claims.id", ondelete="SET NULL"), nullable=True
+    )
     experience_id: Mapped[int | None] = mapped_column(
         BigInteger,
         ForeignKey("interview_experiences.id", ondelete="CASCADE"),
         nullable=True,
+    )
+    company_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("companies.id", ondelete="SET NULL"), nullable=True
+    )
+    job_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("jobs.id", ondelete="SET NULL"), nullable=True
     )
     question: Mapped[str] = mapped_column(Text, nullable=False)
     original_answer: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -218,16 +262,25 @@ class InterviewQuestion(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
+    __table_args__ = (
+        Index("idx_interview_questions_company_id", "company_id"),
+        Index("idx_interview_questions_job_id", "job_id"),
+    )
+
 
 class ExperienceAgentRun(Base):
     __tablename__ = "experience_agent_runs"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    source_item_id: Mapped[int] = mapped_column(
+    source_item_id: Mapped[int | None] = mapped_column(
         BigInteger,
         ForeignKey("experience_source_items.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
     )
+    refresh_task_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("public_data_refresh_tasks.id", ondelete="RESTRICT"), nullable=True
+    )
+    agent_role: Mapped[str | None] = mapped_column(String(100), nullable=True)
     task_id: Mapped[int | None] = mapped_column(
         BigInteger,
         ForeignKey("experience_collection_tasks.id", ondelete="SET NULL"),
@@ -251,6 +304,7 @@ class ExperienceAgentRun(Base):
     )
 
     __table_args__ = (
+        Index("idx_experience_agent_runs_refresh_task", "refresh_task_id"),
         Index("idx_experience_agent_runs_source_item_id", "source_item_id"),
         Index("idx_experience_agent_runs_task_id", "task_id"),
         Index("idx_experience_agent_runs_status", "status"),
@@ -274,6 +328,10 @@ class ExperienceAgentStepRun(Base):
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     model_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    provider_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    prompt_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    prompt_version: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    structured_retry: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     token_usage_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

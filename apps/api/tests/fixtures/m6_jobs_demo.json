@@ -1,0 +1,9 @@
+{
+  "mode": "DEMO / REPLAY / fixture",
+  "description": "Synthetic jobs, not real recruitment pages or Live Search data",
+  "jobs": [
+    {"title": "DEMO AI Application Engineer", "family": "AI_APPLICATION", "location": "北京", "qualification": null, "topics": ["Python", "Redis"]},
+    {"title": "DEMO Java Backend Engineer", "family": "BACKEND", "location": "北京", "qualification": "硕士及以上", "topics": ["Java", "Spring", "Redis"]},
+    {"title": "DEMO Data / Risk Analyst", "family": "DATA_RISK", "location": "上海", "qualification": null, "topics": ["SQL", "Risk"]}
+  ]
+}

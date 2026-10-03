@@ -267,3 +267,65 @@ PENDING
 | `APPROVED` | 审核通过 |
 | `REJECTED` | 审核拒绝 |
 | `INDEXED` | 已写入向量库 |
+
+---
+
+# 13. M2A PublicDataRefreshTask 状态机
+
+```text
+PENDING -> SEARCHING -> FETCHING -> READY_FOR_EXTRACTION
+                                      -> COMPLETED   (M2B/后续阶段)
+任一执行阶段 -> FAILED
+FAILED -> SEARCHING                    (显式兼容重试)
+READY_FOR_EXTRACTION -> SEARCHING/FETCHING（显式补采）
+```
+
+M2A 正常执行终点是 `READY_FOR_EXTRACTION`，不会调用模型或自行进入抽取。
+`ExperienceCollectionTask` 是旧管理入口，通过唯一外键绑定该状态边界；其
+`SEARCH_*`/`FETCH_*` 状态仅作为旧 UI 投影，Search/Fetch 的真实调用与审计以
+`PublicDataRefreshTask` 和 `ToolInvocation` 为准。
+
+## 13.1 M2B 抽取状态
+
+```text
+READY_FOR_EXTRACTION -> EXTRACTING -> VALIDATING -> PUBLISHING -> COMPLETED
+任一抽取执行阶段 -> FAILED
+COMPLETED / FAILED -> EXTRACTING（仅显式 force 的 INTERVIEW_DATA 重跑）
+```
+
+`PublicDataResearchAgent` 是唯一对外公共研究角色，只处理 `JOB_JD` 和
+`INTERVIEW_DATA`；旧 `EXPERIENCE_COLLECTION_TASK` target 是面经兼容别名。
+任务成功完成不代表内容已发布：社区面经继续等待原管理审核；JD 的
+`publication_status` 独立记录 `APPROVED` / `WAITING_REVIEW`。
+面经显式重跑只替换该任务的未批准草稿，已批准数据禁止覆盖。
+公共实体/证据与任务 COMPLETED 在同一事务提交；失败不会留下半套公共数据。
+
+# 14. M4 Interview SessionController
+
+Session：CREATED -> READY -> IN_PROGRESS -> COMPLETED。
+Question：PENDING -> ASKED -> ANSWERED -> EVALUATED -> COMPLETED，或 SKIPPED。
+Answer：RUNNING -> COMPLETED，失败为 FAILED，同幂等键可重试。
+两个 Agent 只返回 artifact/recommendation；Controller 独占状态推进和 index 同步。
+FOLLOW_UP 是同主题补问，DEEP_DIVE 是新 child question；二者共用根题追问上限，
+并受题量/轮次/时间/Token 预算控制。陈旧 state_version 结果返回 409，不覆盖。
+模型期间无行锁/长事务；全部结果 SSE 在短事务提交后才发送。COMPLETE 由实际
+Evaluation 的 DB 聚合产生，结束时无 ASKED/PENDING 残留，不写长期 Memory/Profile。
+详见 [M4 状态、幂等与预算](22_mock_interview_core_m4.md)。
+
+# 15. M5 独立报告与提案
+
+Session 保持 COMPLETED。Report generation：RUNNING -> COMPLETED / FAILED；FAILED
+同 key 重试增加 attempt，主动 regenerate 新建 generation。模型不持 DB 长事务。
+发布完整 Report/Observation/Proposal 后同事务最后切换 current，失败不替换旧 current。
+Proposal：PENDING -> APPROVED / CORRECTED / REJECTED；最终决定不可覆盖。approve/
+correct 与 UserMemoryItem/Event 一起 commit，reject 不写 Memory；没有自动 commit。
+下一场创建时分别固定 approved Memory 与近期 PerformanceObservation，不每轮刷新。
+详见 [M5 状态、事务与验收](23_interview_coach_m5.md)。
+
+# 16. M6 Frozen MatchRun
+
+READY/FAILED -> RUNNING -> COMPLETED/FAILED。固定输入不能更新；成功 Run 封存，重试只读。
+短事务领取 attempt/version，事务外模型调用，短事务校验 token 后一次写完整推荐和三层
+排序，最后切换 COMPLETED。失败不留下部分推荐；attempt/Agent audit 保留。RUNNING
+重入 409，过期 lease 允许重试，旧 attempt fencing 防止覆盖。不修改 Interview/Report/Profile/
+Memory 状态；无候选不调用模型或 Research。详见 [M6 状态与验收](24_job_matching_m6.md)。

@@ -1,152 +1,66 @@
 <script setup lang="ts">
-import { useRouter } from "vue-router";
-import { useAuthStore } from "../stores/auth";
-
-const auth = useAuthStore();
-const router = useRouter();
-
-const features = [
-  {
-    title: "知识库问答",
-    description: "基于面试知识库的智能问答，覆盖后端、AI、RAG、Agent 等高频面试话题。",
-  },
-  {
-    title: "简历模拟面试",
-    description: "上传您的简历，系统自动识别技术栈与项目亮点，生成针对性面试追问与参考答案。",
-  },
-  {
-    title: "面经库查询",
-    description: "查询已发布的牛客、小红书、抖音等多平台真实面经，了解最新面试趋势。",
-  },
-];
-
-function goInterview() {
-  router.push("/interview");
+import { onMounted, ref } from "vue"
+import { useAuthStore } from "../stores/auth"
+import { listResumes } from "../api/resume"
+import { readProfile } from "../api/profile"
+import { listSessions } from "../api/interview"
+import { listInterviewReports, listMemoryProposals } from "../api/interview-report"
+const auth = useAuthStore()
+const loading = ref(true), error = ref("")
+const resumeName = ref("还没有上传简历"), profileState = ref("尚未生成")
+const completed = ref<number | null>(null), latestPerformance = ref<number | null>(null)
+const pending = ref<number | null>(null), recentReportId = ref<number | null>(null)
+const actions = [
+  { title: "上传 / 更新简历", description: "保留原始材料，生成可追溯的候选人画像。", path: "/resumes" },
+  { title: "查看岗位推荐", description: "基于画像和公开岗位要求，了解匹配依据与待补充信息。", path: "/jobs/matches" },
+  { title: "开始模拟面试", description: "选择岗位，在面试官 Agent 的问题和追问中练习表达。", path: "/interview" },
+]
+const agents = ["简历画像 Agent", "岗位匹配 Agent", "面试官 Agent", "回答评价 Agent", "复盘教练 Agent", "公共数据 Research Agent"]
+async function load() {
+  loading.value = true; error.value = ""
+  const results = await Promise.allSettled([listResumes(), readProfile(), listSessions(), listInterviewReports()])
+  const [resumes, profile, sessions, reports] = results
+  if (resumes.status === "fulfilled") resumeName.value = resumes.value.items[0]?.filename || "还没有上传简历"
+  if (profile.status === "fulfilled") profileState.value = profile.value.current ? `已生成 · 第 ${profile.value.current.version_number} 版` : "尚未生成"
+  if (sessions.status === "fulfilled") completed.value = sessions.value.filter(s => s.status === "COMPLETED").length
+  if (reports.status === "fulfilled") {
+    const current = reports.value.items.find(r => r.is_current && (r.generation_status || r.status) === "COMPLETED")
+    recentReportId.value = current?.id || null
+    latestPerformance.value = current?.statistics?.overall_average ?? null
+    try {
+      const lists = await Promise.all(reports.value.items.filter(r => r.is_current).map(r => listMemoryProposals(r.id)))
+      pending.value = lists.reduce((count, list) => count + list.items.filter(p => p.status === "PENDING").length, 0)
+    } catch { error.value = "记忆建议状态暂时无法读取，请在面试报告中查看。"; pending.value = null }
+  }
+  if (results.some(r => r.status === "rejected")) error.value = "部分求职状态暂时无法读取，请刷新重试；不会将读取失败当作空数据。"
+  loading.value = false
 }
-
-function goAdminKb() {
-  router.push("/admin/kb/documents");
-}
-function goAdminExperiences() {
-  router.push("/admin/experiences");
-}
+onMounted(load)
 </script>
-
 <template>
   <div class="dashboard">
-    <h2 class="welcome">欢迎，{{ auth.currentUser?.username || auth.currentUser?.email }}</h2>
-
-    <!-- Admin section -->
-    <div v-if="auth.isAdmin" class="admin-section">
-      <h3 class="section-title">管理</h3>
-      <div class="feature-grid">
-        <div class="feature-card admin-card" @click="goAdminKb">
-          <h3>知识库管理</h3>
-          <p>上传、查看、删除、重新索引知识库文档。修改分块/embedding配置后需在此重新索引。</p>
-        </div>
-        <div class="feature-card admin-card" @click="goAdminExperiences">
-          <h3>面经更新管理</h3>
-          <p>维护公司、岗位、平台关键词，创建近期面经采集任务，审核和发布面经内容。</p>
-        </div>
-      </div>
-    </div>
-
-    <h3 class="section-title">功能</h3>
-    <div class="feature-grid">
-      <div class="feature-card" @click="router.push('/qa')" style="cursor:pointer">
-        <h3>{{ features[0].title }}</h3>
-        <p>{{ features[0].description }}</p>
-      </div>
-      <div class="feature-card resume-card" @click="goInterview">
-        <h3>{{ features[1].title }}</h3>
-        <p>{{ features[1].description }}</p>
-      </div>
-      <div class="feature-card">
-        <h3>{{ features[2].title }}</h3>
-        <p>{{ features[2].description }}</p>
-      </div>
-    </div>
+    <header><h1>面向秋招的多 Agent 求职与模拟面试系统</h1><p>欢迎，{{ auth.currentUser?.username || auth.currentUser?.email }}。从真实材料出发，通过面试练习持续成长。</p></header>
+    <p v-if="loading" role="status">正在读取求职状态…</p>
+    <p v-if="error" role="alert">{{ error }} <button @click="load">重试</button></p>
+    <section class="status"><h2>当前求职状态</h2><div class="status-grid">
+      <div><span>当前简历</span><strong>{{ resumeName }}</strong></div>
+      <div><span>候选人画像</span><strong>{{ profileState }}</strong></div>
+      <div><span>已完成模拟面试</span><strong>{{ completed ?? '暂未读取' }}</strong></div>
+      <div><span>最近面试表现</span><strong>{{ latestPerformance == null ? '暂无有效报告均分' : latestPerformance + ' / 5' }}</strong></div>
+      <div><span>待处理长期记忆建议</span><strong>{{ pending ?? '暂未读取' }}</strong><small>当前可读取报告范围</small></div>
+    </div></section>
+    <section class="feature-grid"><router-link v-for="item in actions" :key="item.path" :to="item.path" class="feature-card"><h2>{{ item.title }}</h2><p>{{ item.description }}</p></router-link>
+      <router-link :to="recentReportId ? '/interview/reports/' + recentReportId : '/interview/reports'" class="feature-card"><h2>查看最近报告</h2><p>分别查看本场数据、Coach 分析与下一步练习建议。</p></router-link>
+    </section>
+    <section class="workflow"><h2>从简历到长期成长</h2><p>上传简历 → 生成候选人画像 → 选择 / 推荐岗位 → 模拟面试 → 回答评价 → 面试报告 → 长期成长记录</p><div class="agent-grid"><span v-for="agent in agents" :key="agent">{{ agent }}</span></div><p>公共 Research 只支持公共数据建设，不由普通用户触发实时采集。面试表现不会自动改写你的画像，长期记忆建议由你确认。</p><router-link to="/qa">使用知识问答辅助准备</router-link></section>
+    <details class="ux-technical"><summary>本地开发说明</summary>当前本地环境仍使用开发用 JWT 默认值，不适合作为公网生产配置。Live Search 受第三方验证与限流影响，未稳定验收；Replay / fixture 不代表 Live Search。</details>
   </div>
 </template>
-
 <style scoped>
-.dashboard {
-  max-width: 900px;
-  margin: 0 auto;
-}
-
-.welcome {
-  font-size: 22px;
-  font-weight: 600;
-  color: #1a1a2e;
-  margin-bottom: 32px;
-}
-
-.section-title {
-  font-size: 15px;
-  font-weight: 500;
-  color: #999;
-  margin-bottom: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.admin-section {
-  margin-bottom: 32px;
-}
-
-.feature-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 20px;
-  margin-bottom: 32px;
-}
-
-.feature-card {
-  background: #fff;
-  border-radius: 10px;
-  padding: 24px;
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
-}
-
-.admin-card {
-  border: 2px solid #e6a23c;
-  cursor: pointer;
-  transition: box-shadow 0.2s;
-}
-
-.admin-card:hover {
-  box-shadow: 0 2px 16px rgba(230, 162, 60, 0.2);
-}
-
-.admin-card h3 {
-  color: #e6a23c;
-}
-
-.feature-card h3 {
-  font-size: 17px;
-  font-weight: 600;
-  color: #1a1a2e;
-  margin-bottom: 10px;
-}
-
-.resume-card {
-  border: 2px solid #409eff;
-  cursor: pointer;
-  transition: box-shadow 0.2s;
-}
-
-.resume-card:hover {
-  box-shadow: 0 2px 16px rgba(64, 158, 255, 0.2);
-}
-
-.resume-card h3 {
-  color: #409eff;
-}
-
-.feature-card p {
-  font-size: 14px;
-  color: #888;
-  line-height: 1.6;
-}
+.dashboard{max-width:1120px;margin:auto}.dashboard header{margin-bottom:24px}.dashboard p{color:#667085;margin-top:10px}
+.status,.workflow{padding:24px;background:white;border:1px solid #e2e8f0;border-radius:12px;margin:20px 0}
+.status-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:20px;margin-top:20px}
+.status-grid span,.status-grid strong,.status-grid small{display:block}.status-grid span,.status-grid small{color:#667085}.status-grid strong{margin-top:8px;overflow-wrap:anywhere}
+.feature-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}.feature-card{padding:24px;border:1px solid #d9e2ec;border-radius:12px;background:white;text-decoration:none;color:#243047}.feature-card:hover{border-color:#315be5}
+.agent-grid{display:flex;flex-wrap:wrap;gap:10px;margin:18px 0}.agent-grid span{padding:6px 12px;background:#f1f5ff;border-radius:6px}
 </style>

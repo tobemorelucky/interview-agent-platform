@@ -1,5 +1,16 @@
 # 19 Agent Platform Evolution Plan
 
+> 当前主线已按 M1–M6 增量实现，早期路线仅保留为历史规划。当前事实边界：
+> CandidateProfile/UserSkill 是简历/本人确认的稳定事实；Evaluation/PerformanceObservation
+> 是模拟面试表现；SummaryCoachAgent 生成 Report 和 PENDING MemoryProposal，只有用户
+> approve/correct 单事务写现有 Career Memory。M4 热路径不自动更新长期技能或 Memory，
+> 旧 consolidate 仅明确 legacy 可兼容。新场 Snapshot 分开固定批准 Memory 与 Observation。
+> M2–M5 冻结。M6 JobMatchingAgent 只比较公共库有界候选，固定 MatchRun 输入，
+> 不推断硬资格、不联网补库，推荐只以 Company/Job 引用进入 M4 当前创建规则。
+> Live Search CAPTCHA/rate-limit 仍是已知限制，Replay/fixture 不宣称 Live 验收。
+> 当前实现详见 [M5 交付与验收](23_interview_coach_m5.md) 和 [M6 交付](24_job_matching_m6.md)。
+> M6 后停止新增 Agent/主要业务功能，不进入 M7。
+
 本文记录 Interview Agent Platform 从“面试 Agent 平台”升级到“可用型多 Agent 平台”的阶段性架构、已完成模块、后续路线和开发边界。
 
 ## 1. 项目当前定位

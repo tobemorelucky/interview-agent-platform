@@ -1,3 +1,4 @@
+import { displayLabel } from '../i18n/zh-CN';
 export interface InterviewMessage {
   id: number
   role: "USER" | "ASSISTANT" | "SYSTEM"
@@ -136,6 +137,7 @@ export interface InterviewMemoryConsolidateResult {
 }
 
 export interface InterviewSessionDetail extends InterviewSession {
+  pending_answer?: { question_id: number; idempotency_key: string; content: string; status: string; error: string | null } | null
   memory_summary: string | null
   messages: InterviewMessage[]
   questions?: InterviewQuestion[]
@@ -150,6 +152,12 @@ export interface InterviewSessionDetail extends InterviewSession {
 }
 
 export interface InterviewSession {
+  workflow_mode?: "legacy" | "m4"
+  legacy?: boolean
+  active_question_id?: number | null
+  state_version?: number
+  context_snapshot?: { company_name: string; job_title: string; profile_version_number: number; jd_version_number: number; coverage_insufficient: boolean; profile?: unknown }
+  completion_json?: { overall_average: number | null; dimension_averages: Record<string, number | null>; answered_count: number; evaluated_count: number; mode: string }
   id: number
   user_id: number
   resume_id: number | null
@@ -208,12 +216,7 @@ export interface EvaluationEvent {
 }
 
 export function sourceLabel(source: string): string {
-  switch (source) {
-    case "KB_RETRIEVED": return "知识库召回"
-    case "LLM_GENERATED": return "大模型生成"
-    case "HYBRID": return "混合生成"
-    default: return source
-  }
+  return displayLabel(source)
 }
 
 export function sourceColor(source: string): string {

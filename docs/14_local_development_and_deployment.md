@@ -1,5 +1,11 @@
 # 14 本地开发与部署说明
 
+> F4 更正：下文保留历史开发记录，不再是最终启动入口。
+> 使用根 README 与 `scripts/*-interview-platform.ps1`：旧 BAT 只转发，
+> 不按端口 taskkill；默认 stop 保留基础设施，显式完整停止只用 compose stop。
+> 不执行下文旧 `down -v` 示例；不得删除既有 volume。
+> 非 development/test 环境需要强 JWT；最终说明见 `27_engineering_delivery.md`。
+
 ## 1. 文档目标
 
 指导开发者和 Claude Code：

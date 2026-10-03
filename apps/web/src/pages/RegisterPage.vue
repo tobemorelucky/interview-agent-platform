@@ -32,15 +32,15 @@ async function handleSubmit() {
   <form class="auth-form" @submit.prevent="handleSubmit">
     <div class="form-item">
       <label for="email">邮箱</label>
-      <input id="email" v-model="form.email" type="email" required placeholder="请输入邮箱" />
+      <input id="email" v-model="form.email" type="email" autocomplete="email" required placeholder="请输入邮箱" />
     </div>
     <div class="form-item">
       <label for="username">用户名</label>
-      <input id="username" v-model="form.username" type="text" required placeholder="请输入用户名" />
+      <input id="username" v-model="form.username" type="text" autocomplete="username" required placeholder="请输入用户名" />
     </div>
     <div class="form-item">
       <label for="password">密码</label>
-      <input id="password" v-model="form.password" type="password" required minlength="6" placeholder="请输入密码（至少6位）" />
+      <input id="password" v-model="form.password" type="password" autocomplete="new-password" required minlength="6" placeholder="请输入密码（至少6位）" />
     </div>
     <div v-if="auth.error" class="form-error">{{ auth.error }}</div>
     <button class="btn-submit" :disabled="submitting">

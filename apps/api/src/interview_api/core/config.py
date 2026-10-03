@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -30,6 +31,7 @@ class Settings(BaseSettings):
         env_file=str(_find_env_file()),
         env_file_encoding="utf-8",
         extra="ignore",
+        hide_input_in_errors=True,
     )
 
     # App
@@ -67,6 +69,7 @@ class Settings(BaseSettings):
     llm_base_url: str = ""
     llm_api_key: str = ""
     llm_model: str = ""
+    llm_fallback_model: str = ""
     llm_request_timeout_seconds: float = 60.0
     llm_max_retries: int = 0
 
@@ -102,7 +105,33 @@ class Settings(BaseSettings):
     experience_search_safesearch: int = 0
     experience_search_enable_time_range: bool = False
 
+    # Public data tools (LLM-independent)
+    public_search_tool_timeout_seconds: float = 30.0
+    public_fetch_tool_timeout_seconds: float = 30.0
+    public_fetch_timeout_seconds: float = 15.0
+    public_fetch_max_response_bytes: int = 2_000_000
+    public_fetch_max_content_chars: int = 200_000
+    public_fetch_max_redirects: int = 5
+    public_fetch_allowed_content_types: str = "text/html,application/xhtml+xml"
+
+    # Public research model routes and deterministic publication trust.
+    public_research_base_url: str = ""
+    public_research_api_key: str = ""
+    public_research_extract_model: str = ""
+    public_research_quality_model: str = ""
+    public_research_model_timeout_seconds: float = 60.0
+    public_research_max_output_tokens: int = 6000
+    public_research_provider_concurrency: int = 2
+    public_research_max_evidence_chars: int = 24000
+    public_research_official_domains: dict[str, list[str]] = {}
+
     # Resume
+    resume_profile_model: str = ""
+    resume_profile_base_url: str = ""
+    resume_profile_api_key: str = ""
+    resume_profile_timeout_seconds: float = 60.0
+    resume_profile_max_output_tokens: int = 6000
+    resume_profile_provider_concurrency: int = 2
     resume_max_file_size_mb: int = 10
     resume_allowed_types: str = "pdf,docx,txt"
     resume_question_count: int = 8
@@ -115,6 +144,28 @@ class Settings(BaseSettings):
     resume_fallback_to_llm: bool = True
 
     # Interview Chat
+    interview_main_model: str = ""
+    answer_evaluation_model: str = ""
+    interview_model_base_url: str = ""
+    interview_model_api_key: str = ""
+    interview_model_timeout_seconds: float = 60.0
+    interview_model_max_output_tokens: int = 3000
+    interview_provider_concurrency: int = 2
+    interview_max_rounds: int = 40
+    interview_max_duration_seconds: int = 7200
+    interview_max_model_tokens: int = 200000
+    # M5 report synthesis is independent of the completed interview state.
+    interview_coach_model: str = ""
+    interview_coach_base_url: str = ""
+    interview_coach_api_key: str = ""
+    interview_coach_timeout_seconds: float = 60.0
+    interview_coach_max_output_tokens: int = 6000
+    interview_coach_provider_concurrency: int = 2
+    interview_coach_max_input_bytes: int = 200000
+    interview_approved_memory_limit: int = 8
+    interview_approved_memory_token_budget: int = 4000
+    interview_observation_limit: int = 5
+    interview_observation_token_budget: int = 2000
     interview_memory_compression_trigger_turns: int = 50
     interview_memory_recent_keep_count: int = 10
     interview_retrieval_top_k: int = 8
@@ -132,9 +183,37 @@ class Settings(BaseSettings):
     interview_default_mode: str = "comprehensive"
     interview_enable_dynamic_question: bool = True
 
+    # M6 bounded matching, never performs public research or changes Profile.
+    job_matching_model: str = ""
+    job_matching_base_url: str = ""
+    job_matching_api_key: str = ""
+    job_matching_timeout_seconds: float = 60.0
+    job_matching_max_output_tokens: int = 6000
+    job_matching_provider_concurrency: int = 2
+    job_matching_max_input_bytes: int = 200000
+    job_matching_top_n: int = 20
+    job_matching_retrieval_limit: int = 200
+    job_matching_preference_limit: int = 8
+    job_matching_preference_budget: int = 4000
+
     # Celery
     celery_broker_url: str = "redis://localhost:6379/1"
     celery_result_backend: str = "redis://localhost:6379/2"
+
+    @model_validator(mode="after")
+    def protect_production_jwt(self):
+        """Fail closed outside explicitly local environments; never generate keys."""
+        if self.app_env.strip().lower() in {"development", "test"}:
+            return self
+        value = self.jwt_secret_key.strip()
+        compact = value.lower().replace("-", "").replace("_", "").replace(" ", "")
+        if (len(value) < 32 or len(set(value)) < 8 or
+                any(marker in compact for marker in (
+                    "changeme", "yourjwt", "yoursecret", "placeholder",
+                    "development", "devsecret", "testsecret", "example", "replacewith",
+                ))):
+            raise ValueError("JWT_SECRET_KEY must be a configured strong secret outside development/test")
+        return self
 
 
 settings = Settings()

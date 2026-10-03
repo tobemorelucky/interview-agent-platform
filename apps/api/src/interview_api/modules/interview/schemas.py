@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # ── Request Schemas ──
@@ -8,6 +8,11 @@ from pydantic import BaseModel, ConfigDict
 
 class CreateSessionRequest(BaseModel):
     title: str | None = None
+    company_id: int = Field(gt=0)
+    job_id: int = Field(gt=0)
+    candidate_profile_version_id: int | None = Field(default=None, gt=0)
+    job_description_version_id: int | None = Field(default=None, gt=0)
+    question_count: int = Field(default=20, ge=1, le=40)
 
 
 class SetTargetPositionRequest(BaseModel):
@@ -21,7 +26,9 @@ class BindResumeRequest(BaseModel):
 
 
 class SendMessageRequest(BaseModel):
-    content: str
+    content: str = Field(min_length=1, max_length=12000)
+    question_id: int = Field(gt=0)
+    idempotency_key: str = Field(min_length=8, max_length=100)
 
 
 class ConsolidateMemoryRequest(BaseModel):

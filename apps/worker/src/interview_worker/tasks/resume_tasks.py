@@ -1,9 +1,4 @@
-"""Celery task for resume processing — delegates to shared processor.
-
-In Phase 3, resume processing runs in-process (asyncio.create_task in the API).
-This Celery task exists for Phase 4+ when we may switch back to async workers
-for bulk ingestion. It simply delegates to the shared processor module.
-"""
+"""Existing Resume pipeline and independent, idempotent Candidate Profile task."""
 
 import time
 from celery.utils.log import get_task_logger
@@ -59,3 +54,17 @@ async def _mark_resume_failed(resume_id: int, exc: Exception) -> None:
         )
         await repo.update_processing_stage(resume_id, "FAILED", error_text[:500])
         await db.commit()
+
+
+@app.task(name="generate_candidate_profile", bind=True)
+def generate_candidate_profile(self, resume_id: int, regeneration_token: str | None = None):
+    from interview_api.infrastructure.db.session import async_session_factory
+    from interview_api.modules.candidate_profile.agent import ResumeProfileAgent
+
+    # Redelivery keeps the SAME token; only an explicit user request invents one.
+    result = run_async(ResumeProfileAgent(async_session_factory).run(
+        resume_id, regeneration_token=regeneration_token,
+    ))
+    if result["status"] == "FAILED":
+        raise RuntimeError(f"Profile generation failed: {result.get('error', 'unknown')}")
+    return result

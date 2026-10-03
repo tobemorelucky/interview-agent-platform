@@ -250,6 +250,165 @@ export async function extractExperienceSource(
   return client.post(`/admin/experience/sources/${id}/extract`, data || {}, { timeout: 180000 })
 }
 
+export interface ExperienceReviewItem {
+  experience_id: number
+  source_item_id?: number
+  task_id?: number
+  title?: string
+  source_url?: string
+  platform?: string
+  company?: string
+  position?: string
+  round_name?: string
+  summary?: string
+  question_count: number
+  reliability_score?: number | null
+  review_status: string
+  risk_flags: string[]
+  quality_flags: string[]
+  created_at?: string
+  updated_at?: string
+}
+
+export interface ExperienceReviewQuestion {
+  question_id: number
+  experience_id?: number
+  question: string
+  original_answer?: string | null
+  standard_answer?: string | null
+  answer_source: string
+  evidence?: string | null
+  question_type?: string | null
+  technical_categories: string[]
+  difficulty?: string | null
+  should_index: boolean
+  confidence?: number | null
+  review_status: string
+  index_status: string
+}
+
+export interface ExperienceAgentStepRun {
+  id: number
+  step_name: string
+  status: string
+  error_message?: string | null
+  latency_ms?: number | null
+  model_name?: string | null
+  created_at?: string
+  output_summary?: Record<string, unknown>
+}
+
+export interface ExperienceReviewDetail {
+  experience: {
+    id: number
+    source_item_id?: number
+    task_id?: number
+    company?: string | null
+    position?: string | null
+    round_name?: string | null
+    summary?: string | null
+    source_url?: string | null
+    platform?: string | null
+    title?: string | null
+    snippet?: string | null
+    raw_text_preview: string
+    extraction_json?: Record<string, unknown> | null
+    routing_json?: Record<string, unknown> | null
+    reliability_json?: Record<string, unknown> | null
+    quality_gate_json?: Record<string, unknown> | null
+    risk_flags: string[]
+    quality_flags: string[]
+    quality_gate_reasons: string[]
+    reliability_score?: number | null
+    review_status: string
+    review_note?: string | null
+    reviewer_id?: number | null
+    reviewed_at?: string | null
+    reject_reason?: string | null
+    created_at?: string
+    updated_at?: string
+  }
+  agent: {
+    agent_run_id?: number | null
+    graph_name?: string | null
+    graph_version?: string | null
+    status?: string | null
+    error_message?: string | null
+    started_at?: string | null
+    finished_at?: string | null
+    step_runs: ExperienceAgentStepRun[]
+  }
+  questions: ExperienceReviewQuestion[]
+}
+
+export async function listExperienceReviewItems(params?: {
+  review_status?: string
+  company?: string
+  position?: string
+  platform?: string
+  reliability_min?: number
+  reliability_max?: number
+  risk_flag?: string
+  keyword?: string
+  offset?: number
+  limit?: number
+}): Promise<{ items: ExperienceReviewItem[]; total: number }> {
+  return client.get("/admin/experience/review/items", { params })
+}
+
+export async function getExperienceReviewItem(id: number): Promise<ExperienceReviewDetail> {
+  return client.get(`/admin/experience/review/items/${id}`)
+}
+
+export async function updateExperienceReviewItem(
+  id: number,
+  data: {
+    company?: string | null
+    position?: string | null
+    round_name?: string | null
+    summary?: string | null
+    review_note?: string | null
+  }
+): Promise<ExperienceReviewDetail> {
+  return client.patch(`/admin/experience/review/items/${id}`, data)
+}
+
+export async function updateExperienceReviewQuestion(
+  id: number,
+  data: Partial<{
+    question: string
+    original_answer: string | null
+    standard_answer: string | null
+    answer_source: string
+    question_type: string | null
+    technical_categories: string[]
+    difficulty: string | null
+    should_index: boolean
+    evidence: string | null
+    review_status: string
+  }>
+): Promise<ExperienceReviewQuestion> {
+  return client.patch(`/admin/experience/review/questions/${id}`, data)
+}
+
+export async function approveExperienceReviewItem(id: number): Promise<ExperienceReviewDetail> {
+  return client.post(`/admin/experience/review/items/${id}/approve`, {})
+}
+
+export async function rejectExperienceReviewItem(
+  id: number,
+  data: { reason: string }
+): Promise<ExperienceReviewDetail> {
+  return client.post(`/admin/experience/review/items/${id}/reject`, data)
+}
+
+export async function requestExperienceReviewRerun(
+  id: number,
+  data: { reason?: string; force?: boolean }
+): Promise<ExperienceReviewDetail> {
+  return client.post(`/admin/experience/review/items/${id}/request-rerun`, data)
+}
+
 export interface AuditLog {
   id: number
   request_id?: string

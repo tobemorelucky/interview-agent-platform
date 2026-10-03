@@ -1,13 +1,15 @@
 <template>
   <div class="public-layout">
     <div class="public-card">
-      <h1 class="public-title">Interview Agent Platform</h1>
+      <h1 class="public-title">秋招面试助手</h1>
+      <p class="product-caption">面向秋招的多 Agent 求职与模拟面试系统</p>
       <slot />
     </div>
   </div>
 </template>
 
 <style scoped>
+.product-caption {text-align:center;color:#667085;font-size:13px;margin-bottom:20px;}
 .public-layout {
   min-height: 100vh;
   display: flex;

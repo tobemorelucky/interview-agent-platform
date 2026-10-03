@@ -1,0 +1,11 @@
+TEST / DEMO: synthetic resume, not a real applicant.
+Summary
+Built a demo document retrieval application using Python and Redis.
+Skills
+Python, Redis, SQL
+Projects
+DEMO QA Assistant: Implemented Python document retrieval and Redis cache; tested cache misses and TTL.
+Education
+DEMO University: BSc in Computer Science.
+Internship experience
+DEMO Software Lab: Wrote Python integration tests for document retrieval failures.

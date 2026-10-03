@@ -1,5 +1,8 @@
 import axios from "axios";
+import { shallowRef } from "vue";
+import { userError } from "../i18n/zh-CN";
 import type { ApiEnvelope } from "../types/auth";
+export const lastApiDiagnostic = shallowRef<{ code: string; requestId?: string } | null>(null);
 
 const client = axios.create({
   baseURL: "/api/v1",
@@ -58,13 +61,16 @@ export class ApiError extends Error {
   code: string;
   requestId?: string;
   details?: unknown;
+  rawMessage: string;
 
   constructor(code: string, message: string, requestId?: string, details?: unknown) {
-    super(message);
+    super(userError(code, message));
+    this.rawMessage = message;
     this.code = code;
     this.requestId = requestId;
     this.details = details;
     this.name = "ApiError";
+    lastApiDiagnostic.value = { code, requestId };
   }
 }
 

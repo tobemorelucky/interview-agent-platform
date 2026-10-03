@@ -2,6 +2,14 @@ import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "../stores/auth";
 
 const routes = [
+  { path: "/:pathMatch(.*)*", name: "NotFound", component: () => import("../pages/NotFoundPage.vue"), meta: { requiresAuth: true } },
+  { path: "/jobs/matches/:id?", name: "JobMatches", component: () => import("../pages/JobMatchingPage.vue"), meta: { requiresAuth: true } },
+  {
+    path: "/profile",
+    name: "CandidateProfile",
+    component: () => import("../pages/CandidateProfilePage.vue"),
+    meta: { requiresAuth: true },
+  },
   {
     path: "/login",
     name: "Login",
@@ -33,6 +41,18 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: "/interview/reports",
+    name: "InterviewReports",
+    component: () => import("../pages/InterviewReportPage.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/interview/reports/:id",
+    name: "InterviewReport",
+    component: () => import("../pages/InterviewReportPage.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
     path: "/memory",
     name: "Memory",
     component: () => import("../pages/MemoryPage.vue"),
@@ -60,6 +80,12 @@ const routes = [
     path: "/admin/experiences",
     name: "AdminExperiences",
     component: () => import("../pages/AdminExperiencesPage.vue"),
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
+  {
+    path: "/admin/experience-review",
+    name: "AdminExperienceReview",
+    component: () => import("../pages/admin/AdminExperienceReviewPage.vue"),
     meta: { requiresAuth: true, requiresAdmin: true },
   },
   {

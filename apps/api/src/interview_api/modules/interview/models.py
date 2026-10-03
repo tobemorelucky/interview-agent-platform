@@ -9,6 +9,8 @@ from sqlalchemy import (
     JSON,
     String,
     Text,
+    UniqueConstraint,
+    CheckConstraint,
     func,
 )
 from sqlalchemy.orm import Mapped, mapped_column
@@ -20,6 +22,13 @@ class InterviewSession(Base):
     __tablename__ = "interview_sessions"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    workflow_mode: Mapped[str] = mapped_column(String(20), default="legacy", server_default="legacy")
+    context_snapshot_id: Mapped[int | None] = mapped_column(ForeignKey("interview_context_snapshots.id", use_alter=True, name="fk_interview_snapshot", ondelete="RESTRICT"))
+    active_question_id: Mapped[int | None] = mapped_column(ForeignKey("interview_session_questions.id", use_alter=True, name="fk_interview_active_question", ondelete="SET NULL"))
+    state_version: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    completion_json: Mapped[dict | None] = mapped_column(JSON)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     user_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
@@ -66,6 +75,11 @@ class InterviewSessionQuestion(Base):
     __tablename__ = "interview_session_questions"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    source_question_id: Mapped[int | None] = mapped_column(ForeignKey("interview_questions.id", ondelete="RESTRICT"))
+    job_requirement_id: Mapped[int | None] = mapped_column(ForeignKey("job_requirements.id", ondelete="RESTRICT"))
+    source_fingerprint: Mapped[str | None] = mapped_column(String(64))
+    candidate_refs_json: Mapped[dict | None] = mapped_column(JSON)
+    question_kind: Mapped[str | None] = mapped_column(String(20))
     session_id: Mapped[int] = mapped_column(
         BigInteger,
         ForeignKey("interview_sessions.id", ondelete="CASCADE"),
@@ -122,3 +136,61 @@ class InterviewMessage(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+class InterviewContextSnapshot(Base):
+    __tablename__ = "interview_context_snapshots"
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    interview_session_id: Mapped[int] = mapped_column(ForeignKey("interview_sessions.id", ondelete="CASCADE"), unique=True)
+    candidate_profile_version_id: Mapped[int] = mapped_column(ForeignKey("candidate_profile_versions.id", ondelete="RESTRICT"))
+    company_id: Mapped[int] = mapped_column(ForeignKey("companies.id", ondelete="RESTRICT"))
+    job_id: Mapped[int] = mapped_column(ForeignKey("jobs.id", ondelete="RESTRICT"))
+    job_description_version_id: Mapped[int] = mapped_column(ForeignKey("job_description_versions.id", ondelete="RESTRICT"))
+    context_json: Mapped[dict] = mapped_column(JSON)
+    content_fingerprint: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class InterviewAnswer(Base):
+    __tablename__ = "interview_answers"
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    session_id: Mapped[int] = mapped_column(ForeignKey("interview_sessions.id", ondelete="CASCADE"))
+    session_question_id: Mapped[int] = mapped_column(ForeignKey("interview_session_questions.id", ondelete="CASCADE"), unique=True)
+    message_id: Mapped[int] = mapped_column(ForeignKey("interview_messages.id", ondelete="CASCADE"), unique=True)
+    idempotency_key: Mapped[str] = mapped_column(String(100))
+    status: Mapped[str] = mapped_column(String(20))
+    error: Mapped[str | None] = mapped_column(Text)
+    result_events: Mapped[list | None] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    __table_args__ = (UniqueConstraint("session_id", "idempotency_key", name="uq_interview_answer_key"),)
+
+
+class InterviewEvaluation(Base):
+    __tablename__ = "interview_evaluations"
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    session_id: Mapped[int] = mapped_column(ForeignKey("interview_sessions.id", ondelete="CASCADE"))
+    session_question_id: Mapped[int] = mapped_column(ForeignKey("interview_session_questions.id", ondelete="CASCADE"))
+    answer_id: Mapped[int] = mapped_column(ForeignKey("interview_answers.id", ondelete="CASCADE"), unique=True)
+    artifact_json: Mapped[dict] = mapped_column(JSON)
+    technical_correctness: Mapped[int] = mapped_column(Integer)
+    coverage: Mapped[int] = mapped_column(Integer)
+    depth: Mapped[int] = mapped_column(Integer)
+    relevance: Mapped[int] = mapped_column(Integer)
+    communication: Mapped[int] = mapped_column(Integer)
+    provider: Mapped[str] = mapped_column(String(100))
+    model: Mapped[str] = mapped_column(String(200))
+    prompt_version: Mapped[str] = mapped_column(String(50))
+    structured_retry: Mapped[int] = mapped_column(Integer)
+    token_usage_json: Mapped[dict] = mapped_column(JSON)
+    agent_run_id: Mapped[int] = mapped_column(ForeignKey("experience_agent_runs.id", ondelete="RESTRICT"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    __table_args__ = tuple(CheckConstraint(f"{key} BETWEEN 1 AND 5", name=f"ck_interview_eval_{key}") for key in ("technical_correctness", "coverage", "depth", "relevance", "communication"))
+
+
+class InterviewAgentCall(Base):
+    __tablename__ = "interview_agent_calls"
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    session_id: Mapped[int] = mapped_column(ForeignKey("interview_sessions.id", ondelete="CASCADE"))
+    answer_id: Mapped[int | None] = mapped_column(ForeignKey("interview_answers.id", ondelete="CASCADE"))
+    agent_run_id: Mapped[int] = mapped_column(ForeignKey("experience_agent_runs.id", ondelete="RESTRICT"), unique=True)

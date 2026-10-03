@@ -1,4 +1,5 @@
 import client from "./client";
+import { SSEParser } from "./sse";
 import type {
   InterviewSession,
   InterviewSessionDetail,
@@ -10,10 +11,15 @@ import type {
 } from "../types/interview";
 
 export async function createSession(
-  title?: string
+  companyId: number, jobId: number, questionCount = 20, title?: string
 ): Promise<InterviewSession> {
-  const response = await client.post("/interview/sessions", { title });
+  const response = await client.post("/interview/sessions", { title, company_id: companyId, job_id: jobId, question_count: questionCount });
   return response as unknown as InterviewSession;
+}
+
+export interface InterviewTarget { company_id: number; company_name: string; job_id: number; job_title: string }
+export async function getInterviewTargets(): Promise<InterviewTarget[]> {
+  return await client.get("/interview/targets") as unknown as InterviewTarget[];
 }
 
 export async function listSessions(): Promise<InterviewSession[]> {
@@ -168,7 +174,10 @@ export function sendMessageStream(
     question_budget?: number;
     total_questions?: number;
     avg_score?: number;
-  }) => void
+    dimension_averages?: Record<string, number>;
+    overall_average?: number;
+  }) => void,
+  answerContext?: { question_id: number; idempotency_key: string }
 ): AbortController {
   const controller = new AbortController();
   const token = localStorage.getItem("access_token");
@@ -179,7 +188,7 @@ export function sendMessageStream(
       "Content-Type": "application/json",
       Authorization: token ? `Bearer ${token}` : "",
     },
-    body: JSON.stringify({ content }),
+    body: JSON.stringify({ content, ...answerContext }),
     signal: controller.signal,
   })
     .then(async (response) => {
@@ -194,25 +203,15 @@ export function sendMessageStream(
         return;
       }
       const decoder = new TextDecoder();
-      let buffer = "";
+      const parser = new SSEParser();
+      let receivedDone = false;
 
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
-        let eventType = "";
-        for (const line of lines) {
-          if (line.startsWith("event: ")) {
-            eventType = line.slice(7).trim();
-          } else if (line.startsWith("data: ")) {
-            const dataStr = line.slice(6);
-            try {
-              const data = JSON.parse(dataStr);
-              switch (eventType) {
+        if (done) { parser.push(decoder.decode()); parser.finish(); break; }
+        for (const parsed of parser.push(decoder.decode(value, { stream: true }))) {
+              const data = parsed.data as any;
+              switch (parsed.event) {
                 case "status":
                   onStatus(data.stage);
                   break;
@@ -241,24 +240,24 @@ export function sendMessageStream(
                   if (onQuestionTransition) onQuestionTransition(data);
                   break;
                 case "interview_complete":
+                case "complete":
                   if (onInterviewComplete) onInterviewComplete(data);
                   break;
                 case "done":
+                  receivedDone = true;
                   onDone(data);
                   break;
                 case "compressed":
                   onCompressed(data);
                   break;
                 case "error":
+                  receivedDone = true;
                   onError(data.code, data.message);
                   break;
               }
-            } catch {
-              // skip parse errors for malformed lines
-            }
-          }
         }
       }
+      if (!receivedDone) onError("STREAM_INTERRUPTED", "连接中断，请使用同一回答重试；不会重复提交");
     })
     .catch((err) => {
       if (err.name !== "AbortError") {

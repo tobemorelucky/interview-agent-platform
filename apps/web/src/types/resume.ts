@@ -1,3 +1,4 @@
+import { displayLabel } from "../i18n/zh-CN";
 export interface Resume {
   id: number
   user_id: number
@@ -148,12 +149,7 @@ export interface ResumeReport {
 }
 
 export function sourceLabel(source: string): string {
-  switch (source) {
-    case "KB_RETRIEVED": return "知识库召回"
-    case "LLM_GENERATED": return "大模型生成"
-    case "HYBRID": return "混合生成"
-    default: return source
-  }
+  return displayLabel(source)
 }
 
 export function sourceColor(source: string): string {
@@ -166,29 +162,12 @@ export function sourceColor(source: string): string {
 }
 
 export function statusLabel(status: string): string {
-  switch (status) {
-    case "UPLOADED": return "待处理"
-    case "PROCESSING": return "处理中"
-    case "COMPLETED": return "已完成"
-    case "FAILED": return "失败"
-    default: return status
-  }
+  return displayLabel(status)
 }
 
 export function stageLabel(stage: string | null): string {
   if (!stage) return ""
-  switch (stage) {
-    case "QUEUED": return "已加入队列"
-    case "PARSING_RESUME": return "解析简历文件"
-    case "STRUCTURING_RESUME": return "提取结构化信息"
-    case "GENERATING_RETRIEVAL_QUERIES": return "生成检索查询"
-    case "RETRIEVING_KB": return "检索知识库"
-    case "GENERATING_QUESTIONS": return "生成面试问题"
-    case "SAVING_REPORT": return "保存分析报告"
-    case "COMPLETED": return "完成"
-    case "FAILED": return "失败"
-    default: return stage
-  }
+  return displayLabel(stage)
 }
 
 export function statusColor(status: string): string {

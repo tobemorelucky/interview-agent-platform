@@ -10,6 +10,8 @@ from typing import Any
 from sqlalchemy import desc, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from interview_api.core.exceptions import AppError
+
 from interview_api.modules.interview.models import (
     InterviewMessage,
     InterviewSession,
@@ -131,6 +133,8 @@ class InterviewMemoryWriter:
         session = await self._get_session_for_user(user_id, session_id)
         if session is None:
             raise LookupError("interview session not found")
+        if session.workflow_mode != "legacy":
+            raise AppError("CONTROLLED_MEMORY_REQUIRED", "新面试只能通过报告记忆建议逐条批准/修正，不能使用旧自动合并入口", 409)
 
         episodic_key = f"interview_session:{session_id}"
         existing = await self._find_memory_by_key(

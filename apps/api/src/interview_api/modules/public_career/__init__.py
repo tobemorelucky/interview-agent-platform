@@ -1,0 +1,2 @@
+"""Public career data domain."""
+

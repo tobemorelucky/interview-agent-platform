@@ -448,3 +448,56 @@ Phase 7：
 - Published 才能索引；
 - 失败可追踪；
 - 审核页可查看完整处理链路。
+
+---
+
+# 13. M1 公共数据刷新边界（2026-09-30）
+
+`PublicDataRefreshTask` 在 M1 只保存公共数据刷新意图和状态，包括 target、reason、
+freshness、requested time、status 和可选 idempotency key。
+
+M1 明确不实现：
+
+- Research Agent 执行；
+- ToolGateway 接入；
+- Celery Research task；
+- 自动刷新 workflow；
+- 用户查询时触发实时联网补库。
+
+已有面经采集链路继续运行，但新正文和题目在写入时必须生成确定性 fingerprint。
+公共 Company/Job 的历史关联仅由显式维护或唯一精确 backfill 完成。普通用户仍只
+查询已发布内容，Raw/Candidate 数据不得进入用户查询路径或 Milvus。
+
+---
+
+# 14. M2A 公共数据 Research Infrastructure（2026-09-30）
+
+M2A 的无模型执行边界为：
+
+```text
+PublicDataRefreshTask
+  -> ToolGateway
+       -> SearchProvider (SearXNG / Replay)
+       -> FetchProvider  (safe HTTP / Replay)
+  -> Source / SourceSnapshot
+  -> deterministic content grouping
+  -> READY_FOR_EXTRACTION
+```
+
+所有公共网络调用必须经过 Gateway，并产生 `ToolInvocation`。Search 只登记 URL 和
+搜索 metadata，snippet 不作为正式正文；只有安全 Fetch 成功才生成 SourceSnapshot。
+失败 Fetch 同样审计，但不得生成虚假快照。
+
+Live 与 Replay 共用 contract、Gateway、审计、持久化和去重。Replay Provider 只读取
+本地 fixture，不包含网络客户端路径。Fetch 对每个初始 URL 和 redirect target 执行
+HTTP/HTTPS、DNS 公网地址、content type、timeout 和响应大小校验。
+
+内容分组指标完全由确定性代码生成：
+
+- `independent_content_count`：normalized content fingerprint 的唯一数量；
+- `occurrence_count`：输入内容的总出现数量；
+- `multi_source`：`independent_content_count >= 2`；
+- 旧 `source_count` 如需保留，只能等于 `independent_content_count`。
+
+M2A 不包含 Research Agent、LLM extraction、LangGraph、ModelRouter、ToolGateway 之外
+的模型基础设施，也不改变普通用户查询边界和模拟面试 Workflow。

@@ -19,6 +19,10 @@ from interview_api.modules.kb.admin_router import router as kb_admin_router
 from interview_api.modules.memory.router import router as memory_router
 from interview_api.modules.qa.router import router as qa_router
 from interview_api.modules.resume.router import router as resume_router
+from interview_api.modules.candidate_profile.router import router as candidate_profile_router
+from interview_api.modules.interview_report.router import router as interview_report_router
+from interview_api.modules.memory.proposal_router import router as memory_proposal_router
+from interview_api.modules.job_matching.router import router as job_matching_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -127,9 +131,13 @@ app.include_router(auth_router)
 app.include_router(kb_admin_router)
 app.include_router(qa_router)
 app.include_router(resume_router)
+app.include_router(candidate_profile_router)
 app.include_router(interview_router)
 app.include_router(experience_router)
 app.include_router(memory_router)
+app.include_router(interview_report_router)
+app.include_router(memory_proposal_router)
+app.include_router(job_matching_router)
 app.include_router(audit_router)
 
 

@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, watch, onUnmounted } from "vue"
+import { displayLabel, publicName, dimensionLabels, userError } from "../i18n/zh-CN"
+import { useRoute, useRouter } from "vue-router"
 import {
   createSession,
   listSessions,
@@ -10,6 +12,9 @@ import {
   getQuestions,
   getQuestionDetail,
   consolidateInterviewMemory,
+  getInterviewTargets,
+  startInterview,
+  type InterviewTarget,
 } from "../api/interview"
 import { uploadResume, getResume as apiGetResume } from "../api/resume"
 import { ApiError } from "../api/client"
@@ -17,8 +22,22 @@ import type { InterviewSession, InterviewMessage, InterviewQuestionSummary } fro
 import { sourceLabel, sourceColor } from "../types/interview"
 import { statusLabel, stageLabel } from "../types/resume"
 
+const route = useRoute(), router = useRouter()
+const entryRoute = route, entryRouter = router
+
 // ── State ──
 const sessions = ref<InterviewSession[]>([])
+const targets = ref<InterviewTarget[]>([])
+const targetsLoading = ref(true), sessionsLoading = ref(true)
+const selectedJobId = ref<number | null>(null)
+const createBudget = ref(6)
+const activeQuestionId = ref<number | null>(null)
+const retryAnswer = ref<{ question_id: number; idempotency_key: string; content: string } | null>(null)
+const profileContext = ref<InterviewSession["context_snapshot"]>()
+const completion = ref<InterviewSession["completion_json"]>()
+const pageError = ref("")
+const streamErrorCode = ref("")
+const isReplay = computed(() => messages.value.some(m => m.metadata_json?.mode === 'replay'))
 const activeSessionId = ref<number | null>(null)
 const messages = ref<InterviewMessage[]>([])
 const questionList = ref<InterviewQuestionSummary[]>([])
@@ -51,27 +70,34 @@ const chatContainer = ref<HTMLElement | null>(null)
 
 // ── Computed ──
 const activeSession = () => sessions.value.find((s) => s.id === activeSessionId.value)
-const isActiveResumeReady = () => activeSession()?.resume_status === "COMPLETED"
+const isActiveResumeReady = () => activeSession()?.workflow_mode === "m4" && activeSession()?.status === "IN_PROGRESS"
 const isActiveResumeFailed = () => activeSession()?.resume_status === "FAILED"
 const hasActiveResume = () => Boolean(activeSession()?.resume_id)
 
 // ── Methods ──
 
 async function loadSessions() {
+  sessionsLoading.value = true
   try {
     sessions.value = await listSessions()
     const active = activeSession()
-    if (active?.resume_id && active.resume_status !== "COMPLETED" && active.resume_status !== "FAILED") {
+    if (active?.workflow_mode !== "m4" && active?.resume_id && active.resume_status !== "COMPLETED" && active.resume_status !== "FAILED") {
       startResumePoll(active.resume_id, active.id)
     }
   } catch (e) {
-    console.error("Failed to load sessions", e)
-  }
+    pageError.value = e instanceof Error ? e.message : "面试历史读取失败，请重试"
+  } finally { sessionsLoading.value = false }
 }
 
 async function selectSession(id: number, force = false) {
+  if (String(route.query.session_id || "") !== String(id)) await router.replace({ path: "/interview", query: { session_id: id } });
+  pageError.value = "";
   if (!force && activeSessionId.value === id) return
   activeSessionId.value = id
+  activeQuestionId.value = null
+  retryAnswer.value = null
+  profileContext.value = undefined
+  completion.value = undefined
   loading.value = true
   messages.value = []
   streamingContent.value = ""
@@ -87,6 +113,13 @@ async function selectSession(id: number, force = false) {
   try {
     const detail = await getSession(id)
     messages.value = detail.messages || []
+    activeQuestionId.value = detail.active_question_id || null
+    profileContext.value = detail.context_snapshot
+    completion.value = detail.completion_json
+    if (detail.pending_answer) {
+      retryAnswer.value = detail.pending_answer
+      inputText.value = detail.pending_answer.content
+    } else { inputText.value = "" }
     // Phase 3.7: Initialize eval collapsed state on refresh
     for (const msg of messages.value) {
       if (msg.metadata_json?.type === "EVALUATION") {
@@ -113,7 +146,7 @@ async function selectSession(id: number, force = false) {
     }
 
     // If resume processing, start polling
-    if (detail.resume_id && detail.resume_status !== "COMPLETED" && detail.resume_status !== "FAILED") {
+    if (detail.workflow_mode !== "m4" && !detail.legacy && detail.resume_id && detail.resume_status !== "COMPLETED" && detail.resume_status !== "FAILED") {
       startResumePoll(detail.resume_id, id)
     } else {
       if (resumePollTimer.value) clearInterval(resumePollTimer.value)
@@ -123,7 +156,7 @@ async function selectSession(id: number, force = false) {
       resumeStageMessage.value = ""
     }
   } catch (e) {
-    console.error("Failed to load session", e)
+    pageError.value = e instanceof Error ? e.message : "面试读取失败，请重试"
   } finally {
     loading.value = false
     await scrollToBottom()
@@ -132,12 +165,26 @@ async function selectSession(id: number, force = false) {
 
 async function handleCreateSession() {
   try {
-    const session = await createSession()
+    const target = targets.value.find(t => t.job_id === selectedJobId.value)
+    if (!target) { alert("请选择公司和岗位；需先完成候选人画像"); return }
+    const session = await createSession(target.company_id, target.job_id, createBudget.value)
     sessions.value.unshift(session)
     await selectSession(session.id)
+    await handleStart()
   } catch (e) {
     if (e instanceof ApiError) alert(e.message)
   }
+}
+
+async function handleStart() {
+  if (!activeSessionId.value) return
+  generationStage.value = "generating_first_question"
+  try {
+    await startInterview(activeSessionId.value)
+    await loadSessions()
+    await selectSession(activeSessionId.value, true)
+  } catch (e) { alert(e instanceof ApiError ? e.message : "首题生成失败，可以重试开始") }
+  finally { generationStage.value = "idle" }
 }
 
 async function handleDeleteSession(id: number) {
@@ -266,29 +313,24 @@ async function handleSend() {
   const text = inputText.value.trim()
   if (!text || sending.value || !activeSessionId.value) return
 
-  if (!hasActiveResume()) {
-    alert("请先上传并绑定一份简历")
+  if (!isActiveResumeReady() || !activeQuestionId.value) {
+    alert("请开始新的模拟面试；历史会话为只读")
     return
   }
-  if (isActiveResumeFailed()) {
-    alert("简历处理失败，请重新上传简历后再开始面试")
-    return
-  }
-  if (!isActiveResumeReady()) {
-    alert("简历还在处理中，请等待处理完成后再开始面试")
-    return
-  }
+  if (retryAnswer.value && retryAnswer.value.content !== text) { alert("上一回答处理失败，请先重试原回答，不能替换已提交内容"); return }
+  const answerContext = retryAnswer.value || { question_id: activeQuestionId.value, idempotency_key: crypto.randomUUID(), content: text }
+  retryAnswer.value = answerContext
 
   // Add user message locally
   const turnIndex = (messages.value.length > 0
     ? Math.max(...messages.value.map((m) => m.turn_index))
     : 0) + (streaming.value ? 0 : 1)
 
-  messages.value.push({
+  if (!messages.value.some(m => m.role === "USER" && m.metadata_json?.idempotency_key === answerContext.idempotency_key)) messages.value.push({
     id: Date.now(),
     role: "USER",
     content: text,
-    metadata_json: null,
+    metadata_json: { idempotency_key: answerContext.idempotency_key },
     turn_index: turnIndex,
     created_at: new Date().toISOString(),
   })
@@ -316,12 +358,15 @@ async function handleSend() {
     () => {},
     // onDone — clear streaming state. SSE events already built the UI.
     () => {
+      retryAnswer.value = null
+      generationStage.value = "idle"
       streamingContent.value = ""
       streaming.value = false
       sending.value = false
       streamingSource.value = ""
       abortController = null
       loadSessions()
+      if (activeSessionId.value) selectSession(activeSessionId.value, true)
     },
     // onCompressed
     (data) => {
@@ -329,17 +374,21 @@ async function handleSend() {
     },
     // onError
     (code, message) => {
-      alert(`错误 [${code}]: ${message}`)
+      pageError.value = userError(code, message)
+      generationStage.value = "idle"
+      streamErrorCode.value = code
       streamingContent.value = ""
       streaming.value = false
       sending.value = false
       abortController = null
+      inputText.value = answerContext.content
     },
     // onStatus
-    () => {},
+    (stage) => { if (['evaluating', 'generating_first_question', 'generating_next_question'].includes(stage)) generationStage.value = stage as typeof generationStage.value },
     // Phase 3.6 final: New SSE callbacks
     // onEvaluation — add collapsible evaluation message
     (data) => {
+      activeQuestionId.value = data.question_id || null
       const mid = Date.now()
       evalCollapsed.value[mid] = true  // default collapsed
       messages.value.push({
@@ -348,6 +397,7 @@ async function handleSend() {
         content: data.evaluation || "",
         metadata_json: {
           type: "EVALUATION",
+          ...data,
           question_id: data.question_id,
           score: data.score,
           missing_points: data.missing_points || [],
@@ -362,12 +412,14 @@ async function handleSend() {
     // onFollowUp — add as question bubble
     (data) => {
       const mid = Date.now()
+      activeQuestionId.value = data.question_id || null
       messages.value.push({
         id: mid,
         role: "ASSISTANT",
         content: data.question || "",
         metadata_json: {
           type: "FOLLOW_UP",
+          ...data,
           question_id: data.question_id,
           follow_up_count: data.follow_up_count,
           max_follow_ups: data.max_follow_ups,
@@ -379,12 +431,14 @@ async function handleSend() {
     // onQuestion — add as question bubble
     (data) => {
       const mid = Date.now()
+      activeQuestionId.value = data.question_id
       messages.value.push({
         id: mid,
         role: "ASSISTANT",
         content: data.question,
         metadata_json: {
           type: "QUESTION",
+          ...data,
           question_id: data.question_id,
           question_index: data.question_index,
           dimension: data.dimension,
@@ -429,13 +483,15 @@ async function handleSend() {
       const budget = data.question_budget || data.total_questions || questionBudget.value || 0
       messages.value.push({
         id: mid, role: "ASSISTANT",
-        content: budget > 1 ? `面试结束。已回答 ${answered} 题，计划 ${budget} 题。` : `面试结束。`,
+        content: `面试结束。已回答 ${answered} 题，计划 ${budget} 题。全场均分 ${data.overall_average ?? data.avg_score ?? '—'} / 5。`,
         metadata_json: { type: "INTERVIEW_COMPLETE", answered_count: answered, question_budget: budget },
         turn_index: messages.value.length, created_at: new Date().toISOString(),
       })
       sending.value = false
       streaming.value = false
-    }
+      activeQuestionId.value = null
+    },
+    answerContext
   )
 }
 
@@ -462,6 +518,7 @@ function handleStopStream() {
   streamingContent.value = ""
   streaming.value = false
   sending.value = false
+  if (retryAnswer.value) inputText.value = retryAnswer.value.content
 }
 
 function handleKeydown(e: KeyboardEvent) {
@@ -475,6 +532,7 @@ function handleKeydown(e: KeyboardEvent) {
 function formatContent(text: string): string {
   if (!text) return ""
   return text
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/\n/g, "<br>")
 }
@@ -485,8 +543,8 @@ function buildDisplayItems(msgs: InterviewMessage[]) {
     const ta = a.turn_index ?? 0
     const tb = b.turn_index ?? 0
     if (ta !== tb) return ta - tb
-    const oa = (a.metadata_json as any)?.display_order ?? 99
-    const ob = (b.metadata_json as any)?.display_order ?? 99
+    const oa = a.role === "USER" ? 0 : (a.metadata_json as any)?.display_order ?? 99
+    const ob = b.role === "USER" ? 0 : (b.metadata_json as any)?.display_order ?? 99
     if (oa !== ob) return oa - ob
     const ca = new Date(a.created_at || 0).getTime()
     const cb = new Date(b.created_at || 0).getTime()
@@ -505,6 +563,7 @@ function buildDisplayItems(msgs: InterviewMessage[]) {
         question_id: meta.question_id, question_index: meta.question_index,
         dimension: meta.dimension, difficulty: meta.difficulty,
         source: meta.source || meta.source_label, evidence: meta.evidence,
+        source_fingerprint: meta.source_fingerprint, question_kind: meta.question_kind,
         follow_up_count: meta.follow_up_count, max_follow_ups: meta.max_follow_ups,
         is_dynamic: t === "DYNAMIC_QUESTION", parent_question_id: meta.parent_question_id,
         raw: msg,
@@ -518,6 +577,8 @@ function buildDisplayItems(msgs: InterviewMessage[]) {
         risk_tip: (msg.metadata_json as any).risk_tip,
         covered_points: (msg.metadata_json as any).covered_points || [],
         action: (msg.metadata_json as any).action,
+        dimensions: Object.fromEntries(["technical_correctness", "coverage", "depth", "relevance", "communication"].map(key => [key, msg.metadata_json?.[key]])),
+        mode: msg.metadata_json?.mode,
         raw: msg,
       })
     } else if (t === "INTERVIEW_COMPLETE") {
@@ -573,16 +634,42 @@ onUnmounted(() => {
 })
 
 // Init
-loadSessions()
+loadSessions().then(() => { const id = Number(route.query.session_id); if (sessions.value.some(s => s.id === id)) selectSession(id); })
+getInterviewTargets().then(async data => {
+  targets.value = data
+  const jobId = Number(entryRoute.query.job_id), companyId = Number(entryRoute.query.company_id)
+  if (!jobId || !companyId) return
+  // M6 hands off references ONLY. The existing M4 create endpoint revalidates
+  // current Profile/JD/public data/Memory; no MatchRun snapshot is copied.
+  await entryRouter.replace({ path: '/interview' }) // consuming the entry avoids reload creating another session
+  const target = data.find(t => t.job_id === jobId && t.company_id === companyId)
+  if (!target) { alert('该岗位当前已关闭或不可用，无法创建新的模拟面试；历史推荐保留。'); return }
+  selectedJobId.value = jobId
+  await handleCreateSession()
+}).catch(e => { pageError.value = e instanceof Error ? e.message : "岗位读取失败，请重试" }).finally(() => { targetsLoading.value = false })
 </script>
 
 <template>
   <div class="interview-page">
+    <p v-if="pageError" class="ux-empty" role="alert">{{ pageError }}</p>
+    <details v-if="streamErrorCode" class="ux-technical"><summary>错误技术详情</summary>{{ streamErrorCode }}</details>
     <!-- Left: Session List -->
     <aside class="session-sidebar">
       <div class="sidebar-header">
         <h3>面试会话</h3>
         <button class="btn-new" @click="handleCreateSession">+ 新建</button>
+      </div>
+      <div style="padding:12px;display:grid;gap:8px">
+        <label>公司 / 岗位
+          <select v-model="selectedJobId" aria-label="公司和岗位" style="width:100%">
+            <option :value="null">请选择已发布岗位</option>
+            <option v-for="t in targets" :key="t.job_id" :value="t.job_id">{{ publicName(t.company_name) }} · {{ publicName(t.job_title) }}</option>
+          </select>
+        </label>
+        <label>题目预算（包含补问 / 深挖）<input v-model.number="createBudget" type="number" min="1" max="40" style="width:60px"></label>
+        <router-link to="/profile">先查看 / 完成我的画像</router-link>
+        <p v-if="targetsLoading">正在读取岗位…</p>
+        <p v-else-if="!targets.length && !pageError">当前岗位库暂无可用岗位。</p>
       </div>
       <div class="session-list">
         <div
@@ -592,10 +679,10 @@ loadSessions()
           :class="{ active: s.id === activeSessionId }"
           @click="selectSession(s.id)"
         >
-          <div class="session-title">{{ s.title || `面试 ${s.id}` }}</div>
+          <div class="session-title">{{ s.title ? publicName(s.title) : '模拟面试' }}</div>
           <div class="session-meta">
             <span v-if="s.resume_filename" class="resume-name">{{ s.resume_filename }}</span>
-            <span v-else class="no-resume">未绑定简历</span>
+            <span v-else class="no-resume">{{ s.legacy ? '历史只读' : displayLabel(s.status) }}</span>
             <span class="turn-count">{{ s.turn_count }} 轮</span>
           </div>
           <button
@@ -606,8 +693,9 @@ loadSessions()
             ×
           </button>
         </div>
-        <div v-if="sessions.length === 0" class="empty-sessions">
-          暂无面试会话，点击"新建"开始
+        <div v-if="sessionsLoading" class="empty-sessions">正在读取面试记录…</div>
+        <div v-else-if="sessions.length === 0 && !pageError" class="empty-sessions">
+          还没有模拟面试记录。选择岗位后开始第一场面试。
         </div>
       </div>
     </aside>
@@ -622,7 +710,18 @@ loadSessions()
       <!-- Session active -->
       <template v-else>
         <!-- Resume status bar -->
-        <div class="resume-bar" v-if="activeSession()">
+        <div class="resume-bar" v-if="activeSession()" style="flex-wrap:wrap">
+          <template v-if="activeSession()?.workflow_mode === 'm4'">
+            <strong>{{ publicName(profileContext?.company_name) }} · {{ publicName(profileContext?.job_title) }}</strong>
+            <span>已完成 {{ questionList.filter(q => ['EVALUATED', 'COMPLETED'].includes(q.status)).length }} / {{ questionBudget }} 题</span>
+            <span v-if="activeQuestionId">当前题型：{{ displayLabel(questionList.find(q => q.id === activeQuestionId)?.dimension, '技术 / 项目') }} · 难度：{{ displayLabel(questionList.find(q => q.id === activeQuestionId)?.difficulty) }}</span>
+            <span>画像第 {{ profileContext?.profile_version_number }} 版 / 岗位描述第 {{ profileContext?.jd_version_number }} 版（本场固定）</span>
+            <span v-if="profileContext?.coverage_insufficient">公共题库覆盖不足，使用岗位 / 画像出题</span>
+            <span v-if="isReplay || completion?.mode === 'replay'">DEMO · Replay 回放模式（不是 Live 模型验收）</span>
+            <button v-if="activeSession()?.status === 'READY'" @click="handleStart">开始 / 重试首题</button>
+          </template>
+          <template v-else><span>历史会话只读，不猜测关联画像或岗位</span></template>
+          <template v-if="false">
           <template v-if="uploadingResume">
             <span class="uploading-indicator">⏳ 简历处理中</span>
             <span v-if="resumeProcessingStage" class="stage-text">
@@ -652,9 +751,12 @@ loadSessions()
           >
             {{ hasActiveResume() ? '更换简历' : '上传简历' }}
           </button>
+          </template>
         </div>
 
         <!-- Messages -->
+        <div v-if="retryAnswer && !sending" class="resume-bar">已保存本题回答；可以安全重试，不会重复评分或推进。</div>
+        <p v-if="sending" role="status" class="resume-bar">{{ displayLabel(generationStage, '正在处理本轮回答…') }}</p>
         <div ref="chatContainer" class="chat-messages" v-if="!loading">
           <!-- Phase 3.8: Loading card for question generation stages -->
           <div v-if="generationStage === 'generating_first_question' && !streaming" class="message-row assistant">
@@ -669,7 +771,7 @@ loadSessions()
           </div>
 
           <div v-if="messages.length === 0 && !streaming && generationStage === 'idle'" class="chat-empty">
-            <p v-if="isActiveResumeReady() && !activeSession()?.target_position_confirmed">简历已就绪，请确认面试岗位后开始</p>
+            <p v-if="activeSession()?.workflow_mode === 'm4'">画像与岗位已固定，请开始面试</p>
             <p v-else-if="isActiveResumeReady()">简历已就绪，面试即将开始...</p>
             <p v-else-if="isActiveResumeFailed()">简历处理失败，请重新上传简历</p>
             <p v-else-if="hasActiveResume()">简历处理中，请等待处理完成</p>
@@ -682,6 +784,7 @@ loadSessions()
             <!-- QUESTION / FOLLOW_UP / DYNAMIC_QUESTION bubbles -->
             <div v-if="item.type === 'QUESTION' || item.type === 'FOLLOW_UP' || item.type === 'DYNAMIC_QUESTION'" class="message-row assistant">
               <div class="message-bubble question-bubble">
+                <div class="speaker-label">面试官 Agent</div>
                 <div class="q-header">
                   <span class="q-badge" v-if="item.type === 'QUESTION'">
                     Q{{ (item.question_index ?? 0) + 1 }} / {{ item.question_budget || questionBudget }}
@@ -689,12 +792,21 @@ loadSessions()
                   <span class="q-badge followup" v-else-if="item.type === 'FOLLOW_UP'">
                     追问 {{ item.follow_up_count ?? '' }}{{ item.max_follow_ups ? ' / ' + item.max_follow_ups : '' }}
                   </span>
-                  <span class="q-badge dynamic" v-else>⚡ 临时追问</span>
-                  <span class="q-dimension" v-if="item.dimension">{{ item.dimension }}</span>
-                  <span class="q-difficulty" v-if="item.difficulty">{{ item.difficulty }}</span>
+                  <span class="q-badge dynamic" v-else>动态问题</span>
+                  <span class="q-dimension" v-if="item.dimension">{{ displayLabel(item.dimension, "技术 / 项目") }}</span>
+                  <span class="q-difficulty" v-if="item.difficulty">{{ displayLabel(item.difficulty) }}</span>
                   <span class="q-source" v-if="item.source">{{ sourceLabel(item.source) }}</span>
                 </div>
                 <div class="q-body">{{ item.content }}</div>
+                <div v-if="item.question_kind === 'DEEP_DIVE'" class="q-dimension">深挖：新题，关联上一主题</div>
+                <details v-if="item.evidence?.evidence?.length">
+                  <summary>查看候选人依据</summary>
+                  <div v-for="e in item.evidence.evidence" :key="e.key">
+                    {{ displayLabel(e.kind) }} · {{ displayLabel(e.section) }}
+                    <blockquote>{{ e.excerpt }}</blockquote>
+                  </div>
+                </details>
+                <details v-if="item.source_fingerprint" class="ux-technical"><summary>题目技术详情</summary>公共原题指纹：{{ item.source_fingerprint }}</details>
                 <button v-if="item.question_id" class="q-answer-btn" @click="toggleAnswerForItem(item)">
                   {{ answerVisibleMap[item.id] ? '收起答案' : '展开参考答案' }}
                 </button>
@@ -711,6 +823,10 @@ loadSessions()
                 </div>
                 <div v-if="evalCollapsed[item.id] === false" class="eval-detail">
                   <div class="eval-text" v-html="formatContent(item.content)"></div>
+                  <div v-if="item.mode === 'replay'">DEMO · Replay 回放模式 · fixture</div>
+                  <div v-for="(label, key) in dimensionLabels" :key="key">{{ label }}：{{ item.dimensions?.[key] ?? '—' }} / 5</div>
+                  <div v-if="item.covered_points?.length"><strong>已覆盖要点：</strong>{{ item.covered_points.join('；') }}</div>
+                  <p v-if="item.action">下一步：{{ displayLabel(item.action) }}</p>
                   <div v-if="item.missing_points?.length" class="eval-missing">
                     <strong>缺失点:</strong>
                     <ul><li v-for="mp in item.missing_points" :key="mp">{{ mp }}</li></ul>
@@ -726,21 +842,30 @@ loadSessions()
             <div v-else-if="item.type === 'INTERVIEW_COMPLETE'" class="message-row assistant">
               <div class="message-bubble complete-bubble">
                 <div class="complete-text">🎉 {{ item.content }}</div>
+                <template v-if="completion">
+                  <p>数据库统计：已评价 {{ completion.evaluated_count }}，全场均分 {{ completion.overall_average ?? '—' }} / 5</p>
+                  <div v-for="(label, key) in dimensionLabels" :key="key">{{ label }}：{{ completion.dimension_averages[key] ?? '—' }}</div>
+                </template>
+                <router-link
+                  v-if="activeSession()?.workflow_mode === 'm4' && activeSessionId"
+                  :to="{ path: '/interview/reports', query: { session_id: activeSessionId } }"
+                >生成 / 查看面试报告与记忆提案</router-link>
                 <button
-                  v-if="activeSessionId && !memoryConsolidatedMap[activeSessionId]"
+                  v-if="activeSession()?.legacy && activeSessionId && !memoryConsolidatedMap[activeSessionId]"
                   class="memory-save-btn"
                   :disabled="consolidatingMemory"
                   @click="handleConsolidateMemory(activeSessionId)"
                 >
                   {{ consolidatingMemory ? '正在沉淀...' : '沉淀为长期记忆' }}
                 </button>
-                <div v-else class="memory-saved-note">已更新你的面试记忆和技能画像</div>
+                <div v-else-if="activeSession()?.legacy" class="memory-saved-note">已更新你的面试记忆和技能画像</div>
               </div>
             </div>
 
             <!-- USER messages -->
             <div v-else-if="item.type === 'USER'" class="message-row user">
               <div class="message-bubble">
+                <div class="speaker-label">我的回答</div>
                 <div class="message-content">{{ item.content }}</div>
               </div>
             </div>
@@ -777,13 +902,10 @@ loadSessions()
             v-model="inputText"
             :disabled="sending || !isActiveResumeReady()"
             :placeholder="
-              isActiveResumeReady()
-                ? '输入你的回答... (Enter 发送, Shift+Enter 换行)'
-                : isActiveResumeFailed()
-                  ? '简历处理失败，请重新上传简历'
-                  : hasActiveResume()
-                    ? '简历处理中，请稍候'
-                    : '请先上传简历'
+              activeSession()?.legacy ? '历史面试只读，请新建模拟面试'
+                : activeSession()?.status === 'COMPLETED' ? '面试已结束，请新建会话继续练习'
+                : isActiveResumeReady() ? '输入你的回答…（回车发送，Shift+回车换行）'
+                : '画像与岗位已固定，请开始面试'
             "
             rows="2"
             @keydown="handleKeydown"
@@ -804,6 +926,8 @@ loadSessions()
 </template>
 
 <style scoped>
+.speaker-label {font-size:12px;color:#667085;margin-bottom:8px;}
+.message-row.user .speaker-label {color:#fff;}
 .interview-page {
   display: flex;
   height: calc(100vh - 56px);
@@ -1274,13 +1398,13 @@ loadSessions()
 }
 .eval-summary {
   font-size: 13px;
-  color: #e6a23c;
+  color: #916000;
   font-weight: 600;
 }
 .eval-toggle { float: right; color: #909399; font-weight: 400; font-size: 12px; }
 .eval-detail { margin-top: 10px; }
 .eval-text { font-size: 14px; color: #303133; line-height: 1.6; }
-.eval-missing { margin-top: 8px; font-size: 13px; color: #e6a23c; }
+.eval-missing { margin-top: 8px; font-size: 13px; color: #916000; }
 .eval-missing ul { margin: 4px 0 0 16px; }
 .eval-risk { margin-top: 8px; font-size: 13px; color: #f56c6c; }
 .complete-bubble { background: #f0f9eb !important; border: 1px solid #c2e7b0 !important; text-align: center; }
@@ -1302,5 +1426,11 @@ loadSessions()
   margin-top: 10px;
   font-size: 13px;
   color: #529b2e;
+}
+@media (max-width: 700px) {
+  .interview-page { flex-direction: column; height: auto; }
+  .session-sidebar { width: 100%; min-width: 0; max-height: 320px; flex-shrink: 0; }
+  .chat-main { min-height: 620px; height: 72vh; flex: none; }
+  .message-bubble { max-width: 95%; overflow-wrap: anywhere; }
 }
 </style>

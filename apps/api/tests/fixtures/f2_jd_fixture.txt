@@ -1,0 +1,8 @@
+TEST / LOCAL_FIXTURE: synthetic recruitment text for model acceptance, not a live vacancy.
+Company: F2 TEST Fixture Company
+Job: AI Application Engineer
+This demonstration role builds document retrieval applications for campus candidates.
+Requirements:
+Use Python to implement document retrieval services.
+Use Redis to cache retrieval results with TTL and explicit invalidation.
+Write integration tests for retrieval errors and cache misses.

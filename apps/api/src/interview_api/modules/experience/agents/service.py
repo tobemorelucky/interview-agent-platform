@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from pydantic import ValidationError
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from interview_api.core.config import settings
 from interview_api.core.errors import AppError
@@ -29,6 +29,7 @@ from interview_api.modules.experience.agents.schemas import (
 )
 from interview_api.modules.experience.agents.state import ExperienceAgentState
 from interview_api.modules.experience.agents.validators import validate_extraction_result
+from interview_api.modules.experience.models import ExperienceCollectionTask, InterviewExperience
 
 logger = logging.getLogger(__name__)
 
@@ -36,10 +37,11 @@ MIN_RAW_TEXT_CHARS = 300
 
 
 class ExperienceAgentService:
-    def __init__(self, db: AsyncSession, llm: LLMProvider | None = None):
+    def __init__(self, db: AsyncSession, llm: LLMProvider | None = None, *, research_router=None):
         self.db = db
         self.repo = ExperienceAgentRepository(db)
         self.llm = llm
+        self.research_router = research_router
 
     async def run_extraction_for_source(
         self,
@@ -60,6 +62,50 @@ class ExperienceAgentService:
             existing = await self.repo.latest_experience_for_source(source.id)
             if existing:
                 return await self._existing_result_payload(source.id, existing)
+
+        legacy_task = await self.db.get(ExperienceCollectionTask, source.task_id) if source.task_id else None
+        if legacy_task is not None and legacy_task.public_refresh_task_id is not None:
+            # A bound M2A task has one public execution boundary. Preserve the
+            # old endpoint/result shape, but do not start a second legacy run.
+            from interview_api.modules.public_career.research.agent import PublicDataResearchAgent
+            from interview_api.modules.public_career.models import PublicDataRefreshTask
+            from interview_api.modules.public_career.fingerprints import compute_content_fingerprint
+            from sqlalchemy import select
+
+            source_id, public_id, legacy_id = source.id, legacy_task.public_refresh_task_id, legacy_task.id
+            task = await self.db.get(PublicDataRefreshTask, public_id)
+            if task.status == "COMPLETED" and not force:
+                if source.extract_status == "NOT_EXPERIENCE":
+                    return {"source_id": source_id, "is_interview_experience": False,
+                            "experience_id": None, "question_count": 0, "status": "REJECTED",
+                            "extract_status": "NOT_EXPERIENCE", "skipped": True, "error_message": None}
+                existing = await self.db.scalar(select(InterviewExperience).where(
+                    InterviewExperience.task_id == legacy_id,
+                    InterviewExperience.content_fingerprint == compute_content_fingerprint(raw_text),
+                ).order_by(InterviewExperience.id.desc()))
+                if existing is not None and not force:
+                    return await self._existing_result_payload(source_id, existing)
+                raise ValueError("completed_public_refresh_has_no_matching_experience")
+            await self.db.commit()
+            factory = async_sessionmaker(self.db.bind, expire_on_commit=False)
+            output = await PublicDataResearchAgent(factory, self.research_router).run(public_id, force=force)
+            self.db.expire_all()
+            if output["status"] == "FAILED":
+                raise ValueError(output.get("error", "public_research_failed"))
+            existing = await self.repo.latest_experience_for_source(source_id)
+            if existing is None:
+                existing = await self.db.scalar(select(InterviewExperience).where(
+                    InterviewExperience.task_id == legacy_id,
+                    InterviewExperience.content_fingerprint == compute_content_fingerprint(raw_text),
+                ).order_by(InterviewExperience.id.desc()))
+            if existing is None:
+                return {"source_id": source_id, "agent_run_id": output["agent_run_id"],
+                        "is_interview_experience": False, "experience_id": None,
+                        "question_count": 0, "status": "REJECTED", "extract_status": "NOT_EXPERIENCE",
+                        "skipped": False, "error_message": None}
+            payload = await self._existing_result_payload(source_id, existing)
+            payload.update(agent_run_id=output["agent_run_id"], skipped=False)
+            return payload
 
         llm = self.llm or self._build_default_llm()
         extraction_agent = ExtractionAgent(llm, model_name=settings.llm_model)

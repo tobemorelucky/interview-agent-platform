@@ -164,10 +164,24 @@ class ResumeService:
     # ── Delete ──
 
     async def delete_resume(self, resume_id: int, user_id: int) -> None:
-        resume = await self.resume_repo.get_by_id_and_user(resume_id, user_id)
+        from sqlalchemy import select
+        from interview_api.modules.resume.models import Resume
+        from interview_api.modules.candidate_profile.models import ResumeEvidence, CandidateProfileVersion, ProfileGeneration
+        from interview_api.core.exceptions import AppError
+
+        # Same row lock as evidence creation/publication closes the precheck race.
+        resume = await self.db.scalar(select(Resume).where(
+            Resume.id == resume_id, Resume.user_id == user_id
+        ).with_for_update())
         if resume is None:
             from interview_api.core.exceptions import ResumeNotFoundError
             raise ResumeNotFoundError()
+
+        for table, field in ((ResumeEvidence, ResumeEvidence.resume_id),
+                             (CandidateProfileVersion, CandidateProfileVersion.source_resume_id),
+                             (ProfileGeneration, ProfileGeneration.resume_id)):
+            if await self.db.scalar(select(table.id).where(field == resume_id).limit(1)) is not None:
+                raise AppError("RESUME_REFERENCED_BY_PROFILE", "简历已被画像或 Evidence 引用，不能删除溯源材料", 409)
 
         from interview_api.infrastructure.storage.provider import MinioObjectStorageProvider
 

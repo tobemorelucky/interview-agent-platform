@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { listResumes, uploadResume, deleteResume } from "../api/resume";
 import { ApiError } from "../api/client";
+import { userError } from "../i18n/zh-CN";
 import type { Resume } from "../types/resume";
 import { statusLabel, statusColor, stageLabel } from "../types/resume";
 
@@ -69,8 +70,8 @@ async function handleDelete(id: number) {
   try {
     await deleteResume(id);
     await fetchList();
-  } catch {
-    alert("删除失败");
+  } catch (e) {
+    error.value = e instanceof ApiError ? e.message : "删除失败，请重试。";
   }
 }
 
@@ -95,8 +96,8 @@ onUnmounted(() => {
 
 <template>
   <div class="resume-list-page">
-    <h2>简历模拟面试</h2>
-    <p class="subtitle">上传简历，系统将解析您的工作经历与技术栈，结合面试知识库生成针对性的模拟面试问题。</p>
+    <h2>我的简历</h2>
+    <p class="subtitle">上传简历，系统会解析原始材料并生成可追溯的候选人画像。准备好画像后，可以选择岗位开始模拟面试。</p>
 
     <!-- Upload -->
     <div class="upload-card">
@@ -121,7 +122,7 @@ onUnmounted(() => {
     <div v-if="loading && resumes.length === 0" class="loading">加载中...</div>
     <div v-else-if="error" class="error">{{ error }}</div>
     <div v-else-if="resumes.length === 0" class="empty">
-      暂无简历，请上传您的第一份简历。
+      还没有上传简历，上传后系统会生成候选人画像。
     </div>
     <table v-else class="resume-table">
       <thead>
@@ -144,7 +145,7 @@ onUnmounted(() => {
             <span class="badge-status" :style="{ background: statusColor(r.status) }">
               {{ statusLabel(r.status) }}
             </span>
-            <span v-if="r.error_message" class="error-tip" :title="r.error_message">
+            <span v-if="r.error_message" class="error-tip" :title="userError(r.error_message)">
               ⚠
             </span>
           </td>

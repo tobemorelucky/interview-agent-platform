@@ -1,11 +1,11 @@
-"""Phase 4: Experience collection schemas."""
+﻿"""Phase 4: Experience collection schemas."""
 
 from datetime import datetime
 
 from pydantic import BaseModel, Field
 
 
-# ── Keyword Preset ──
+# 鈹€鈹€ Keyword Preset 鈹€鈹€
 
 class ExperienceKeywordPresetCreate(BaseModel):
     preset_type: str = Field(..., description="COMPANY / JOB / PLATFORM")
@@ -33,7 +33,7 @@ class ExperienceKeywordPresetRead(BaseModel):
     model_config = {"from_attributes": True}
 
 
-# ── Collection Task ──
+# 鈹€鈹€ Collection Task 鈹€鈹€
 
 class ExperienceCollectionTaskCreate(BaseModel):
     search_scope: str = Field(default="JOB", pattern="^(JOB|COMPANY)$")
@@ -51,6 +51,7 @@ class ExperienceCollectionTaskCreate(BaseModel):
 class ExperienceCollectionTaskRead(BaseModel):
     id: int
     created_by: int | None = None
+    public_refresh_task_id: int | None = None
     time_window_hours: int
     job_keywords_json: list = []
     company_keywords_json: list = []
@@ -83,7 +84,7 @@ class ExperienceCollectionTaskListResponse(BaseModel):
     total: int
 
 
-# ── Source Item ──
+# 鈹€鈹€ Source Item 鈹€鈹€
 
 class ExperienceSourceItemRead(BaseModel):
     id: int
@@ -124,7 +125,7 @@ class ExperienceSourceFetchRequest(BaseModel):
     force: bool = False
 
 
-# ── Interview Experience ──
+# 鈹€鈹€ Interview Experience 鈹€鈹€
 
 class InterviewExperienceRead(BaseModel):
     id: int
@@ -151,7 +152,7 @@ class InterviewExperienceRead(BaseModel):
     model_config = {"from_attributes": True}
 
 
-# ── Interview Question ──
+# 鈹€鈹€ Interview Question 鈹€鈹€
 
 class InterviewQuestionRead(BaseModel):
     id: int
@@ -176,7 +177,62 @@ class InterviewQuestionRead(BaseModel):
     model_config = {"from_attributes": True}
 
 
-# ── Recent Summary ──
+# 鈹€鈹€ Recent Summary 鈹€鈹€
+
+
+class ExperienceReviewItemRead(BaseModel):
+    experience_id: int
+    source_item_id: int | None = None
+    task_id: int | None = None
+    title: str | None = None
+    source_url: str | None = None
+    platform: str | None = None
+    company: str | None = None
+    position: str | None = None
+    round_name: str | None = None
+    summary: str | None = None
+    question_count: int = 0
+    reliability_score: float | None = None
+    review_status: str
+    risk_flags: list[str] = []
+    quality_flags: list[str] = []
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+class ExperienceReviewListResponse(BaseModel):
+    items: list[ExperienceReviewItemRead]
+    total: int
+
+
+class ExperienceReviewUpdateRequest(BaseModel):
+    company: str | None = Field(None, max_length=128)
+    position: str | None = Field(None, max_length=128)
+    round_name: str | None = Field(None, max_length=64)
+    summary: str | None = None
+    review_note: str | None = None
+
+
+class ExperienceReviewQuestionUpdateRequest(BaseModel):
+    question: str | None = None
+    original_answer: str | None = None
+    standard_answer: str | None = None
+    answer_source: str | None = None
+    question_type: str | None = None
+    technical_categories: list[str] | None = None
+    difficulty: str | None = None
+    should_index: bool | None = None
+    evidence: str | None = None
+    review_status: str | None = None
+
+
+class ExperienceReviewRejectRequest(BaseModel):
+    reason: str = Field(..., min_length=1, max_length=2000)
+
+
+class ExperienceReviewRerunRequest(BaseModel):
+    reason: str | None = Field(None, max_length=2000)
+    force: bool = True
 
 class ExperienceRecentSummaryRead(BaseModel):
     id: int

@@ -1,23 +1,16 @@
 <script setup lang="ts">
 import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "../stores/auth";
+import { computed, watch } from "vue";
+import { lastApiDiagnostic } from "../api/client";
+import { userNavigation as navItems, adminNavigation as adminNavItems, navigationActive } from "../i18n/zh-CN";
 
 const auth = useAuthStore();
 const router = useRouter();
 const route = useRoute();
+watch(() => route.path, () => { lastApiDiagnostic.value = null; });
 
-const navItems = [
-  { path: "/dashboard", label: "首页" },
-  { path: "/qa", label: "知识问答" },
-  { path: "/interview", label: "简历面试" },
-  { path: "/memory", label: "我的记忆" },
-];
-
-const adminNavItems = [
-  { path: "/admin/kb/documents", label: "知识库管理" },
-  { path: "/admin/experiences", label: "面经采集" },
-  { path: "/admin/audit", label: "审计日志" },
-];
+const isDemo = computed(() => /(?:^|[-_ ])demo(?:[-_ @]|$)/i.test((auth.currentUser?.email || '') + ' ' + (auth.currentUser?.username || '')));
 
 function handleLogout() {
   auth.logout();
@@ -29,26 +22,17 @@ function handleLogout() {
   <div class="user-layout">
     <header class="topbar">
       <div class="topbar-left">
-        <span class="brand">Interview Agent Platform</span>
-        <nav class="nav-links">
+        <span class="brand">秋招面试助手</span>
+        <nav class="nav-links" aria-label="用户主导航">
           <router-link
             v-for="item in navItems"
             :key="item.path"
             :to="item.path"
-            :class="['nav-link', { active: route.path === item.path }]"
+            :class="['nav-link', { active: navigationActive(route.path, item.path) }]"
           >
             {{ item.label }}
           </router-link>
-          <template v-if="auth.isAdmin">
-            <router-link
-              v-for="item in adminNavItems"
-              :key="item.path"
-              :to="item.path"
-              :class="['nav-link', 'nav-admin', { active: route.path === item.path }]"
-            >
-              {{ item.label }}
-            </router-link>
-          </template>
+
         </nav>
       </div>
       <div class="topbar-right">
@@ -59,13 +43,22 @@ function handleLogout() {
         <button class="btn-logout" @click="handleLogout">退出</button>
       </div>
     </header>
+    <div v-if="isDemo" class="demo-banner" role="status">DEMO 账号 · 演示数据请勿视为真实求职经历；Replay 回放模式与实时模型以各记录标识为准。</div>
+    <details v-if="auth.isAdmin" class="admin-area" :open="route.path.startsWith('/admin/')"><summary>管理员区域</summary>
+      <nav aria-label="管理员导航"><router-link v-for="item in adminNavItems" :key="item.path" :to="item.path" :class="['nav-link', { active: navigationActive(route.path, item.path) }]">{{ item.label }}</router-link></nav>
+      <p>公共岗位与 Research / Tool 审计暂无独立管理页面，本轮不新增管理功能。</p>
+    </details>
     <main class="main-content">
+      <details v-if="lastApiDiagnostic" class="ux-technical"><summary>本次错误技术详情</summary><p>错误代码：{{ lastApiDiagnostic.code }} · 请求标识：{{ lastApiDiagnostic.requestId || '未返回' }}</p></details>
       <slot />
     </main>
   </div>
 </template>
 
 <style scoped>
+.demo-banner { padding:8px 24px; background:#fff3cd; color:#765600; font-size:13px; }
+.admin-area {padding:8px 24px; background:#fff; font-size:13px;}
+.admin-area nav {display:flex;flex-wrap:wrap;padding:10px 0;}
 .user-layout {
   min-height: 100vh;
   display: flex;

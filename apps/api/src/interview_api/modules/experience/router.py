@@ -8,6 +8,7 @@ from interview_api.core.errors import AppError, ResourceLockedError
 from interview_api.core.locks import redis_lock
 from interview_api.core.rate_limit import (
     experience_task_limit,
+    experience_review_write_limit,
     extraction_run_limit,
     fetch_run_limit,
     search_run_limit,
@@ -19,6 +20,10 @@ from interview_api.modules.experience.schemas import (
     ExperienceCollectionTaskCreate,
     ExperienceKeywordPresetCreate,
     ExperienceKeywordPresetUpdate,
+    ExperienceReviewQuestionUpdateRequest,
+    ExperienceReviewRejectRequest,
+    ExperienceReviewRerunRequest,
+    ExperienceReviewUpdateRequest,
     ExperienceSourceFetchRequest,
     ExperienceTaskFetchRequest,
 )
@@ -28,6 +33,7 @@ from interview_api.modules.experience.service import (
     ExperienceKeywordService,
     ExperienceTaskService,
 )
+from interview_api.modules.experience.review_service import ExperienceReviewService
 
 router = APIRouter(prefix="/api/v1/admin/experience", tags=["admin_experience"])
 
@@ -42,6 +48,341 @@ def _task_service(db: AsyncSession) -> ExperienceTaskService:
 
 def _agent_service(db: AsyncSession) -> ExperienceAgentService:
     return ExperienceAgentService(db)
+
+
+def _review_service(db: AsyncSession) -> ExperienceReviewService:
+    return ExperienceReviewService(db)
+
+
+@router.get("/review/items")
+async def list_review_items(
+    review_status: str | None = Query(None),
+    company: str | None = Query(None),
+    position: str | None = Query(None),
+    platform: str | None = Query(None),
+    reliability_min: float | None = Query(None, ge=0, le=1),
+    reliability_max: float | None = Query(None, ge=0, le=1),
+    risk_flag: str | None = Query(None),
+    keyword: str | None = Query(None),
+    offset: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    _admin=Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    svc = _review_service(db)
+    result = await svc.list_items(
+        review_status=review_status,
+        company=company,
+        position=position,
+        platform=platform,
+        reliability_min=reliability_min,
+        reliability_max=reliability_max,
+        risk_flag=risk_flag,
+        keyword=keyword,
+        offset=offset,
+        limit=limit,
+    )
+    return success(data=result)
+
+
+@router.get("/review/items/{experience_id}")
+async def get_review_item(
+    experience_id: int,
+    _admin=Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    svc = _review_service(db)
+    try:
+        result = await svc.get_detail(experience_id)
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return success(data=result)
+
+
+@router.patch("/review/items/{experience_id}")
+async def update_review_item(
+    experience_id: int,
+    body: ExperienceReviewUpdateRequest,
+    request: Request,
+    _limit=Depends(experience_review_write_limit),
+    admin_user=Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    svc = _review_service(db)
+    audit = AuditService(db)
+    try:
+        async with redis_lock(f"experience:review:{experience_id}", 120):
+            result = await svc.update_experience(
+                experience_id,
+                body.model_dump(exclude_unset=True),
+            )
+    except ResourceLockedError as e:
+        await _log_review_failure(
+            audit,
+            action="experience.review.update",
+            admin_user=admin_user,
+            request=request,
+            resource_id=experience_id,
+            error_message=e.message,
+        )
+        raise
+    except LookupError as e:
+        await _log_review_failure(
+            audit,
+            action="experience.review.update",
+            admin_user=admin_user,
+            request=request,
+            resource_id=experience_id,
+            error_message=str(e),
+        )
+        raise HTTPException(status_code=404, detail=str(e))
+    await audit.log_event(
+        action="experience.review.update",
+        actor_user_id=admin_user.id,
+        actor_role=admin_user.role,
+        resource_type="interview_experience",
+        resource_id=str(experience_id),
+        before_json=result["before"],
+        after_json=result["after"],
+        **audit_request_metadata(request),
+    )
+    return success(data=result["item"], message="Review item updated")
+
+
+@router.patch("/review/questions/{question_id}")
+async def update_review_question(
+    question_id: int,
+    body: ExperienceReviewQuestionUpdateRequest,
+    request: Request,
+    _limit=Depends(experience_review_write_limit),
+    admin_user=Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    svc = _review_service(db)
+    audit = AuditService(db)
+    try:
+        async with redis_lock(f"experience:review:question:{question_id}", 120):
+            result = await svc.update_question(
+                question_id,
+                body.model_dump(exclude_unset=True),
+            )
+    except ResourceLockedError as e:
+        await _log_review_failure(
+            audit,
+            action="experience.review.question_update",
+            admin_user=admin_user,
+            request=request,
+            resource_id=question_id,
+            resource_type="interview_question",
+            error_message=e.message,
+        )
+        raise
+    except LookupError as e:
+        await _log_review_failure(
+            audit,
+            action="experience.review.question_update",
+            admin_user=admin_user,
+            request=request,
+            resource_id=question_id,
+            resource_type="interview_question",
+            error_message=str(e),
+        )
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        await _log_review_failure(
+            audit,
+            action="experience.review.question_update",
+            admin_user=admin_user,
+            request=request,
+            resource_id=question_id,
+            resource_type="interview_question",
+            error_message=str(e),
+        )
+        raise HTTPException(status_code=400, detail=str(e))
+    await audit.log_event(
+        action="experience.review.question_update",
+        actor_user_id=admin_user.id,
+        actor_role=admin_user.role,
+        resource_type="interview_question",
+        resource_id=str(question_id),
+        before_json=result["before"],
+        after_json=result["after"],
+        **audit_request_metadata(request),
+    )
+    return success(data=result["question"], message="Review question updated")
+
+
+@router.post("/review/items/{experience_id}/approve")
+async def approve_review_item(
+    experience_id: int,
+    request: Request,
+    _limit=Depends(experience_review_write_limit),
+    admin_user=Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    svc = _review_service(db)
+    audit = AuditService(db)
+    try:
+        async with redis_lock(f"experience:review:{experience_id}", 120):
+            result = await svc.approve(experience_id, reviewer_id=admin_user.id)
+    except ResourceLockedError as e:
+        await _log_review_failure(
+            audit,
+            action="experience.review.approve",
+            admin_user=admin_user,
+            request=request,
+            resource_id=experience_id,
+            error_message=e.message,
+        )
+        raise
+    except LookupError as e:
+        await _log_review_failure(
+            audit,
+            action="experience.review.approve",
+            admin_user=admin_user,
+            request=request,
+            resource_id=experience_id,
+            error_message=str(e),
+        )
+        raise HTTPException(status_code=404, detail=str(e))
+    await audit.log_event(
+        action="experience.review.approve",
+        actor_user_id=admin_user.id,
+        actor_role=admin_user.role,
+        resource_type="interview_experience",
+        resource_id=str(experience_id),
+        before_json=result["before"],
+        after_json=result["after"],
+        **audit_request_metadata(request),
+    )
+    return success(data=result["item"], message="Review approved")
+
+
+@router.post("/review/items/{experience_id}/reject")
+async def reject_review_item(
+    experience_id: int,
+    body: ExperienceReviewRejectRequest,
+    request: Request,
+    _limit=Depends(experience_review_write_limit),
+    admin_user=Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    svc = _review_service(db)
+    audit = AuditService(db)
+    try:
+        async with redis_lock(f"experience:review:{experience_id}", 120):
+            result = await svc.reject(
+                experience_id,
+                reviewer_id=admin_user.id,
+                reason=body.reason,
+            )
+    except ResourceLockedError as e:
+        await _log_review_failure(
+            audit,
+            action="experience.review.reject",
+            admin_user=admin_user,
+            request=request,
+            resource_id=experience_id,
+            error_message=e.message,
+        )
+        raise
+    except LookupError as e:
+        await _log_review_failure(
+            audit,
+            action="experience.review.reject",
+            admin_user=admin_user,
+            request=request,
+            resource_id=experience_id,
+            error_message=str(e),
+        )
+        raise HTTPException(status_code=404, detail=str(e))
+    await audit.log_event(
+        action="experience.review.reject",
+        actor_user_id=admin_user.id,
+        actor_role=admin_user.role,
+        resource_type="interview_experience",
+        resource_id=str(experience_id),
+        before_json=result["before"],
+        after_json=result["after"],
+        metadata_json={"reason": body.reason},
+        **audit_request_metadata(request),
+    )
+    return success(data=result["item"], message="Review rejected")
+
+
+@router.post("/review/items/{experience_id}/request-rerun")
+async def request_review_rerun(
+    experience_id: int,
+    body: ExperienceReviewRerunRequest,
+    request: Request,
+    _limit=Depends(experience_review_write_limit),
+    admin_user=Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    svc = _review_service(db)
+    audit = AuditService(db)
+    try:
+        async with redis_lock(f"experience:review:{experience_id}", 120):
+            result = await svc.request_rerun(
+                experience_id,
+                reviewer_id=admin_user.id,
+                reason=body.reason,
+                force=body.force,
+            )
+    except ResourceLockedError as e:
+        await _log_review_failure(
+            audit,
+            action="experience.review.request_rerun",
+            admin_user=admin_user,
+            request=request,
+            resource_id=experience_id,
+            error_message=e.message,
+        )
+        raise
+    except LookupError as e:
+        await _log_review_failure(
+            audit,
+            action="experience.review.request_rerun",
+            admin_user=admin_user,
+            request=request,
+            resource_id=experience_id,
+            error_message=str(e),
+        )
+        raise HTTPException(status_code=404, detail=str(e))
+    await audit.log_event(
+        action="experience.review.request_rerun",
+        actor_user_id=admin_user.id,
+        actor_role=admin_user.role,
+        resource_type="interview_experience",
+        resource_id=str(experience_id),
+        before_json=result["before"],
+        after_json=result["after"],
+        metadata_json={"reason": body.reason, "force": body.force},
+        **audit_request_metadata(request),
+    )
+    return success(data=result["item"], message="Review rerun requested")
+
+
+async def _log_review_failure(
+    audit: AuditService,
+    *,
+    action: str,
+    admin_user,
+    request: Request,
+    resource_id: int,
+    error_message: str,
+    resource_type: str = "interview_experience",
+) -> None:
+    await audit.log_event(
+        action=action,
+        actor_user_id=admin_user.id,
+        actor_role=admin_user.role,
+        resource_type=resource_type,
+        resource_id=str(resource_id),
+        status="FAILED",
+        error_message=error_message,
+        **audit_request_metadata(request),
+    )
 
 
 @router.get("/keywords")
