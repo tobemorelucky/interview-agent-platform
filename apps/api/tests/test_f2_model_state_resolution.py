@@ -120,7 +120,9 @@ def test_unsupported_strength_still_rejected_after_skill_resolution():
 
 def test_profile_prompt_history_is_available():
     registry=CandidatePromptRegistry()
-    assert registry.get('resume_profile').version=='1.0.1'
+    assert registry.get('resume_profile').version=='1.0.4'
+    assert registry.get('resume_profile','1.0.2').version=='1.0.2'
+    assert registry.get('resume_profile','1.0.1').version=='1.0.1'
     assert registry.get('resume_profile','1.0.0').version=='1.0.0'
     assert 'proposed_evidence_state' not in registry.get('resume_profile','1.0.0').system
 
@@ -131,7 +133,7 @@ def test_profile_downward_resolution_persisted_and_audited(database_url):
         factory=async_sessionmaker(engine,expire_on_commit=False)
         try:
             _,resume_id=await seed(factory)
-            body=response(resume_id); body['skills'][0]['evidence_state']='STRONG_EVIDENCE'
+            body=response(resume_id); body['skills'][0]['proposed_evidence_state']='STRONG_EVIDENCE'
             result=await ResumeProfileAgent(factory,ModelRouter({RESUME_PROFILE_ROUTE:ReplayModelProvider([body])})).run(resume_id)
             assert result['status']=='COMPLETED'
             async with factory() as db:

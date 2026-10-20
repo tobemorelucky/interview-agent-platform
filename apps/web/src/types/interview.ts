@@ -63,12 +63,20 @@ export interface SSEErrorEvent {
 
 // Phase 3.6: Question & New SSE types
 
+export interface ReferenceAnswer {
+  answer_framework: string[]
+  interview_answer: string
+  bonus_points: string[]
+  possible_follow_ups: string[]
+}
+
 export interface InterviewQuestion {
   question_id: number
   question_index: number
   total_questions?: number
   question: string
   standard_answer?: string | null
+  reference_answer?: ReferenceAnswer | null
   dimension?: string | null
   difficulty?: string | null
   source: string
@@ -89,6 +97,8 @@ export interface InterviewQuestionSummary {
   status: string
   is_dynamic?: boolean
   answer_summary?: string | null
+  parent_question_id?: number | null
+  question_kind?: string
 }
 
 export interface InterviewQuestionList {
@@ -137,7 +147,7 @@ export interface InterviewMemoryConsolidateResult {
 }
 
 export interface InterviewSessionDetail extends InterviewSession {
-  pending_answer?: { question_id: number; idempotency_key: string; content: string; status: string; error: string | null } | null
+  pending_answer?: { question_id: number; idempotency_key: string; content: string; status: string; error: string | null; processing_stage?: string; processing_deadline?: string; retryable?: boolean; design_plan?: DesignPlan } | null
   memory_summary: string | null
   messages: InterviewMessage[]
   questions?: InterviewQuestion[]
@@ -151,12 +161,48 @@ export interface InterviewSessionDetail extends InterviewSession {
   question_count?: number
 }
 
+export type InterviewerSkillId = string
+export interface DesignPlan { deduplication: 'NONE' | 'CHECK_THEN_WRITE' | 'ATOMIC_KEY'; capacity_guard: 'NONE' | 'CHECK_THEN_WRITE' | 'ATOMIC_RESERVATION'; capacity: number }
+export interface DesignTrace {
+  design_revisions: { version: number; answer_id: number; plan: DesignPlan }[]
+  design_tools: { id: string; plan_version: number; tool: string; status: string; error?: string; result?: { passed: boolean; submitted_count: number; accepted_count: number; violation?: string | null } | null }[]
+}
+export interface SkillRecommendation {
+  policy_version: string; job_id?: number; jd_id?: number; jd_fingerprint?: string
+  status: string; auto_select: boolean; recommended_skill_id: string | null; recommended_version: string | null; reason: string
+  ranking: { skill_id: string; version: string; label: string; rank: number; excluded: boolean; reason: string
+    evidence: { field: string; requirement_id?: number | null; term: string; excerpt: string }[] }[]
+}
+export type InterviewerRound = "technical_screen" | "project_deep_dive"
+export type InterviewerStyle = "gentle" | "standard" | "strict"
+export interface InterviewerSelection {
+  design_interview?: boolean
+  interviewer_skill_id: InterviewerSkillId
+  interview_round: InterviewerRound
+  interviewer_style: InterviewerStyle
+  interviewer_selection_source?: 'AUTO_RECOMMENDED' | 'USER_SELECTED'
+}
+export interface InterviewerConfig {
+  engine_version: string
+  content_fingerprint: string
+  skill: { id: InterviewerSkillId; label: string; version: string; domains: string[] }
+  round: { id: InterviewerRound; label: string; version: string; focus: string }
+  style: { id: InterviewerStyle; label: string; version: string }
+  company_background: { mode: string; instruction: string; source?: { source_type: string; url: string } | null }
+}
+export interface InterviewerOptions {
+  skills: { id: InterviewerSkillId; label: string; version: string }[]
+  rounds: { id: InterviewerRound; label: string; description: string }[]
+  styles: { id: InterviewerStyle; label: string; description: string }[]
+}
+
 export interface InterviewSession {
+  planner_trace_json?: DesignTrace
   workflow_mode?: "legacy" | "m4"
   legacy?: boolean
   active_question_id?: number | null
   state_version?: number
-  context_snapshot?: { company_name: string; job_title: string; profile_version_number: number; jd_version_number: number; coverage_insufficient: boolean; profile?: unknown }
+  context_snapshot?: { company_name: string; job_title: string; profile_version_number: number; jd_version_number: number; coverage_insufficient: boolean; profile?: unknown; interviewer_config?: InterviewerConfig; interviewer_selection?: { source: 'AUTO_RECOMMENDED' | 'USER_SELECTED'; skill_id: string }; approved_memory_context?: { items: { id: number; content: string }[]; omitted_count?: number }; recent_performance_observations?: { items: { id: number; content: string }[] } }
   completion_json?: { overall_average: number | null; dimension_averages: Record<string, number | null>; answered_count: number; evaluated_count: number; mode: string }
   id: number
   user_id: number

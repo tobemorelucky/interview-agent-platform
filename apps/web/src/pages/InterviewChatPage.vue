@@ -1,5 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, watch, onUnmounted } from "vue"
+import { canReviewQuestion, followUpOrdinal } from '../types/match-presentation'
+import { pendingStage } from '../types/interview-processing'
+import { applySkillRecommendation, chooseSkill, type SkillChoice } from '../types/skill-selection'
+import ReferenceAnswerView from '../components/ReferenceAnswer.vue'
+import DesignTraceView from '../components/DesignTrace.vue'
+import type { DesignPlan, DesignTrace } from '../types/interview'
+import type { ReferenceAnswer, InterviewerOptions, InterviewerSelection } from '../types/interview'
 import { displayLabel, publicName, dimensionLabels, userError } from "../i18n/zh-CN"
 import { useRoute, useRouter } from "vue-router"
 import {
@@ -13,6 +20,7 @@ import {
   getQuestionDetail,
   consolidateInterviewMemory,
   getInterviewTargets,
+  getInterviewerOptions,
   startInterview,
   type InterviewTarget,
 } from "../api/interview"
@@ -31,8 +39,28 @@ const targets = ref<InterviewTarget[]>([])
 const targetsLoading = ref(true), sessionsLoading = ref(true)
 const selectedJobId = ref<number | null>(null)
 const createBudget = ref(6)
+const interviewerOptions = ref<InterviewerOptions | null>(null)
+const interviewerOptionsError = ref('')
+const creatingSession = ref(false)
+const designInterview = ref(false), activeDesign = ref(false)
+const designTrace = ref<DesignTrace>()
+const designPlan = ref<DesignPlan>({ deduplication: 'NONE', capacity_guard: 'NONE', capacity: 1 })
+const skillChoice = ref<SkillChoice>({ skill_id: '', source: null })
+const roundAndStyle = ref<Pick<InterviewerSelection, 'interview_round' | 'interviewer_style'>>({ interview_round: 'technical_screen', interviewer_style: 'standard' })
+const interviewerSelection = computed<InterviewerSelection>(() => ({ ...roundAndStyle.value, interviewer_skill_id: skillChoice.value.skill_id,
+  design_interview: designInterview.value,
+  interviewer_selection_source: skillChoice.value.source || 'USER_SELECTED' }))
+const skillRecommendation = computed(() => targets.value.find(t => t.job_id === selectedJobId.value)?.interviewer_skill_recommendation)
+const manualSkillMismatch = computed(() => skillChoice.value.source === 'USER_SELECTED' && !!selectedJobId.value &&
+  (!skillRecommendation.value?.auto_select || skillRecommendation.value.recommended_skill_id !== skillChoice.value.skill_id))
+watch([skillRecommendation, interviewerOptions], () => {
+  skillChoice.value = applySkillRecommendation(skillChoice.value, skillRecommendation.value, interviewerOptions.value?.skills.map(s => s.id) || [])
+})
+function selectSkill(event: Event) { skillChoice.value = chooseSkill((event.target as HTMLSelectElement).value) }
+const activeInterviewer = computed(() => profileContext.value?.interviewer_config)
 const activeQuestionId = ref<number | null>(null)
-const retryAnswer = ref<{ question_id: number; idempotency_key: string; content: string } | null>(null)
+const retryAnswer = ref<{ question_id: number; idempotency_key: string; content: string; design_plan?: DesignPlan } | null>(null)
+const answerPersisted = ref(false)
 const profileContext = ref<InterviewSession["context_snapshot"]>()
 const completion = ref<InterviewSession["completion_json"]>()
 const pageError = ref("")
@@ -43,15 +71,57 @@ const messages = ref<InterviewMessage[]>([])
 const questionList = ref<InterviewQuestionSummary[]>([])
 const answerVisibleMap = ref<Record<number, boolean>>({})
 const standardAnswerMap = ref<Record<number, string>>({})
+const referenceAnswerMap = ref<Record<number, ReferenceAnswer | null>>({})
 const evalCollapsed = ref<Record<number, boolean>>({})
 const questionBudget = ref(20)
 const generatedCount = ref(0)
-const generationStage = ref<"idle" | "generating_first_question" | "generating_next_question" | "evaluating">("idle")
+const generationStage = ref<"idle" | "submitting" | "validating_design" | "generating_evaluation" | "generating_first_question" | "generating_next_question" | "evaluating">("idle")
+const waitingSeconds = ref(0)
+let waitingTimer: ReturnType<typeof setInterval> | null = null
+watch(generationStage, stage => {
+  if (waitingTimer) clearInterval(waitingTimer)
+  waitingTimer = null
+  waitingSeconds.value = 0
+  if (stage !== 'idle') {
+    const started = Date.now()
+    waitingTimer = setInterval(() => { waitingSeconds.value = Math.floor((Date.now() - started) / 1000) }, 1000)
+  }
+})
+onUnmounted(() => { if (waitingTimer) clearInterval(waitingTimer) })
+let answerPoll: ReturnType<typeof setTimeout> | null = null
+const processingAnswer = computed(() => ['submitting', 'validating_design', 'evaluating', 'generating_evaluation', 'generating_next_question'].includes(generationStage.value))
+
+function stopAnswerPoll() {
+  if (answerPoll) clearTimeout(answerPoll)
+  answerPoll = null
+}
+
+function pollAnswer(id: number) {
+  stopAnswerPoll()
+  answerPoll = setTimeout(async () => {
+    if (activeSessionId.value !== id || sending.value) return
+    try {
+      const detail = await getSession(id)
+      if (activeSessionId.value !== id) return
+      generationStage.value = pendingStage(detail.pending_answer)
+      if (generationStage.value !== 'idle') pollAnswer(id)
+      else {
+        await selectSession(id, true)
+        if (detail.pending_answer) pageError.value = '本轮处理已中断或超时，回答仍已保存；请安全重试原回答，不会重复提交。'
+      }
+    } catch (e) {
+      generationStage.value = 'idle'
+      pageError.value = e instanceof Error ? e.message : '读取处理状态失败，请刷新后安全重试'
+    }
+  }, 2500)
+}
 const consolidatingMemory = ref(false)
 const memoryConsolidatedMap = ref<Record<number, boolean>>({})
 
 // Phase 3.8: Stable-sorted display items (use this, not messages directly)
 const displayItems = computed(() => buildDisplayItems(messages.value))
+const evaluatedQuestionIds = computed(() => displayItems.value.filter(item => item.type === 'EVALUATION').map(item => item.question_id))
+const canReview = (item: any) => canReviewQuestion(item.question_id, evaluatedQuestionIds.value)
 const inputText = ref("")
 const loading = ref(false)
 const sending = ref(false)
@@ -92,10 +162,14 @@ async function loadSessions() {
 async function selectSession(id: number, force = false) {
   if (String(route.query.session_id || "") !== String(id)) await router.replace({ path: "/interview", query: { session_id: id } });
   pageError.value = "";
+  streamErrorCode.value = ''
   if (!force && activeSessionId.value === id) return
+  stopAnswerPoll()
+  generationStage.value = 'idle'
   activeSessionId.value = id
   activeQuestionId.value = null
   retryAnswer.value = null
+  answerPersisted.value = false
   profileContext.value = undefined
   completion.value = undefined
   loading.value = true
@@ -115,10 +189,22 @@ async function selectSession(id: number, force = false) {
     messages.value = detail.messages || []
     activeQuestionId.value = detail.active_question_id || null
     profileContext.value = detail.context_snapshot
+    activeDesign.value = !!(detail.context_snapshot as unknown as { system_design?: unknown })?.system_design
+    designTrace.value = detail.planner_trace_json
+    const latestPlan = detail.planner_trace_json?.design_revisions?.slice(-1)[0]?.plan
+    if (latestPlan) designPlan.value = { ...latestPlan }
+    if (detail.pending_answer?.design_plan) designPlan.value = { ...detail.pending_answer.design_plan }
     completion.value = detail.completion_json
     if (detail.pending_answer) {
       retryAnswer.value = detail.pending_answer
+      answerPersisted.value = true
       inputText.value = detail.pending_answer.content
+      streamErrorCode.value = detail.pending_answer.error || ''
+      generationStage.value = pendingStage(detail.pending_answer)
+      if (generationStage.value !== 'idle') pollAnswer(id)
+      else pageError.value = detail.pending_answer.error === 'INTERVIEW_BUDGET_EXHAUSTED'
+        ? '本场时间或模型预算已不足，回答仍已保存；请新建面试继续，重试不会重置预算。'
+        : '本轮处理未完成，回答已保存；可以安全重试原回答。'
     } else { inputText.value = "" }
     // Phase 3.7: Initialize eval collapsed state on refresh
     for (const msg of messages.value) {
@@ -164,16 +250,18 @@ async function selectSession(id: number, force = false) {
 }
 
 async function handleCreateSession() {
+  if (creatingSession.value || !interviewerOptions.value || !skillChoice.value.skill_id) return
+  creatingSession.value = true
   try {
     const target = targets.value.find(t => t.job_id === selectedJobId.value)
     if (!target) { alert("请选择公司和岗位；需先完成候选人画像"); return }
-    const session = await createSession(target.company_id, target.job_id, createBudget.value)
+    const session = await createSession(target.company_id, target.job_id, createBudget.value, undefined, interviewerSelection.value)
     sessions.value.unshift(session)
     await selectSession(session.id)
     await handleStart()
   } catch (e) {
     if (e instanceof ApiError) alert(e.message)
-  }
+  } finally { creatingSession.value = false }
 }
 
 async function handleStart() {
@@ -311,14 +399,18 @@ function startResumePoll(resumeId: number, sessionId = activeSessionId.value) {
 
 async function handleSend() {
   const text = inputText.value.trim()
-  if (!text || sending.value || !activeSessionId.value) return
+  if (!text || sending.value || processingAnswer.value || !activeSessionId.value) return
 
   if (!isActiveResumeReady() || !activeQuestionId.value) {
     alert("请开始新的模拟面试；历史会话为只读")
     return
   }
   if (retryAnswer.value && retryAnswer.value.content !== text) { alert("上一回答处理失败，请先重试原回答，不能替换已提交内容"); return }
-  const answerContext = retryAnswer.value || { question_id: activeQuestionId.value, idempotency_key: crypto.randomUUID(), content: text }
+  const answerContext = retryAnswer.value || { question_id: activeQuestionId.value, idempotency_key: crypto.randomUUID(), content: text,
+    ...(activeDesign.value ? { design_plan: { ...designPlan.value } } : {}) }
+  pageError.value = ''
+  streamErrorCode.value = ''
+  if (!retryAnswer.value) answerPersisted.value = false
   retryAnswer.value = answerContext
 
   // Add user message locally
@@ -337,6 +429,8 @@ async function handleSend() {
 
   inputText.value = ""
   sending.value = true
+  generationStage.value = 'submitting'
+  stopAnswerPoll()
   streaming.value = true
   streamingContent.value = ""
   streamingSource.value = ""
@@ -382,9 +476,27 @@ async function handleSend() {
       sending.value = false
       abortController = null
       inputText.value = answerContext.content
+      if (code === 'AUTH_TOKEN_EXPIRED') {
+        // A 401 rejects the request before persistence. Keep the draft, not a fake saved answer.
+        messages.value = messages.value.filter(m => m.metadata_json?.idempotency_key !== answerContext.idempotency_key)
+        retryAnswer.value = null
+        answerPersisted.value = false
+      } else if (activeSessionId.value) {
+        // Read actual persistence/lease state after an error, rather than claim success.
+        const id = activeSessionId.value
+        getSession(id).then(detail => {
+          if (activeSessionId.value !== id || sending.value) return
+          if (detail.pending_answer) {
+            answerPersisted.value = true
+            retryAnswer.value = detail.pending_answer
+          }
+          generationStage.value = pendingStage(detail.pending_answer)
+          if (generationStage.value !== 'idle') pollAnswer(id)
+        }).catch(() => {})
+      }
     },
     // onStatus
-    (stage) => { if (['evaluating', 'generating_first_question', 'generating_next_question'].includes(stage)) generationStage.value = stage as typeof generationStage.value },
+    (stage) => { if (['evaluating', 'validating_design', 'generating_evaluation', 'generating_first_question', 'generating_next_question'].includes(stage)) generationStage.value = stage as typeof generationStage.value },
     // Phase 3.6 final: New SSE callbacks
     // onEvaluation — add collapsible evaluation message
     (data) => {
@@ -518,6 +630,8 @@ function handleStopStream() {
   streamingContent.value = ""
   streaming.value = false
   sending.value = false
+  generationStage.value = 'idle'
+  if (activeSessionId.value) pollAnswer(activeSessionId.value)
   if (retryAnswer.value) inputText.value = retryAnswer.value.content
 }
 
@@ -565,6 +679,7 @@ function buildDisplayItems(msgs: InterviewMessage[]) {
         source: meta.source || meta.source_label, evidence: meta.evidence,
         source_fingerprint: meta.source_fingerprint, question_kind: meta.question_kind,
         follow_up_count: meta.follow_up_count, max_follow_ups: meta.max_follow_ups,
+        interviewer_guidance: meta.interviewer_guidance,
         is_dynamic: t === "DYNAMIC_QUESTION", parent_question_id: meta.parent_question_id,
         raw: msg,
       })
@@ -592,7 +707,7 @@ function buildDisplayItems(msgs: InterviewMessage[]) {
 
 // Phase 3.8: Toggle answer for display item (uses item.question_id directly)
 async function toggleAnswerForItem(item: any) {
-  if (!activeSessionId.value || !item.question_id) return
+  if (!activeSessionId.value || !canReview(item)) return
   const itemId = item.id
   if (answerVisibleMap.value[itemId]) {
     answerVisibleMap.value[itemId] = false
@@ -601,6 +716,7 @@ async function toggleAnswerForItem(item: any) {
   try {
     const detail = await getQuestionDetail(activeSessionId.value, item.question_id)
     standardAnswerMap.value[itemId] = detail.standard_answer || "暂无答案"
+    referenceAnswerMap.value[itemId] = detail.reference_answer || null
     answerVisibleMap.value[itemId] = true
   } catch {
     standardAnswerMap.value[itemId] = "获取答案失败"
@@ -629,11 +745,14 @@ watch(streamingContent, () => {
 })
 
 onUnmounted(() => {
+  stopAnswerPoll()
   if (resumePollTimer.value) clearInterval(resumePollTimer.value)
   if (abortController) abortController.abort()
 })
 
 // Init
+getInterviewerOptions().then(data => { interviewerOptions.value = data })
+  .catch(() => { interviewerOptionsError.value = '面试官配置读取失败，请刷新后重试。' })
 loadSessions().then(() => { const id = Number(route.query.session_id); if (sessions.value.some(s => s.id === id)) selectSession(id); })
 getInterviewTargets().then(async data => {
   targets.value = data
@@ -645,7 +764,7 @@ getInterviewTargets().then(async data => {
   const target = data.find(t => t.job_id === jobId && t.company_id === companyId)
   if (!target) { alert('该岗位当前已关闭或不可用，无法创建新的模拟面试；历史推荐保留。'); return }
   selectedJobId.value = jobId
-  await handleCreateSession()
+  // Select the current target, then let the user choose interviewer configuration.
 }).catch(e => { pageError.value = e instanceof Error ? e.message : "岗位读取失败，请重试" }).finally(() => { targetsLoading.value = false })
 </script>
 
@@ -657,7 +776,7 @@ getInterviewTargets().then(async data => {
     <aside class="session-sidebar">
       <div class="sidebar-header">
         <h3>面试会话</h3>
-        <button class="btn-new" @click="handleCreateSession">+ 新建</button>
+        <button class="btn-new" :disabled="creatingSession || !interviewerOptions || !selectedJobId || !skillChoice.skill_id" @click="handleCreateSession">{{ creatingSession ? '正在创建…' : '+ 新建' }}</button>
       </div>
       <div style="padding:12px;display:grid;gap:8px">
         <label>公司 / 岗位
@@ -666,7 +785,31 @@ getInterviewTargets().then(async data => {
             <option v-for="t in targets" :key="t.job_id" :value="t.job_id">{{ publicName(t.company_name) }} · {{ publicName(t.job_title) }}</option>
           </select>
         </label>
-        <label>题目预算（包含补问 / 深挖）<input v-model.number="createBudget" type="number" min="1" max="40" style="width:60px"></label>
+        <label>面试轮数（含追问）<input v-model.number="createBudget" type="number" min="1" max="40" style="width:60px"></label>
+        <label><input type="checkbox" v-model="designInterview" aria-label="系统设计验证面试"> 系统设计验证面试（限量预约场景）</label>
+        <template v-if="interviewerOptions">
+          <label>岗位专业 Skill<select :value="skillChoice.skill_id" @change="selectSkill" aria-label="岗位专业 Skill" style="width:100%">
+            <option value="">请选择专业 Skill</option>
+            <option v-for="option in interviewerOptions.skills" :key="option.id" :value="option.id">{{ option.label }}</option>
+          </select></label>
+          <p v-if="skillRecommendation" role="status">{{ skillRecommendation.reason }}</p>
+          <small>{{ skillChoice.source === 'USER_SELECTED' ? '用户手动选择' : skillChoice.source === 'AUTO_RECOMMENDED' ? '根据岗位自动推荐' : '推荐依据不足，请手动选择' }}</small>
+          <p v-if="manualSkillMismatch">已保留你的手动选择；与当前岗位推荐方向可能不同，请确认。</p>
+          <details v-if="skillRecommendation"><summary>查看推荐依据与其他方向</summary>
+            <div v-for="item in skillRecommendation.ranking" :key="item.skill_id"><p>{{ item.label }}：{{ item.excluded ? '不适用' : item.reason }}</p>
+              <small v-for="e in item.evidence.slice(0, 3)" :key="`${e.field}-${e.term}`">岗位字段依据：{{ e.excerpt }}<br></small>
+            </div>
+          </details>
+          <label>面试轮次<select v-model="roundAndStyle.interview_round" aria-label="面试轮次" style="width:100%">
+            <option v-for="option in interviewerOptions.rounds" :key="option.id" :value="option.id">{{ option.label }}</option>
+          </select></label>
+          <label>面试官风格<select v-model="roundAndStyle.interviewer_style" aria-label="面试官风格" style="width:100%">
+            <option v-for="option in interviewerOptions.styles" :key="option.id" :value="option.id">{{ option.label }}</option>
+          </select></label>
+          <small>{{ interviewerOptions.styles.find(option => option.id === interviewerSelection.interviewer_style)?.description }} 严格不等于更难或额外扣分。</small>
+          <small>设置后点击“新建”。从岗位推荐进入时也可先调整本场配置。</small>
+        </template>
+        <p v-else :role="interviewerOptionsError ? 'alert' : 'status'">{{ interviewerOptionsError || '正在读取面试官配置…' }}</p>
         <router-link to="/profile">先查看 / 完成我的画像</router-link>
         <p v-if="targetsLoading">正在读取岗位…</p>
         <p v-else-if="!targets.length && !pageError">当前岗位库暂无可用岗位。</p>
@@ -713,12 +856,19 @@ getInterviewTargets().then(async data => {
         <div class="resume-bar" v-if="activeSession()" style="flex-wrap:wrap">
           <template v-if="activeSession()?.workflow_mode === 'm4'">
             <strong>{{ publicName(profileContext?.company_name) }} · {{ publicName(profileContext?.job_title) }}</strong>
-            <span>已完成 {{ questionList.filter(q => ['EVALUATED', 'COMPLETED'].includes(q.status)).length }} / {{ questionBudget }} 题</span>
+            <span v-if="activeInterviewer">{{ activeInterviewer.skill.label }} / {{ activeInterviewer.round.label }} / {{ activeInterviewer.style.label }}</span>
+            <details v-if="activeInterviewer" class="session-context-detail"><summary>本场面试官配置（已固定）</summary>
+              <p v-if="profileContext?.interviewer_selection">选择来源：{{ profileContext.interviewer_selection.source === 'AUTO_RECOMMENDED' ? '根据岗位自动推荐' : '用户手动选择' }}</p>
+              <p>{{ activeInterviewer.round.focus }}</p><p>考察领域：{{ activeInterviewer.skill.domains.join('、') }}</p>
+              <p>{{ activeInterviewer.company_background.instruction }}</p>
+              <small>Skill {{ activeInterviewer.skill.version }} / 策略 {{ activeInterviewer.style.version }}；后续配置更新不改变本场。</small>
+            </details>
+            <span v-else>原有通用面试策略</span>
+            <span class="round-progress">第 {{ Math.min(questionList.find(q => q.id === activeQuestionId)?.question_index != null ? questionList.find(q => q.id === activeQuestionId)!.question_index + 1 : questionList.length || 1, questionBudget) }} / {{ questionBudget }} 轮</span>
             <span v-if="activeQuestionId">当前题型：{{ displayLabel(questionList.find(q => q.id === activeQuestionId)?.dimension, '技术 / 项目') }} · 难度：{{ displayLabel(questionList.find(q => q.id === activeQuestionId)?.difficulty) }}</span>
-            <span>画像第 {{ profileContext?.profile_version_number }} 版 / 岗位描述第 {{ profileContext?.jd_version_number }} 版（本场固定）</span>
-            <span v-if="profileContext?.coverage_insufficient">公共题库覆盖不足，使用岗位 / 画像出题</span>
+            <details class="session-context-detail"><summary>本场资料详情</summary><p>画像第 {{ profileContext?.profile_version_number }} 版 / 岗位描述第 {{ profileContext?.jd_version_number }} 版（本场固定）</p><p v-if="profileContext?.coverage_insufficient">题库覆盖有限，本场会结合真实项目和岗位要求出题。</p></details>
             <span v-if="isReplay || completion?.mode === 'replay'">DEMO · Replay 回放模式（不是 Live 模型验收）</span>
-            <button v-if="activeSession()?.status === 'READY'" @click="handleStart">开始 / 重试首题</button>
+            <button v-if="activeSession()?.status === 'READY'" :disabled="generationStage !== 'idle'" @click="handleStart">开始 / 重试首题</button>
           </template>
           <template v-else><span>历史会话只读，不猜测关联画像或岗位</span></template>
           <template v-if="false">
@@ -755,8 +905,20 @@ getInterviewTargets().then(async data => {
         </div>
 
         <!-- Messages -->
-        <div v-if="retryAnswer && !sending" class="resume-bar">已保存本题回答；可以安全重试，不会重复评分或推进。</div>
-        <p v-if="sending" role="status" class="resume-bar">{{ displayLabel(generationStage, '正在处理本轮回答…') }}</p>
+        <div v-if="retryAnswer && !sending && !processingAnswer && streamErrorCode !== 'INTERVIEW_BUDGET_EXHAUSTED'" class="resume-bar">{{ answerPersisted ? '已保存本题回答；可以安全重试，不会重复评分或推进。' : '本题处理尚未确认完成，请保留原回答安全重试；保存状态以刷新后的结果为准。' }}</div>
+        <div v-if="streamErrorCode === 'AUTH_TOKEN_EXPIRED'" class="resume-bar">
+          本次回答尚未提交，草稿保留在输入框。
+          <a href="/login" target="_blank" rel="noopener">重新登录（新窗口）</a>
+          登录后可回到本页提交，不必丢弃草稿。
+        </div>
+        <details v-if="profileContext" class="resume-bar"><summary>本场使用的历史记忆（开始时固定）</summary>
+          <p>已批准的准备目标 / 偏好，不作为学历或技能证明。本场开始后不动态刷新。</p>
+          <ul v-if="profileContext.approved_memory_context?.items.length"><li v-for="memory in profileContext.approved_memory_context.items" :key="memory.id">{{ memory.content }}</li></ul>
+          <p v-else>本场未使用已批准的历史记忆。</p>
+          <details v-if="profileContext.recent_performance_observations?.items.length"><summary>近期练习观察（不是长期事实）</summary><ul><li v-for="observation in profileContext.recent_performance_observations.items" :key="observation.id">{{ observation.content }}</li></ul></details>
+          <router-link to="/memory">查看和管理成长记录</router-link>
+        </details>
+        <p v-if="generationStage !== 'idle'" role="status" aria-live="polite" class="resume-bar processing-status"><span class="processing-dot" aria-hidden="true"></span>{{ displayLabel(generationStage, '正在处理本轮回答…') }} · 当前阶段已等待 {{ waitingSeconds }} 秒。{{ waitingSeconds >= 20 ? '仍在处理；完成后会自动更新，也可刷新查看已保存状态。' : '请稍候；刷新后可恢复处理状态。' }}</p>
         <div ref="chatContainer" class="chat-messages" v-if="!loading">
           <!-- Phase 3.8: Loading card for question generation stages -->
           <div v-if="generationStage === 'generating_first_question' && !streaming" class="message-row assistant">
@@ -784,33 +946,33 @@ getInterviewTargets().then(async data => {
             <!-- QUESTION / FOLLOW_UP / DYNAMIC_QUESTION bubbles -->
             <div v-if="item.type === 'QUESTION' || item.type === 'FOLLOW_UP' || item.type === 'DYNAMIC_QUESTION'" class="message-row assistant">
               <div class="message-bubble question-bubble">
-                <div class="speaker-label">面试官 Agent</div>
+                <div class="speaker-label">面试官</div>
                 <div class="q-header">
                   <span class="q-badge" v-if="item.type === 'QUESTION'">
-                    Q{{ (item.question_index ?? 0) + 1 }} / {{ item.question_budget || questionBudget }}
+                    第 {{ (item.question_index ?? 0) + 1 }} / {{ item.question_budget || questionBudget }} 轮
                   </span>
                   <span class="q-badge followup" v-else-if="item.type === 'FOLLOW_UP'">
-                    追问 {{ item.follow_up_count ?? '' }}{{ item.max_follow_ups ? ' / ' + item.max_follow_ups : '' }}
+                    追问 {{ followUpOrdinal(questionList, item.question_id) ?? item.follow_up_count ?? '' }}{{ item.max_follow_ups ? ' / ' + item.max_follow_ups : '' }}
                   </span>
                   <span class="q-badge dynamic" v-else>动态问题</span>
                   <span class="q-dimension" v-if="item.dimension">{{ displayLabel(item.dimension, "技术 / 项目") }}</span>
                   <span class="q-difficulty" v-if="item.difficulty">{{ displayLabel(item.difficulty) }}</span>
-                  <span class="q-source" v-if="item.source">{{ sourceLabel(item.source) }}</span>
                 </div>
                 <div class="q-body">{{ item.content }}</div>
-                <div v-if="item.question_kind === 'DEEP_DIVE'" class="q-dimension">深挖：新题，关联上一主题</div>
-                <details v-if="item.evidence?.evidence?.length">
+                <p v-if="item.interviewer_guidance" class="q-dimension">表达提示：{{ item.interviewer_guidance }}</p>
+                <div v-if="item.question_kind === 'DEEP_DIVE'" class="q-dimension">技术深挖</div>
+                <details v-if="canReview(item) && item.evidence?.evidence?.length">
                   <summary>查看候选人依据</summary>
                   <div v-for="e in item.evidence.evidence" :key="e.key">
                     {{ displayLabel(e.kind) }} · {{ displayLabel(e.section) }}
                     <blockquote>{{ e.excerpt }}</blockquote>
                   </div>
                 </details>
-                <details v-if="item.source_fingerprint" class="ux-technical"><summary>题目技术详情</summary>公共原题指纹：{{ item.source_fingerprint }}</details>
-                <button v-if="item.question_id" class="q-answer-btn" @click="toggleAnswerForItem(item)">
+                <details v-if="canReview(item) && item.source_fingerprint" class="ux-technical"><summary>题目技术详情</summary>公共原题指纹：{{ item.source_fingerprint }}</details>
+                <button v-if="canReview(item)" class="q-answer-btn" @click="toggleAnswerForItem(item)">
                   {{ answerVisibleMap[item.id] ? '收起答案' : '展开参考答案' }}
                 </button>
-                <div v-if="answerVisibleMap[item.id]" class="q-answer">{{ standardAnswerMap[item.id] || '加载中...' }}</div>
+                <ReferenceAnswerView v-if="canReview(item) && answerVisibleMap[item.id]" :reference="referenceAnswerMap[item.id]" :fallback="standardAnswerMap[item.id]" />
               </div>
             </div>
 
@@ -843,7 +1005,7 @@ getInterviewTargets().then(async data => {
               <div class="message-bubble complete-bubble">
                 <div class="complete-text">🎉 {{ item.content }}</div>
                 <template v-if="completion">
-                  <p>数据库统计：已评价 {{ completion.evaluated_count }}，全场均分 {{ completion.overall_average ?? '—' }} / 5</p>
+                  <p>本场复盘：已评价 {{ completion.evaluated_count }} 轮，综合平均表现 {{ completion.overall_average ?? '—' }} / 5</p>
                   <div v-for="(label, key) in dimensionLabels" :key="key">{{ label }}：{{ completion.dimension_averages[key] ?? '—' }}</div>
                 </template>
                 <router-link
@@ -881,7 +1043,7 @@ getInterviewTargets().then(async data => {
           <!-- Streaming bubble -->
           <div v-if="streaming" class="message-row assistant">
             <div class="message-bubble">
-              <div class="message-content" v-html="formatContent(streamingContent) || '思考中...'"></div>
+              <div class="message-content" v-html="formatContent(streamingContent) || displayLabel(generationStage, '正在处理本轮回答…')"></div>
               <div class="message-meta" v-if="streamingSource">
                 <span
                   class="source-badge"
@@ -897,10 +1059,17 @@ getInterviewTargets().then(async data => {
         <div v-if="loading" class="chat-loading">加载中...</div>
 
         <!-- Input -->
+        <DesignTraceView v-if="activeDesign" :trace="designTrace" />
         <div class="chat-input">
+          <fieldset v-if="activeDesign" :disabled="sending || processingAnswer || !!retryAnswer || activeSession()?.status === 'COMPLETED'">
+            <legend>本轮方案声明（与回答一起提交）</legend>
+            <label>请求去重<select v-model="designPlan.deduplication" aria-label="请求去重"><option value="NONE">无去重</option><option value="CHECK_THEN_WRITE">先查后写（非原子）</option><option value="ATOMIC_KEY">原子业务键去重</option></select></label>
+            <label>名额保护<select v-model="designPlan.capacity_guard" aria-label="名额保护"><option value="NONE">无保护</option><option value="CHECK_THEN_WRITE">先查名额再写入（非原子）</option><option value="ATOMIC_RESERVATION">原子条件扣减</option></select></label>
+            <label>容量<input v-model.number="designPlan.capacity" type="number" min="1" max="20" aria-label="预约容量"></label>
+          </fieldset>
           <textarea
             v-model="inputText"
-            :disabled="sending || !isActiveResumeReady()"
+            :disabled="sending || processingAnswer || !isActiveResumeReady()"
             :placeholder="
               activeSession()?.legacy ? '历史面试只读，请新建模拟面试'
                 : activeSession()?.status === 'COMPLETED' ? '面试已结束，请新建会话继续练习'
@@ -913,7 +1082,7 @@ getInterviewTargets().then(async data => {
           <button
             v-if="!streaming"
             class="btn-send"
-            :disabled="!inputText.trim() || sending || !isActiveResumeReady()"
+            :disabled="!inputText.trim() || sending || processingAnswer || streamErrorCode === 'INTERVIEW_BUDGET_EXHAUSTED' || !isActiveResumeReady()"
             @click="handleSend"
           >
             发送

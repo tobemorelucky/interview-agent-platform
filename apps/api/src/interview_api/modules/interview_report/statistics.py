@@ -24,7 +24,11 @@ async def interview_records(db, session_id):
         issues=e.artifact_json.get("factual_or_reasoning_issues", []),
         factual_or_reasoning_issues=e.artifact_json.get("factual_or_reasoning_issues", []),
         follow_up_focus=e.artifact_json.get("follow_up_focus", []), provider=e.provider, model=e.model,
-        source=q.source, question_kind=q.question_kind) for e, a, m, q in rows]
+        source=q.source, question_kind=q.question_kind,
+        reference_answer=e.artifact_json.get("reference_answer"),
+        design_revision=(m.metadata_json or {}).get("design_revision"),
+        tool_evidence=(m.metadata_json or {}).get("tool_evidence"),
+        answer_framework=(q.standard_answer or "").splitlines()) for e, a, m, q in rows]
     return questions, evaluations
 
 

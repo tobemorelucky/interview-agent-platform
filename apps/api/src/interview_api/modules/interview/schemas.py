@@ -1,6 +1,8 @@
 from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
+from interview_api.modules.interview.skill_engine import SkillId, RoundId, StyleId
+from interview_api.modules.interview.system_design import DesignPlan
 
 
 # ── Request Schemas ──
@@ -13,6 +15,15 @@ class CreateSessionRequest(BaseModel):
     candidate_profile_version_id: int | None = Field(default=None, gt=0)
     job_description_version_id: int | None = Field(default=None, gt=0)
     question_count: int = Field(default=20, ge=1, le=40)
+    interviewer_skill_id: SkillId | None = None
+    interview_round: RoundId = "technical_screen"
+    interviewer_style: StyleId = "standard"
+    interviewer_selection_source: str = Field(default="USER_SELECTED", pattern=r"^(AUTO_RECOMMENDED|USER_SELECTED)$")
+    design_interview: bool = False
+
+
+class SkillRecommendationRequest(BaseModel):
+    job_ids: list[int] = Field(min_length=1, max_length=50)
 
 
 class SetTargetPositionRequest(BaseModel):
@@ -29,6 +40,7 @@ class SendMessageRequest(BaseModel):
     content: str = Field(min_length=1, max_length=12000)
     question_id: int = Field(gt=0)
     idempotency_key: str = Field(min_length=8, max_length=100)
+    design_plan: DesignPlan | None = None
 
 
 class ConsolidateMemoryRequest(BaseModel):

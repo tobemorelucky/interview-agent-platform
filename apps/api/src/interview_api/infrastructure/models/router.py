@@ -58,7 +58,10 @@ def _configured_router(routes: dict[str, ModelProvider], *, concurrency: int) ->
             if isinstance(provider, CompatibleModelProvider) and provider.model_name != settings.llm_fallback_model:
                 fallbacks[name] = CompatibleModelProvider(base_url=provider.base_url, api_key=provider.api_key,
                     model=settings.llm_fallback_model, timeout_seconds=provider.timeout,
-                    max_output_tokens=provider.max_output_tokens)
+                    max_output_tokens=provider.max_output_tokens, thinking_type=provider.thinking_type)
+    for provider in (*routes.values(), *fallbacks.values()):
+        if isinstance(provider, CompatibleModelProvider):
+            provider.governed = True
     return ModelRouter(routes, concurrency=concurrency, fallback_routes=fallbacks)
 
 
@@ -74,6 +77,7 @@ def build_model_router() -> ModelRouter:
             model=configured_model or settings.llm_model,
             timeout_seconds=settings.public_research_model_timeout_seconds,
             max_output_tokens=settings.public_research_max_output_tokens,
+            thinking_type=settings.public_research_thinking,
         )
     return _configured_router(routes, concurrency=settings.public_research_provider_concurrency)
 
@@ -86,6 +90,7 @@ def build_resume_profile_router() -> ModelRouter:
         model=settings.resume_profile_model or settings.llm_model,
         timeout_seconds=settings.resume_profile_timeout_seconds,
         max_output_tokens=settings.resume_profile_max_output_tokens,
+        thinking_type=settings.resume_profile_thinking,
     )}, concurrency=settings.resume_profile_provider_concurrency)
 
 
@@ -96,6 +101,7 @@ def build_interview_router() -> ModelRouter:
         model=model or settings.llm_model,
         timeout_seconds=settings.interview_model_timeout_seconds,
         max_output_tokens=settings.interview_model_max_output_tokens,
+        thinking_type=settings.answer_evaluation_thinking if route == ANSWER_EVALUATION_ROUTE else settings.interview_main_thinking,
     ) for route, model in ((INTERVIEW_MAIN_ROUTE, settings.interview_main_model),
                           (ANSWER_EVALUATION_ROUTE, settings.answer_evaluation_model))},
         concurrency=settings.interview_provider_concurrency)
@@ -109,6 +115,7 @@ def build_interview_coach_router() -> ModelRouter:
         model=settings.interview_coach_model or settings.llm_model,
         timeout_seconds=settings.interview_coach_timeout_seconds,
         max_output_tokens=settings.interview_coach_max_output_tokens,
+        thinking_type=settings.interview_coach_thinking,
     )}, concurrency=settings.interview_coach_provider_concurrency)
 
 
@@ -119,4 +126,5 @@ def build_job_matching_router() -> ModelRouter:
         model=settings.job_matching_model or settings.llm_model,
         timeout_seconds=settings.job_matching_timeout_seconds,
         max_output_tokens=settings.job_matching_max_output_tokens,
+        thinking_type=settings.job_matching_thinking,
     )}, concurrency=settings.job_matching_provider_concurrency)

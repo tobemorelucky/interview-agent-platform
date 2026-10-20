@@ -30,6 +30,12 @@ class JobJDExtraction(BaseModel):
     identity_evidence_ids: list[EvidenceID] = Field(min_length=1)
     jd_evidence_ids: list[EvidenceID] = Field(min_length=1)
     requirements: list[RequirementExtraction] = Field(min_length=1)
+    # Optional literal public metadata; old extractions remain readable.
+    attributes: list["JobAttribute"] = Field(default_factory=list)
+
+
+class JobAttribute(SupportedStatement):
+    field: Literal["RESPONSIBILITY", "LOCATION", "PUBLISHED_AT", "JOB_NUMBER"]
 
 
 class PublicInterviewQuestion(ExtractionQuestion):

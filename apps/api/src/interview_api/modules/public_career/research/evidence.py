@@ -59,3 +59,21 @@ class EvidenceCatalog:
 
     def model_input(self) -> list[dict]:
         return [{"evidence_id": span.evidence_id, "text": span.excerpt} for span in self.spans.values()]
+
+    def supports_literal(self, ids: list[str], statement: str) -> bool:
+        """Allow a literal to cross adjacent cited spans, never a gap/source.
+
+        A fixed-size Evidence chunk boundary must not turn valid original text
+        into an unsupported fact. This is not paraphrase/semantic matching.
+        """
+        from interview_api.modules.public_career.fingerprints import normalize_text
+        groups = []
+        previous = None
+        for span in sorted(self.resolve(ids), key=lambda s: (s.snapshot_id, s.start)):
+            if previous and previous.snapshot_id == span.snapshot_id and previous.end == span.start:
+                groups[-1] += span.excerpt
+            else:
+                groups.append(span.excerpt)
+            previous = span
+        value = normalize_text(statement)
+        return bool(value) and any(value in normalize_text(group) for group in groups)

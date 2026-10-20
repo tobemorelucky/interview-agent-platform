@@ -11,6 +11,7 @@ from interview_api.modules.job_matching.models import JobMatchAttempt
 from interview_api.modules.job_matching.prompts import MATCH_PROMPT, MatchPromptRegistry
 from interview_api.modules.job_matching.schemas import MatchArtifact
 from interview_api.modules.job_matching.resolver import resolve_artifact
+from interview_api.modules.job_matching.context import model_context
 
 
 class JobMatchingAgent:
@@ -28,11 +29,14 @@ class JobMatchingAgent:
             run_id = run.id
             await db.commit()
         try:
-            envelope = dict(input=payload, schema=MatchArtifact.model_json_schema(), system=MATCH_PROMPT.system)
+            prompts = MatchPromptRegistry(payload['prompt_version'])
+            prompt = prompts.get(MATCH_PROMPT.name)
+            context = model_context(payload)
+            envelope = dict(input=context, schema=MatchArtifact.model_json_schema(), system=prompt.system)
             if len(json.dumps(envelope, ensure_ascii=False).encode()) > settings.job_matching_max_input_bytes:
                 raise AppError("MATCH_INPUT_BUDGET", "匹配材料超过输入预算，未静默删除证据", 422)
-            artifact = await ResearchModelCalls(self.factory, self.router, run_id, prompts=MatchPromptRegistry(),
-                timeout_seconds=settings.job_matching_timeout_seconds).call(MATCH_PROMPT.name, JOB_MATCHING_ROUTE, payload, MatchArtifact)
+            artifact = await ResearchModelCalls(self.factory, self.router, run_id, prompts=prompts,
+                timeout_seconds=settings.job_matching_timeout_seconds).call(MATCH_PROMPT.name, JOB_MATCHING_ROUTE, context, MatchArtifact)
             resolved = resolve_artifact(artifact, payload["candidates"], payload["profile"])
             await finish_research_run(self.factory, run_id, status="SUCCEEDED", output={"schema": "MatchArtifact"})
             async with self.factory() as db:

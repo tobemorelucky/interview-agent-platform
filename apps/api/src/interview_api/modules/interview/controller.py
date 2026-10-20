@@ -1,5 +1,5 @@
 """The sole M4 business-state writer. Model calls never run inside its transactions."""
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from copy import deepcopy
 from sqlalchemy import select, func
 from interview_api.core.config import settings
@@ -9,9 +9,11 @@ from interview_api.modules.interview.models import (
     InterviewSession, InterviewSessionQuestion, InterviewMessage, InterviewContextSnapshot,
     InterviewAnswer, InterviewEvaluation, InterviewAgentCall,
 )
-from interview_api.modules.experience.models import ExperienceAgentStepRun
+from interview_api.modules.experience.models import ExperienceAgentStepRun, ExperienceAgentRun
 from interview_api.modules.interview.artifacts import DIMENSIONS
 from interview_api.modules.interview.context import build_context, question_policy, validate_question
+from interview_api.modules.interview.topics import coverage, classify, POLICY_VERSION, mentioned_topics, TOPICS
+from interview_api.modules.interview.skill_engine import style_recommendation
 
 
 def conflict(message="会话或题目已变化，请刷新后重试"):
@@ -19,17 +21,33 @@ def conflict(message="会话或题目已变化，请刷新后重试"):
 
 
 def question_data(q, budget):
-    return dict(question_id=q.id, question_index=q.question_index, total_questions=budget,
+    result = dict(question_id=q.id, question_index=q.question_index, total_questions=budget,
                 question=q.question, dimension=q.dimension, difficulty=q.difficulty,
                 source=q.source, source_type=q.source, source_question_id=q.source_question_id,
                 job_requirement_id=q.job_requirement_id, source_fingerprint=q.source_fingerprint,
                 evidence=q.candidate_refs_json, parent_question_id=q.parent_question_id,
                 question_kind=q.question_kind, status=q.status, is_dynamic=q.is_dynamic)
+    guidance = (q.candidate_refs_json or {}).get("interviewer_guidance")
+    if guidance:
+        result["interviewer_guidance"] = guidance
+    return result
 
 
 class SessionController:
     def __init__(self, db):
         self.db = db
+
+    async def bind_design_plan(self, *args):
+        from interview_api.modules.interview.system_design import bind_plan
+        return await bind_plan(self, *args)
+
+    async def reserve_design_tool(self, *args):
+        from interview_api.modules.interview.system_design import reserve_tool
+        return await reserve_tool(self, *args)
+
+    async def finish_design_tool(self, *args, **kwargs):
+        from interview_api.modules.interview.system_design import finish_tool
+        return await finish_tool(self, *args, **kwargs)
 
     async def owned(self, session_id, user_id, *, lock=False):
         query = select(InterviewSession).where(InterviewSession.id == session_id, InterviewSession.user_id == user_id)
@@ -70,11 +88,15 @@ class SessionController:
             InterviewAgentCall, InterviewAgentCall.agent_run_id == ExperienceAgentStepRun.agent_run_id)
             .where(InterviewAgentCall.session_id == session_id))).all()
         tokens = sum((u or {}).get("total_tokens") or 0 for u in usage)
-        tokens = max(tokens, (session.interview_plan_json or {}).get("reserved_model_tokens", 0))
+        plan = session.interview_plan_json or {}
+        # Completed calls are charged from their audit usage, not a cumulative
+        # UTF-8 reservation. Unreported failures remain conservatively charged.
+        tokens += plan.get("unreported_model_tokens", 0)
+        tokens += sum(plan.get("model_call_reservations", {}).values())
         return session, deepcopy(snapshot.context_json), questions, active, tokens
 
-    async def reserve_model_call(self, session_id, user_id, expected_version, reservation):
-        """Conservative, non-refundable call allowance also bounds failed retries."""
+    async def reserve_model_call(self, session_id, user_id, expected_version, reservation, call_key="legacy_pending"):
+        """Reserve only while a call is in flight; do not confuse units with usage."""
         session = await self.owned(session_id, user_id, lock=True)
         if session.state_version != expected_version:
             raise conflict()
@@ -85,26 +107,22 @@ class SessionController:
         if remaining_time <= 0 or used >= context["budgets"]["max_model_tokens"] or used + reservation > context["budgets"]["max_model_tokens"]:
             session.interview_plan_json = {**(session.interview_plan_json or {}), "budget_exhausted": True}
             return None
-        session.interview_plan_json = {**(session.interview_plan_json or {}), "reserved_model_tokens": used + reservation, "budget_exhausted": False}
+        plan = dict(session.interview_plan_json or {})
+        reservations = dict(plan.get("model_call_reservations", {}))
+        reservations[call_key] = reservation
+        session.interview_plan_json = {**plan, "model_call_reservations": reservations,
+                                      "reserved_model_tokens": sum(reservations.values()), "budget_exhausted": False}
         return min(settings.interview_model_timeout_seconds, remaining_time)
 
-    async def budget_complete(self, session_id, user_id, answer_id, expected_version):
+    async def settle_model_call(self, session_id, user_id, call_key, usage_reported):
+        """Audit holds actual usage; unknown failure usage cannot create free retries."""
         session = await self.owned(session_id, user_id, lock=True)
-        if session.state_version != expected_version or not (session.interview_plan_json or {}).get("budget_exhausted"):
-            raise conflict()
-        answer = await self.db.get(InterviewAnswer, answer_id)
-        if session.active_question_id != answer.session_question_id or answer.status != "RUNNING":
-            raise conflict()
-        q = await self.db.get(InterviewSessionQuestion, answer.session_question_id)
-        q.status = "SKIPPED"
-        summary = await self.complete(session)
-        summary["termination_reason"] = "MODEL_OR_TIME_BUDGET"
-        session.completion_json = summary
-        await self._message(session, "INTERVIEW_COMPLETE", "预算已耗尽，面试结束；未生成虚假评分", summary)
-        session.state_version += 1
-        events = [["complete", summary], ["done", {"message_id": answer.message_id, "action": "COMPLETE", "turn_index": session.turn_count}]]
-        answer.status, answer.result_events = "COMPLETED", events
-        return events
+        plan = dict(session.interview_plan_json or {})
+        reservations = dict(plan.get("model_call_reservations", {}))
+        reserved = reservations.pop(call_key, 0)
+        session.interview_plan_json = {**plan, "model_call_reservations": reservations,
+            "reserved_model_tokens": sum(reservations.values()),
+            "unreported_model_tokens": plan.get("unreported_model_tokens", 0) + (0 if usage_reported else reserved)}
 
     @staticmethod
     def adjusted_difficulty(active, evaluation):
@@ -115,28 +133,48 @@ class SessionController:
         return levels[max(0, min(2, current + shift))]
 
     @staticmethod
-    def choose_action(context, questions, active, recommendation, *, rounds, tokens, started_at):
+    def follow_up_consumption(questions, active):
+        by_id = {q.id: q for q in questions}
+        def root_id(q):
+            while q and q.parent_question_id:
+                q = by_id.get(q.parent_question_id)
+            return q.id if q else None
+        root = root_id(active)
+        return sum(q.question_kind in ("FOLLOW_UP", "DEEP_DIVE") and root_id(q) == root for q in questions)
+
+    @staticmethod
+    def choose_action(context, questions, active, recommendation, *, rounds, tokens, started_at, evaluation=None):
         budgets = context["budgets"]
         elapsed = (datetime.now(timezone.utc) - started_at).total_seconds() if started_at else 0
         if len(questions) >= budgets["question_count"] or rounds >= budgets["max_rounds"] or tokens >= budgets["max_model_tokens"] or elapsed >= budgets["max_duration_seconds"]:
             return "COMPLETE"
-        root = active
-        by_id = {q.id: q for q in questions}
-        while root and root.parent_question_id:
-            root = by_id[root.parent_question_id]
-        descendants = [q for q in questions if q.question_kind in ("FOLLOW_UP", "DEEP_DIVE")]
-        def belongs(q):
-            while q.parent_question_id:
-                q = by_id[q.parent_question_id]
-            return root and q.id == root.id
-        count = sum(bool(belongs(q)) for q in descendants)
+        recommendation = style_recommendation(context, recommendation, evaluation)
+        count = SessionController.follow_up_consumption(questions, active)
         if recommendation in ("FOLLOW_UP", "DEEP_DIVE"):
+            pacing = coverage(questions, budgets["question_count"])
+            if pacing["recent_topic"] in pacing["blocked_topics"]:
+                return "NEXT"
             return recommendation if count < budgets["max_follow_ups"] else "NEXT"
         # An agent cannot end an under-budget interview just by recommending COMPLETE.
         return "ADJUST_DIFFICULTY" if recommendation == "ADJUST_DIFFICULTY" else "NEXT"
 
     async def _new_question(self, session, context, questions, artifact, policy, *, kind="NEXT", parent=None):
         validate_question(artifact, context, policy)
+        if context.get("interviewer_config") and kind != "ADJUST_DIFFICULTY":
+            expected_difficulty = questions[-1].difficulty if questions else "MEDIUM"
+            if artifact.difficulty != expected_difficulty:
+                raise AppError("DIFFICULTY_POLICY", "风格不能改变难度；仅允许依据有效评价调整", 422)
+        subject = classify(artifact.question)
+        if parent and subject['category'] != 'BACKGROUND' and kind in ('FOLLOW_UP', 'DEEP_DIVE'):
+            # Parent-bound deepening is still its subject, even if wording uses
+            # a secondary term such as “消费线程” rather than repeating Kafka.
+            target = policy.get('target_topic')
+            if target in TOPICS:
+                subject['topic'] = target
+        if policy.get("source_type") == "CANDIDATE_PROFILE" and policy.get("target_topic") in mentioned_topics(artifact.question):
+            subject["topic"] = policy["target_topic"]
+        if subject["category"] != "BACKGROUND" and policy.get("target_category") in ("PROJECT", "FOUNDATION", "JOB_TECHNICAL", "SCENARIO"):
+            subject["category"] = policy["target_category"]
         public = next((q for q in context["public_questions"] if q["id"] == artifact.source_question_id), None)
         evidence = [e for e in context["candidate_evidence"] if e["key"] in artifact.candidate_evidence_ids]
         fact_ids = list(artifact.candidate_fact_ids)
@@ -152,7 +190,10 @@ class SessionController:
             source_question_id=artifact.source_question_id, job_requirement_id=artifact.job_requirement_id,
             source_fingerprint=public["fingerprint"] if public else None,
             candidate_refs_json=dict(fact_ids=fact_ids, evidence_ids=evidence_ids, evidence=evidence,
-                project_ids=[p["id"] for p in context["normalized"]["projects"] if p["fact_id"] in fact_ids]),
+                **({"interviewer_guidance": policy["interaction"]["guidance"]}
+                   if (policy.get("interaction") or {}).get("guidance") else {}),
+                project_ids=[p["id"] for p in context["normalized"]["projects"] if p["fact_id"] in fact_ids],
+                topic_policy={**subject, "policy_version": POLICY_VERSION}),
             parent_question_id=parent.id if parent else None, is_dynamic=kind == "DEEP_DIVE" or artifact.source_type == "DYNAMIC_GENERATED",
             question_kind=kind, status="PENDING")
         self.db.add(q)
@@ -187,6 +228,25 @@ class SessionController:
                 raise conflict("幂等键已用于其他题目或回答")
             if answer.status == "COMPLETED":
                 return answer, session.state_version, True
+            if answer.status == "RUNNING":
+                lease = (session.interview_plan_json or {}).get("answer_processing") or {}
+                expires = datetime.fromisoformat(lease["expires_at"]) if lease.get("answer_id") == answer.id and lease.get("expires_at") else answer.created_at + timedelta(seconds=2 * settings.interview_model_timeout_seconds + 30)
+                if expires > datetime.now(timezone.utc):
+                    raise AppError("INTERVIEW_ANSWER_RUNNING", "回答正在评价或生成追问，请等待或刷新查看；不会重复提交。", 409)
+                # Fence a vanished request. Keep the exact Answer and all successful audit history.
+                runs = (await self.db.scalars(select(ExperienceAgentRun).join(InterviewAgentCall,
+                    InterviewAgentCall.agent_run_id == ExperienceAgentRun.id).where(
+                    InterviewAgentCall.answer_id == answer.id, ExperienceAgentRun.status == "RUNNING"))).all()
+                for run in runs:
+                    run.status, run.error_message, run.finished_at = "FAILED", "interview_request_interrupted", datetime.now(timezone.utc)
+                    for step in (await self.db.scalars(select(ExperienceAgentStepRun).where(
+                            ExperienceAgentStepRun.agent_run_id == run.id, ExperienceAgentStepRun.status == "RUNNING"))).all():
+                        step.status, step.error_message = "FAILED", "interview_request_interrupted"
+                plan = dict(session.interview_plan_json or {})
+                # Unknown usage remains conservatively charged, not silently refunded.
+                unreported = sum(plan.get("model_call_reservations", {}).values())
+                session.interview_plan_json = {**plan, "model_call_reservations": {}, "reserved_model_tokens": 0,
+                    "unreported_model_tokens": plan.get("unreported_model_tokens", 0) + unreported}
         if session.status != "IN_PROGRESS" or session.active_question_id != question_id:
             raise conflict()
         q = await self.db.get(InterviewSessionQuestion, question_id)
@@ -205,7 +265,18 @@ class SessionController:
         answer.status, answer.error = "RUNNING", None
         session.state_version += 1
         await self.db.flush()
+        session.interview_plan_json = {**(session.interview_plan_json or {}), "answer_processing": dict(
+            answer_id=answer.id, stage="evaluating", expires_at=(datetime.now(timezone.utc) +
+            timedelta(seconds=2 * settings.interview_model_timeout_seconds + 30)).isoformat())}
         return answer, session.state_version, False
+
+    async def answer_stage(self, session_id, user_id, answer_id, expected_version, stage):
+        session = await self.owned(session_id, user_id, lock=True)
+        if session.state_version != expected_version:
+            raise conflict()
+        processing = dict((session.interview_plan_json or {}).get("answer_processing") or {})
+        if processing.get("answer_id") == answer_id:
+            session.interview_plan_json = {**session.interview_plan_json, "answer_processing": {**processing, "stage": stage}}
 
     async def failed_answer(self, session_id, user_id, answer_id, expected_version, error):
         session = await self.owned(session_id, user_id, lock=True)
@@ -213,6 +284,7 @@ class SessionController:
             answer = await self.db.get(InterviewAnswer, answer_id)
             if answer.status != "COMPLETED":
                 answer.status, answer.error = "FAILED", error[:500]
+                session.interview_plan_json = {**(session.interview_plan_json or {}), "answer_processing": None}
                 # ANSWERED is retained. Never mark EVALUATED or advance on model failure.
 
     async def commit_answer(self, session_id, user_id, answer_id, expected_version, evaluation, main, requested_action, policy):
@@ -223,9 +295,7 @@ class SessionController:
         _, context, questions, q, tokens = await self.state(session_id, user_id)
         artifact = evaluation.artifact
         action = self.choose_action(context, questions, q, artifact.next_action_recommendation,
-            rounds=session.turn_count, tokens=tokens, started_at=session.started_at)
-        if (session.interview_plan_json or {}).get("budget_exhausted"):
-            action = "COMPLETE"
+            rounds=session.turn_count, tokens=tokens, started_at=session.started_at, evaluation=artifact.model_dump())
         if action != "COMPLETE" and action != requested_action:
             raise conflict("预算或会话条件已变化，请重试")
         if action != "COMPLETE" and (not main or main.artifact.recommendation != action or not main.artifact.question):
@@ -252,18 +322,21 @@ class SessionController:
         else:
             parent = q if action in ("FOLLOW_UP", "DEEP_DIVE") else None
             next_q = await self._new_question(session, context, questions, main.artifact.question, policy, kind=action, parent=parent)
+            if main.artifact.tool_result_ids:
+                next_q.candidate_refs_json = {**(next_q.candidate_refs_json or {}), "tool_result_ids": main.artifact.tool_result_ids}
             if parent:
                 parent.follow_up_count += 1
             data = question_data(next_q, session.question_count)
             data["mode"] = "replay" if main.provider == "replay" else "live"
             if action == "FOLLOW_UP":
-                data.update(follow_up_count=sum(x.question_kind == "FOLLOW_UP" for x in questions) + 1,
+                data.update(follow_up_count=self.follow_up_consumption(questions, q) + 1,
                             max_follow_ups=context["budgets"]["max_follow_ups"])
             events.append(["follow_up" if action == "FOLLOW_UP" else "question", data])
             await self._message(session, "FOLLOW_UP" if action == "FOLLOW_UP" else "QUESTION", next_q.question, data)
         session.state_version += 1
         events.append(["done", dict(message_id=answer.message_id, turn_index=session.turn_count, action=action, state_version=session.state_version)])
         answer.status, answer.result_events = "COMPLETED", events
+        session.interview_plan_json = {**(session.interview_plan_json or {}), "answer_processing": None}
         await self.db.flush()
         return events
 
@@ -300,8 +373,6 @@ class SessionController:
         q.status = "SKIPPED"
         session.turn_count += 1
         action = self.choose_action(context, questions, q, "NEXT", rounds=session.turn_count, tokens=tokens, started_at=session.started_at)
-        if (session.interview_plan_json or {}).get("budget_exhausted"):
-            action = "COMPLETE"
         if action == "COMPLETE":
             result = dict(skipped_question_id=q.id, next_question=None, completion=await self.complete(session))
             await self._message(session, "INTERVIEW_COMPLETE", "面试结束", result["completion"])

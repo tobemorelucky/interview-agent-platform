@@ -1,0 +1,11 @@
+{
+  "id": "java_backend",
+  "version": "1.0.0",
+  "label": "Java 后端开发",
+  "priority_topics": ["java", "mysql_consistency", "redis", "kafka_reliability", "system_design"],
+  "domains": ["Java 与并发基础", "数据库事务与一致性", "缓存与消息可靠性", "后端接口和系统设计"],
+  "key_capabilities": ["解释线程与事务边界", "说明索引与查询取舍", "分析缓存一致性和重复消费", "定位接口失败及幂等问题"],
+  "project_strategy": ["从候选人实际负责的请求链路开始", "追问一次写入、一次消息投递或一次缓存更新", "不因简历列出 Java 就假设使用过所有中间件"],
+  "level_probes": {"introductory": "讲清基本概念和调用链路", "intermediate": "说明并发控制、事务和幂等实现", "advanced": "分析竞态、故障窗口和一致性取舍"},
+  "evaluation_anchors": {"technical_correctness": "Java、事务、并发和中间件机制是否准确", "coverage": "是否覆盖当前链路和必要的一致性条件", "depth": "是否解释竞态、异常窗口与设计取舍", "relevance": "是否回答当前后端问题而非堆叠技术名词", "communication": "是否用清晰步骤说明请求、数据和异常流向"}
+}

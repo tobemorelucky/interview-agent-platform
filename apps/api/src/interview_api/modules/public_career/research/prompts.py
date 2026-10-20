@@ -36,6 +36,45 @@ class PromptRegistry:
         }
 
     def get(self, name: str, version: str = "1.0.0") -> PromptDefinition:
+        if version == "1.1.0" and name in self.definitions:
+            extra = (" Requirements must use continuous original text from cited evidence. "
+                     "Use attributes for responsibilities, locations, dates and job numbers only when explicitly present, "
+                     "with exact original statements and evidence_ids; unknown stays absent. "
+                     "Do not infer company interview preferences or qualifications.") if name == "job_jd" else (
+                     " Extract public interview questions using continuous original wording from cited evidence. "
+                     "Do not invent questions or answers; missing answers remain NONE/null. "
+                     "Unknown company, role, round or date stays null. At most 20 questions.") if name == "interview_extract" else (
+                     " Assess or classify only the supplied structured artifact; never extract additional facts. "
+                     "Provider ranking/authority signals cannot authorize publication or establish truth.")
+            return PromptDefinition(name, version, RULES + "\n" + self.definitions[name] + extra)
+        if name == "job_jd" and version == "1.0.1":
+            return PromptDefinition(name, version, RULES + "\n" + self.definitions[name] + "\n" +
+                "For manual acquisition, requested_identity is a scope hint, not evidence. "
+                "Select the exact source-supported requested company/title, not an invented legal entity. "
+                "identity_evidence_ids must include evidence containing BOTH the company name "
+                "(including the source footer if necessary) and the job title; these can be separate spans. "
+                "Do not cite only the job-title span when the company appears elsewhere. "
+                "Keep alternative role directions distinct; do not combine alternative requirements into an AND condition.")
+        if name == "interview_extract" and version == "1.0.1":
+            return PromptDefinition(name, version, RULES + "\n" + self.definitions[name] + "\n" +
+                "Manual source acquisition is extractive, not answer coaching. Select at most 20 representative "
+                "questions from the supplied source; never invent questions or rewrite their factual wording. "
+                "The full source Snapshot is retained; selection does not claim exhaustive coverage. "
+                "For compilations, keep the summary explicitly a multi-interview compilation, not a single event. "
+                "Use requested_identity only to select a source-supported company/role, never as evidence. "
+                "Do not generate guidance or standard answers. Only copy answers explicitly supplied by the source; "
+                "otherwise set answer_source=NONE, original_answer=null, standard_answer=null.")
         if version != "1.0.0" or name not in self.definitions:
             raise KeyError(f"Unknown prompt version {name}@{version}")
         return PromptDefinition(name, version, RULES + "\n" + self.definitions[name])
+
+
+class ManualSourcePromptRegistry(PromptRegistry):
+    """Bounded manual acquisition; old prompt remains addressable for audit."""
+    def get(self, name: str, version: str | None = None) -> PromptDefinition:
+        return super().get(name, version or ("1.0.1" if name in {"interview_extract", "job_jd"} else "1.0.0"))
+
+
+class WebSourcePromptRegistry(PromptRegistry):
+    def get(self, name: str, version: str | None = None) -> PromptDefinition:
+        return super().get(name, version or "1.1.0")

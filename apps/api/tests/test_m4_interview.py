@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 import interview_api.modules.models  # noqa
 
 from interview_api.core.exceptions import AppError
-from interview_api.infrastructure.models.provider import ReplayModelProvider
+from interview_api.infrastructure.models.provider import ReplayModelProvider, ModelResponse
 from interview_api.infrastructure.models.router import ModelRouter, INTERVIEW_MAIN_ROUTE, ANSWER_EVALUATION_ROUTE
 from interview_api.modules.candidate_profile.agent import ResumeProfileAgent
 from interview_api.modules.candidate_profile.service import CandidateProfileService
@@ -72,7 +72,8 @@ def evaluation(action="NEXT", score=4):
 
 
 def question(context, policy, action="NEXT", difficulty="MEDIUM"):
-    body = dict(question="Replay: 请说明具体技术实现和取舍", expected_points=["原理", "实践", "边界"],
+    turn = sum(policy.get('topic_coverage', {}).get('topic_counts', {}).values()) + 1
+    body = dict(question=f"Replay 第{turn}轮: 请说明具体技术实现和取舍", expected_points=["原理", "实践", "边界"],
                 dimension="缓存", difficulty=difficulty, source_type=policy["source_type"])
     if body["source_type"] == "PUBLIC_QUESTION":
         public = next(q for q in context["public_questions"] if q["id"] == policy["source_id"])
@@ -81,6 +82,10 @@ def question(context, policy, action="NEXT", difficulty="MEDIUM"):
     if body["source_type"] == "CANDIDATE_PROFILE":
         fact = next(f for f in context["candidate_facts"] if f["id"] == policy["source_id"])
         body.update(candidate_fact_ids=[fact["id"]], candidate_evidence_ids=fact["evidence_ids"])
+        # Replay selects the supplied real technical intent, not a generic repeated question.
+        from interview_api.modules.interview.topics import TOPICS
+        if policy.get('target_topic') in TOPICS:
+            body['question'] = f"Replay 第{turn}轮: 请说明 {policy['target_topic'].split('_')[0]} 的具体实现和取舍"
     return dict(recommendation=action, question=body)
 
 
@@ -319,12 +324,133 @@ def test_pre_call_budget_stops_without_fake_evaluation(database_url, budget):
                 await SessionController(db).reserve_model_call(sid, uid, session.state_version,
                     detail["context_snapshot"]["budgets"]["max_model_tokens"])
             await db.commit()
-        events = await core.answer(sid, uid, first["question_id"], uuid4().hex, "Replay answer after budget expiry")
-        assert events[0][0] == "complete" and evaluator.calls == 0
+        key = uuid4().hex
+        with pytest.raises(AppError) as exc:
+            await core.answer(sid, uid, first["question_id"], key, "Replay answer after budget expiry")
+        assert exc.value.code == "INTERVIEW_BUDGET_EXHAUSTED" and evaluator.calls == 0
         final = await core.detail(sid, uid)
-        assert final["status"] == "COMPLETED" and final["completion_json"]["evaluated_count"] == 0
-        assert final["completion_json"]["overall_average"] is None
-        assert all(q["status"] == "SKIPPED" for q in final["questions"])
+        assert final["status"] == "IN_PROGRESS" and final["completion_json"] is None
+        assert final["questions"][0]["status"] == "ANSWERED"
+        assert final["pending_answer"]["status"] == "FAILED"
+        assert final["pending_answer"]["idempotency_key"] == key
+        async with factory() as db:
+            assert await db.scalar(select(func.count(InterviewEvaluation.id)).where(InterviewEvaluation.session_id == sid)) == 0
+        if budget == "tokens":
+            async with factory() as db:
+                await SessionController(db).settle_model_call(sid, uid, "legacy_pending", True)
+                await db.commit()
+            evaluator.responses.append(evaluation())
+            _, ctx, qs, _, _ = await core.read_state(sid, uid)
+            main.responses.append(question(ctx, question_policy(ctx, qs)))
+            events = await core.answer(sid, uid, first["question_id"], key, "Replay answer after budget expiry")
+            assert events[0][0] == "evaluation" and events[1][0] == "question"
+            async with factory() as db:
+                assert await db.scalar(select(func.count(InterviewAnswer.id)).where(InterviewAnswer.session_id == sid)) == 1
+    asyncio.run(run_with_database(database_url, scenario))
+
+
+def test_large_context_budget_settles_to_usage_and_allows_three_answers(database_url):
+    """Local provider fixture exercises LIVE-shaped accounting, never real network."""
+    async def scenario(factory):
+        core, main, evaluator, uid, detail = await seed(factory, budget=10)
+        sid = detail["id"]
+        class AuditedFixture(ReplayModelProvider):
+            provider_name = "local_accounting_fixture"
+            model_name = "DEMO_NO_NETWORK"
+            async def generate(self, messages, *, schema):
+                value = await super().generate(messages, schema=schema)
+                return ModelResponse(value.text, {"input_tokens": 19000, "output_tokens": 1000, "total_tokens": 20000})
+        main, evaluator = AuditedFixture([]), AuditedFixture([])
+        core._router = ModelRouter({INTERVIEW_MAIN_ROUTE: main, ANSWER_EVALUATION_ROUTE: evaluator})
+        payload = core.payload
+        core.payload = lambda *a, **kw: {**payload(*a, **kw), "fixture_padding": "本地预算测试" * 3000}
+        await queue_start(core, main, uid, sid)
+        for _ in range(3):
+            request = await queue_answer(core, main, evaluator, uid, sid)
+            events = await core.answer(sid, uid, request.question_id, request.idempotency_key, request.content)
+            assert [e[0] for e in events] == ["evaluation", "question", "done"]
+        session, _, qs, active, tokens = await core.read_state(sid, uid)
+        assert session.status == "IN_PROGRESS" and len(qs) == 4 and active.status == "ASKED"
+        assert tokens == 7 * 20000
+        assert session.interview_plan_json["model_call_reservations"] == {}
+        assert session.interview_plan_json["reserved_model_tokens"] == 0
+        assert not session.interview_plan_json["budget_exhausted"]
+        async with factory() as db:
+            assert await db.scalar(select(func.count(InterviewEvaluation.id)).where(InterviewEvaluation.session_id == sid)) == 3
+            assert await db.scalar(select(func.count(InterviewAnswer.id)).where(InterviewAnswer.session_id == sid, InterviewAnswer.status == "COMPLETED")) == 3
+    asyncio.run(run_with_database(database_url, scenario))
+
+
+def test_unknown_usage_failure_remains_charged_but_does_not_complete(database_url):
+    async def scenario(factory):
+        core, main, _, uid, detail = await seed(factory)
+        sid = detail["id"]
+        await queue_start(core, main, uid, sid)
+        session, _, _, _, _ = await core.read_state(sid, uid)
+        async with factory() as db:
+            await SessionController(db).reserve_model_call(sid, uid, session.state_version, 50000, "unknown-call")
+            await db.commit()
+        async with factory() as db:
+            await SessionController(db).settle_model_call(sid, uid, "unknown-call", False)
+            await SessionController(db).settle_model_call(sid, uid, "unknown-call", False)
+            await db.commit()
+        session, _, _, _, used = await core.read_state(sid, uid)
+        assert used == 50000 and session.status == "IN_PROGRESS"
+        assert session.interview_plan_json["model_call_reservations"] == {}
+    asyncio.run(run_with_database(database_url, scenario))
+
+
+def test_natural_public_question_retains_pinned_provenance(database_url):
+    async def scenario(factory):
+        from interview_api.modules.interview.agents import InterviewPromptRegistry
+        registry = InterviewPromptRegistry()
+        assert registry.get(INTERVIEW_MAIN_ROUTE).version == "1.0.13"
+        assert registry.get(INTERVIEW_MAIN_ROUTE, "1.0.2").version == "1.0.2"
+        assert registry.get(INTERVIEW_MAIN_ROUTE, "1.0.1").version == "1.0.1"
+        assert "copy its pinned question exactly" in registry.get(INTERVIEW_MAIN_ROUTE, "1.0.0").system
+        core, main, _, uid, detail = await seed(factory)
+        _, ctx, qs, _, _ = await core.read_state(detail["id"], uid)
+        artifact = question(ctx, question_policy(ctx, qs))
+        artifact["question"]["question"] = "如果项目里用 Redis 缓存，你会怎么保证缓存与数据库一致呢？请讲讲更新策略和并发情况下的取舍。"
+        main.responses.append(artifact)
+        first = await core.start(detail["id"], uid)
+        assert first["question"] == artifact["question"]["question"]
+        assert first["source"] == "PUBLIC_QUESTION"
+        pinned = ctx["public_questions"][0]
+        assert first["source_question_id"] == pinned["id"] and first["source_fingerprint"] == pinned["fingerprint"]
+        async with factory() as db:
+            assert (await db.get(InterviewQuestion, pinned["id"])).question == pinned["question"]
+    asyncio.run(run_with_database(database_url, scenario))
+
+
+def test_follow_up_reference_pair_failure_keeps_answer_retryable_and_audits_ids(database_url):
+    async def scenario(factory):
+        core, main, evaluator, uid, detail = await seed(factory, budget=10)
+        sid = detail["id"]
+        await queue_start(core, main, uid, sid)
+        request = await queue_answer(core, main, evaluator, uid, sid, action="FOLLOW_UP")
+        _, ctx, _, _, _ = await core.read_state(sid, uid)
+        main.responses[-1]["question"]["candidate_fact_ids"] = [ctx["candidate_facts"][0]["id"]]
+        main.responses[-1]["question"]["candidate_evidence_ids"] = []
+        with pytest.raises(AppError) as exc:
+            await core.answer(sid, uid, request.question_id, request.idempotency_key, request.content)
+        assert exc.value.code == "UNSUPPORTED_CANDIDATE_QUESTION"
+        failed = await core.detail(sid, uid)
+        assert failed["status"] == "IN_PROGRESS" and failed["pending_answer"]["status"] == "FAILED"
+        async with factory() as db:
+            run = await db.scalar(select(ExperienceAgentRun).join(InterviewAgentCall,
+                InterviewAgentCall.agent_run_id == ExperienceAgentRun.id).where(
+                InterviewAgentCall.session_id == sid, ExperienceAgentRun.status == "FAILED"))
+            assert run.output_json["validation"]["unpaired_fact_ids"] == [ctx["candidate_facts"][0]["id"]]
+            assert "excerpt" not in json.dumps(run.output_json)
+        evaluator.responses.append(evaluation("FOLLOW_UP"))
+        _, ctx, qs, _, _ = await core.read_state(sid, uid)
+        main.responses.append(question(ctx, question_policy(ctx, qs, "FOLLOW_UP"), "FOLLOW_UP"))
+        events = await core.answer(sid, uid, request.question_id, request.idempotency_key, request.content)
+        assert [item[0] for item in events] == ["evaluation", "follow_up", "done"]
+        async with factory() as db:
+            assert await db.scalar(select(func.count(InterviewAnswer.id)).where(InterviewAnswer.session_id == sid)) == 1
+            assert await db.scalar(select(func.count(InterviewEvaluation.id)).where(InterviewEvaluation.session_id == sid)) == 1
     asyncio.run(run_with_database(database_url, scenario))
 
 
@@ -349,12 +475,14 @@ def test_same_answer_concurrent_retry_optimistic_conflict(database_url):
         args = (sid, uid, request.question_id, request.idempotency_key, request.content)
         task = asyncio.create_task(core.answer(*args))
         await asyncio.wait_for(entered.wait(), 3)
-        # A second request can read/commit while the first model is waiting.
-        events = await asyncio.wait_for(core.answer(*args), 5)
-        assert events[0][0] == "evaluation"
+        # A duplicate submit cannot launch another model while the owned lease is active.
+        with pytest.raises(AppError) as exc:
+            await asyncio.wait_for(core.answer(*args), 5)
+        assert exc.value.code == "INTERVIEW_ANSWER_RUNNING"
         release.set()
-        with pytest.raises(AppError) as exc: await task
-        assert exc.value.code == "INTERVIEW_CONFLICT"
+        events = await task
+        assert events[0][0] == "evaluation"
+        assert await core.answer(*args) == events
         async with factory() as db:
             assert await db.scalar(select(func.count(InterviewAnswer.id)).where(InterviewAnswer.session_id == sid)) == 1
             assert await db.scalar(select(func.count(InterviewEvaluation.id)).where(InterviewEvaluation.session_id == sid)) == 1

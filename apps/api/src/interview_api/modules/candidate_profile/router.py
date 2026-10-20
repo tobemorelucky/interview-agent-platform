@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from interview_api.api.deps import get_current_user
 from interview_api.core.exceptions import AppError
 from interview_api.core.response import success
+from interview_api.core.rate_limit import interview_chat_limit
 from interview_api.infrastructure.db.session import get_db
 from interview_api.modules.users.models import User
 from interview_api.modules.resume.models import Resume, ResumeReport
@@ -46,7 +47,7 @@ async def correct(request: CorrectionRequest, db: AsyncSession = Depends(get_db)
     return success(data=data)
 
 
-@router.post("/generate", status_code=202)
+@router.post("/generate", status_code=202, dependencies=[Depends(interview_chat_limit)])
 async def generate(request: GenerationRequest, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     resume = await db.scalar(select(Resume).where(Resume.id == request.resume_id, Resume.user_id == user.id))
     if not resume:

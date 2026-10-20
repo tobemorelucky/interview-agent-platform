@@ -16,5 +16,7 @@ test('recommendation handoff passes only public refs, never historical inputs', 
   assert.deepEqual(interviewTarget({ company_id: 12, job_id: 24, profile_version_id: 5, snapshot: 'old' }), { company_id: '12', job_id: '24' })
   const page = readFileSync(new URL('../src/pages/InterviewChatPage.vue', import.meta.url), 'utf8')
   assert.ok(page.includes('t.job_id === jobId && t.company_id === companyId'))
-  assert.ok(page.includes('await handleCreateSession()'))
+  assert.ok(page.includes('selectedJobId.value = jobId'))
+  assert.ok(page.includes('undefined, interviewerSelection.value'))
+  assert.ok(!page.includes('await handleCreateSession()')) // user confirms skill/round/style before creation
 })

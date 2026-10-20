@@ -1,0 +1,12 @@
+{
+  "version": "1.0.0",
+  "rounds": {
+    "technical_screen": {"label": "技术一面", "category_weights": {"PROJECT": 0.35, "FOUNDATION": 0.35, "JOB_TECHNICAL": 0.20, "SCENARIO": 0.10}, "focus": "基础机制、真实项目理解与岗位技术适配", "opening_category": "FOUNDATION"},
+    "project_deep_dive": {"label": "项目深挖面", "category_weights": {"PROJECT": 0.55, "FOUNDATION": 0.10, "JOB_TECHNICAL": 0.15, "SCENARIO": 0.20}, "focus": "实现细节、设计取舍、异常路径与反例", "opening_category": "PROJECT"}
+  },
+  "styles": {
+    "gentle": {"label": "温和", "probe_mode": "CLARIFY_WITH_PROCESS_HINT", "guidance": "可以先说思路，再补充一个具体实现细节。", "missing_point_action": "FOLLOW_UP", "instruction": "一次澄清一个缺失点，允许给非答案式的表达提示，鼓励补充；不能透露参考答案。"},
+    "standard": {"label": "标准", "probe_mode": "MECHANISM_THEN_TRADEOFF", "guidance": null, "missing_point_action": "AS_RECOMMENDED", "instruction": "围绕当前问题先问机制，再逐层询问设计理由；不重复已回答内容。"},
+    "strict": {"label": "严格", "probe_mode": "VERIFY_BOUNDARY_OR_COUNTEREXAMPLE", "guidance": null, "missing_point_action": "DEEP_DIVE", "instruction": "不提供答案提示；对模糊表述要求一个具体机制、边界条件或反例。保持专业，不羞辱用户，不额外扣分。"}
+  }
+}

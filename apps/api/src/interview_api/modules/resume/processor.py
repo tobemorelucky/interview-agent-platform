@@ -85,12 +85,12 @@ async def _run_pipeline(resume_id: int) -> None:
     from interview_api.modules.resume.parser import ResumeParser
 
     storage = MinioObjectStorageProvider()
-    llm = OpenAICompatibleLLMProvider()
     # Retrieval is skipped below: don't instantiate unused embedding/Milvus clients.
 
     resume = await _get_resume_snapshot(resume_id)
     if resume is None:
         raise ValueError(f"Resume {resume_id} not found")
+    llm = OpenAICompatibleLLMProvider(user_id=resume.user_id)
 
     logger.info("[resume %s] ========== PARSING_RESUME ==========", resume_id)
     await _update_stage(resume_id, "PARSING_RESUME", "Parsing resume file...")

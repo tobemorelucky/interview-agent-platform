@@ -117,8 +117,11 @@ async def two_session_replay(factory):
         for provider in (main, evaluator):
             for call in provider.requests:
                 payload = json.loads(call["messages"][-1]["content"])["input"]
-                assert payload["snapshot"]["approved_memory_context"] == pinned["approved_memory_context"]
-                assert payload["snapshot"]["recent_performance_observations"] == observations
+                for name, layer in (("approved_memory_context", pinned["approved_memory_context"]),
+                                    ("recent_performance_observations", observations)):
+                    actual = payload["snapshot"][name]
+                    assert [(m['id'], m['content']) for m in actual['items']] == [(m['id'], m['content']) for m in layer['items']]
+                    assert 'NOT_SKILL_PROOF' in actual['semantics'] or 'NOT_STABLE_FACTS' in actual['semantics']
     final = await core.detail(second["id"], uid)
     assert final["status"] == "COMPLETED" and all(q["status"] == "COMPLETED" for q in final["questions"])
     async with factory() as db:

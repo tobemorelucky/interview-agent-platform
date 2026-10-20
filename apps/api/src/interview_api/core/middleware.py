@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
 
 class RequestContextMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        from interview_api.infrastructure.models.governance import request_user_id
+        identity_token = request_user_id.set(None)
         request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
         request.state.request_id = request_id
         start = time.perf_counter()
@@ -21,6 +23,7 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
             status_code = response.status_code
             return response
         finally:
+            request_user_id.reset(identity_token)
             duration_ms = int((time.perf_counter() - start) * 1000)
             if request.url.path not in {"/", "/api/v1/health"}:
                 logger.info(

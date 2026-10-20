@@ -44,20 +44,30 @@ async def seed(factory, raw=RAW):
         return user.id, resume.id
 
 
-def response(resume_id, raw=RAW):
+def response(resume_id, raw=RAW, *, aliases=True):
     rows = evidence_rows(resume_id, raw)
     def ref(fragment):
-        return next(row["evidence_key"] for row in rows if fragment in row["excerpt"])
+        index = next(index for index, row in enumerate(rows, 1) if fragment in row["excerpt"])
+        return f"E{index:02}" if aliases else rows[index - 1]["evidence_key"]
     def named(label, statement):
         return {"label": label, "statement": statement, "evidence_ids": [ref(statement)]}
-    return dict(candidate_summary={"statement": raw.splitlines()[0], "evidence_ids": [rows[0]["evidence_key"]]},
+    body = dict(candidate_summary=None if aliases else {"statement": raw.splitlines()[0], "evidence_ids": [rows[0]["evidence_key"]]},
                 skills=[dict(**named("Redis", "订单系统：使用 Python 和 Redis 实现缓存。"), evidence_state="DEMONSTRATED")],
                 projects=[named("订单系统", "订单系统：使用 Python 和 Redis 实现缓存。")],
                 education=[named("示例大学", "示例大学 计算机科学 本科")],
                 work_experience=[named("示例公司", "示例公司 Python 开发")],
                 internship_experience=[named("示例实验室", "示例实验室 Redis 缓存实习")],
-                strengths=[{"statement": "使用 Python 和 Redis 实现缓存", "evidence_ids": [ref("订单系统")]}],
+                strengths=[] if aliases else [{"statement": "使用 Python 和 Redis 实现缓存", "evidence_ids": [ref("订单系统")]}],
                 unknowns=["项目规模"])
+    if aliases:
+        body.pop("candidate_summary")
+        body.pop("strengths")
+        for category in ("skills", "projects", "education", "work_experience", "internship_experience"):
+            for fact in body[category]:
+                fact.pop("statement")
+                if "evidence_state" in fact:
+                    fact["proposed_evidence_state"] = fact.pop("evidence_state")
+    return body
 
 
 def model_router(outputs):
@@ -76,7 +86,7 @@ def test_evidence_stable_parser_offsets():
 
 @pytest.mark.parametrize("case", ["unknown", "strength", "skill_state", "negative_unknown", "excerpt", "no_evidence"])
 def test_deterministic_rejections(case):
-    body = response(7)
+    body = response(7, aliases=False)
     rows = evidence_rows(7, RAW)
     evidence = {row["evidence_key"]: dict(key=row["evidence_key"], excerpt=row["excerpt"], section=row["section"]) for row in rows}
     if case == "unknown": body["skills"][0]["evidence_ids"] = ["re_invented"]

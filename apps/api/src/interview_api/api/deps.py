@@ -33,11 +33,17 @@ async def get_current_user(
     if not user_id:
         raise AuthTokenExpiredError()
 
+    try:
+        parsed_id = int(user_id)
+    except (TypeError, ValueError):
+        raise AuthTokenExpiredError()
     repo = UserRepository(db)
-    user = await repo.get_by_id(int(user_id))
+    user = await repo.get_by_id(parsed_id)
     if not user or not user.is_active:
         raise AuthTokenExpiredError()
 
+    from interview_api.infrastructure.models.governance import request_user_id
+    request_user_id.set(user.id)
     return user
 
 

@@ -2,10 +2,12 @@
 export const userNavigation = [
   { label: '首页', path: '/dashboard' }, { label: '我的简历', path: '/resumes' },
   { label: '我的画像', path: '/profile' }, { label: '岗位推荐', path: '/jobs/matches' },
+  { label: '公共资料', path: '/career' },
   { label: '模拟面试', path: '/interview' }, { label: '面试报告', path: '/interview/reports' },
   { label: '成长记录', path: '/memory' },
 ]
 export const adminNavigation = [
+  { label: '职业资料采集', path: '/admin/public-career' },
   { label: '知识库管理', path: '/admin/kb/documents' }, { label: '面经采集', path: '/admin/experiences' },
   { label: '题库 / 面经审核', path: '/admin/experience-review' }, { label: '审计日志', path: '/admin/audit' },
 ]
@@ -34,6 +36,8 @@ export const labels: Record<string, string> = {
   INTERVIEW: '模拟面试', GLOBAL: '通用', PRIVATE: '仅本人可见', MEMORY_PROPOSAL: '本人批准的记忆建议', USER: '本人',
   skills: '技能', projects: '项目经历', education: '教育经历', work_experience: '工作经历', internship_experience: '实习经历',
   location: '地区', locations: '地区', campus_type: '校招类型', job_family: '岗位类别', degree: '学历', major: '专业', graduation_year: '毕业年份',
+  education_minimum: '学历要求', majors: '专业要求', graduation_years: '毕业年份', level: '岗位级别',
+  explicit_exclusion: '明确排除项', excluded_tags: '排除标签', tags: '指定技术标签',
   strengths: '优势', candidate_summary: '个人摘要', statement: '描述', label: '名称',
   PublicDataResearchAgent: '公共数据 Research Agent', ResumeProfileAgent: '简历画像 Agent', JobMatchingAgent: '岗位匹配 Agent',
   InterviewMainAgent: '面试官 Agent', AnswerEvaluationAgent: '回答评价 Agent', SummaryCoachAgent: '复盘教练 Agent',
@@ -42,8 +46,8 @@ export const labels: Record<string, string> = {
   work: '工作经历', internship: '实习经历', general: '基本材料', skills_section: '技能材料',
   public_question: '公共题库', job_requirement: '岗位要求', candidate_profile: '候选人画像',
   AI: 'AI 应用', BACKEND: '后端开发', CAMPUS: '校招', AI_APPLICATION: 'AI 应用开发',
-  evaluating: '正在评价本轮回答…', generating_first_question: '正在准备第一题…', generating_next_question: '正在准备下一题…',
-  idle: '已就绪',
+  submitting: '正在提交回答…', evaluating: '正在分析回答…', generating_evaluation: '正在生成评价…', generating_first_question: '正在准备第一题…', generating_next_question: '正在准备追问 / 下一题…',
+    idle: '已就绪', validating_design: '正在选择验证工具 / 执行方案验证…',
   KB_RETRIEVED: '知识库召回', LLM_GENERATED: '大模型生成', HYBRID: '混合生成',
   QUEUED: '已加入队列', PARSING_RESUME: '解析简历文件', STRUCTURING_RESUME: '提取结构化信息',
   GENERATING_RETRIEVAL_QUERIES: '生成检索查询', RETRIEVING_KB: '检索知识库', GENERATING_QUESTIONS: '生成面试问题', SAVING_REPORT: '保存分析报告',
@@ -69,6 +73,7 @@ export function displayLabel(value: unknown, fallback = '未说明'): string {
 export function modelModeLabel(provider?: string | null, model?: string | null): string {
   if (provider === 'replay') return 'DEMO · Replay 回放模式（不是 Live 模型验收）'
   if (model?.startsWith('deepseek')) return 'DeepSeek 实时模型'
+  if (model === 'doubao-seed-2-1-turbo-260628') return 'Doubao 2.1 Turbo 实时模型'
   return provider ? 'Live 实时模型' : ''
 }
 export const errorLabels: Record<string, string> = {
@@ -76,6 +81,10 @@ export const errorLabels: Record<string, string> = {
   AUTH_MISSING_TOKEN: '请先登录后再继续。', AUTH_PERMISSION_DENIED: '没有访问权限，请联系管理员。',
   DUPLICATE_EMAIL: '这个邮箱已注册，请直接登录。', DUPLICATE_USERNAME: '这个用户名已被使用，请换一个。',
   UNSUPPORTED_SKILL_STATE: '候选人画像生成结果与简历证据不一致，请重新生成或检查简历内容。',
+  MODEL_USER_QUOTA: '今日模型使用额度不足，请稍后再试。',
+  MODEL_USER_CONCURRENCY: '你已有模型任务运行中，请等待完成后重试。',
+  MODEL_IDENTITY_REQUIRED: '模型任务缺少可信归属信息，请联系维护者。',
+  RATE_LIMIT_UNAVAILABLE: '限流服务暂时不可用，请稍后再试。',
   UNSUPPORTED_STRENGTH: '优势陈述缺少简历依据，请检查材料后重试。',
   PROFILE_NOT_FOUND: '还没有候选人画像，请先上传简历并生成画像。',
   CANDIDATE_PROFILE_REQUIRED: '请先生成候选人画像，再开始模拟面试。',
@@ -87,6 +96,8 @@ export const errorLabels: Record<string, string> = {
   CONFLICT: '当前状态已变化，请刷新后重试。', VALIDATION_ERROR: '请检查填写内容后重试。',
   RESUME_REFERENCED: '该简历已作为画像依据保留，不能删除。',
   SESSION_HAS_REPORT: '该面试已有报告，为保留复盘依据不能删除。',
+  COACH_COMPUTED_NUMBER: '报告分析混入了应由程序计算的统计，请安全重试；本场评分与完成状态已保留。',
+  model_timeout: '模型处理超时，已保存的数据不会丢失，请安全重试。',
 }
 export function userError(code: string, raw = ''): string {
   if (errorLabels[code]) return errorLabels[code]

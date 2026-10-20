@@ -8,4 +8,27 @@ details > summary { cursor:pointer; color:#315be5; } details { margin-top:10px; 
 .ux-empty { max-width:960px; padding:32px; margin:20px auto; background:white; border:1px solid var(--line); border-radius:12px; text-align:center; }
 .ux-badge { display:inline-block; font-size:12px; border-radius:6px; background:#fff3cc; color:#825600; padding:3px 9px; }
 .ux-technical { font-size:12px; color:var(--muted); overflow-wrap:anywhere; }
+/* Small product polish only: retain the existing layouts and components. */
+.matching-page h1, .report-page h1 { font-size:26px; letter-spacing:-.02em; }
+.matching-page header p, .report-page .heading p { margin-top:8px; color:var(--muted); max-width:70ch; }
+.matching-page .card, .report-page .card { border-color:var(--line); border-radius:12px; padding:24px; box-shadow:0 2px 8px #24304704; }
+.matching-page .card h3 { margin:22px 0 8px; }
+.matching-page .card p, .matching-page .card li, .report-page .coach p, .report-page .coach li { max-width:72ch; overflow-wrap:anywhere; }
+.matching-page .card ul, .report-page .coach ol { padding-left:22px; }
+.matching-page .card li, .report-page .coach li { margin:6px 0; }
+.matching-page .fit-band { display:inline-block; padding:4px 12px; border-radius:8px; color:var(--brand); background:#edf2ff; font-weight:600; }
+.matching-page .card > button { padding:10px 20px; margin-top:16px; }
+.matching-page .history button { background:white; color:var(--brand); border:1px solid var(--line); }
+.matching-page .error, .matching-page p[role=status] { padding:14px 18px; border-radius:10px; background:#f8fafc; }
+.report-page .actions button:first-child { background:var(--brand); border-color:var(--brand); }
+.report-page .overall { color:var(--brand); }
+.interview-page .question-bubble { border:1px solid #bdccf8; box-shadow:0 3px 10px #315be508; background:white; }
+.interview-page .question-bubble .q-body { font-size:18px; font-weight:500; line-height:1.8; max-width:48ch; color:#17243c; }
+.interview-page .message-bubble { max-width:min(92%,780px); overflow-wrap:anywhere; }
+.interview-page .eval-bubble { background:#f0f5ff; border-left:3px solid #91aaf3; }
+.interview-page .resume-bar { gap:10px 16px; }
+.interview-page .round-progress { padding:4px 10px; border-radius:6px; background:#eaf0ff; color:var(--brand); font-weight:600; }
+.interview-page .session-context-detail { font-size:12px; margin:0; }
+.interview-page .processing-status { border-left:3px solid var(--brand); background:#edf2ff; }
+.processing-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--brand); flex-shrink:0; }
 @media(max-width:700px) { h1 {font-size:21px;} .main-content {padding:16px !important;} }

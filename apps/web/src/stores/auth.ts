@@ -1,8 +1,8 @@
 import { defineStore } from "pinia";
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { login as apiLogin, register as apiRegister, getMe } from "../api/auth";
 import type { LoginRequest, RegisterRequest, UserInfo } from "../types/auth";
-import { ApiError } from "../api/client";
+import { ApiError, authExpiredAt } from "../api/client";
 
 export const useAuthStore = defineStore("auth", () => {
   const token = ref<string | null>(localStorage.getItem("access_token"));
@@ -59,6 +59,15 @@ export const useAuthStore = defineStore("auth", () => {
     currentUser.value = null;
     localStorage.removeItem("access_token");
   }
+
+  // Fetch/SSE and Axios share expiry state; the in-memory store must not keep a stale JWT.
+  watch(authExpiredAt, logout, { flush: "sync" });
+  window.addEventListener("storage", (event) => {
+    if (event.key === "access_token") {
+      token.value = event.newValue;
+      currentUser.value = null;
+    }
+  });
 
   function clearError() {
     error.value = null;

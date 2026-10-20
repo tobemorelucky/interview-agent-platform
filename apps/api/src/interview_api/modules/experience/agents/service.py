@@ -456,7 +456,7 @@ class ExperienceAgentService:
                 "LLM is not configured. Please set LLM_API_KEY and LLM_MODEL.",
                 status_code=400,
             )
-        return OpenAICompatibleLLMProvider()
+        return OpenAICompatibleLLMProvider(public_system_task=True)
 
     async def _record_step(
         self,

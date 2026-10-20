@@ -1,0 +1,11 @@
+{
+  "id": "bank_it",
+  "version": "1.0.0",
+  "label": "银行信息科技岗位",
+  "priority_topics": ["data_security", "mysql_consistency", "system_design", "java", "kafka_reliability"],
+  "domains": ["数据权限与敏感信息保护", "交易一致性和可追溯性", "系统稳定性与变更风险", "业务需求到工程实现"],
+  "key_capabilities": ["区分身份认证与资源授权", "解释事务、幂等和审计", "说明故障恢复和变更校验", "以业务约束解释技术选择"],
+  "project_strategy": ["基于真实项目追问数据流、权限或一致性", "将通用技术映射到岗位 JD 中实际存在的要求", "不编造具体银行必考题、内部系统或监管条款"],
+  "level_probes": {"introductory": "说明业务流程和数据保护基本原则", "intermediate": "解释权限、事务及审计的实际设计", "advanced": "分析异常恢复、数据边界和操作风险"},
+  "evaluation_anchors": {"technical_correctness": "权限、事务和数据保护机制是否准确", "coverage": "是否覆盖当前问题中的业务与数据边界", "depth": "是否考虑审计、异常恢复和变更风险", "relevance": "是否依据实际岗位要求而非虚构银行偏好", "communication": "是否用准确清晰的业务语言解释工程方案"}
+}

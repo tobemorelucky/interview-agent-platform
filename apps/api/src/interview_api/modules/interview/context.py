@@ -6,11 +6,13 @@ from interview_api.core.config import settings
 from interview_api.core.exceptions import AppError
 from interview_api.modules.candidate_profile.service import CandidateProfileService
 from interview_api.modules.candidate_profile.models import CandidateProfileVersion, CandidateFact
-from interview_api.modules.public_career.models import Company, Job, JobDescriptionVersion, JobRequirement
+from interview_api.modules.public_career.models import Company, Job, JobDescriptionVersion, JobRequirement, Source, SourceSnapshot
 from interview_api.modules.public_career.fingerprints import compute_content_fingerprint, compute_question_fingerprint
 from interview_api.modules.candidate_profile.evidence import digest
 from interview_api.modules.experience.models import InterviewQuestion, InterviewExperience
 from interview_api.modules.memory.snapshot import build_memory_snapshot
+from interview_api.modules.interview.topics import coverage, classify, is_hard_condition, validate_topic, mentioned_topics
+from interview_api.modules.interview.skill_engine import SkillRegistry, selection_coverage, choose_skill_source, interaction_policy
 
 
 APPROVED = ("APPROVED", "AUTO_APPROVED")
@@ -76,6 +78,31 @@ async def build_context(db, user_id, request):
     # M5: read once at creation, as two explicitly different provenance layers.
     # Agents continue reading only this immutable Snapshot on every round.
     context.update(await build_memory_snapshot(db, user_id))
+    if request.interviewer_skill_id:
+        jd_source = None
+        if jd.source_snapshot_id:
+            source_snapshot = await db.get(SourceSnapshot, jd.source_snapshot_id)
+            source = await db.get(Source, source_snapshot.source_id) if source_snapshot else None
+            if source:
+                jd_source = dict(source_id=source.id, snapshot_id=source_snapshot.id,
+                    url=source.canonical_url, source_type=source.source_type,
+                    content_hash=source_snapshot.content_hash, jd_version_id=jd.id)
+        context["interviewer_config"] = SkillRegistry().freeze(request.interviewer_skill_id,
+            request.interview_round, request.interviewer_style, requirements=context["requirements"], jd_source=jd_source)
+        from interview_api.modules.interview.skill_recommendation import recommend_jobs
+        recommendation = (await recommend_jobs(db, [job.id])).get(job.id)
+        automatic = request.interviewer_selection_source == "AUTO_RECOMMENDED"
+        if automatic and (not recommendation or recommendation["recommended_skill_id"] != request.interviewer_skill_id):
+            raise AppError("SKILL_RECOMMENDATION_CHANGED", "岗位或推荐已变化，请重新确认专业 Skill", 409)
+        context["interviewer_selection"] = dict(source=request.interviewer_selection_source,
+            skill_id=request.interviewer_skill_id, recommendation=recommendation)
+    elif request.interview_round != "technical_screen" or request.interviewer_style != "standard":
+        raise AppError("INTERVIEWER_SKILL_REQUIRED", "请先选择岗位专业 Skill，再设置轮次或风格", 422)
+    if request.design_interview:
+        from interview_api.modules.interview.system_design import SCENARIO
+        if not request.interviewer_skill_id:
+            raise AppError("INTERVIEWER_SKILL_REQUIRED", "系统设计面试须选择专业 Skill", 422)
+        context["system_design"] = deepcopy(SCENARIO)
     return context, version.source_resume_id, digest(context)
 
 
@@ -85,22 +112,117 @@ def _fact_keys(snapshot, path):
     return item["evidence_ids"]
 
 
+def model_context(context, policy=None):
+    """Project the pinned Snapshot, without sending each fact three times.
+
+    Full provenance stays in the immutable DB Snapshot and the Controller. All
+    fact IDs, evidence keys/excerpts, requirements and public sources remain.
+    This is a DTO, not a new context/version boundary or a mutable profile read.
+    """
+    result = deepcopy({k: v for k, v in context.items() if k not in ("profile", "normalized", "interviewer_selection")})
+    for fact in result["candidate_facts"]:
+        # The exact excerpt is already in candidate_evidence. Keep identity,
+        # classification and support refs, not the same paragraph twice.
+        fact.pop("statement", None)
+        parts = fact["field_path"].split(".")
+        values = context.get("profile", {}).get(parts[0])
+        if len(parts) == 2 and isinstance(values, list) and parts[1].isdigit():
+            index = int(parts[1])
+            if index < len(values) and isinstance(values[index], dict):
+                fact["label"] = values[index].get("label")
+                if "evidence_state" in values[index]:
+                    fact["evidence_state"] = values[index]["evidence_state"]
+    result["candidate_evidence"] = [
+        {k: item[k] for k in ("key", "kind", "section", "excerpt") if k in item}
+        for item in context["candidate_evidence"]
+    ]
+    result.pop("interview_experiences", None)  # Question intent already pinned.
+    for name in ("approved_memory_context", "recent_performance_observations"):
+        layer = context.get(name, {})
+        result[name] = {"semantics": "USER_CONFIRMED_CONTEXT_NOT_SKILL_PROOF" if name == "approved_memory_context"
+                       else "PRIOR_PRACTICE_OBSERVATIONS_NOT_STABLE_FACTS",
+            "items": [{k: v for k, v in item.items() if k in ("id", "content", "text", "memory_type", "observation_type")}
+                      for item in layer.get("items", [])]}
+    if policy is not None:
+        result["public_questions"] = [q for q in result["public_questions"] if
+            policy.get("source_type") == "PUBLIC_QUESTION" and q["id"] == policy.get("source_id")]
+    return result
+
+
 def question_policy(context, questions, action="NEXT"):
+    pacing = selection_coverage(context, coverage(questions, context["budgets"]["question_count"]))
     if action in ("FOLLOW_UP", "DEEP_DIVE"):
-        return dict(source_type="FOLLOW_UP" if action == "FOLLOW_UP" else "DYNAMIC_GENERATED", source_id=None)
+        return interaction_policy(context, dict(source_type="FOLLOW_UP" if action == "FOLLOW_UP" else "DYNAMIC_GENERATED", source_id=None,
+                    target_topic=pacing["recent_topic"], target_category="TECHNICAL", topic_coverage=pacing))
     used_public = {q.source_question_id for q in questions}
-    public = next((q for q in context["public_questions"] if q["id"] not in used_public), None)
-    if public:
-        return dict(source_type="PUBLIC_QUESTION", source_id=public["id"])
     used_requirements = {q.job_requirement_id for q in questions}
-    requirement = next((r for r in context["requirements"] if r["id"] not in used_requirements), None)
-    if requirement:
-        return dict(source_type="JOB_REQUIREMENT", source_id=requirement["id"])
     used_facts = {key for q in questions for key in (q.candidate_refs_json or {}).get("fact_ids", [])}
-    ordered_facts = sorted(context["candidate_facts"], key=lambda f: (0 if f["field_path"].startswith("projects.") else 1, f["id"]))
-    fact = next((f for f in ordered_facts if f["id"] not in used_facts and
-                 f["field_path"].split(".")[0] in ("projects", "skills", "work_experience", "internship_experience")), None)
-    return dict(source_type="CANDIDATE_PROFILE", source_id=fact["id"]) if fact else dict(source_type="DYNAMIC_GENERATED", source_id=None)
+    pool = []
+    seen_intents = set()
+    def add(source_type, source_id, text, category=None):
+        subject = classify(text)
+        # Known degree data is never turned into an oral eligibility exam.
+        if subject["topic"] == "education":
+            return
+        if subject["topic"] in pacing["blocked_topics"]:
+            return
+        if subject["category"] == "BACKGROUND" and not pacing["background_allowed"]:
+            return
+        if source_type == "CANDIDATE_PROFILE":
+            topics = [t for t in mentioned_topics(text) if t not in pacing["blocked_topics"]]
+            if topics:
+                priorities = pacing.get("skill_priority_topics", [])
+                subject["topic"] = min(topics, key=lambda t: (t not in priorities if priorities else False,
+                    pacing["topic_counts"].get(t, 0), priorities.index(t) if t in priorities else topics.index(t)))
+        intent = compute_content_fingerprint(text.casefold())
+        if intent in seen_intents:
+            return
+        seen_intents.add(intent)
+        pool.append(dict(source_type=source_type, source_id=source_id,
+            target_topic=subject["topic"], target_category=("BACKGROUND" if subject["category"] == "BACKGROUND" else category or subject["category"])))
+    for q in context["public_questions"]:
+        if q["id"] not in used_public:
+            add("PUBLIC_QUESTION", q["id"], q["question"])
+    for r in context["requirements"]:
+        # A qualification is not an interview skill test. Do not ask the LLM to
+        # decide degree/major eligibility by interviewing the user.
+        if r["id"] not in used_requirements and not is_hard_condition(r["statement"]):
+            add("JOB_REQUIREMENT", r["id"], r["statement"], "JOB_TECHNICAL")
+    for f in sorted(context["candidate_facts"], key=lambda f: (not f["field_path"].startswith("projects."), f["id"])):
+        section = f["field_path"].split(".")[0]
+        if f["id"] not in used_facts and section in ("projects", "skills", "work_experience", "internship_experience"):
+            add("CANDIDATE_PROFILE", f["id"], f["statement"], "PROJECT" if section != "skills" else "FOUNDATION")
+    technical = [p for p in pool if p["target_category"] != "BACKGROUND"]
+    # Public opening intent is allowed; never choose a background entry merely
+    # because it has the smallest DB ID. Thereafter favor uncovered technical
+    # subjects and weighted coverage, not mechanical quota filling.
+    main_count = pacing["main_question_count"]
+    fresh_projects = [p for p in technical if p["source_type"] == "CANDIDATE_PROFILE" and p["target_category"] == "PROJECT"]
+    configured = choose_skill_source(context["interviewer_config"], technical, pacing) if context.get("interviewer_config") else None
+    if configured:
+        selected = configured
+    elif not questions and technical:
+        selected = next((p for p in technical if p["source_type"] == "PUBLIC_QUESTION"), technical[0])
+    elif len(questions) >= 3 and main_count == 1 and len([f for f in context["candidate_facts"] if f["field_path"].startswith("projects.")]) > 1 and fresh_projects:
+        # After one opening + its follow-up chain, prefer another real project
+        # before testing further details of the same RAG project through a JD.
+        selected = min(fresh_projects, key=lambda p: (pacing["topic_counts"].get(p["target_topic"], 0), p["source_id"]))
+    elif technical:
+        def priority(p):
+            category = p["target_category"]
+            deficit = pacing["category_weights"].get(category, .1) * (main_count + 1) - pacing["category_counts"].get(category, 0)
+            preferred = "JOB_REQUIREMENT" if main_count % 3 == 1 else "CANDIDATE_PROFILE"
+            return (p["target_topic"] == pacing["recent_topic"] and p["target_topic"] != "unknown",
+                    p["source_type"] != preferred if main_count < 3 else -deficit,
+                    category != "PROJECT" if main_count == 2 else pacing["topic_counts"].get(p["target_topic"], 0),
+                    p["source_id"])
+        selected = min(technical, key=priority)
+    elif pool:
+        selected = pool[0]
+    else:
+        selected = dict(source_type="DYNAMIC_GENERATED", source_id=None,
+                        target_topic="uncovered_technical", target_category="SCENARIO")
+    return interaction_policy(context, {**selected, "topic_coverage": pacing})
 
 
 def validate_question(artifact, context, policy):
@@ -122,9 +244,10 @@ def validate_question(artifact, context, policy):
         if not set(facts[fact_id]["evidence_ids"]) & set(artifact.candidate_evidence_ids):
             raise AppError("UNSUPPORTED_CANDIDATE_QUESTION", "候选人问题未绑定对应事实证据", 422)
     if artifact.source_type == "PUBLIC_QUESTION":
-        if artifact.source_question_id != policy["source_id"] or artifact.question != public[policy["source_id"]]["question"]:
-            raise AppError("PUBLIC_QUESTION_CHANGED", "公共题目必须使用快照原题", 422)
+        if artifact.source_question_id != policy["source_id"]:
+            raise AppError("PUBLIC_QUESTION_CHANGED", "必须引用本场固定的公共题目来源", 422)
     elif artifact.source_type == "JOB_REQUIREMENT" and artifact.job_requirement_id != policy["source_id"]:
         raise AppError("REQUIREMENT_REQUIRED", "缺少本题岗位要求引用", 422)
     elif artifact.source_type == "CANDIDATE_PROFILE" and (policy["source_id"] not in artifact.candidate_fact_ids or not artifact.candidate_evidence_ids):
         raise AppError("CANDIDATE_EVIDENCE_REQUIRED", "缺少本题候选人证据", 422)
+    validate_topic(artifact, policy)

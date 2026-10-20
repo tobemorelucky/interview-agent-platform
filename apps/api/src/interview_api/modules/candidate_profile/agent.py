@@ -13,8 +13,9 @@ from interview_api.modules.resume.models import Resume, ResumeReport
 from interview_api.modules.candidate_profile.evidence import digest, evidence_rows, ensure_resume_evidence, resolve_and_validate, normalize_skill_evidence_states
 from interview_api.modules.candidate_profile.models import ProfileGeneration, CandidateProfileVersion, ProfileCorrection
 from interview_api.modules.candidate_profile.prompts import CandidatePromptRegistry, PROFILE_PROMPT
-from interview_api.modules.candidate_profile.schemas import CandidateProfileDelta
+from interview_api.modules.candidate_profile.schemas import CandidateEvidenceSelection
 from interview_api.modules.candidate_profile.service import CandidateProfileService, evidence_catalog, iter_facts
+from interview_api.modules.candidate_profile.context import build_profile_context
 
 
 class ResumeProfileAgent:
@@ -26,6 +27,7 @@ class ResumeProfileAgent:
         generation_id = run_id = None
         prepared = False
         state_diagnostics = []
+        context_audit = None
         try:
             async with self.factory() as db:
                 resume = await db.scalar(select(Resume).where(Resume.id == resume_id).with_for_update())
@@ -46,9 +48,9 @@ class ResumeProfileAgent:
                 current_snapshot = deepcopy(current.snapshot_json) if current else None
                 active_keys = {row["evidence_key"] for row in evidence_rows(resume_id, resume.raw_text)}
                 catalog = {key: value for key, value in catalog.items() if key in active_keys}
-                payload = dict(resume_report=report.summary_json,
-                               resume_evidence=[dict(evidence_id=item["key"], section=item["section"], excerpt=item["excerpt"]) for item in catalog.values()],
-                               current_profile=current_snapshot)
+                context = build_profile_context(catalog, report.summary_json, current_snapshot)
+                payload, catalog = context.payload, context.catalog
+                context_audit = context.audit()
                 await db.execute(insert(ProfileGeneration).values(resume_id=resume_id, generation_key=key, status="RUNNING")
                                  .on_conflict_do_nothing(index_elements=["generation_key"]))
                 generation = await db.scalar(select(ProfileGeneration).where(ProfileGeneration.generation_key == key))
@@ -64,19 +66,22 @@ class ResumeProfileAgent:
                 prepared = True
             calls = ResearchModelCalls(self.factory, self.router, run_id,
                 prompts=CandidatePromptRegistry(), timeout_seconds=settings.resume_profile_timeout_seconds)
-            delta = await calls.call("resume_profile", RESUME_PROFILE_ROUTE, payload, CandidateProfileDelta)
-            state_diagnostics = normalize_skill_evidence_states(delta, catalog)
-            resolve_and_validate(delta, catalog)
+            selection = await calls.call("resume_profile", RESUME_PROFILE_ROUTE, payload, CandidateEvidenceSelection)
+            delta = context.resolve_selection(selection)
+            state_diagnostics = normalize_skill_evidence_states(delta, catalog,
+                evidence_aliases={key: alias for alias, key in context.alias_to_key.items()})
+            resolve_and_validate(delta, catalog, stable_only=True,
+                evidence_aliases={key: alias for alias, key in context.alias_to_key.items()})
             snapshot = delta.model_dump()
             async with self.factory() as db:
                 service = CandidateProfileService(db)
                 if current_snapshot:
-                    keys = {key for _, fact in iter_facts(current_snapshot) for key in fact["evidence_ids"]}
+                    keys = {key for _, fact in iter_facts(current_snapshot, stable_only=True) for key in fact["evidence_ids"]}
                     previous_evidence = await evidence_catalog(db, user_id, keys=keys)
                     corrections = (await db.scalars(select(ProfileCorrection)
                         .join(CandidateProfileVersion, CandidateProfileVersion.id == ProfileCorrection.new_version_id)
                         .where(CandidateProfileVersion.candidate_profile_id == current.candidate_profile_id))).all()
-                    for path, fact in iter_facts(current_snapshot):
+                    for path, fact in iter_facts(current_snapshot, stable_only=True):
                         if not any(previous_evidence[key]["kind"] == "USER_CONFIRMED" for key in fact["evidence_ids"]):
                             continue
                         category = path.split(".")[0]
@@ -96,12 +101,15 @@ class ResumeProfileAgent:
                 version = await service.persist(user_id=user_id, resume_id=resume_id, snapshot=snapshot,
                     generation_key=key, base_version_id=base_id,
                     producer="REPLAY_FIXTURE" if provider.provider_name == "replay" else "RESUME_PROFILE_AGENT",
-                    provider=provider.provider_name, model=provider.model_name, prompt_version=PROFILE_PROMPT.version, agent_run_id=run_id)
+                    provider=provider.provider_name, model=provider.model_name, prompt_version=PROFILE_PROMPT.version, agent_run_id=run_id,
+                    evidence_sections=context_audit["section_map"])
                 generation = await db.get(ProfileGeneration, generation_id)
                 generation.status, generation.version_id, generation.error = "COMPLETED", version.id, None
                 run = await db.get(ExperienceAgentRun, run_id)
-                run.status, run.output_json = "SUCCEEDED", {"version_id": version.id, "schema": "CandidateProfileDelta",
-                    "skill_state_resolution": state_diagnostics}
+                run.status, run.output_json = "SUCCEEDED", {"version_id": version.id, "schema": "CandidateEvidenceSelection",
+                    "snapshot_schema": "CandidateProfileDelta", "statement_policy": "LONGEST_CITED_EXCERPT_V1",
+                    "thinking": getattr(provider, "thinking_type", None),
+                    "skill_state_resolution": state_diagnostics, "profile_context": context_audit}
                 run.finished_at = datetime.now(timezone.utc)
                 await db.commit()
                 version_id = version.id
@@ -120,7 +128,9 @@ class ResumeProfileAgent:
             if run_id and prepared:
                 diagnostics = getattr(exc, "diagnostics", None)
                 await finish_research_run(self.factory, run_id, status="FAILED", error=code[:500],
-                    output={"skill_state_resolution": state_diagnostics, "validation_failure": diagnostics})
+                    output={"skill_state_resolution": state_diagnostics, "validation_failure": diagnostics,
+                            "profile_context": context_audit,
+                            "thinking": getattr(self.router.resolve(RESUME_PROFILE_ROUTE), "thinking_type", None)})
             return dict(status="FAILED", error=code[:500], generation_id=generation_id)
 
 

@@ -192,7 +192,7 @@ onMounted(() => {
               <span>关注程度：{{ item.importance >= 0.7 ? "重点" : "一般" }}</span>
             </div>
             <p class="memory-content">{{ item.content }}</p>
-            <p v-if="item.summary" class="memory-summary">{{ item.summary }}</p>
+            <p v-if="item.summary && item.summary.trim() !== item.content.trim()" class="memory-summary">{{ item.summary }}</p>
             <p v-if="item.source_type" class="memory-summary">来源：{{ displayLabel(item.source_type, "历史记录") }}</p>
             <details v-if="item.metadata_json" class="memory-summary">
               <summary>技术详情 / 本人确认记录</summary>

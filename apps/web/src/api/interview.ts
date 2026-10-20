@@ -1,4 +1,5 @@
-import client from "./client";
+import client, { expireAuthorization } from "./client";
+import { streamHttpError } from "./stream-http-error";
 import { SSEParser } from "./sse";
 import type {
   InterviewSession,
@@ -8,16 +9,23 @@ import type {
   InterviewMemoryConsolidateResult,
   StartInterviewResult,
   TargetPositionResult,
+  InterviewerSelection,
+  InterviewerOptions,
+  SkillRecommendation,
+  DesignPlan,
 } from "../types/interview";
 
 export async function createSession(
-  companyId: number, jobId: number, questionCount = 20, title?: string
+  companyId: number, jobId: number, questionCount = 20, title?: string, interviewer?: InterviewerSelection
 ): Promise<InterviewSession> {
-  const response = await client.post("/interview/sessions", { title, company_id: companyId, job_id: jobId, question_count: questionCount });
+  const response = await client.post("/interview/sessions", { title, company_id: companyId, job_id: jobId, question_count: questionCount, ...interviewer });
   return response as unknown as InterviewSession;
 }
 
-export interface InterviewTarget { company_id: number; company_name: string; job_id: number; job_title: string }
+export interface InterviewTarget { company_id: number; company_name: string; job_id: number; job_title: string; interviewer_skill_recommendation?: SkillRecommendation }
+export async function getInterviewerOptions(): Promise<InterviewerOptions> {
+  return await client.get("/interview/interviewer-options") as unknown as InterviewerOptions;
+}
 export async function getInterviewTargets(): Promise<InterviewTarget[]> {
   return await client.get("/interview/targets") as unknown as InterviewTarget[];
 }
@@ -177,7 +185,7 @@ export function sendMessageStream(
     dimension_averages?: Record<string, number>;
     overall_average?: number;
   }) => void,
-  answerContext?: { question_id: number; idempotency_key: string }
+  answerContext?: { question_id: number; idempotency_key: string; design_plan?: DesignPlan }
 ): AbortController {
   const controller = new AbortController();
   const token = localStorage.getItem("access_token");
@@ -194,7 +202,9 @@ export function sendMessageStream(
     .then(async (response) => {
       if (!response.ok) {
         const text = await response.text();
-        onError("HTTP_ERROR", text);
+        if (response.status === 401) expireAuthorization();
+        const error = streamHttpError(response.status, text);
+        onError(error.code, error.message);
         return;
       }
       const reader = response.body?.getReader();

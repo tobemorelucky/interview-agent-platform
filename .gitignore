@@ -55,3 +55,9 @@ output/playwright/
 backups/
 uploads/
 private_resumes/
+
+# Real third-party source bodies stay local; only manifests/instructions are public.
+data/manual_sources/**/*
+!data/manual_sources/**/
+!data/manual_sources/**/manifest.json
+!data/manual_sources/**/README.md

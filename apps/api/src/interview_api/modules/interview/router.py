@@ -12,9 +12,10 @@ from interview_api.core.locks import redis_lock
 from interview_api.core.rate_limit import interview_chat_limit, memory_write_limit
 from interview_api.core.response import success
 from interview_api.infrastructure.db.session import get_db, async_session_factory
-from interview_api.modules.interview.schemas import CreateSessionRequest, SendMessageRequest, BindResumeRequest, SetTargetPositionRequest, ConsolidateMemoryRequest
+from interview_api.modules.interview.schemas import CreateSessionRequest, SendMessageRequest, BindResumeRequest, SetTargetPositionRequest, ConsolidateMemoryRequest, SkillRecommendationRequest
 from interview_api.modules.interview.models import InterviewSession, InterviewSessionQuestion
 from interview_api.modules.interview.core_service import MockInterviewService
+from interview_api.modules.interview.skill_registry import public_session_view
 from interview_api.modules.public_career.models import Company, Job, JobDescriptionVersion
 from interview_api.modules.memory.interview_writer import InterviewMemoryWriter
 from interview_api.modules.audit.service import AuditService, audit_request_metadata
@@ -26,18 +27,33 @@ def build_core():
     return MockInterviewService(async_session_factory)
 
 
+@router.get("/interviewer-options")
+async def interviewer_options(current_user=Depends(get_current_user)):
+    from interview_api.modules.interview.skill_engine import SkillRegistry
+    return success(data=SkillRegistry().options())
+
+
 @router.get("/targets")
 async def targets(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     rows = (await db.execute(select(Company, Job).join(Job, Job.company_id == Company.id)
         .where(Company.status == "ACTIVE", Job.status == "ACTIVE",
                Job.id.in_(select(JobDescriptionVersion.job_id).where(JobDescriptionVersion.publication_status == "PUBLISHED")))
         .order_by(Company.canonical_name, Job.canonical_title))).all()
-    return success(data=[dict(company_id=c.id, company_name=c.canonical_name, job_id=j.id, job_title=j.canonical_title) for c, j in rows])
+    from interview_api.modules.interview.skill_recommendation import recommend_jobs
+    recommendations = await recommend_jobs(db, [j.id for _, j in rows])
+    return success(data=[dict(company_id=c.id, company_name=c.canonical_name, job_id=j.id, job_title=j.canonical_title,
+        interviewer_skill_recommendation=recommendations.get(j.id)) for c, j in rows])
+
+
+@router.post("/skill-recommendations")
+async def skill_recommendations(body: SkillRecommendationRequest, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    from interview_api.modules.interview.skill_recommendation import recommend_jobs
+    return success(data=list((await recommend_jobs(db, body.job_ids)).values()))
 
 
 @router.post("/sessions", status_code=201)
 async def create_session(body: CreateSessionRequest, current_user=Depends(get_current_user)):
-    return success(data=await build_core().create(current_user.id, body))
+    return success(data=public_session_view(await build_core().create(current_user.id, body)))
 
 
 @router.get("/sessions")
@@ -50,7 +66,7 @@ async def list_sessions(current_user=Depends(get_current_user), db: AsyncSession
 
 @router.get("/sessions/{session_id}")
 async def get_session(session_id: int, current_user=Depends(get_current_user)):
-    return success(data=await build_core().detail(session_id, current_user.id))
+    return success(data=public_session_view(await build_core().detail(session_id, current_user.id)))
 
 
 @router.delete("/sessions/{session_id}")
@@ -75,7 +91,7 @@ async def delete_session(session_id: int, current_user=Depends(get_current_user)
 
 
 @router.post("/sessions/{session_id}/start")
-async def start_interview(session_id: int, current_user=Depends(get_current_user)):
+async def start_interview(session_id: int, current_user=Depends(get_current_user), _limit=Depends(interview_chat_limit)):
     return success(data=await build_core().start(session_id, current_user.id))
 
 
@@ -106,7 +122,15 @@ async def get_question_detail(session_id: int, question_id: int, current_user=De
         raise HTTPException(404, "题目不存在")
     if q.status == "PENDING":
         raise HTTPException(409, "该题尚未提问")
+    from interview_api.modules.interview.models import InterviewEvaluation, InterviewAnswer
+    evaluation = await db.scalar(select(InterviewEvaluation).join(InterviewAnswer,
+        InterviewAnswer.id == InterviewEvaluation.answer_id).where(
+        InterviewEvaluation.session_id == session_id, InterviewEvaluation.session_question_id == q.id,
+        InterviewAnswer.status == "COMPLETED"))
+    if session.workflow_mode == "m4" and not evaluation:
+        raise HTTPException(409, "完成本题回答评价后才能查看参考回答")
     return success(data=dict(question_id=q.id, question=q.question, standard_answer=q.standard_answer,
+                             reference_answer=(evaluation.artifact_json or {}).get("reference_answer") if evaluation else None,
                              source=q.source, evidence=q.candidate_refs_json or q.evidence_json))
 
 

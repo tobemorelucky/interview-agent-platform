@@ -57,5 +57,6 @@ class SummaryCoachAgent:
                 return CoachResult(artifact, resolved, run_id, step.provider_name, step.model_name,
                                    step.structured_retry, step.token_usage_json or {})
         except Exception as exc:
-            await finish_research_run(self.factory, run_id, status="FAILED", error=getattr(exc, "code", type(exc).__name__))
+            await finish_research_run(self.factory, run_id, status="FAILED", error=getattr(exc, "code", type(exc).__name__),
+                output={"validation": exc.diagnostics} if hasattr(exc, "diagnostics") else None)
             raise

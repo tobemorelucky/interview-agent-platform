@@ -12,6 +12,7 @@ from interview_api.modules.experience.agents.quality_gate import evaluate_qualit
 from interview_api.modules.public_career.research.schemas import (
     PublicInterviewExtraction, PublicRoutingResult, PublicReliabilityResult,
 )
+from interview_api.modules.public_career.research.evidence import EvidenceValidationError
 
 
 class RoutedLegacyLLM:
@@ -27,24 +28,35 @@ class RoutedLegacyLLM:
 
 
 class InterviewPipelineAdapter:
-    def __init__(self, calls):
+    def __init__(self, calls, *, requested_identity=None, require_literal_questions=False):
         self.calls = calls
+        self.requested_identity = requested_identity
+        self.require_literal_questions = require_literal_questions
 
     async def run(self, catalog, raw_text: str, source_url: str, title: str | None):
         public_extraction = None
 
         async def extraction_node(state):
             nonlocal public_extraction
+            payload = {"evidence": catalog.model_input()}
+            if self.requested_identity:
+                payload["requested_identity"] = self.requested_identity
             public_extraction = await self.calls.call(
                 "interview_extract", EXTRACT_ROUTE,
-                {"evidence": catalog.model_input()}, PublicInterviewExtraction,
+                payload, PublicInterviewExtraction,
             )
             catalog.resolve(public_extraction.evidence_ids)
             if public_extraction.company or public_extraction.position:
                 catalog.resolve(public_extraction.identity_evidence_ids)
             questions = []
-            for item in public_extraction.questions:
+            for index, item in enumerate(public_extraction.questions):
                 spans = catalog.resolve(item.evidence_ids)
+                if self.require_literal_questions and not catalog.supports_literal(item.evidence_ids, item.question):
+                    elsewhere = catalog.supports_literal(list(catalog.spans), item.question)
+                    raise EvidenceValidationError(
+                        f"Web question must be extractive: questions[{index}].question={item.question[:160]!r}; "
+                        f"evidence_ids={item.evidence_ids}; literal_in_cited=False; literal_elsewhere={elsewhere}"
+                    )
                 value = item.model_dump(exclude={"evidence_ids", "evidence"})
                 value["evidence"] = spans[0].excerpt[:500]
                 questions.append(value)

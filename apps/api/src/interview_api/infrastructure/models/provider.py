@@ -37,7 +37,8 @@ class CompatibleModelProvider(ModelProvider):
 
     def __init__(self, *, base_url: str, api_key: str, model: str,
                  timeout_seconds: float, max_output_tokens: int,
-                 client: httpx.AsyncClient | None = None):
+                 client: httpx.AsyncClient | None = None, thinking_type: str | None = None,
+                 governed: bool = False):
         if not base_url or not api_key or not model:
             raise ModelProviderError("model_config_missing", "Public research model configuration is incomplete")
         self.model_name = model
@@ -46,16 +47,29 @@ class CompatibleModelProvider(ModelProvider):
         self.timeout = timeout_seconds
         self.max_output_tokens = max_output_tokens
         self.client = client
+        self.governed = governed
+        if thinking_type not in (None, "enabled", "disabled"):
+            raise ValueError("Unsupported thinking policy")
+        self.thinking_type = thinking_type
 
     async def generate(self, messages: list[dict], *, schema: dict) -> ModelResponse:
+        if self.governed:
+            from .governance import governed_call
+            return await governed_call(self, messages, lambda: self._generate(messages, schema=schema))
+        return await self._generate(messages, schema=schema)
+
+    async def _generate(self, messages: list[dict], *, schema: dict) -> ModelResponse:
         client = self.client or httpx.AsyncClient(timeout=self.timeout)
         try:
+            body = {"model": self.model_name, "messages": messages,
+                    "temperature": 0, "max_tokens": self.max_output_tokens,
+                    "response_format": {"type": "json_object"}}
+            if self.thinking_type is not None:
+                body["thinking"] = {"type": self.thinking_type}
             response = await client.post(
                 f"{self.base_url}/chat/completions",
                 headers={"Authorization": f"Bearer {self.api_key}"},
-                json={"model": self.model_name, "messages": messages,
-                      "temperature": 0, "max_tokens": self.max_output_tokens,
-                      "response_format": {"type": "json_object"}},
+                json=body,
                 timeout=self.timeout,
             )
             response.raise_for_status()

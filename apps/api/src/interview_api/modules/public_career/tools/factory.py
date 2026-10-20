@@ -33,6 +33,10 @@ class SearchToolInput(BaseModel):
     query: str = Field(min_length=1, max_length=1000)
     time_window_hours: int = Field(gt=0)
     max_results: int = Field(ge=1, le=100)
+    need_content: bool = False
+    sites: list[str] = Field(default_factory=list, max_length=3)
+    published_after: str | None = None
+    published_before: str | None = None
 
 
 class FetchToolInput(BaseModel):
@@ -53,7 +57,10 @@ def build_tool_gateway(
         arguments: BaseModel, _context: ToolContext
     ) -> ToolResult:
         parsed = SearchToolInput.model_validate(arguments)
-        results = await search_provider.search(
+        options = getattr(search_provider, "search_with_options", None)
+        results = await options(parsed.query, max_results=parsed.max_results,
+            need_content=parsed.need_content, sites=parsed.sites,
+            published_after=parsed.published_after, published_before=parsed.published_before) if options else await search_provider.search(
             parsed.query,
             time_window_hours=parsed.time_window_hours,
             max_results=parsed.max_results,
@@ -66,6 +73,7 @@ def build_tool_gateway(
                 "engine": item.engine,
                 "published_at": item.published_at,
                 "metadata": item.metadata,
+                "body_available": bool(item.content),
             }
             for item in results
         ]
@@ -84,6 +92,12 @@ def build_tool_gateway(
                 )
                 for item in results
             ],
+            # Only the explicit actual-body field can create a Snapshot.
+            # Search snippets and provider summaries are not evidence.
+            fetched_contents=[FetchedContentPayload(canonical_url=item.url, title=item.title,
+                fetched_at=datetime.now(timezone.utc), content=item.content,
+                metadata={**item.metadata, "body_origin": "SEARCH_CONTENT"})
+                for item in results if item.content and item.content.strip()],
         )
 
     async def fetch_handler(
@@ -134,7 +148,7 @@ def build_tool_gateway(
             version="1.0",
             description="Search public career data sources",
             input_model=SearchToolInput,
-            timeout_seconds=settings.public_search_tool_timeout_seconds,
+            timeout_seconds=max(settings.public_search_tool_timeout_seconds, 90) if options_supported(search_provider) else settings.public_search_tool_timeout_seconds,
         ),
         provider_name=search_provider.provider_name,
         provider_mode=search_provider.provider_mode,
@@ -146,7 +160,7 @@ def build_tool_gateway(
             version="1.0",
             description="Safely fetch public career source content",
             input_model=FetchToolInput,
-            timeout_seconds=settings.public_fetch_tool_timeout_seconds,
+            timeout_seconds=max(settings.public_fetch_tool_timeout_seconds, 90) if fetch_provider.provider_name == "deepseek_web" else settings.public_fetch_tool_timeout_seconds,
         ),
         provider_name=fetch_provider.provider_name,
         provider_mode=fetch_provider.provider_mode,
@@ -155,10 +169,23 @@ def build_tool_gateway(
     return gateway
 
 
+def options_supported(provider):
+    return callable(getattr(provider, "search_with_options", None))
+
+
 def build_live_tool_gateway(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> ToolGateway:
-    """Build the default live gateway without importing adapters at module load."""
+    """Default LIVE acquisition uses official Web API with durable HTTP caps."""
+    class TaskBoundWebGateway(ToolGateway):
+        async def invoke(self, tool_name, arguments, context):
+            from interview_api.modules.public_career.web_collection import build_web_gateway
+            return await build_web_gateway(self.session_factory, context.refresh_task_id).invoke(tool_name, arguments, context)
+    return TaskBoundWebGateway(session_factory)
+
+
+def build_searxng_tool_gateway(session_factory) -> ToolGateway:
+    """Explicit legacy provider; never an automatic fallback for paid Web errors."""
     from interview_api.modules.experience.fetchers import HttpxContentFetcher
     from interview_api.modules.experience.search import SearxngSearchProvider
 

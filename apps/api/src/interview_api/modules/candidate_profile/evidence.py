@@ -76,16 +76,19 @@ class ProfileEvidenceError(ValueError):
         self.diagnostics = diagnostics
 
 
-def normalize_skill_evidence_states(delta, evidence: dict[str, dict]) -> list[dict]:
+def normalize_skill_evidence_states(delta, evidence: dict[str, dict], *, evidence_aliases=None) -> list[dict]:
     diagnostics = []
-    for skill in delta.skills:
+    for index, skill in enumerate(delta.skills):
         record = dict(skill_label=skill.label, proposed_state=skill.evidence_state,
             maximum_supported_state=None, referenced_evidence_ids=list(skill.evidence_ids), validation_rule=SKILL_RULE)
         if not skill.evidence_ids or any(key not in evidence for key in skill.evidence_ids):
             raise ProfileEvidenceError("UNKNOWN_CANDIDATE_EVIDENCE", record)
         # A legitimate reference is not enough: the skill itself must be in the cited text.
         if not any(normalize_text(skill.label) in normalize_text(evidence[key]["excerpt"]) for key in skill.evidence_ids):
-            raise ProfileEvidenceError("UNSUPPORTED_CANDIDATE_FACT", record)
+            diagnostic = literal_failure_diagnostics(skill.label, category="skills", path=f"skills.{index}",
+                field="label", keys=skill.evidence_ids, evidence=evidence, aliases=evidence_aliases)
+            diagnostic.update(proposed_state=skill.evidence_state, maximum_supported_state=None)
+            raise ProfileEvidenceError("UNSUPPORTED_CANDIDATE_FACT", diagnostic)
         maximum = maximum_supported_skill_state(skill, evidence)
         final = SKILL_STATES[min(SKILL_STATES.index(skill.evidence_state), SKILL_STATES.index(maximum))]
         record.update(maximum_supported_state=maximum, final_state=final,
@@ -95,18 +98,42 @@ def normalize_skill_evidence_states(delta, evidence: dict[str, dict]) -> list[di
     return diagnostics
 
 
-def resolve_and_validate(delta, evidence: dict[str, dict]) -> None:
-    facts = [("candidate_summary", delta.candidate_summary)] if delta.candidate_summary else []
-    for category in ("skills", "projects", "education", "work_experience", "internship_experience", "strengths"):
-        facts.extend((category, item) for item in getattr(delta, category))
-    for category, fact in facts:
+def literal_failure_diagnostics(value, *, category, path, field, keys, evidence, aliases=None):
+    """Describe failed support without storing candidate text or repairing refs."""
+    aliases = aliases or {}
+    cited = set(keys)
+    normalized = normalize_text(value)
+    matches = [key for key, item in evidence.items()
+               if key not in cited and normalized in normalize_text(item["excerpt"])]
+    return dict(field_path=path + "." + field, category=category, value_field=field,
+        value_length=len(value), value_fingerprint=sha256(normalized.encode()).hexdigest(),
+        cited_aliases=[aliases.get(key, key) for key in keys],
+        cited_literal_match=any(normalized in normalize_text(evidence[key]["excerpt"])
+                                for key in cited if key in evidence),
+        uncited_literal_match=bool(matches),
+        possible_wrong_evidence_reference=bool(matches),
+        validation_rule="NORMALIZED_CONTIGUOUS_QUOTE_IN_CITED_ATOMIC_EVIDENCE")
+
+
+def resolve_and_validate(delta, evidence: dict[str, dict], *, stable_only=False, evidence_aliases=None) -> None:
+    # Legacy callers keep the old extractive checks; new writes validate only
+    # stable fields. This does not relax ANY stable-fact support rule.
+    facts = [("candidate_summary", "candidate_summary", delta.candidate_summary)] if delta.candidate_summary and not stable_only else []
+    categories = ("skills", "projects", "education", "work_experience", "internship_experience")
+    if not stable_only:
+        categories += ("strengths",)
+    for category in categories:
+        facts.extend((category, f"{category}.{index}", item) for index, item in enumerate(getattr(delta, category)))
+    for category, path, fact in facts:
         if any(key not in evidence for key in fact.evidence_ids):
             raise ValueError("UNKNOWN_CANDIDATE_EVIDENCE")
         sources = [evidence[key] for key in set(fact.evidence_ids)]
         # Conservative extractive facts: valid IDs alone cannot support invented ability.
-        for value in (fact.statement, getattr(fact, "label", None)):
+        for field, value in (("statement", fact.statement), ("label", getattr(fact, "label", None))):
             if value and not any(normalize_text(value) in normalize_text(item["excerpt"]) for item in sources):
-                raise ValueError("UNSUPPORTED_CANDIDATE_FACT" if category != "strengths" else "UNSUPPORTED_STRENGTH")
+                raise ProfileEvidenceError("UNSUPPORTED_CANDIDATE_FACT" if category != "strengths" else "UNSUPPORTED_STRENGTH",
+                    literal_failure_diagnostics(value, category=category, path=path, field=field,
+                        keys=fact.evidence_ids, evidence=evidence, aliases=evidence_aliases))
         if category == "skills" and fact.evidence_state != "MENTIONED":
             concrete = [item for item in sources if item["section"] in ("projects", "work", "internship")]
             required = 2 if fact.evidence_state == "STRONG_EVIDENCE" else 1

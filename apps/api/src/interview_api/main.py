@@ -23,6 +23,7 @@ from interview_api.modules.candidate_profile.router import router as candidate_p
 from interview_api.modules.interview_report.router import router as interview_report_router
 from interview_api.modules.memory.proposal_router import router as memory_proposal_router
 from interview_api.modules.job_matching.router import router as job_matching_router
+from interview_api.modules.public_career.router import router as public_career_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -35,6 +36,8 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     yield
+    from interview_api.core.rate_limit import close_rate_limit_client
+    await close_rate_limit_client()
     await engine.dispose()
 
 
@@ -138,6 +141,9 @@ app.include_router(memory_router)
 app.include_router(interview_report_router)
 app.include_router(memory_proposal_router)
 app.include_router(job_matching_router)
+app.include_router(public_career_router)
+from interview_api.modules.public_career.web_router import router as public_web_router
+app.include_router(public_web_router)
 app.include_router(audit_router)
 
 

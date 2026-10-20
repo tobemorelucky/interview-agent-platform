@@ -10,7 +10,9 @@ from interview_api.modules.job_matching.models import JobMatchRun, JobMatchCandi
 from interview_api.modules.job_matching.retrieval import profile_snapshot, retrieve
 from interview_api.modules.job_matching.preferences import approved_preferences
 from interview_api.modules.job_matching.policy import POLICY_VERSION, final_rank_key
-from interview_api.modules.job_matching.prompts import MATCH_PROMPT
+from interview_api.modules.job_matching.prompts import MATCH_PROMPT, MatchPromptRegistry
+from interview_api.modules.job_matching.context import reuse_identity
+from interview_api.infrastructure.models.router import JOB_MATCHING_ROUTE
 from interview_api.modules.job_matching.agent import JobMatchingAgent
 
 
@@ -72,6 +74,36 @@ class JobMatchingService:
                     raise AppError("MATCH_RUNNING", "本次匹配正在生成，请稍后读取", 409)
                 # Expired worker lease: fence its eventual publication using attempt_version.
                 previous.status, previous.error, previous.completed_at = "FAILED", "worker_lease_expired", datetime.now(timezone.utc)
+            router = self.router or build_job_matching_router()
+            primary = router.primary(JOB_MATCHING_ROUTE)
+            sources = (await db.scalars(select(JobMatchRun).where(JobMatchRun.user_id == user_id,
+                JobMatchRun.id != run.id, JobMatchRun.status == 'COMPLETED',
+                JobMatchRun.candidate_profile_version_id == run.candidate_profile_version_id,
+                JobMatchRun.prompt_version == run.prompt_version, JobMatchRun.policy_version == run.policy_version,
+                JobMatchRun.provider == primary.provider_name, JobMatchRun.model == primary.model_name)
+                .order_by(JobMatchRun.id.desc()).limit(20))).all()
+            source = next((s for s in sources if reuse_identity(s.input_snapshot_json) == reuse_identity(run.input_snapshot_json)), None)
+            if source:
+                # One short atomic publication. No new/fake model call or audit is emitted.
+                old_rows = (await db.scalars(select(JobMatchCandidate).where(JobMatchCandidate.run_id == source.id))).all()
+                new_rows = (await db.scalars(select(JobMatchCandidate).where(JobMatchCandidate.run_id == run.id))).all()
+                old_recs = {r.candidate_id: r for r in (await db.scalars(select(JobMatchRecommendation).where(
+                    JobMatchRecommendation.candidate_id.in_([c.id for c in old_rows])))).all()}
+                by_job = {c.job_id: c for c in old_rows}
+                for c in new_rows:
+                    old = by_job[c.job_id]
+                    c.agent_rank, c.final_rank = old.agent_rank, old.final_rank
+                    if old.id in old_recs:
+                        rec = old_recs[old.id]
+                        db.add(JobMatchRecommendation(candidate_id=c.id, fit_band=rec.fit_band, analysis_json=rec.analysis_json))
+                await db.flush()  # child content must be complete before the run seal trigger
+                run.status, run.error, run.completed_at = 'COMPLETED', None, datetime.now(timezone.utc)
+                run.provider, run.model, run.producer = source.provider, source.model, f'REUSED_RESULT_{source.id}'
+                # coverage_json is frozen input: reuse provenance uses the mutable producer,
+                # and is exposed separately by the read DTO, never by rewriting that snapshot.
+                await db.flush()
+                await db.commit()
+                return await self.serialize(db, run)
             run.attempt_version += 1
             token = run.attempt_version
             attempt = JobMatchAttempt(run_id=run.id, attempt_number=token, status="RUNNING")
@@ -84,7 +116,8 @@ class JobMatchingService:
         try:
             if not payload["candidates"]:
                 raise AppError("MATCH_COVERAGE_INSUFFICIENT", "当前岗位库覆盖不足；未调用模型或 Research", 409)
-            if payload["prompt_version"] != MATCH_PROMPT.version or payload["prompt_hash"] != MATCH_PROMPT.content_hash:
+            historical = MatchPromptRegistry().get(MATCH_PROMPT.name, payload['prompt_version'])
+            if payload["prompt_hash"] != historical.content_hash:
                 raise AppError("MATCH_PROMPT_VERSION_UNAVAILABLE", "历史 Prompt 版本不可用，不以新 Prompt 替换固定输入", 409)
             router = self.router or build_job_matching_router()
             result = await JobMatchingAgent(self.factory, router).call(attempt_id, payload)
@@ -121,17 +154,21 @@ class JobMatchingService:
                 raise AppError("MATCH_ATTEMPT_CONFLICT", "旧尝试未覆盖当前结果", 409) from exc
 
     async def serialize(self, db, run):
+        coverage = dict(run.coverage_json)
+        if run.producer.startswith('REUSED_RESULT_'):
+            coverage.update(generation_mode='REUSED_RESULT', reused_from_run_id=int(run.producer.removeprefix('REUSED_RESULT_')))
         rows = list((await db.scalars(select(JobMatchCandidate).where(JobMatchCandidate.run_id == run.id)
             .order_by(JobMatchCandidate.final_rank.asc().nulls_last(), JobMatchCandidate.pre_rank.asc().nulls_last(), JobMatchCandidate.id))).all())
         recommendations = {r.candidate_id: r for r in (await db.scalars(select(JobMatchRecommendation).where(JobMatchRecommendation.candidate_id.in_([r.id for r in rows])))).all()}
         def view(c):
+            from interview_api.modules.interview.skill_recommendation import attach_to_match
             r = recommendations.get(c.id)
-            return {**c.input_json, "id": c.id, "pre_rank": c.pre_rank, "agent_rank": c.agent_rank, "final_rank": c.final_rank,
-                "recommendation": dict(id=r.id, fit_band=r.fit_band, analysis=r.analysis_json) if r else None}
+            return attach_to_match({**c.input_json, "id": c.id, "pre_rank": c.pre_rank, "agent_rank": c.agent_rank, "final_rank": c.final_rank,
+                "recommendation": dict(id=r.id, fit_band=r.fit_band, analysis=r.analysis_json) if r else None})
         attempts = list((await db.scalars(select(JobMatchAttempt).where(JobMatchAttempt.run_id == run.id).order_by(JobMatchAttempt.id))).all())
         return dict(id=run.id, status=run.status, error=run.error, producer=run.producer, provider=run.provider, model=run.model,
             profile_version_id=run.candidate_profile_version_id, policy_version=run.policy_version, prompt_version=run.prompt_version,
-            input_fingerprint=run.input_fingerprint, snapshot=run.input_snapshot_json, coverage=run.coverage_json,
+            input_fingerprint=run.input_fingerprint, snapshot=run.input_snapshot_json, coverage=coverage,
             created_at=run.created_at.isoformat(), completed_at=run.completed_at.isoformat() if run.completed_at else None,
             candidates=[view(c) for c in rows if c.eligibility_status != "NOT_SATISFIED"],
             excluded_candidates=[view(c) for c in rows if c.eligibility_status == "NOT_SATISFIED"],

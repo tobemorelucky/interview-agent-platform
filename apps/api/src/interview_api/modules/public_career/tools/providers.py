@@ -17,6 +17,8 @@ class SearchResult:
     engine: str | None = None
     published_at: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
+    # Actual provider-returned webpage body, never synthesized from snippet/summary.
+    content: str | None = None
 
 
 class SearchProvider(ABC):

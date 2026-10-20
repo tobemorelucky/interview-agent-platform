@@ -36,22 +36,21 @@ class DemoProfileProvider(ReplayModelProvider):
 
     async def generate(self, messages, *, schema):
         payload = json.loads(messages[-1]["content"])["input"]
-        if payload["resume_report"].get("mode") != "replay_fixture_demo":
-            raise ValueError("REPLAY_FIXTURE_ONLY: unsupported report")
         rows = payload["resume_evidence"]
+        if not any(row["excerpt"] == "Demo candidate — local fixture, not real personal data" for row in rows):
+            raise ValueError("REPLAY_FIXTURE_ONLY: unsupported material")
         def fact(statement, label=None, **extra):
             row = next(row for row in rows if statement in row["excerpt"])
-            result = dict(statement=statement, evidence_ids=[row["evidence_id"]], **extra)
+            result = dict(evidence_ids=[row["evidence_id"]], **extra)
             if label: result["label"] = label
             return result
         body = dict(
-            candidate_summary=fact("Demo candidate — local fixture, not real personal data"),
-            skills=[fact("订单系统：使用 Python 和 Redis 实现缓存。", "Redis", evidence_state="DEMONSTRATED")],
+            skills=[fact("订单系统：使用 Python 和 Redis 实现缓存。", "Redis", proposed_evidence_state="DEMONSTRATED")],
             projects=[fact("订单系统：使用 Python 和 Redis 实现缓存。", "订单系统")],
             education=[fact("示例大学 计算机科学 本科", "示例大学")],
             work_experience=[fact("示例公司 Python 开发", "示例公司")],
             internship_experience=[fact("示例实验室 Redis 缓存实习", "示例实验室")],
-            strengths=[fact("使用 Python 和 Redis 实现缓存")], unknowns=["项目规模"],
+            unknowns=["项目规模"],
         )
         self.responses.append(body)
         return await super().generate(messages, schema=schema)

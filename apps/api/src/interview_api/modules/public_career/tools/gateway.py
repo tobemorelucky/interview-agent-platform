@@ -115,6 +115,11 @@ class ToolGateway:
                     }
                 }
             )
+        except asyncio.CancelledError:
+            await asyncio.shield(self._complete_failure(invocation_id,
+                ToolExecutionError("tool_cancelled", "Tool execution cancelled; outcome may be unknown"),
+                round((time.perf_counter() - started) * 1000)))
+            raise
         except asyncio.TimeoutError as exc:
             error = ToolExecutionError("tool_timeout", "Tool execution timed out")
             await self._complete_failure(
@@ -250,8 +255,6 @@ class ToolGateway:
                 set_={
                     "canonical_url": canonical_url,
                     "domain": parsed.hostname or "",
-                    "source_type": payload.source_type,
-                    "metadata_json": metadata,
                     "updated_at": datetime.now(timezone.utc),
                 },
             )
@@ -259,6 +262,8 @@ class ToolGateway:
         )
         if source_id is None:
             raise RuntimeError("Source upsert failed")
+        source = await session.scalar(select(Source).where(Source.id == source_id).with_for_update())
+        source.metadata_json = {**(source.metadata_json or {}), **metadata}
         return source_id
 
     async def _persist_fetched_content(
@@ -285,7 +290,6 @@ class ToolGateway:
                 set_={
                     "canonical_url": canonical_url,
                     "domain": parsed.hostname or "",
-                    "source_type": payload.source_type,
                     "updated_at": datetime.now(timezone.utc),
                 },
             )

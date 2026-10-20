@@ -1,7 +1,11 @@
 """M4 orchestration: read/close -> model -> short Controller transaction -> events."""
 import json
 import logging
+import asyncio
+from datetime import datetime, timezone
+import anyio
 from functools import cached_property
+from uuid import uuid4
 from interview_api.core.config import settings
 from sqlalchemy import select
 
@@ -9,10 +13,18 @@ from interview_api.core.exceptions import AppError
 from interview_api.infrastructure.models.router import build_interview_router
 from interview_api.modules.interview.agents import InterviewMainAgent, AnswerEvaluationAgent
 from interview_api.modules.interview.controller import SessionController, question_data
-from interview_api.modules.interview.context import question_policy
+from interview_api.modules.interview.context import question_policy, model_context
+from interview_api.modules.interview.topics import coverage
 from interview_api.modules.interview.models import InterviewSession, InterviewMessage, InterviewSessionQuestion, InterviewAnswer, InterviewContextSnapshot, InterviewEvaluation
 
 logger = logging.getLogger(__name__)
+
+
+def session_policy(context, questions, action="NEXT"):
+    if context.get("system_design"):
+        from interview_api.modules.interview.system_design import design_policy
+        return design_policy(context, questions, action)
+    return question_policy(context, questions, action)
 
 
 def sse(event, data):
@@ -48,26 +60,47 @@ class MockInterviewService:
             return await SessionController(db).state(session_id, user_id)
 
     async def call_agent(self, agent, session_id, user_id, expected, payload, *, answer_id=None):
-        # Replay consumes zero model tokens. Live reserves conservative UTF-8 input
-        # units + output allowance for initial generation and the one repair.
+        if agent.route == self.evaluator.route and answer_id is not None:
+            reused = await self.evaluator.reusable(session_id, answer_id, payload)
+            if reused is not None:
+                return reused
+        # An admission estimate is temporary, not permanent token usage. Include
+        # UTF-8 input units and both bounded output attempts, then settle to audit.
         provider = self.router.resolve(agent.route)
-        reservation = 0 if provider.provider_name == "replay" else 2 * (
+        reservation = 0 if provider.provider_name == "replay" else (
             len(json.dumps(payload, ensure_ascii=False).encode("utf-8")) +
             len(json.dumps(agent.schema.model_json_schema()).encode("utf-8")) +
-            settings.interview_model_max_output_tokens + 2048)
+            2 * (settings.interview_model_max_output_tokens + 2048))
+        call_key = uuid4().hex
         async with self.factory() as db:
-            timeout = await SessionController(db).reserve_model_call(session_id, user_id, expected, reservation)
+            timeout = await SessionController(db).reserve_model_call(session_id, user_id, expected, reservation, call_key)
             await db.commit()
         if timeout is None:
             return None
-        return await agent.call(session_id, payload, answer_id=answer_id, timeout_seconds=timeout)
+        usage_reported = provider.provider_name == "replay"
+        try:
+            result = await agent.call(session_id, payload, answer_id=answer_id, timeout_seconds=timeout)
+            usage_reported = usage_reported or isinstance(result.usage.get("total_tokens"), int)
+            return result
+        except Exception as exc:
+            usage_reported = usage_reported or isinstance((getattr(exc, "usage", {}) or {}).get("total_tokens"), int)
+            raise
+        finally:
+            with anyio.CancelScope(shield=True):
+                async with self.factory() as db:
+                    await SessionController(db).settle_model_call(session_id, user_id, call_key, usage_reported)
+                    await db.commit()
 
     @staticmethod
     def payload(context, questions, active, action, policy, *, answer=None, evaluation=None):
         desired = None
         if action == "ADJUST_DIFFICULTY" and active and evaluation:
             desired = SessionController.adjusted_difficulty(active, evaluation)
-        return dict(snapshot=context, requested_action=action, preferred_source=policy, desired_difficulty=desired,
+        if context.get("interviewer_config") and desired is None:
+            desired = active.difficulty if active else "MEDIUM"
+        selected_policy = policy or (dict(source_type="PUBLIC_QUESTION", source_id=active.source_question_id) if active else {})
+        return dict(snapshot=model_context(context, selected_policy), requested_action=action, preferred_source=policy, desired_difficulty=desired,
+            topic_coverage=coverage(questions, context["budgets"]["question_count"]),
             history=[dict(question_id=q.id, question=q.question, status=q.status, source=q.source, difficulty=q.difficulty) for q in questions],
             current_question=question_data(active, context["budgets"]["question_count"]) if active else None,
             rubric=(active.standard_answer or "").splitlines() if active else [],
@@ -79,7 +112,7 @@ class MockInterviewService:
             return question_data(active, session.question_count)
         if session.status != "READY":
             raise AppError("INTERVIEW_NOT_READY", "面试无法开始", 409)
-        policy = question_policy(context, questions)
+        policy = session_policy(context, questions)
         result = await self.call_agent(self.main, session_id, user_id, session.state_version,
                                       self.payload(context, questions, None, "NEXT", policy))
         if result is None:
@@ -89,38 +122,65 @@ class MockInterviewService:
             await db.commit()
         return data
 
-    async def answer(self, session_id, user_id, question_id, key, content):
+    async def answer(self, session_id, user_id, question_id, key, content, on_stage=None, design_plan=None):
+        _, initial_context, _, _, _ = await self.read_state(session_id, user_id)
+        if bool(initial_context.get("system_design")) != (design_plan is not None):
+            raise AppError("DESIGN_PLAN_REQUIRED", "系统设计面试须同时提交结构化方案；普通面试不接收方案", 422)
         # Retrying the same key resumes one persisted Answer, not a new user message.
         async with self.factory() as db:
             answer, expected, reused = await SessionController(db).prepare_answer(session_id, user_id, question_id, key, content)
+            if design_plan is not None:
+                revision = await SessionController(db).bind_design_plan(session_id, user_id, answer, expected, design_plan)
             await db.commit()
             answer_id, old_events = answer.id, answer.result_events
         if reused:
             return old_events
         try:
             session, context, questions, active, _ = await self.read_state(session_id, user_id)
+            tool_payload = {}
+            if context.get("system_design"):
+                if on_stage: on_stage("validating_design")
+                evidence = await self.design_tool_evidence(session_id, user_id, answer_id, expected, revision, context, questions, active, content)
+                session, context, questions, active, _ = await self.read_state(session_id, user_id)
+                tool_payload = dict(tool_evidence=evidence, design_revision=revision,
+                    previous_tool_evidence=[i for i in (session.planner_trace_json or {}).get("design_tools", []) if i["status"] == "SUCCEEDED" and i["id"] != evidence["id"]])
+            async with self.factory() as db:
+                await SessionController(db).answer_stage(session_id, user_id, answer_id, expected, "generating_evaluation")
+                await db.commit()
+            if on_stage:
+                on_stage("generating_evaluation")
             eval_result = await self.call_agent(self.evaluator, session_id, user_id, expected,
-                self.payload(context, questions, active, "NEXT", {}, answer=content), answer_id=answer_id)
+                {**self.payload(context, questions, active, "NEXT", {}, answer=content), **tool_payload}, answer_id=answer_id)
             if eval_result is None:
-                async with self.factory() as db:
-                    events = await SessionController(db).budget_complete(session_id, user_id, answer_id, expected)
-                    await db.commit()
-                return events
+                raise AppError("INTERVIEW_BUDGET_EXHAUSTED", "本场时间或模型预算已不足，未执行评价、未结束或推进面试。回答已保存；重试不会重置预算，请新建面试继续练习。", 409)
             # Audit token usage is included before choosing the next deterministic action.
             session, context, questions, active, tokens = await self.read_state(session_id, user_id)
             action = SessionController.choose_action(context, questions, active, eval_result.artifact.next_action_recommendation,
-                rounds=session.turn_count, tokens=tokens, started_at=session.started_at)
-            policy = question_policy(context, questions, action)
+                rounds=session.turn_count, tokens=tokens, started_at=session.started_at, evaluation=eval_result.artifact.model_dump())
+            policy = session_policy(context, questions, action)
             main_result = None
             if action != "COMPLETE":
+                async with self.factory() as db:
+                    await SessionController(db).answer_stage(session_id, user_id, answer_id, expected, "generating_next_question")
+                    await db.commit()
+                if on_stage:
+                    on_stage("generating_next_question")
                 main_result = await self.call_agent(self.main, session_id, user_id, expected,
-                    self.payload(context, questions, active, action, policy, answer=content,
-                                 evaluation=eval_result.artifact.model_dump()), answer_id=answer_id)
+                    {**self.payload(context, questions, active, action, policy, answer=content,
+                                 evaluation=eval_result.artifact.model_dump()), **tool_payload}, answer_id=answer_id)
+                if main_result is None:
+                    raise AppError("INTERVIEW_BUDGET_EXHAUSTED", "下一题调用预算已不足，未结束面试。回答已保存；重试不会重置预算，请新建面试继续练习。", 409)
             async with self.factory() as db:
                 events = await SessionController(db).commit_answer(session_id, user_id, answer_id, expected,
                     eval_result, main_result, action, policy)
                 await db.commit()
             return events
+        except asyncio.CancelledError:
+            with anyio.CancelScope(shield=True):
+                async with self.factory() as db:
+                    await SessionController(db).failed_answer(session_id, user_id, answer_id, expected, "interview_request_cancelled")
+                    await db.commit()
+            raise
         except Exception as exc:
             code = getattr(exc, "code", type(exc).__name__)
             async with self.factory() as db:
@@ -130,8 +190,19 @@ class MockInterviewService:
 
     async def stream(self, session_id, user_id, request):
         yield sse("status", {"stage": "evaluating"})
+        stages = asyncio.Queue()
+        task = asyncio.create_task(self.answer(session_id, user_id, request.question_id,
+            request.idempotency_key, request.content, on_stage=stages.put_nowait,
+            design_plan=request.design_plan.model_dump() if request.design_plan else None))
+        stage = "evaluating"
         try:
-            events = await self.answer(session_id, user_id, request.question_id, request.idempotency_key, request.content)
+            while not task.done():
+                await asyncio.wait({task}, timeout=3)
+                while not stages.empty():
+                    stage = stages.get_nowait()
+                if not task.done():
+                    yield sse("status", {"stage": stage})
+            events = await task
             # All result events are emitted only after the Controller transaction commits.
             for event, data in events:
                 yield sse(event, data)
@@ -141,6 +212,14 @@ class MockInterviewService:
                 "message": exc.message if isinstance(exc, AppError) else "模型处理失败，未评分或推进面试；请使用同一回答重试",
                 "retryable": not isinstance(exc, AppError) or exc.status_code != 404,
                 "idempotency_key": request.idempotency_key})
+        finally:
+            if not task.done():
+                task.cancel()
+            with anyio.CancelScope(shield=True):
+                try:
+                    await task
+                except (asyncio.CancelledError, Exception):
+                    pass
 
     async def skip(self, session_id, user_id, question_id):
         session, context, questions, active, tokens = await self.read_state(session_id, user_id)
@@ -148,7 +227,7 @@ class MockInterviewService:
             raise AppError("INTERVIEW_CONFLICT", "只能跳过当前未回答题目", 409)
         action = SessionController.choose_action(context, questions, active, "NEXT", rounds=session.turn_count + 1,
             tokens=tokens, started_at=session.started_at)
-        policy = question_policy(context, questions)
+        policy = session_policy(context, questions)
         result = None
         if action != "COMPLETE":
             result = await self.call_agent(self.main, session_id, user_id, session.state_version,
@@ -170,6 +249,7 @@ class MockInterviewService:
             result["messages"] = [{c.name: getattr(m, c.name) for c in InterviewMessage.__table__.columns} for m in messages]
             result["questions"] = [question_data(q, session.question_count) for q in questions]
             result["total_questions"] = len(questions)
+            result["topic_coverage"] = coverage(questions, session.question_count)
             result["current_question"] = next((q for q in result["questions"] if q["question_id"] == session.active_question_id), None)
             pending = await db.scalar(select(InterviewAnswer).where(InterviewAnswer.session_id == session_id,
                 InterviewAnswer.session_question_id == session.active_question_id, InterviewAnswer.status != "COMPLETED"))
@@ -178,8 +258,55 @@ class MockInterviewService:
                 message = await db.get(InterviewMessage, pending.message_id)
                 result["pending_answer"] = dict(question_id=pending.session_question_id, idempotency_key=pending.idempotency_key,
                     content=message.content, status=pending.status, error=pending.error)
+                processing = (session.interview_plan_json or {}).get("answer_processing") or {}
+                expires = processing.get("expires_at")
+                deadline = datetime.fromisoformat(expires) if expires else pending.created_at
+                if not expires:
+                    from datetime import timedelta
+                    deadline += timedelta(seconds=2 * settings.interview_model_timeout_seconds + 30)
+                result["pending_answer"].update(processing_stage=processing.get("stage", "evaluating"),
+                    retryable=pending.status != "RUNNING" or deadline <= datetime.now(timezone.utc),
+                    processing_deadline=deadline.isoformat())
+                if (message.metadata_json or {}).get("design_revision"):
+                    result["pending_answer"]["design_plan"] = message.metadata_json["design_revision"]["plan"]
             if session.context_snapshot_id:
                 snapshot = await db.get(InterviewContextSnapshot, session.context_snapshot_id)
                 result["context_snapshot"] = snapshot.context_json
                 result["snapshot_fingerprint"] = snapshot.content_fingerprint
             return result
+
+    async def design_tool_evidence(self, sid, uid, aid, expected, revision, context, questions, active, content):
+        from interview_api.modules.interview import system_design as design
+        session, _, _, _, _ = await self.read_state(sid, uid)
+        for item in (session.planner_trace_json or {}).get("design_tools", []):
+            if item["answer_id"] == aid and item["plan_fingerprint"] == revision["fingerprint"] and item["status"] == "SUCCEEDED":
+                return item
+        if len((session.planner_trace_json or {}).get("design_tools", [])) >= context["system_design"]["max_tool_calls"]:
+            raise AppError("DESIGN_TOOL_BUDGET", "工具调用额度已耗尽，回答保留且不推进", 409)
+        async with self.factory() as db:
+            await SessionController(db).answer_stage(sid, uid, aid, expected, "validating_design")
+            await db.commit()
+        payload = {**self.payload(context, questions, active, "NEXT", {}, answer=content),
+            "design_phase": "select_tool", "design_revision": revision,
+            "previous_tool_evidence": (session.planner_trace_json or {}).get("design_tools", [])}
+        decision = await self.call_agent(self.main.tool_selector(), sid, uid, expected, payload, answer_id=aid)
+        if decision is None: raise AppError("INTERVIEW_BUDGET_EXHAUSTED", "未取得工具决策，未推进", 409)
+        async with self.factory() as db:
+            item = await SessionController(db).reserve_design_tool(sid, uid, aid, expected, revision, decision.artifact, decision.run_id)
+            await db.commit()
+        try:
+            result = await asyncio.wait_for(design.execute_tool(item["tool"], item["arguments"], revision["plan"]),
+                                            timeout=context["system_design"]["tool_timeout_seconds"])
+            async with self.factory() as db:
+                completed = await SessionController(db).finish_design_tool(sid, uid, expected, item["id"], result=result)
+                await db.commit()
+            return completed
+        except BaseException as exc:
+            with anyio.CancelScope(shield=True):
+                async with self.factory() as db:
+                    try:
+                        await SessionController(db).finish_design_tool(sid, uid, expected, item["id"], error="DESIGN_TOOL_TIMEOUT" if isinstance(exc, TimeoutError) else type(exc).__name__)
+                        await db.commit()
+                    except AppError:
+                        await db.rollback()  # stale requests cannot overwrite current state
+            raise

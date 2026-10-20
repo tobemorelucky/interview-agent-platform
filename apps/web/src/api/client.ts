@@ -3,6 +3,11 @@ import { shallowRef } from "vue";
 import { userError } from "../i18n/zh-CN";
 import type { ApiEnvelope } from "../types/auth";
 export const lastApiDiagnostic = shallowRef<{ code: string; requestId?: string } | null>(null);
+export const authExpiredAt = shallowRef(0);
+export function expireAuthorization() {
+  localStorage.removeItem("access_token");
+  authExpiredAt.value += 1;
+}
 
 const client = axios.create({
   baseURL: "/api/v1",
@@ -33,7 +38,7 @@ client.interceptors.response.use(
   },
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem("access_token");
+      expireAuthorization();
     }
 
     const data = error.response?.data;

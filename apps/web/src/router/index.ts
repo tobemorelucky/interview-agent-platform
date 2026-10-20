@@ -2,6 +2,8 @@ import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "../stores/auth";
 
 const routes = [
+  { path: "/admin/public-career", name: "AdminPublicCareer", component: () => import("../pages/admin/AdminPublicCareerPage.vue"), meta: { requiresAuth: true, requiresAdmin: true } },
+  { path: "/career", name: "PublicCareer", component: () => import("../pages/PublicCareerPage.vue"), meta: { requiresAuth: true } },
   { path: "/:pathMatch(.*)*", name: "NotFound", component: () => import("../pages/NotFoundPage.vue"), meta: { requiresAuth: true } },
   { path: "/jobs/matches/:id?", name: "JobMatches", component: () => import("../pages/JobMatchingPage.vue"), meta: { requiresAuth: true } },
   {

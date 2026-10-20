@@ -46,7 +46,7 @@ function handleLogout() {
     <div v-if="isDemo" class="demo-banner" role="status">DEMO 账号 · 演示数据请勿视为真实求职经历；Replay 回放模式与实时模型以各记录标识为准。</div>
     <details v-if="auth.isAdmin" class="admin-area" :open="route.path.startsWith('/admin/')"><summary>管理员区域</summary>
       <nav aria-label="管理员导航"><router-link v-for="item in adminNavItems" :key="item.path" :to="item.path" :class="['nav-link', { active: navigationActive(route.path, item.path) }]">{{ item.label }}</router-link></nav>
-      <p>公共岗位与 Research / Tool 审计暂无独立管理页面，本轮不新增管理功能。</p>
+      <p>职业资料采集与审核仅限管理员；普通用户只读取已发布资料。</p>
     </details>
     <main class="main-content">
       <details v-if="lastApiDiagnostic" class="ux-technical"><summary>本次错误技术详情</summary><p>错误代码：{{ lastApiDiagnostic.code }} · 请求标识：{{ lastApiDiagnostic.requestId || '未返回' }}</p></details>

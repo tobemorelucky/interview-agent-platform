@@ -2,6 +2,8 @@
 import { computed, ref, watch } from "vue"
 import { displayLabel, publicName, userError } from "../i18n/zh-CN"
 import { useRoute, useRouter } from "vue-router"
+import ReferenceAnswerView from '../components/ReferenceAnswer.vue'
+import DesignTraceView from '../components/DesignTrace.vue'
 import {
   approveMemoryProposal, correctMemoryProposal, generateInterviewReport, getInterviewReport,
   getSessionReport, listInterviewReports, listMemoryProposals, rejectMemoryProposal,
@@ -19,6 +21,7 @@ const proposals = ref<MemoryProposal[]>([])
 const loading = ref(false), generating = ref(false), deciding = ref<number | null>(null)
 const error = ref(""), notice = ref("")
 const correction = ref<{ id: number; content: string; reason: string } | null>(null)
+const decision = ref<{ proposal: MemoryProposal; action: "approve" | "reject" } | null>(null)
 // A lost response must retry the same explicit regeneration request, not mint another generation.
 const regenerateRequest = ref<{ sessionId: number; key: string } | null>(null)
 let loadSequence = 0
@@ -28,12 +31,13 @@ const selectedReport = computed(() => detail.value?.report || detail.value?.curr
 const analysis = computed(() => selectedReport.value?.coach_analysis)
 
 
+const uniqueFindings = (items: CoachFinding[]) => items.filter((item, index, all) => all.findIndex(other => other.statement.trim() === item.statement.trim()) === index)
 const findingSections = computed(() => [
   { label: "本场表现优势", items: analysis.value?.strengths || [] },
   { label: "本场待改进表现", items: analysis.value?.weaknesses || [] },
   { label: "重复出现的问题", items: analysis.value?.recurring_issues || [] },
   { label: "岗位对齐分析", items: analysis.value?.job_alignment || [] },
-])
+].map(section => ({ ...section, items: uniqueFindings(section.items) })))
 const countFields = [
   { key: "answered_count", label: "有效回答" }, { key: "evaluated_count", label: "有效评价" },
   { key: "skipped_count", label: "跳过" }, { key: "follow_up_count", label: "补问" },
@@ -62,6 +66,7 @@ async function load() {
   detail.value = null
   proposals.value = []
   correction.value = null
+  decision.value = null
   try {
     const listing = await listInterviewReports()
     const result = selectedId ? await getInterviewReport(selectedId) : selectedSession ? await getSessionReport(selectedSession) : null
@@ -90,7 +95,7 @@ async function generate(regenerate: boolean) {
     const report = await generateInterviewReport(id, regenerate, regenerate ? regenerateRequest.value?.key : undefined)
     if (reportGenerationStatus(report) === "COMPLETED") regenerateRequest.value = null
     notice.value = reportGenerationStatus(report) === "FAILED"
-      ? `报告生成失败：${report.error || "请查看生成记录后安全重试"}。面试已完成状态保持不变。`
+      ? `报告生成失败：${userError(report.error || "REPORT_FAILED")} 面试已完成状态保持不变。`
       : "报告已生成；记忆提案仍需你逐条确认，尚未自动写入长期记忆。"
     // View this session's current successful report, not a failed replacement.
     if (reportId.value) await router.push({ path: "/interview/reports", query: { session_id: id } })
@@ -102,12 +107,22 @@ async function generate(regenerate: boolean) {
 }
 async function decide(proposal: MemoryProposal, action: "approve" | "reject") {
   if (!proposalCanDecide(proposal) || deciding.value !== null) return
-  if (!confirm(action === "approve" ? "确认将这条提案写入长期成长记忆？" : "拒绝这条提案？不会写入长期记忆。")) return
+  // Keep an explicit, accessible confirmation in the page. Browser-native
+  // dialogs can disappear behind another window and interrupt refresh recovery.
+  decision.value = { proposal, action }
+  correction.value = null
+}
+async function confirmDecision() {
+  const selected = decision.value
+  if (!selected || deciding.value !== null) return
+  const { proposal, action } = selected
+  if (!proposalCanDecide(proposals.value.find(item => item.id === proposal.id) || proposal)) return
   deciding.value = proposal.id
   error.value = ""
   try {
     const result = action === "approve" ? await approveMemoryProposal(proposal.id) : await rejectMemoryProposal(proposal.id)
     proposals.value = proposals.value.map(item => item.id === result.id ? result : item)
+    decision.value = null
     notice.value = action === "approve" ? "已由本人批准并写入成长记录。" : "已拒绝，没有写入长期记忆。"
   } catch (err) { error.value = message(err) }
   finally { deciding.value = null }
@@ -160,8 +175,8 @@ watch(() => route.fullPath, () => { notice.value = ""; load() }, { immediate: tr
               <button v-if="reportId" :disabled="generating" @click="selectSession(detail.session.id)">查看本场当前报告</button>
             </div>
           </article>
-          <article class="card statistics"><h2>本场数据</h2>
-            <p>全部数字来自已持久化有效评价与题目状态，Coach 不重新评分。</p>
+          <article class="card statistics"><h2>总体表现 · 本场数据</h2>
+            <p>本场数据来自每轮已保存的有效评价，Coach 不重新评分。</p>
             <p class="overall">综合平均表现 {{ detail.statistics.overall_average ?? '—' }} / 5</p>
             <div class="stat-grid"><div v-for="field in countFields" :key="field.key"><span>{{ field.label }}</span><strong>{{ detail.statistics[field.key] }}</strong></div></div>
             <div class="dimension-grid"><div v-for="(label, key) in REPORT_DIMENSION_LABELS" :key="key"><span>{{ label }}</span><strong>{{ detail.statistics.dimension_averages[key] ?? '—' }} / 5</strong></div></div>
@@ -176,7 +191,7 @@ watch(() => route.fullPath, () => { notice.value = ""; load() }, { immediate: tr
             <section v-for="section in findingSections" :key="section.label" class="findings"><h3>{{ section.label }}</h3>
               <p v-if="!section.items.length">暂无有评价支持的分析。</p>
               <article v-for="(finding, index) in section.items" :key="index" class="finding"><p>{{ finding.statement }}</p>
-                <span v-if="finding.occurrence_count != null">确定性出现次数：{{ finding.occurrence_count }}</span>
+                <span v-if="finding.occurrence_count != null">相关评价 {{ finding.occurrence_count }} 次</span>
                 <details><summary>查看评价依据</summary>
                   <div v-for="evaluation in support(finding)" :key="evaluation.id" class="support">
                     <strong>对应问题与本轮评价</strong>
@@ -186,11 +201,11 @@ watch(() => route.fullPath, () => { notice.value = ""; load() }, { immediate: tr
                 </details>
               </article>
             </section>
-            <h3>建议行动</h3><pre v-for="(item, index) in analysis.recommended_actions" :key="index">{{ text(item) }}</pre>
-            <h3>练习计划</h3><pre v-for="(item, index) in analysis.practice_plan" :key="index">{{ text(item) }}</pre>
+            <h3>下一场建议 · 按优先级准备</h3><ol><li v-for="(item, index) in [...new Set(analysis.recommended_actions)]" :key="index">{{ text(item) }}</li></ol>
+            <h3>练习计划</h3><ol><li v-for="(item, index) in [...new Set(analysis.practice_plan)]" :key="index">{{ text(item) }}</li></ol>
           </article>
           <article v-else class="card">暂无成功的 Coach 分析。可以生成 / 安全重试；本场评分与完成状态已经保存。</article>
-          <article class="card proposals"><h2>长期记忆建议</h2><p>尚未批准的建议不会写入长期记忆，也不会修改候选人画像。表现观察只描述来源场次。</p>
+          <article class="card proposals"><h2>本场建议记住</h2><p>长期记忆建议：尚未批准不会影响下一场，也不会修改候选人画像。批准后可在成长记录查看，下次新建面试时固定使用。表现观察只描述来源场次。</p>
             <p v-if="!proposals.length">该报告暂无记忆提案。</p>
             <article v-for="proposal in proposals" :key="proposal.id" class="proposal">
               <h3>{{ displayLabel(proposal.proposal_type) }} · {{ displayLabel(proposal.status) }}</h3>
@@ -202,9 +217,14 @@ watch(() => route.fullPath, () => { notice.value = ""; load() }, { immediate: tr
               </details>
               <div v-if="proposalCanDecide(proposal)" class="actions">
                 <button :disabled="deciding !== null || generating || loading" @click="decide(proposal, 'approve')">批准写入长期记忆</button>
-                <button :disabled="deciding !== null || generating || loading" @click="correction = { id: proposal.id, content: proposal.original_content, reason: '' }">修改后批准</button>
+                <button :disabled="deciding !== null || generating || loading" @click="decision = null; correction = { id: proposal.id, content: proposal.original_content, reason: '' }">修改后批准</button>
                 <button class="danger" :disabled="deciding !== null || generating || loading" @click="decide(proposal, 'reject')">忽略</button>
               </div>
+              <section v-if="decision?.proposal.id === proposal.id" class="correction" role="group" aria-label="确认记忆决定">
+                <p>{{ decision.action === 'approve' ? '确认将这条提案写入长期成长记忆？批准后，下一场面试才会读取它。' : '确认忽略这条提案？不会写入长期记忆。' }}</p>
+                <button :disabled="deciding !== null || loading || generating" @click="confirmDecision">{{ decision.action === 'approve' ? '确认批准' : '确认忽略' }}</button>
+                <button :disabled="deciding !== null" @click="decision = null">取消</button>
+              </section>
               <form v-if="correction?.id === proposal.id" class="correction" @submit.prevent="saveCorrection">
                 <label>修正内容<textarea v-model="correction.content" required maxlength="4000" rows="3" /></label>
                 <label>确认 / 修正原因<input v-model="correction.reason" required maxlength="1000" /></label>
@@ -214,6 +234,7 @@ watch(() => route.fullPath, () => { notice.value = ""; load() }, { immediate: tr
               <p v-if="proposal.memory_item_id">已保存到成长记录 · <router-link to="/memory">查看成长记录</router-link></p>
             </article>
           </article>
+          <DesignTraceView :trace="detail?.design_trace" />
           <article class="card"><h2>逐题复盘</h2><p>展示本轮已保存的评价，Coach 不重新评分。</p>
             <details v-for="evaluation in detail.evaluations" :key="evaluation.id" class="evaluation"><summary>{{ evaluation.question }}</summary>
               <p v-if="evaluation.answer"><strong>本人回答：</strong>{{ evaluation.answer }}</p><p>{{ evaluation.evaluation }}</p>
@@ -221,11 +242,13 @@ watch(() => route.fullPath, () => { notice.value = ""; load() }, { immediate: tr
               <p v-if="evaluation.covered_points?.length">覆盖：{{ evaluation.covered_points.join('；') }}</p>
               <p v-if="evaluation.missing_points?.length">缺失：{{ evaluation.missing_points.join('；') }}</p>
               <p v-if="evaluation.factual_or_reasoning_issues?.length">问题：{{ evaluation.factual_or_reasoning_issues.join('；') }}</p>
+              <h4>更好的回答思路与参考回答</h4>
+              <ReferenceAnswerView :reference="evaluation.reference_answer" :fallback="evaluation.answer_framework?.join('\n')" />
             </details>
           </article>
-          <article class="card"><h2>本场生成历史</h2>
+          <details class="card"><summary>报告版本历史</summary>
             <button v-for="report in detail.history" :key="report.id" class="history-row" :disabled="generating" @click="selectGeneration(report)">第 {{ report.generation_number ?? report.id }} 版 · {{ displayLabel(reportGenerationStatus(report)) }} {{ report.is_current ? '· 当前有效' : '' }} · {{ report.created_at }} <span v-if="report.error">· {{ userError(report.error) }}</span></button>
-          </article>
+          </details>
         </template>
         <p v-else-if="!loading" class="card">选择历史报告，或从已完成面试进入生成页。</p>
       </main>

@@ -29,13 +29,19 @@ class ResearchModelCalls:
                 provider_name=provider.provider_name, model_name=provider.model_name,
                 prompt_name=prompt.name, prompt_version=prompt.version,
                 structured_retry=0,
-                input_json={"route": route, "prompt_hash": prompt.content_hash},
+                input_json={"route": route, "prompt_hash": prompt.content_hash,
+                            "thinking_type": getattr(provider, "thinking_type", None)},
             )
             db.add(step)
             await db.commit()
             step_id = step.id
         started = time.perf_counter()
+        from interview_api.infrastructure.models.governance import model_scope, run_owner
+        scope_token = None
         try:
+            if getattr(provider, "governed", False):
+                owner, uid = await run_owner(self.factory, self.run_id)
+                scope_token = model_scope.set((self.factory, owner, uid, route))
             result = await generate_structured(
                 self.router, route, system=prompt.system, payload=payload,
                 response_model=schema,
@@ -74,6 +80,9 @@ class ResearchModelCalls:
                 step.output_json = {"schema": schema.__name__, "model_invocations": getattr(exc, "invocations", [])}
                 await db.commit()
             raise
+        finally:
+            if scope_token is not None:
+                model_scope.reset(scope_token)
 
 
 async def create_research_run(factory: async_sessionmaker, refresh_task_id: int) -> int:

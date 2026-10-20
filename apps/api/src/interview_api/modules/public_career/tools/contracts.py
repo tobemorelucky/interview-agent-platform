@@ -27,7 +27,10 @@ class ToolContext(BaseModel):
 
 
 class SourceCandidatePayload(BaseModel):
-    """Search observation that creates/reuses Source, never SourceSnapshot."""
+    """Search metadata only; this payload never creates a SourceSnapshot.
+
+    An actual search-returned webpage body uses FetchedContentPayload separately.
+    """
 
     model_config = ConfigDict(extra="forbid")
 

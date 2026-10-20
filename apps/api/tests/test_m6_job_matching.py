@@ -135,7 +135,7 @@ async def replay_e2e(factory):
         steps = (await db.scalars(select(ExperienceAgentStepRun).join(ExperienceAgentRun,
             ExperienceAgentRun.id == ExperienceAgentStepRun.agent_run_id).where(ExperienceAgentRun.agent_role == "JobMatchingAgent",
             ExperienceAgentRun.input_hash == run["input_fingerprint"]))).all()
-        assert steps[0].provider_name == "replay" and steps[0].prompt_version == "1.0.0"
+        assert steps[0].provider_name == "replay" and steps[0].prompt_version == run['prompt_version']
     with pytest.raises(AppError) as error:
         await m4.create(uid, CreateSessionRequest(company_id=ai["company_id"], job_id=ai["job_id"]))
     assert error.value.status_code in (409, 422)

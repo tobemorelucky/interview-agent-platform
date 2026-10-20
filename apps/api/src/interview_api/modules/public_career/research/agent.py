@@ -22,9 +22,14 @@ from interview_api.modules.public_career.tool_models import ToolInvocation
 from interview_api.modules.public_career.research.evidence import EvidenceCatalog, EvidenceValidationError
 from interview_api.modules.public_career.research.schemas import JobJDExtraction, ResearchQuality
 from interview_api.modules.public_career.research.audit import ResearchModelCalls, create_research_run, finish_research_run
+from interview_api.modules.public_career.research.prompts import ManualSourcePromptRegistry, WebSourcePromptRegistry
 from interview_api.modules.public_career.research.interview import InterviewPipelineAdapter
 from interview_api.modules.public_career.research.policy import job_publication_gate
 from interview_api.modules.public_career.service import link_interview_experience
+from interview_api.modules.public_career.manual_import import (
+    manual_manifest, resolve_manual_snapshot, validate_expected_identity, ACQUISITION_MODE,
+)
+from interview_api.modules.public_career.web_collection import resolve_web_snapshot, web_manifest
 
 
 class PublicDataResearchAgent:
@@ -46,6 +51,10 @@ class PublicDataResearchAgent:
                 raise ValueError("Unsupported public research target")
             target = "INTERVIEW_DATA" if task.target_type == "EXPERIENCE_COLLECTION_TASK" else task.target_type
             rerun = force and target == "INTERVIEW_DATA" and task.status in {"COMPLETED", "FAILED"}
+            # Explicit maintainer recovery after a failed manual JD attempt;
+            # successful generations are still immutable/idempotent. No crawl.
+            rerun = rerun or (force and target == "JOB_JD" and task.status == "FAILED"
+                             and (manual_manifest(task) is not None or web_manifest(task) is not None))
             if task.status != "READY_FOR_EXTRACTION" and not rerun:
                 raise ValueError("Research requires READY_FOR_EXTRACTION (or explicit interview rerun)")
             controller = PublicDataRefreshService(db, None)  # transitions do not use network tools
@@ -53,6 +62,8 @@ class PublicDataResearchAgent:
             await db.commit()
             try:
                 run_id = await create_research_run(self.factory, task.id)
+                manual = manual_manifest(task)
+                web = web_manifest(task)
                 snapshots = await self._snapshots(db, task.id)
                 sources = {s.id: s for s in (await db.scalars(select(Source).where(
                     Source.id.in_({snapshot.source_id for snapshot in snapshots})
@@ -60,9 +71,18 @@ class PublicDataResearchAgent:
                 catalog = EvidenceCatalog(snapshots, max_chars=settings.public_research_max_evidence_chars)
                 if not catalog.spans:
                     raise EvidenceValidationError("Task has no fetched body evidence")
-                calls = ResearchModelCalls(self.factory, self.router or build_model_router(), run_id)
+                calls = ResearchModelCalls(self.factory, self.router or build_model_router(), run_id,
+                                           prompts=ManualSourcePromptRegistry() if manual else WebSourcePromptRegistry() if web else None)
                 if target == "JOB_JD":
-                    extracted = await calls.call("job_jd", EXTRACT_ROUTE, {"evidence": catalog.model_input()}, JobJDExtraction)
+                    extraction_input = {"evidence": catalog.model_input()}
+                    if manual:
+                        # Scope hint only. Both exact source grounding and
+                        # expected-identity validation below remain mandatory.
+                        extraction_input["requested_identity"] = {
+                            "company_name": manual["company"], "job_title": manual["job_title"],
+                            "requires_literal_evidence": True,
+                        }
+                    extracted = await calls.call("job_jd", EXTRACT_ROUTE, extraction_input, JobJDExtraction)
                     quality = await calls.call("quality", QUALITY_ROUTE, {
                         "extraction": extracted.model_dump(), "evidence": catalog.model_input(),
                     }, ResearchQuality)
@@ -71,13 +91,19 @@ class PublicDataResearchAgent:
                     catalog.resolve(extracted.identity_evidence_ids)
                     catalog.resolve(extracted.jd_evidence_ids)
                     self._validate_identity(catalog, extracted.identity_evidence_ids, extracted.company_name, extracted.job_title)
+                    validate_expected_identity(manual, extracted.company_name, extracted.job_title)
                     for requirement in extracted.requirements:
                         catalog.resolve(requirement.evidence_ids)
+                        if web and not catalog.supports_literal(requirement.evidence_ids, requirement.statement):
+                            raise EvidenceValidationError("Web requirement must be extractive from cited source text")
                         if not normalize_text(requirement.statement):
                             raise EvidenceValidationError("Empty normalized requirement statement")
+                    for attribute in extracted.attributes:
+                        if not catalog.supports_literal(attribute.evidence_ids, attribute.statement):
+                            raise EvidenceValidationError("Job metadata must be literal and cite exact evidence")
                     await controller.transition(task, RefreshTaskStatus.PUBLISHING)
                     await db.commit()
-                    output = await self._publish_job(db, extracted, quality, catalog, sources, snapshots)
+                    output = await self._publish_job(db, extracted, quality, catalog, sources, snapshots, manual=manual, web=web)
                 else:
                     prepared = []
                     by_id = {snapshot.id: snapshot for snapshot in snapshots}
@@ -85,16 +111,24 @@ class PublicDataResearchAgent:
                         members = [by_id[sid] for sid in group.snapshot_ids]
                         first = members[0]
                         group_catalog = EvidenceCatalog(members, max_chars=settings.public_research_max_evidence_chars)
-                        extracted, state = await InterviewPipelineAdapter(calls).run(
+                        extracted, state = await InterviewPipelineAdapter(calls, require_literal_questions=bool(web), requested_identity=(
+                            {"company": manual["company"], "position": manual["job_title"],
+                             "requires_literal_evidence": True} if manual else None)).run(
                             group_catalog, first.content_text or "",
                             sources[first.source_id].canonical_url, first.title,
                         )
+                        if web:
+                            for question in extracted.questions:
+                                if not group_catalog.supports_literal(question.evidence_ids, question.question):
+                                    raise EvidenceValidationError("Web question must be extractive from cited source text")
                         prepared.append((extracted, state, group_catalog, members))
                     await controller.transition(task, RefreshTaskStatus.VALIDATING)
                     await db.commit()
                     for extracted, state, group_catalog, members in prepared:
                         if extracted.company or extracted.position:
                             self._validate_identity(group_catalog, extracted.identity_evidence_ids, extracted.company, extracted.position)
+                        if extracted.is_interview_experience:
+                            validate_expected_identity(manual, extracted.company, extracted.position)
                     await controller.transition(task, RefreshTaskStatus.PUBLISHING)
                     await db.commit()
                     entries = [await self._publish_interview(db, task, extracted, state, group_catalog, sources, members, force=force)
@@ -102,6 +136,9 @@ class PublicDataResearchAgent:
                     output = {**entries[0], "experiences": entries, "collection_metrics": self._metrics(snapshots)}
                 await controller.transition(task, RefreshTaskStatus.COMPLETED)
                 output = {"refresh_task_id": refresh_task_id, "agent_run_id": run_id, "status": "COMPLETED", **output}
+                if manual:
+                    output["acquisition_mode"] = ACQUISITION_MODE
+                    output["manual_source"] = manual
                 audit_run = await db.get(ExperienceAgentRun, run_id)
                 audit_run.status, audit_run.output_json = "SUCCEEDED", output
                 audit_run.finished_at = datetime.now(timezone.utc)
@@ -119,6 +156,13 @@ class PublicDataResearchAgent:
                 return {"refresh_task_id": refresh_task_id, "agent_run_id": run_id, "status": task.status, "error": error}
 
     async def _snapshots(self, db, task_id):
+        task = await db.get(PublicDataRefreshTask, task_id)
+        web = await resolve_web_snapshot(db, task) if task else None
+        if web is not None:
+            return web
+        manual = await resolve_manual_snapshot(db, task) if task else None
+        if manual is not None:
+            return manual
         calls = (await db.scalars(select(ToolInvocation).where(
             ToolInvocation.refresh_task_id == task_id,
             ToolInvocation.tool_name == "public.fetch",
@@ -132,10 +176,24 @@ class PublicDataResearchAgent:
 
     @staticmethod
     def _validate_identity(catalog, ids, *names):
-        text = normalize_text(" ".join(s.excerpt for s in catalog.resolve(ids)))
+        # Formatting whitespace is not a different company/role. Join only
+        # adjacent spans of the same real Snapshot; never concatenate unrelated
+        # evidence into a fabricated identity.
+        spans = sorted(catalog.resolve(ids), key=lambda s: (s.snapshot_id, s.start))
+        groups = []
+        previous = None
+        for span in spans:
+            if previous and previous.snapshot_id == span.snapshot_id and previous.end == span.start:
+                groups[-1] += span.excerpt
+            else:
+                groups.append(span.excerpt)
+            previous = span
+        texts = ["".join(normalize_text(text).split()) for text in groups]
         for name in names:
-            if name and normalize_text(name) not in text:
-                raise EvidenceValidationError("Company/job identity is absent from exact cited evidence")
+            if name and not any("".join(normalize_text(name).split()) in text for text in texts):
+                raise EvidenceValidationError(
+                    f"Company/job identity absent from exact cited evidence: name={name!r}; evidence_ids={sorted(set(ids))}"
+                )
 
     @staticmethod
     def _metrics(snapshots):
@@ -160,7 +218,7 @@ class PublicDataResearchAgent:
             ).on_conflict_do_nothing(constraint="uq_claim_evidence_claim_key"))
         return claim_id
 
-    async def _publish_job(self, db, extracted, quality, catalog, sources, snapshots):
+    async def _publish_job(self, db, extracted, quality, catalog, sources, snapshots, *, manual=None, web=None):
         company_ids = await self._company_candidates(db, extracted.company_name)
         if len(company_ids) > 1:
             raise EvidenceValidationError("Ambiguous public company identity; automatic association refused")
@@ -168,6 +226,8 @@ class PublicDataResearchAgent:
         evidence_ids = list(extracted.identity_evidence_ids) + list(extracted.jd_evidence_ids)
         for req in extracted.requirements:
             evidence_ids += req.evidence_ids
+        for attr in extracted.attributes:
+            evidence_ids += attr.evidence_ids
         spans = catalog.resolve(evidence_ids)
         used_sources = {span.source_id for span in spans}
         decision = job_publication_gate(
@@ -177,6 +237,9 @@ class PublicDataResearchAgent:
             trusted_domains=settings.public_research_official_domains,
             official_domain=existing.official_domain if existing else None,
         )
+        if ((manual and manual["source_type"] == "community") or (web and web["source_type"] == "community")) and decision.status == "APPROVED":
+            from interview_api.modules.public_career.research.policy import PublicationDecision
+            decision = PublicationDecision("WAITING_REVIEW", False, ("manual_community_source_requires_review",))
         entity_status = "ACTIVE" if decision.status == "APPROVED" else "WAITING_REVIEW"
         company_id = existing.id if existing else await db.scalar(insert(Company).values(
             canonical_name=extracted.company_name, normalized_name=normalize_text(extracted.company_name),
@@ -209,6 +272,8 @@ class PublicDataResearchAgent:
                                          extracted.identity_evidence_ids, catalog,
                                          context=context, status=entity_status)
         if jd is None:
+            attribute_claims = [dict(field=attr.field, claim_id=await self._claim(db, attr.statement,
+                attr.evidence_ids, catalog, context=context, status=entity_status)) for attr in extracted.attributes]
             version = (await db.scalar(select(func.max(JobDescriptionVersion.version_number)).where(JobDescriptionVersion.job_id == job_id)) or 0) + 1
             jd = JobDescriptionVersion(
                 job_id=job_id, version_number=version, raw_text=raw_text,
@@ -216,6 +281,10 @@ class PublicDataResearchAgent:
                 publication_status=decision.status,
                 structured_data_json=extracted.model_dump(),
                 metadata_json={"identity_claim_id": identity_claim, "quality_gate": decision.reasons,
+                               "quality_assessment": quality.model_dump(),
+                               **({"manual_source": manual} if manual else {}),
+                               **({"web_source": web} if web else {}),
+                               "attribute_claims": attribute_claims,
                                "credibility": "source_support_signals", **self._metrics(snapshots)},
             )
             db.add(jd)
@@ -228,6 +297,7 @@ class PublicDataResearchAgent:
                                       requirement_type=req.requirement_type, importance=req.importance,
                                       claim_id=claim_id))
         return {"target": "JOB_JD", "company_id": company_id, "job_id": job_id,
+                **({"manual_publication_decision": decision.status, "manual_source_type": manual["source_type"]} if manual else {}),
                 "jd_version_id": jd.id, "publication_status": jd.publication_status,
                 **self._metrics(snapshots)}
 
@@ -247,6 +317,10 @@ class PublicDataResearchAgent:
 
     async def _publish_interview(self, db, task, extracted, state, catalog, sources, snapshots, *, force=False):
         gate = state["quality_gate_result"]
+        if web_manifest(task):
+            # Collected community experiences are always candidates for human
+            # review, regardless of provider authority or model confidence.
+            gate = {**gate, "review_status": "WAITING_REVIEW"}
         first = snapshots[0]
         source = sources[first.source_id]
         legacy = await db.scalar(select(ExperienceCollectionTask).where(ExperienceCollectionTask.public_refresh_task_id == task.id))
@@ -262,9 +336,10 @@ class PublicDataResearchAgent:
                                         normalized_url_hash=source.url_hash, title=first.title)
             db.add(item)
         item.raw_text = first.content_text
-        item.fetch_status = "FETCHED"
+        manual = manual_manifest(task)
+        item.fetch_status = "MANUALLY_IMPORTED" if manual else "FETCHED"
         item.content_hash = first.content_hash
-        item.fetched_at = first.fetched_at
+        item.fetched_at = None if manual else first.fetched_at
         await db.flush()
         repo = ExperienceAgentRepository(db)
         metrics = self._metrics(snapshots)
@@ -304,6 +379,8 @@ class PublicDataResearchAgent:
             extraction_confidence=extracted.extraction_confidence,
             extraction_output_json=extracted.model_dump(), routing_json=state.get("routing_result"),
             reliability_json={**(state.get("reliability_result") or {}), **metrics,
+                              **({"manual_source": manual} if manual else {}),
+                              **({"web_source": web_manifest(task)} if web_manifest(task) else {}),
                               "credibility": "source_support_signals"},
             quality_gate_json=gate, reliability_score=gate["reliability_score"],
             quality_flags_json=(state.get("reliability_result") or {}).get("quality_flags", []),

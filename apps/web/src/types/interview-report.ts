@@ -1,4 +1,5 @@
 import { dimensionLabels, modelModeLabel } from '../i18n/zh-CN.ts'
+import type { ReferenceAnswer, DesignTrace } from './interview'
 export const REPORT_DIMENSION_LABELS = dimensionLabels
 
 export interface InterviewReportStatistics {
@@ -25,6 +26,8 @@ export interface ReportEvaluation {
   factual_or_reasoning_issues?: string[]
   provider?: string
   model?: string
+  reference_answer?: ReferenceAnswer | null
+  answer_framework?: string[]
 }
 
 export interface CoachFinding {
@@ -74,6 +77,7 @@ export interface ReportSessionInfo {
 }
 
 export interface InterviewReportDetail {
+  design_trace?: DesignTrace
   session: ReportSessionInfo
   statistics: InterviewReportStatistics
   current_report: FinalInterviewReport | null

@@ -6,6 +6,7 @@ from interview_api.api.deps import get_current_user
 from interview_api.core.config import settings
 from interview_api.core.exceptions import NotFoundError
 from interview_api.core.response import success
+from interview_api.core.rate_limit import interview_chat_limit
 from interview_api.infrastructure.db.session import get_db
 from interview_api.infrastructure.embedding.provider import (
     OpenAICompatibleEmbeddingProvider,
@@ -82,7 +83,7 @@ async def get_session(
     return success(data=detail.model_dump())
 
 
-@router.post("/chat/stream")
+@router.post("/chat/stream", dependencies=[Depends(interview_chat_limit)])
 async def chat_stream(
     body: ChatStreamRequest,
     db: AsyncSession = Depends(get_db),

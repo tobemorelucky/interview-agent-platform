@@ -14,19 +14,23 @@ from interview_api.modules.candidate_profile.models import (
     EducationExperience, UserSkill, ProfileCorrection, ProfileGeneration,
 )
 from interview_api.modules.candidate_profile.schemas import CandidateProfileDelta
+from interview_api.modules.candidate_profile.context import apply_section_map
 
 
 CATEGORIES = ("skills", "projects", "education", "work_experience", "internship_experience", "strengths")
+STABLE_CATEGORIES = CATEGORIES[:-1]
 
 
 def conflict(code, message):
     return AppError(code, message, 409)
 
 
-def iter_facts(snapshot):
-    if snapshot.get("candidate_summary"):
+def iter_facts(snapshot, *, stable_only=False):
+    # Default retains legacy path lookup compatibility for frozen consumers.
+    # New CandidateFact writes MUST explicitly use stable_only=True.
+    if snapshot.get("candidate_summary") and not stable_only:
         yield "candidate_summary", snapshot["candidate_summary"]
-    for category in CATEGORIES:
+    for category in STABLE_CATEGORIES if stable_only else CATEGORIES:
         for index, item in enumerate(snapshot.get(category, [])):
             yield f"{category}.{index}", item
 
@@ -74,7 +78,8 @@ class CandidateProfileService:
         return profile
 
     async def persist(self, *, user_id, resume_id, snapshot, generation_key, base_version_id,
-                      producer, provider=None, model=None, prompt_version=None, agent_run_id=None):
+                      producer, provider=None, model=None, prompt_version=None, agent_run_id=None,
+                      evidence_sections=None):
         """Caller commits once: version + normalized facts + provenance + pointer."""
         profile = await self.lock_profile(user_id)
         existing = await self.db.scalar(select(CandidateProfileVersion).where(CandidateProfileVersion.generation_key == generation_key))
@@ -88,11 +93,22 @@ class CandidateProfileService:
         if not resume:
             raise AppError("RESUME_NOT_FOUND", "简历不存在", 404)
         delta = CandidateProfileDelta.model_validate(snapshot)
-        keys = {key for _, fact in iter_facts(snapshot) for key in fact["evidence_ids"]}
-        catalog = await evidence_catalog(self.db, user_id, keys=keys)
-        # User confirmations describe entire corrected facts; ability state still needs actual source signals.
-        resolve_and_validate(delta, catalog)
         base = await self.db.get(CandidateProfileVersion, base_version_id) if base_version_id else None
+        # No synthesis producer is introduced here. Preserve unchanged legacy
+        # display content on correction, but never accept new derived content
+        # through the stable-fact write path or recreate its CandidateFact rows.
+        for field in ("candidate_summary", "strengths"):
+            if snapshot.get(field) and (base is None or snapshot[field] != base.snapshot_json.get(field)):
+                raise conflict("DERIVED_PROFILE_ANALYSIS_NOT_ALLOWED", "摘要和优势不属于稳定事实抽取或修正入口")
+        keys = {key for _, fact in iter_facts(snapshot, stable_only=True) for key in fact["evidence_ids"]}
+        catalog = await evidence_catalog(self.db, user_id, resume_id=resume_id)
+        catalog.update(await evidence_catalog(self.db, user_id, keys=keys))
+        # A call's deterministic groups are frozen with its audit, not written
+        # back to immutable ResumeEvidence. Corrections inherit that boundary.
+        inherited_sections = await self._version_sections(base_version_id)
+        catalog = apply_section_map(catalog, {**inherited_sections, **(evidence_sections or {})})
+        # User confirmations describe entire corrected facts; ability state still needs actual source signals.
+        resolve_and_validate(delta, catalog, stable_only=True)
         version = CandidateProfileVersion(
             candidate_profile_id=profile.id, version_number=base.version_number + 1 if base else 1,
             base_version_id=base_version_id, source_resume_id=resume_id, generation_key=generation_key,
@@ -103,7 +119,7 @@ class CandidateProfileService:
         )
         self.db.add(version)
         await self.db.flush()
-        for path, item in iter_facts(snapshot):
+        for path, item in iter_facts(snapshot, stable_only=True):
             supports = [catalog[key] for key in dict.fromkeys(item["evidence_ids"])]
             fact = CandidateFact(version_id=version.id, field_path=path, statement=item["statement"],
                                  provenance="USER_CONFIRMED" if any(e["kind"] == "USER_CONFIRMED" for e in supports) else "RESUME_EXTRACTED")
@@ -128,6 +144,22 @@ class CandidateProfileService:
         await self.db.flush()
         return version
 
+    async def _version_sections(self, version_id):
+        from interview_api.modules.experience.models import ExperienceAgentRun
+        visited = set()
+        while version_id and version_id not in visited:
+            visited.add(version_id)
+            version = await self.db.get(CandidateProfileVersion, version_id)
+            if not version:
+                break
+            if version.agent_run_id:
+                run = await self.db.get(ExperienceAgentRun, version.agent_run_id)
+                context = (run.output_json or {}).get("profile_context") if run else None
+                if context:
+                    return context["section_map"]
+            version_id = version.base_version_id
+        return {}
+
     async def correct(self, user_id, request):
         profile = await self.lock_profile(user_id)
         if profile.current_version_id != request.base_version_id:
@@ -138,10 +170,7 @@ class CandidateProfileService:
         snapshot = deepcopy(base.snapshot_json)
         parts = request.field_path.split(".")
         try:
-            if parts[0] == "candidate_summary" and parts == ["candidate_summary", "statement"]:
-                item = snapshot["candidate_summary"]
-                field = "statement"
-            elif len(parts) == 3 and parts[0] in CATEGORIES and parts[1].isdigit() and parts[2] in ("label", "statement"):
+            if len(parts) == 3 and parts[0] in STABLE_CATEGORIES and parts[1].isdigit() and parts[2] in ("label", "statement"):
                 item = snapshot[parts[0]][int(parts[1])]
                 field = parts[2]
             else:

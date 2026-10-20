@@ -4,11 +4,14 @@ from interview_api.core.exceptions import AppError
 from interview_api.modules.memory.proposal_service import validate_observation_content
 
 
-def _qualitative(text):
+def _qualitative(text, path="unknown"):
     validate_observation_content(text)
     # Technical names such as HTTP2 remain legal; generated scores/count assertions do not.
-    if re.search(r"(?:\d+(?:\.\d+)?|[一二三四五六七八九十百]+)\s*(?:分|次|道题|场面试|轮回答|%|/\s*5|out of\s+5)|(?:score|average|count|occurrences?)\s*(?:is|of|:|=)\s*\d+", text, re.IGNORECASE):
-        raise AppError("COACH_COMPUTED_NUMBER", "Coach 不得生成评分、出现次数或统计数字", 422)
+    match = re.search(r"(?:\d+(?:\.\d+)?|[一二三四五六七八九十百]+)\s*(?:分|次|道题|场面试|轮回答|%|/\s*5|out of\s+5)|(?:score|average|count|occurrences?)\s*(?:is|of|:|=)\s*\d+", text, re.IGNORECASE)
+    if match:
+        error = AppError("COACH_COMPUTED_NUMBER", "Coach 不得生成评分、出现次数或统计数字", 422)
+        error.diagnostics = dict(field_path=path, rule="DETERMINISTIC_NUMBERS_ONLY", matched_number=match.group(0)[:40])
+        raise error
     return text
 
 
@@ -29,23 +32,23 @@ def resolve_evaluations(refs, catalog):
 
 def resolve_coach_artifact(artifact, evaluations):
     catalog = {e["id"]: e for e in evaluations}
-    result = dict(overall_summary=_qualitative(artifact.overall_summary),
-        recommended_actions=[_qualitative(t) for t in artifact.recommended_actions],
-        practice_plan=[_qualitative(t) for t in artifact.practice_plan], memory_proposals=[],
+    result = dict(overall_summary=_qualitative(artifact.overall_summary, "overall_summary"),
+        recommended_actions=[_qualitative(t, f"recommended_actions.{i}") for i, t in enumerate(artifact.recommended_actions)],
+        practice_plan=[_qualitative(t, f"practice_plan.{i}") for i, t in enumerate(artifact.practice_plan)], memory_proposals=[],
         epistemic_status="AGENT_SYNTHESIS_OF_THIS_INTERVIEW_NOT_STABLE_CANDIDATE_FACTS")
     for category in ("strengths", "weaknesses", "recurring_issues", "job_alignment"):
         result[category] = []
-        for item in getattr(artifact, category):
+        for index, item in enumerate(getattr(artifact, category)):
             ids = resolve_evaluations(item.supporting_evaluation_ids, catalog)
             if category == "recurring_issues" and len(ids) < 2:
                 raise AppError("RECURRING_SUPPORT_REQUIRED", "重复问题必须支持至少两个不同的真实评价", 422)
-            result[category].append(dict(statement=_qualitative(item.statement), supporting_evaluation_ids=ids,
+            result[category].append(dict(statement=_qualitative(item.statement, f"{category}.{index}.statement"), supporting_evaluation_ids=ids,
                 occurrence_count=len(ids), supporting_evaluations=[dict(id=id_, evaluation_id=id_,
                     session_question_id=catalog[id_]["session_question_id"], question_id=catalog[id_]["session_question_id"],
                     question=catalog[id_]["question"], evaluation=catalog[id_]["evaluation"],
                     scores=dict(catalog[id_]["scores"])) for id_ in ids]))
-    for item in artifact.memory_proposals:
+    for index, item in enumerate(artifact.memory_proposals):
         ids = resolve_evaluations(item.supporting_evaluation_ids, catalog)
         result["memory_proposals"].append(dict(proposal_type=item.proposal_type,
-            content=_qualitative(item.content), supporting_evaluation_ids=ids))
+            content=_qualitative(item.content, f"memory_proposals.{index}.content"), supporting_evaluation_ids=ids))
     return result

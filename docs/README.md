@@ -19,3 +19,5 @@
 - [本地部署历史说明与 F4 更正](14_local_development_and_deployment.md)
 
 Real Model、Replay 和 Live Search 的验收含义不同，不相互替代。
+
+- [V1.4 DeepSeek Web 职业资料采集与审核交付](46_deepseek_web_career_v1_4.md)

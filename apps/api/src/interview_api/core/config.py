@@ -1,7 +1,8 @@
 import os
 from pathlib import Path
+from typing import Literal
 
-from pydantic import model_validator
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -65,11 +66,23 @@ class Settings(BaseSettings):
     jwt_access_token_expire_minutes: int = 120
 
     # LLM
+    # Independent official Web API credential. Never inherit the Ark model key.
+    deepseek_web_api_key: str = Field("", repr=False)
+    deepseek_web_timeout_seconds: float = Field(25.0, ge=1, le=60)
+    deepseek_web_retries: int = Field(1, ge=0, le=2)
+    deepseek_web_daily_search_limit: int = Field(10, ge=1, le=10000)
+    deepseek_web_daily_fetch_limit: int = Field(20, ge=1, le=10000)
+    deepseek_web_min_interval_seconds: float = Field(1.0, ge=0.1, le=10)
+    deepseek_web_min_body_chars: int = Field(200, ge=1, le=10000)
+    deepseek_web_max_content_chars: int = Field(200000, ge=1000, le=1000000)
     llm_provider: str = ""
     llm_base_url: str = ""
     llm_api_key: str = ""
     llm_model: str = ""
     llm_fallback_model: str = ""
+    model_user_daily_calls: int = Field(100, ge=1)
+    model_user_daily_tokens: int = Field(1000000, ge=1)
+    model_user_concurrency: int = Field(2, ge=1)
     llm_request_timeout_seconds: float = 60.0
     llm_max_retries: int = 0
 
@@ -119,6 +132,7 @@ class Settings(BaseSettings):
     public_research_api_key: str = ""
     public_research_extract_model: str = ""
     public_research_quality_model: str = ""
+    public_research_thinking: Literal["disabled", "enabled"] | None = "disabled"
     public_research_model_timeout_seconds: float = 60.0
     public_research_max_output_tokens: int = 6000
     public_research_provider_concurrency: int = 2
@@ -132,6 +146,7 @@ class Settings(BaseSettings):
     resume_profile_timeout_seconds: float = 60.0
     resume_profile_max_output_tokens: int = 6000
     resume_profile_provider_concurrency: int = 2
+    resume_profile_thinking: Literal["disabled", "enabled"] = "disabled"
     resume_max_file_size_mb: int = 10
     resume_allowed_types: str = "pdf,docx,txt"
     resume_question_count: int = 8
@@ -146,6 +161,10 @@ class Settings(BaseSettings):
     # Interview Chat
     interview_main_model: str = ""
     answer_evaluation_model: str = ""
+    answer_evaluation_thinking: Literal["disabled", "enabled"] | None = "disabled"
+    interview_main_thinking: Literal["disabled", "enabled"] | None = "disabled"
+    interview_coach_thinking: Literal["disabled", "enabled"] | None = "disabled"
+    job_matching_thinking: Literal["disabled", "enabled"] | None = "disabled"
     interview_model_base_url: str = ""
     interview_model_api_key: str = ""
     interview_model_timeout_seconds: float = 60.0

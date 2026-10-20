@@ -4,6 +4,7 @@ import asyncio
 import json
 import time
 from dataclasses import dataclass, field
+from contextlib import nullcontext
 from typing import TypeVar
 
 from pydantic import BaseModel, ValidationError
@@ -63,6 +64,8 @@ async def generate_structured(router: ModelRouter, route: str, *, system: str,
     fallback_reason = None
 
     async def invoke(selected, *, reason=None):
+        from interview_api.infrastructure.models.governance import provider_guard
+        guard_token = provider_guard.set(router.guard(route))
         router.record_selection(route, selected)
         call_started = time.perf_counter()
         record = dict(provider=selected.provider_name, model=selected.model_name, fallback_reason=reason)
@@ -77,11 +80,18 @@ async def generate_structured(router: ModelRouter, route: str, *, system: str,
             record.update(status="FAILED", error=exc.code, availability_reason=exc.availability_reason,
                           usage=exc.usage)
             raise
+        except BaseException as exc:
+            record.update(status="CANCELLED" if isinstance(exc, asyncio.CancelledError) else "FAILED",
+                          error=getattr(exc, "code", type(exc).__name__))
+            raise
         finally:
+            provider_guard.reset(guard_token)
             record["latency_ms"] = round((time.perf_counter() - call_started) * 1000)
             invocations.append(record)
 
-    async with router.guard(route):
+    # User admission happens before waiting on the process-wide provider guard.
+    # Otherwise a third session silently queues and never reaches the 429 check.
+    async with (nullcontext() if getattr(provider, "governed", False) else router.guard(route)):
         for attempt in range(2):
             try:
                 try:

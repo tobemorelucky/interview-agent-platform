@@ -5,6 +5,7 @@ from interview_api.core.rate_limit import interview_chat_limit
 from interview_api.infrastructure.db.session import async_session_factory
 from interview_api.modules.job_matching.schemas import MatchRequest
 from interview_api.modules.job_matching.service import JobMatchingService
+from interview_api.infrastructure.models.governance import check_generation_result
 
 router = APIRouter(prefix="/api/v1/job-matches", tags=["job-matches"])
 
@@ -30,4 +31,4 @@ async def detail(run_id: int, user=Depends(get_current_user)):
 
 @router.post("/{run_id}/generate")
 async def generate(run_id: int, user=Depends(get_current_user), _limit=Depends(interview_chat_limit)):
-    return success(data=await build_core().generate(user.id, run_id))
+    return success(data=check_generation_result(await build_core().generate(user.id, run_id)))

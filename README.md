@@ -6,6 +6,12 @@
 面试复盘报告和用户批准的长期成长记录。主要功能已冻结，工程交付记录见
 [交付验收](docs/27_engineering_delivery.md)，[文档索引](docs/README.md)。
 
+当前增量状态：V1.4 管理员职业资料采集接入独立 DeepSeek Search/Fetch Provider，
+沿用共享 Source/Snapshot、Research 和审核发布。需要单独配置
+`DEEPSEEK_WEB_API_KEY`（不能复用方舟模型 Key）。代码与 Replay 验收不等同于真实
+在线采集验收；当前凭证阻塞与完整记录见 [V1.4 交付](docs/46_deepseek_web_career_v1_4.md)。
+旧 SearXNG 仍为独立冻结 Provider，不作为新采集入口的自动 fallback。
+
 ## 用户流程
 
 上传简历 → Candidate Profile → 岗位推荐 / 用户指定岗位 → 模拟面试 →
