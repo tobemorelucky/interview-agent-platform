@@ -61,7 +61,11 @@ class MockInterviewService:
 
     async def call_agent(self, agent, session_id, user_id, expected, payload, *, answer_id=None):
         if agent.route == self.evaluator.route and answer_id is not None:
-            reused = await self.evaluator.reusable(session_id, answer_id, payload)
+            reused = await agent.reusable(session_id, answer_id, payload)
+            if reused is not None:
+                return reused
+        if payload.get("adaptive") and agent.route == self.main.route and answer_id is not None:
+            reused = await agent.reusable(session_id, answer_id, payload)
             if reused is not None:
                 return reused
         # An admission estimate is temporary, not permanent token usage. Include
@@ -112,6 +116,17 @@ class MockInterviewService:
             return question_data(active, session.question_count)
         if session.status != "READY":
             raise AppError("INTERVIEW_NOT_READY", "面试无法开始", 409)
+        if context.get("adaptive_policy"):
+            from interview_api.modules.interview.adaptive import planning_payload, validate_decision
+            payload = planning_payload(context, questions, None, session.interview_plan_json)
+            result = await self.call_agent(self.main.adaptive(payload), session_id, user_id, session.state_version, payload)
+            if result is None:
+                raise AppError("INTERVIEW_BUDGET_EXHAUSTED", "首题预算不足", 409)
+            policy = validate_decision(result.artifact, payload)
+            async with self.factory() as db:
+                data = await SessionController(db).start(session_id, user_id, session.state_version, result, policy)
+                await db.commit()
+            return data
         policy = session_policy(context, questions)
         result = await self.call_agent(self.main, session_id, user_id, session.state_version,
                                       self.payload(context, questions, None, "NEXT", policy))
@@ -137,6 +152,8 @@ class MockInterviewService:
             return old_events
         try:
             session, context, questions, active, _ = await self.read_state(session_id, user_id)
+            if context.get("adaptive_policy"):
+                return await self.adaptive_answer(session_id, user_id, answer_id, expected, content, on_stage)
             tool_payload = {}
             if context.get("system_design"):
                 if on_stage: on_stage("validating_design")
@@ -188,6 +205,35 @@ class MockInterviewService:
                 await db.commit()
             raise
 
+    async def adaptive_answer(self, sid, uid, aid, expected, content, on_stage):
+        from interview_api.modules.interview.adaptive import planning_payload, validate_decision, all_goals_demonstrated
+        session, context, questions, active, _ = await self.read_state(sid, uid)
+        payload = planning_payload(context, questions, active, session.interview_plan_json, answer=content, answer_id=aid)
+        if on_stage: on_stage("generating_evaluation")
+        evaluation = await self.call_agent(self.evaluator.adaptive(), sid, uid, expected, payload, answer_id=aid)
+        if evaluation is None:
+            raise AppError("INTERVIEW_BUDGET_EXHAUSTED", "评价预算不足，回答已保存，未推进或结束", 409)
+        session, context, questions, active, tokens = await self.read_state(sid, uid)
+        payload = planning_payload(context, questions, active, session.interview_plan_json, answer=content,
+            answer_id=aid, evaluation=evaluation.artifact, evaluation_run_id=evaluation.run_id)
+        exhausted = SessionController.choose_action(context, questions, active, "NEXT", rounds=session.turn_count,
+            tokens=tokens, started_at=session.started_at) == "COMPLETE"
+        main, policy, action = None, {}, "COMPLETE"
+        if not exhausted and not all_goals_demonstrated(context, payload["adaptive"]["knowledge_state"]) and payload["adaptive"]["choices"]:
+            async with self.factory() as db:
+                await SessionController(db).answer_stage(sid, uid, aid, expected, "generating_next_question")
+                await db.commit()
+            if on_stage: on_stage("generating_next_question")
+            main = await self.call_agent(self.main.adaptive(payload), sid, uid, expected, payload, answer_id=aid)
+            if main is None:
+                raise AppError("INTERVIEW_BUDGET_EXHAUSTED", "下一题预算不足，回答已保存，未推进", 409)
+            policy = validate_decision(main.artifact, payload)
+            action = main.artifact.recommendation
+        async with self.factory() as db:
+            events = await SessionController(db).commit_answer(sid, uid, aid, expected, evaluation, main, action, policy)
+            await db.commit()
+        return events
+
     async def stream(self, session_id, user_id, request):
         yield sse("status", {"stage": "evaluating"})
         stages = asyncio.Queue()
@@ -230,8 +276,16 @@ class MockInterviewService:
         policy = session_policy(context, questions)
         result = None
         if action != "COMPLETE":
-            result = await self.call_agent(self.main, session_id, user_id, session.state_version,
-                                          self.payload(context, questions, active, "NEXT", policy))
+            if context.get("adaptive_policy"):
+                from interview_api.modules.interview.adaptive import planning_payload, validate_decision
+                payload = planning_payload(context, questions, active, session.interview_plan_json)
+                payload["adaptive"]["choices"] = [c for c in payload["adaptive"]["choices"] if "NEXT" in c["strategies"]]
+                result = await self.call_agent(self.main.adaptive(payload), session_id, user_id, session.state_version, payload)
+                if result:
+                    policy = validate_decision(result.artifact, payload)
+            else:
+                result = await self.call_agent(self.main, session_id, user_id, session.state_version,
+                                              self.payload(context, questions, active, "NEXT", policy))
         async with self.factory() as db:
             data = await SessionController(db).skip(session_id, user_id, question_id, session.state_version, result, policy)
             await db.commit()

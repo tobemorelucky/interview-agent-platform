@@ -243,7 +243,7 @@ def test_stale_acquisition_is_failed_on_refresh_not_permanently_pending(database
     asyncio.run(run_with_database(database_url, scenario))
 
 
-def test_web_question_literal_failure_stops_before_routing(database_url):
+def test_web_question_unknown_anchor_stops_before_routing(database_url):
     async def scenario(factory):
         from interview_api.modules.public_career.research.agent import PublicDataResearchAgent
         from interview_api.modules.public_career.research.evidence import EvidenceCatalog
@@ -259,12 +259,12 @@ def test_web_question_literal_failure_stops_before_routing(database_url):
                 snapshot = await db.get(SourceSnapshot, task['manifest']['source_snapshot_id'])
                 catalog = EvidenceCatalog([snapshot])
             replies = interview_responses(web.company, [next(iter(catalog.spans))])
-            replies[0]['questions'][0]['question'] = '这是原文没有提供支持的新问题吗？'
+            replies[0]['questions'] = [dict(fragment_id='ev_' + '0' * 24, kind='QUESTION',
+                normalized_question='这是原文没有提供支持的新问题吗？', confidence=.9)]
             provider = ReplayModelProvider(replies)
             result = await PublicDataResearchAgent(factory, ModelRouter({EXTRACT_ROUTE:provider, QUALITY_ROUTE:provider})).run(task['id'])
             assert result['status'] == 'FAILED'
-            assert 'questions[0].question' in result['error']
-            assert 'literal_elsewhere=False' in result['error']
+            assert 'Unknown Evidence ID' in result['error']
             assert provider.calls == 1  # No wasted routing/reliability requests.
         finally: await web.http.aclose()
     asyncio.run(run_with_database(database_url, scenario))

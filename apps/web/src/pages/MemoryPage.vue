@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue"
+import CapabilityMemoryPanel from "../components/CapabilityMemoryPanel.vue"
 import { displayLabel } from "../i18n/zh-CN"
 const error = ref("")
 import { confidenceLabel } from "../types/interview-report"
@@ -132,6 +133,7 @@ onMounted(() => {
     </header>
 
     <p v-if="error" role="alert">{{ error }}</p>
+    <CapabilityMemoryPanel />
     <section class="panel create-panel">
       <div>
         <h3>新增偏好记忆</h3>

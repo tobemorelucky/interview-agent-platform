@@ -296,6 +296,9 @@ against the actual question; do not require every domain in the skill at once.
 
 
 def configured_prompt_registry(payload):
+    if payload.get("snapshot", {}).get("adaptive_policy"):
+        from interview_api.modules.interview.adaptive_prompts import AdaptivePromptRegistry
+        return AdaptivePromptRegistry(payload["snapshot"]["adaptive_policy"])
     if payload.get("snapshot", {}).get("system_design"):
         from interview_api.modules.interview.design_prompts import DesignPromptRegistry
         return DesignPromptRegistry(payload.get("design_phase"))
@@ -326,6 +329,16 @@ class InterviewAgent:
     def __init__(self, factory, router):
         self.factory, self.router = factory, router
 
+    async def interrupted(self, run_id, started, code):
+        with anyio.CancelScope(shield=True):
+            async with self.factory() as db:
+                for step in (await db.scalars(select(ExperienceAgentStepRun).where(
+                        ExperienceAgentStepRun.agent_run_id == run_id, ExperienceAgentStepRun.status == "RUNNING"))).all():
+                    step.status, step.error_message = "FAILED", code
+                    step.latency_ms = round((perf_counter() - started) * 1000)
+                await db.commit()
+            await finish_research_run(self.factory, run_id, status="FAILED", error=code)
+
     async def call(self, session_id, payload, *, answer_id=None, timeout_seconds=None):
         from interview_api.modules.interview.skill_engine import agent_payload
         payload = agent_payload(payload, self.route)
@@ -339,28 +352,39 @@ class InterviewAgent:
             await db.commit()
         started = perf_counter()
         try:
-            artifact = await ResearchModelCalls(self.factory, self.router, run_id,
-                prompts=configured_prompt_registry(payload), timeout_seconds=timeout_seconds or settings.interview_model_timeout_seconds
-            ).call(self.route, self.route, payload, self.schema)
+            model_payload = payload
+            if payload.get("adaptive"):
+                from copy import deepcopy
+                model_payload = deepcopy(payload)
+                policy = model_payload["snapshot"]["adaptive_policy"]
+                model_payload["snapshot"]["adaptive_policy"] = dict(version=policy["version"],
+                    prompt_fingerprints={k: v["fingerprint"] for k, v in policy["prompts"].items()})
+                model_payload["snapshot"].pop("adaptive_blueprint", None)  # choices already contain the allowed goals
+                if policy.get("decision_contract") == "TARGET_SOURCE_PAIR_V1" and self.route == INTERVIEW_MAIN_ROUTE:
+                    model_payload["adaptive"].pop("choices", None)  # only indivisible legal pairs face the model
+            timeout = timeout_seconds or settings.interview_model_timeout_seconds
+            async with asyncio.timeout(timeout if payload.get("adaptive") else None):
+                artifact = await ResearchModelCalls(self.factory, self.router, run_id,
+                    prompts=configured_prompt_registry(payload), timeout_seconds=timeout
+                ).call(self.route, self.route, model_payload, self.schema)
+            from interview_api.modules.interview.adaptive import AdaptiveSelection, resolve_selection
+            if isinstance(artifact, AdaptiveSelection):
+                artifact = resolve_selection(artifact, payload)
             self.validate_artifact(artifact, payload)
             output = {"schema": self.schema.__name__}
-            if self.route == ANSWER_EVALUATION_ROUTE:
+            if self.route == ANSWER_EVALUATION_ROUTE or payload.get("adaptive"):
                 output["validated_artifact"] = artifact.model_dump()
             await finish_research_run(self.factory, run_id, status="SUCCEEDED", output=output)
             async with self.factory() as db:
                 step = await db.scalar(select(ExperienceAgentStepRun).where(ExperienceAgentStepRun.agent_run_id == run_id))
                 return AgentResult(artifact, run_id, step.provider_name, step.model_name, step.prompt_version,
                                    step.structured_retry, step.token_usage_json or {})
+        except asyncio.TimeoutError as exc:
+            from interview_api.infrastructure.models.provider import ModelProviderError
+            await self.interrupted(run_id, started, "model_timeout")
+            raise ModelProviderError("model_timeout", "本轮模型含受控修复的总时限已到，未推进会话") from exc
         except asyncio.CancelledError:
-            # Client disconnect is not caught by Exception. Audit it without touching Research code.
-            with anyio.CancelScope(shield=True):
-                async with self.factory() as db:
-                    for step in (await db.scalars(select(ExperienceAgentStepRun).where(
-                            ExperienceAgentStepRun.agent_run_id == run_id, ExperienceAgentStepRun.status == "RUNNING"))).all():
-                        step.status, step.error_message = "FAILED", "interview_request_cancelled"
-                        step.latency_ms = round((perf_counter() - started) * 1000)
-                    await db.commit()
-                await finish_research_run(self.factory, run_id, status="FAILED", error="interview_request_cancelled")
+            await self.interrupted(run_id, started, "interview_request_cancelled")
             raise
         except Exception as exc:
             # A successful provider call followed by business validation failure
@@ -370,23 +394,38 @@ class InterviewAgent:
                 if step and isinstance((step.token_usage_json or {}).get("total_tokens"), int):
                     exc.usage = step.token_usage_json
             failure_output = None
+            if payload.get("adaptive") and self.route == INTERVIEW_MAIN_ROUTE:
+                # Bounded IDs only, not the proposed question, resume, response
+                # or reasoning. Preserve the original rejected selection.
+                candidate_ids = [c["candidate_id"] for c in payload["adaptive"].get("candidates", [])]
+                failure_output = {"validation": dict(
+                    error=getattr(exc, "code", type(exc).__name__), disposition="SAFE_RETRY_NO_EXTRA_CALL",
+                    strategy=getattr(locals().get("artifact"), "strategy", None),
+                    candidate_id=getattr(locals().get("artifact"), "candidate_id", None),
+                    target_knowledge_id=getattr(locals().get("artifact"), "target_knowledge_id", None),
+                    question_source_ref=getattr(locals().get("artifact"), "question_source_ref", None),
+                    allowed_candidate_ids=candidate_ids,
+                    allowed_target_sources=[dict(target=c["target"]["knowledge_id"],
+                        sources=[s["ref"] for s in c["target"]["sources"]]) for c in payload["adaptive"]["choices"]])}
             if getattr(exc, "code", None) == "INVALID_MAIN_ARTIFACT":
                 failure_output = {"validation": {
+                    **((failure_output or {}).get("validation") or {}),
                     "requested_action": payload["requested_action"],
                     "received_recommendation": artifact.recommendation,
                     "question_present": artifact.question is not None,
                 }}
             if getattr(exc, "code", None) == "QUESTION_SOURCE_POLICY":
                 failure_output = {"validation": {
+                    **((failure_output or {}).get("validation") or {}),
                     "requested_action": payload["requested_action"],
-                    "expected_source_type": payload["preferred_source"]["source_type"],
+                    "expected_source_type": payload["preferred_source"].get("source_type"),
                     "received_source_type": artifact.question.source_type,
                 }}
             if getattr(exc, "code", None) == "UNSUPPORTED_CANDIDATE_QUESTION":
                 # IDs/counts only, no resume excerpts, raw response or reasoning.
                 q = artifact.question
                 facts = {f["id"]: f for f in payload["snapshot"]["candidate_facts"]}
-                failure_output = {"validation": dict(source_type=q.source_type,
+                failure_output = {"validation": dict(**((failure_output or {}).get("validation") or {}), source_type=q.source_type,
                     candidate_fact_ids=q.candidate_fact_ids,
                     evidence_ref_count=len(q.candidate_evidence_ids),
                     unpaired_fact_ids=[f for f in q.candidate_fact_ids if
@@ -402,6 +441,16 @@ class InterviewAgent:
 class InterviewMainAgent(InterviewAgent):
     route, role, schema = INTERVIEW_MAIN_ROUTE, "InterviewMainAgent", MainArtifact
 
+    def adaptive(self, payload=None):
+        from copy import copy
+        from interview_api.modules.interview.adaptive import AdaptiveDecision, AdaptiveSelection, uses_pairs
+        agent = copy(self)
+        agent.schema = AdaptiveSelection if uses_pairs(payload or {}) else AdaptiveDecision
+        return agent
+
+    async def reusable(self, session_id, answer_id, payload):
+        return await AnswerEvaluationAgent.reusable(self, session_id, answer_id, payload)
+
     def tool_selector(self):
         from copy import copy
         from interview_api.modules.interview.system_design import ToolDecision
@@ -410,6 +459,10 @@ class InterviewMainAgent(InterviewAgent):
         return selector
 
     def validate_artifact(self, artifact, payload):
+        if payload.get("adaptive"):
+            from interview_api.modules.interview.adaptive import validate_decision
+            validate_decision(artifact, payload)
+            return
         from interview_api.modules.interview.system_design import ToolDecision, validate_tool_citations
         if isinstance(artifact, ToolDecision):
             if artifact.arguments.plan_version != payload["design_revision"]["version"]:
@@ -426,7 +479,18 @@ class InterviewMainAgent(InterviewAgent):
 class AnswerEvaluationAgent(InterviewAgent):
     route, role, schema = ANSWER_EVALUATION_ROUTE, "AnswerEvaluationAgent", EvaluationArtifact
 
+    def adaptive(self):
+        from copy import copy
+        from interview_api.modules.interview.adaptive import AdaptiveEvaluation
+        agent = copy(self)
+        agent.schema = AdaptiveEvaluation
+        return agent
+
     def validate_artifact(self, artifact, payload):
+        if payload.get("adaptive"):
+            from interview_api.modules.interview.adaptive import resolve_observations
+            resolve_observations(artifact, payload)
+            return
         from interview_api.modules.interview.system_design import validate_tool_citations
         validate_tool_citations(artifact, payload)
 
@@ -452,7 +516,10 @@ class AnswerEvaluationAgent(InterviewAgent):
                 .order_by(ExperienceAgentRun.id.desc()).limit(1))).first()
             if row and (row[0].output_json or {}).get("validated_artifact"):
                 run, step = row
-                artifact = self.schema.model_validate(run.output_json["validated_artifact"])
+                from interview_api.modules.interview.adaptive import AdaptiveSelection, ResolvedAdaptiveDecision
+                stored_schema = ResolvedAdaptiveDecision if self.schema is AdaptiveSelection else self.schema
+                artifact = stored_schema.model_validate(run.output_json["validated_artifact"])
+                self.validate_artifact(artifact, payload)
                 return AgentResult(artifact, run.id, step.provider_name, step.model_name, step.prompt_version,
                     step.structured_retry, step.token_usage_json or {})
         return None

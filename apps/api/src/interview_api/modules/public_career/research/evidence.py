@@ -77,3 +77,22 @@ class EvidenceCatalog:
             previous = span
         value = normalize_text(statement)
         return bool(value) and any(value in normalize_text(group) for group in groups)
+
+    def validate_identity(self, ids, *names):
+        """Exact identity rule shared by early selection and final publication."""
+        from interview_api.modules.public_career.fingerprints import normalize_text
+        groups, previous = [], None
+        for span in sorted(self.resolve(ids), key=lambda s: (s.snapshot_id, s.start)):
+            if previous and previous.snapshot_id == span.snapshot_id and previous.end == span.start:
+                groups[-1] += span.excerpt
+            else:
+                groups.append(span.excerpt)
+            previous = span
+        texts = [''.join(normalize_text(group).split()) for group in groups]
+        for name in names:
+            value = ''.join(normalize_text(name).split()) if name else ''
+            if value and not any(value in text for text in texts):
+                elsewhere = any(value in ''.join(normalize_text(s.excerpt).split()) for s in self.spans.values())
+                raise EvidenceValidationError(
+                    f'Company/job identity absent from exact cited evidence: name={name!r}; '
+                    f'evidence_ids={sorted(set(ids))}; literal_elsewhere={elsewhere}')

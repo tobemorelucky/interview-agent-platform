@@ -12,6 +12,7 @@ from interview_api.modules.public_career.web_audit import WebHTTPAudit
 from interview_api.modules.public_career.web_collection import WebCollectionService
 from interview_api.modules.public_career.research.agent import PublicDataResearchAgent
 from interview_api.modules.public_career.research.evidence import EvidenceCatalog
+from interview_api.modules.public_career.research.fragments import InterviewSourceFragments
 from interview_api.modules.public_career.models import SourceSnapshot
 from test_m2b_research_agent import interview_responses
 
@@ -54,7 +55,7 @@ class FixtureResearchAgent:
         task = await WebCollectionService(self.factory).detail(task_id)
         async with self.factory() as db:
             snapshot = await db.get(SourceSnapshot, task['manifest']['source_snapshot_id'])
-            catalog = EvidenceCatalog([snapshot])
+            catalog = (InterviewSourceFragments if task['target_type'] == 'INTERVIEW_DATA' else EvidenceCatalog)([snapshot])
             company = snapshot.content_text.split(' ' + TITLE)[0]
         ids = [next(iter(catalog.spans))]
         if task['target_type'] == 'JOB_JD':
@@ -64,6 +65,8 @@ class FixtureResearchAgent:
                 attributes=[dict(field='LOCATION', statement='北京', evidence_ids=ids)]), dict(suitable=True, risk_flags=[])]
         else:
             responses = interview_responses(company, ids)
+            responses[0]['questions'] = [dict(fragment_id=ids[0], normalized_question=q['question'],
+                kind='QUESTION', question_type=q['question_type'], confidence=q['confidence']) for q in responses[0]['questions']]
         if self.fail:
             responses = [{}, {}]
         provider = ReplayModelProvider(responses)

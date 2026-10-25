@@ -20,6 +20,7 @@ class CreateSessionRequest(BaseModel):
     interviewer_style: StyleId = "standard"
     interviewer_selection_source: str = Field(default="USER_SELECTED", pattern=r"^(AUTO_RECOMMENDED|USER_SELECTED)$")
     design_interview: bool = False
+    adaptive_interview: bool = False
 
 
 class SkillRecommendationRequest(BaseModel):

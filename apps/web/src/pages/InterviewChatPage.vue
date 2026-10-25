@@ -43,12 +43,16 @@ const interviewerOptions = ref<InterviewerOptions | null>(null)
 const interviewerOptionsError = ref('')
 const creatingSession = ref(false)
 const designInterview = ref(false), activeDesign = ref(false)
+const adaptiveInterview = ref(false)
+watch(adaptiveInterview, value => { if (value) designInterview.value = false })
+watch(designInterview, value => { if (value) adaptiveInterview.value = false })
 const designTrace = ref<DesignTrace>()
 const designPlan = ref<DesignPlan>({ deduplication: 'NONE', capacity_guard: 'NONE', capacity: 1 })
 const skillChoice = ref<SkillChoice>({ skill_id: '', source: null })
 const roundAndStyle = ref<Pick<InterviewerSelection, 'interview_round' | 'interviewer_style'>>({ interview_round: 'technical_screen', interviewer_style: 'standard' })
 const interviewerSelection = computed<InterviewerSelection>(() => ({ ...roundAndStyle.value, interviewer_skill_id: skillChoice.value.skill_id,
   design_interview: designInterview.value,
+  adaptive_interview: adaptiveInterview.value,
   interviewer_selection_source: skillChoice.value.source || 'USER_SELECTED' }))
 const skillRecommendation = computed(() => targets.value.find(t => t.job_id === selectedJobId.value)?.interviewer_skill_recommendation)
 const manualSkillMismatch = computed(() => skillChoice.value.source === 'USER_SELECTED' && !!selectedJobId.value &&
@@ -62,6 +66,7 @@ const activeQuestionId = ref<number | null>(null)
 const retryAnswer = ref<{ question_id: number; idempotency_key: string; content: string; design_plan?: DesignPlan } | null>(null)
 const answerPersisted = ref(false)
 const profileContext = ref<InterviewSession["context_snapshot"]>()
+const memoryGuidance = computed(() => (profileContext.value as { memory_guided_plan?: { items: { label: string; history_summary: string }[] } } | undefined)?.memory_guided_plan?.items || [])
 const completion = ref<InterviewSession["completion_json"]>()
 const pageError = ref("")
 const streamErrorCode = ref("")
@@ -787,6 +792,8 @@ getInterviewTargets().then(async data => {
         </label>
         <label>面试轮数（含追问）<input v-model.number="createBudget" type="number" min="1" max="40" style="width:60px"></label>
         <label><input type="checkbox" v-model="designInterview" aria-label="系统设计验证面试"> 系统设计验证面试（限量预约场景）</label>
+        <label><input type="checkbox" v-model="adaptiveInterview" aria-label="自适应面试"> 自适应面试 · 根据回答调整考察目标</label>
+        <small v-if="adaptiveInterview">结合岗位要求、真实项目与已审核资料安排技术主题；回答后补具体缺口或切换主题，不形成长期能力评分。</small>
         <template v-if="interviewerOptions">
           <label>岗位专业 Skill<select :value="skillChoice.skill_id" @change="selectSkill" aria-label="岗位专业 Skill" style="width:100%">
             <option value="">请选择专业 Skill</option>
@@ -864,8 +871,13 @@ getInterviewTargets().then(async data => {
               <small>Skill {{ activeInterviewer.skill.version }} / 策略 {{ activeInterviewer.style.version }}；后续配置更新不改变本场。</small>
             </details>
             <span v-else>原有通用面试策略</span>
+            <details v-if="profileContext?.adaptive_policy" class="session-context-detail"><summary>自适应考察范围（本场固定）</summary>
+              <p>{{ profileContext.adaptive_blueprint?.targets.map(t => t.label).join('、') }}</p>
+              <p>依据本轮回答调整追问；表现观察不等于稳定技能事实，跨场次推断可在成长记录中查看和更正。</p>
+            </details>
             <span class="round-progress">第 {{ Math.min(questionList.find(q => q.id === activeQuestionId)?.question_index != null ? questionList.find(q => q.id === activeQuestionId)!.question_index + 1 : questionList.length || 1, questionBudget) }} / {{ questionBudget }} 轮</span>
             <span v-if="activeQuestionId">当前题型：{{ displayLabel(questionList.find(q => q.id === activeQuestionId)?.dimension, '技术 / 项目') }} · 难度：{{ displayLabel(questionList.find(q => q.id === activeQuestionId)?.difficulty) }}</span>
+            <span v-if="questionList.find(q => q.id === activeQuestionId)?.assessment_topic">考察主题：{{ questionList.find(q => q.id === activeQuestionId)?.assessment_topic }}</span>
             <details class="session-context-detail"><summary>本场资料详情</summary><p>画像第 {{ profileContext?.profile_version_number }} 版 / 岗位描述第 {{ profileContext?.jd_version_number }} 版（本场固定）</p><p v-if="profileContext?.coverage_insufficient">题库覆盖有限，本场会结合真实项目和岗位要求出题。</p></details>
             <span v-if="isReplay || completion?.mode === 'replay'">DEMO · Replay 回放模式（不是 Live 模型验收）</span>
             <button v-if="activeSession()?.status === 'READY'" :disabled="generationStage !== 'idle'" @click="handleStart">开始 / 重试首题</button>
@@ -915,6 +927,7 @@ getInterviewTargets().then(async data => {
           <p>已批准的准备目标 / 偏好，不作为学历或技能证明。本场开始后不动态刷新。</p>
           <ul v-if="profileContext.approved_memory_context?.items.length"><li v-for="memory in profileContext.approved_memory_context.items" :key="memory.id">{{ memory.content }}</li></ul>
           <p v-else>本场未使用已批准的历史记忆。</p>
+          <div v-if="memoryGuidance.length"><h4>本场能力复测参考（系统推断）</h4><p v-for="item in memoryGuidance" :key="item.label">{{ item.label }}：{{ item.history_summary }}</p><p>只作为选题参考，不作为评分事实；开始后不会变化。</p></div>
           <details v-if="profileContext.recent_performance_observations?.items.length"><summary>近期练习观察（不是长期事实）</summary><ul><li v-for="observation in profileContext.recent_performance_observations.items" :key="observation.id">{{ observation.content }}</li></ul></details>
           <router-link to="/memory">查看和管理成长记录</router-link>
         </details>

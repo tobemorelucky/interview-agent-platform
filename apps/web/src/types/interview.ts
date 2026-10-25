@@ -71,6 +71,7 @@ export interface ReferenceAnswer {
 }
 
 export interface InterviewQuestion {
+  assessment_topic?: string
   question_id: number
   question_index: number
   total_questions?: number
@@ -89,6 +90,7 @@ export interface InterviewQuestion {
 }
 
 export interface InterviewQuestionSummary {
+  assessment_topic?: string
   id: number
   question_index: number
   question: string
@@ -176,6 +178,7 @@ export interface SkillRecommendation {
 export type InterviewerRound = "technical_screen" | "project_deep_dive"
 export type InterviewerStyle = "gentle" | "standard" | "strict"
 export interface InterviewerSelection {
+  adaptive_interview?: boolean
   design_interview?: boolean
   interviewer_skill_id: InterviewerSkillId
   interview_round: InterviewerRound
@@ -202,7 +205,7 @@ export interface InterviewSession {
   legacy?: boolean
   active_question_id?: number | null
   state_version?: number
-  context_snapshot?: { company_name: string; job_title: string; profile_version_number: number; jd_version_number: number; coverage_insufficient: boolean; profile?: unknown; interviewer_config?: InterviewerConfig; interviewer_selection?: { source: 'AUTO_RECOMMENDED' | 'USER_SELECTED'; skill_id: string }; approved_memory_context?: { items: { id: number; content: string }[]; omitted_count?: number }; recent_performance_observations?: { items: { id: number; content: string }[] } }
+  context_snapshot?: { adaptive_policy?: { version: string }; adaptive_blueprint?: { targets: { label: string }[] }; company_name: string; job_title: string; profile_version_number: number; jd_version_number: number; coverage_insufficient: boolean; profile?: unknown; interviewer_config?: InterviewerConfig; interviewer_selection?: { source: 'AUTO_RECOMMENDED' | 'USER_SELECTED'; skill_id: string }; approved_memory_context?: { items: { id: number; content: string }[]; omitted_count?: number }; recent_performance_observations?: { items: { id: number; content: string }[] } }
   completion_json?: { overall_average: number | null; dimension_averages: Record<string, number | null>; answered_count: number; evaluated_count: number; mode: string }
   id: number
   user_id: number

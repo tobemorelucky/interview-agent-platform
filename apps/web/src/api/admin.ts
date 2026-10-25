@@ -278,6 +278,13 @@ export interface ExperienceReviewQuestion {
   standard_answer?: string | null
   answer_source: string
   evidence?: string | null
+  source_anchor?: {
+    fragment_id: string
+    raw_excerpt: string
+    normalized_question: string
+    kind: string
+    normalization_status: string
+  } | null
   question_type?: string | null
   technical_categories: string[]
   difficulty?: string | null

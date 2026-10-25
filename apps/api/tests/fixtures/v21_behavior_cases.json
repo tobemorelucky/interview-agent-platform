@@ -1,0 +1,9 @@
+{
+  "mode": "DEMO_REPLAY_EXPECTED_BEHAVIOR_NOT_MODEL_BENCHMARK",
+  "cases": [
+    {"id": "java_vague", "answer": "我用过 Kafka，具体机制没讲清。", "expected": ["REQUEST_EXAMPLE", "FOLLOW_UP"]},
+    {"id": "java_missing_ack", "answer": "消息消费后就 ACK。", "expected": ["FOLLOW_UP", "DEEP_DIVE"]},
+    {"id": "java_repaired", "answer": "业务唯一键与写入同事务，提交后 ACK，重复消费查询原结果。", "expected": ["NEXT"]},
+    {"id": "agent_gap", "answer": "模型选择工具直接执行，失败就重试。", "expected": ["FOLLOW_UP", "DEEP_DIVE", "REQUEST_EXAMPLE"]}
+  ]
+}

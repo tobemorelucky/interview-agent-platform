@@ -92,6 +92,10 @@ class InterviewReportService:
                     question_kind=q.question_kind, status=q.status, candidate_refs=q.candidate_refs_json,
                     job_requirement_id=q.job_requirement_id) for q in questions],
                 evaluations=evaluations, evaluation_fingerprint=fingerprint)
+            if snapshot.context_json.get("adaptive_policy"):
+                from interview_api.modules.interview.adaptive import review_projection
+                payload["snapshot"].pop("adaptive_policy", None)
+                payload["adaptive_review"] = review_projection(snapshot.context_json, session.interview_plan_json)
             await db.commit()
         result, published = None, False
         try:
@@ -209,11 +213,16 @@ class InterviewReportService:
         observations = (await db.scalars(select(InterviewPerformanceObservation).where(
             InterviewPerformanceObservation.report_id == report["id"]).order_by(InterviewPerformanceObservation.id))).all() if report else []
         context = snapshot.context_json
+        adaptive_review = None
+        if context.get("adaptive_policy"):
+            from interview_api.modules.interview.adaptive import review_projection
+            adaptive_review = review_projection(context, session.interview_plan_json)
         return dict(session=dict(id=session.id, title=session.title, status=session.status,
             company_name=context["company_name"], job_title=context["job_title"], context_snapshot_id=snapshot.id),
             statistics=report["statistics"] if report else deterministic_statistics(questions, evaluations),
             current_report=current, report=report, history=history, evaluations=evaluations,
             design_trace=deepcopy(session.planner_trace_json or {}) if context.get("system_design") else None,
+            adaptive_review=adaptive_review,
             memory_proposals=proposal_result["items"], observations=[dict(id=o.id, report_id=o.report_id, session_id=o.session_id,
                 observation_type=o.observation_type, text=o.text, supporting_evaluation_ids=o.supporting_evaluation_ids,
                 occurrence_count=o.occurrence_count, created_at=_iso(o.created_at)) for o in observations])

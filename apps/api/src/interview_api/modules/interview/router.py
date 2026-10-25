@@ -60,8 +60,8 @@ async def create_session(body: CreateSessionRequest, current_user=Depends(get_cu
 async def list_sessions(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     sessions = (await db.scalars(select(InterviewSession).where(InterviewSession.user_id == current_user.id)
         .order_by(InterviewSession.updated_at.desc()))).all()
-    return success(data=[{**{c.name: getattr(s, c.name) for c in InterviewSession.__table__.columns},
-                         "legacy": s.workflow_mode != "m4"} for s in sessions])
+    return success(data=[public_session_view({**{c.name: getattr(s, c.name) for c in InterviewSession.__table__.columns},
+                         "legacy": s.workflow_mode != "m4"}) for s in sessions])
 
 
 @router.get("/sessions/{session_id}")

@@ -77,6 +77,8 @@ export interface ReportSessionInfo {
 }
 
 export interface InterviewReportDetail {
+  adaptive_review?: { semantics: string; targets: { label: string; state: string; missing_mechanisms: string[];
+    observations: { question_id: number; evaluation_id: number; state: string; answer_spans: { excerpt: string }[]; resolved_gap_count: number }[] }[] } | null
   design_trace?: DesignTrace
   session: ReportSessionInfo
   statistics: InterviewReportStatistics

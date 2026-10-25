@@ -20,6 +20,7 @@ from interview_api.modules.public_career.models import (
 from interview_api.modules.public_career.refresh_service import PublicDataRefreshService, RefreshTaskStatus
 from interview_api.modules.public_career.tool_models import ToolInvocation
 from interview_api.modules.public_career.research.evidence import EvidenceCatalog, EvidenceValidationError
+from interview_api.modules.public_career.research.fragments import InterviewSourceFragments
 from interview_api.modules.public_career.research.schemas import JobJDExtraction, ResearchQuality
 from interview_api.modules.public_career.research.audit import ResearchModelCalls, create_research_run, finish_research_run
 from interview_api.modules.public_career.research.prompts import ManualSourcePromptRegistry, WebSourcePromptRegistry
@@ -110,14 +111,15 @@ class PublicDataResearchAgent:
                     for group in group_independent_content(snapshots).groups:
                         members = [by_id[sid] for sid in group.snapshot_ids]
                         first = members[0]
-                        group_catalog = EvidenceCatalog(members, max_chars=settings.public_research_max_evidence_chars)
+                        group_catalog = (InterviewSourceFragments if web else EvidenceCatalog)(
+                            members, max_chars=settings.public_research_max_evidence_chars)
                         extracted, state = await InterviewPipelineAdapter(calls, require_literal_questions=bool(web), requested_identity=(
                             {"company": manual["company"], "position": manual["job_title"],
                              "requires_literal_evidence": True} if manual else None)).run(
                             group_catalog, first.content_text or "",
                             sources[first.source_id].canonical_url, first.title,
                         )
-                        if web:
+                        if web and not state.get('source_anchors'):
                             for question in extracted.questions:
                                 if not group_catalog.supports_literal(question.evidence_ids, question.question):
                                     raise EvidenceValidationError("Web question must be extractive from cited source text")
@@ -176,24 +178,7 @@ class PublicDataResearchAgent:
 
     @staticmethod
     def _validate_identity(catalog, ids, *names):
-        # Formatting whitespace is not a different company/role. Join only
-        # adjacent spans of the same real Snapshot; never concatenate unrelated
-        # evidence into a fabricated identity.
-        spans = sorted(catalog.resolve(ids), key=lambda s: (s.snapshot_id, s.start))
-        groups = []
-        previous = None
-        for span in spans:
-            if previous and previous.snapshot_id == span.snapshot_id and previous.end == span.start:
-                groups[-1] += span.excerpt
-            else:
-                groups.append(span.excerpt)
-            previous = span
-        texts = ["".join(normalize_text(text).split()) for text in groups]
-        for name in names:
-            if name and not any("".join(normalize_text(name).split()) in text for text in texts):
-                raise EvidenceValidationError(
-                    f"Company/job identity absent from exact cited evidence: name={name!r}; evidence_ids={sorted(set(ids))}"
-                )
+        catalog.validate_identity(ids, *names)
 
     @staticmethod
     def _metrics(snapshots):
@@ -320,7 +305,8 @@ class PublicDataResearchAgent:
         if web_manifest(task):
             # Collected community experiences are always candidates for human
             # review, regardless of provider authority or model confidence.
-            gate = {**gate, "review_status": "WAITING_REVIEW"}
+            if gate['review_status'] != 'REJECTED':
+                gate = {**gate, "review_status": "WAITING_REVIEW"}
         first = snapshots[0]
         source = sources[first.source_id]
         legacy = await db.scalar(select(ExperienceCollectionTask).where(ExperienceCollectionTask.public_refresh_task_id == task.id))
@@ -377,7 +363,7 @@ class PublicDataResearchAgent:
             round_name=extracted.round_name, summary=extracted.experience_summary,
             job_direction=(state.get("routing_result") or {}).get("overall_job_direction"),
             extraction_confidence=extracted.extraction_confidence,
-            extraction_output_json=extracted.model_dump(), routing_json=state.get("routing_result"),
+            extraction_output_json={**extracted.model_dump(), **({'source_anchors': state['source_anchors']} if state.get('source_anchors') else {})}, routing_json=state.get("routing_result"),
             reliability_json={**(state.get("reliability_result") or {}), **metrics,
                               **({"manual_source": manual} if manual else {}),
                               **({"web_source": web_manifest(task)} if web_manifest(task) else {}),
@@ -395,14 +381,16 @@ class PublicDataResearchAgent:
             routing_result=state.get("routing_result"), review_status=gate["review_status"],
             reliability_score=gate["reliability_score"],
         )
-        for model_question, question in zip(extracted.questions, questions, strict=True):
-            question.claim_id = await self._claim(db, question.question, model_question.evidence_ids, catalog,
+        for index, (model_question, question) in enumerate(zip(extracted.questions, questions, strict=True)):
+            anchor = (state.get('source_anchors') or {}).get('questions', [])[index] if state.get('source_anchors') else None
+            question.claim_id = await self._claim(db, anchor['raw_excerpt'] if anchor else question.question, model_question.evidence_ids, catalog,
                                                   context=f"INTERVIEW_DATA:{experience.content_fingerprint}", status=gate["review_status"])
             # Legacy evidence is supplied by the exact resolver, never model text.
             question.evidence = catalog.resolve(model_question.evidence_ids)[0].excerpt[:500]
             supported_ids = {span.snapshot_id for span in catalog.resolve(model_question.evidence_ids)}
             question.routing_json = {**(question.routing_json or {}), **self._metrics(
-                [snapshot for snapshot in snapshots if snapshot.id in supported_ids])}
+                [snapshot for snapshot in snapshots if snapshot.id in supported_ids]),
+                **({'source_anchor': anchor} if anchor else {})}
         item.extract_status = "EXTRACTED"
         await repo.refresh_task_extraction_counts(legacy.id)
         return {"target": "INTERVIEW_DATA", "experience_id": experience.id,

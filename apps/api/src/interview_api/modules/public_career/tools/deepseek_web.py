@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 import json
 import re
 from time import perf_counter
+from urllib.parse import urlsplit, parse_qsl
 
 import httpx
 
@@ -23,6 +24,27 @@ BASE_URL = "https://api.deepseek.com/v1/tools"
 ERRORS = {400: 'invalid_request', 401: 'authentication_failed', 402: 'insufficient_balance',
           403: 'access_denied', 404: 'content_unavailable', 408: 'request_timeout',
           413: 'response_too_large', 429: 'rate_limited'}
+
+
+def source_scope_reason(url, sites=()):
+    """Validate actual hostname, never text containment or provider site syntax.
+
+    Reject explicit redirect wrappers in a scoped search. Undisclosed server
+    redirects cannot be attested by the Search API and remain an audit limit.
+    """
+    try:
+        canonical = canonicalize_public_url(url)
+        parsed = urlsplit(canonical)
+        host = parsed.hostname
+        domains = [urlsplit(canonicalize_public_url('https://' + s)).hostname for s in sites]
+        if domains and not any(host == s or host.endswith('.' + s) for s in domains):
+            return 'hostname_out_of_scope'
+        if domains and any(k.lower() in {'url', 'redirect', 'redirect_url', 'redirect_uri', 'target', 'dest', 'destination', 'next', 'to'}
+                           and v.lower().startswith(('http:', 'https:', '//')) for k, v in parse_qsl(parsed.query)):
+            return 'redirect_wrapper_not_verifiable'
+    except (URLSafetyError, TypeError, AttributeError, ValueError):
+        return 'unsafe_or_invalid_url'
+    return None
 
 
 def search_query(query, *, sites=(), published_after=None, published_before=None):
@@ -94,7 +116,7 @@ class DeepSeekWebClient:
             if self.audit:
                 await self.audit.finish(ticket, 'FAILED' if error else 'SUCCEEDED', item)
             if not error:
-                return data, dict(provider='deepseek_web', acquisition_mode='LIVE_SEARCH' if self.mode == ProviderMode.LIVE else 'REPLAY',
+                return data, dict(provider='deepseek_web', acquisition_mode=('LIVE_SEARCH' if kind == 'search' else 'LIVE_FETCH') if self.mode == ProviderMode.LIVE else 'REPLAY',
                                   collected_at=datetime.now(timezone.utc).isoformat(), http_attempts=history)
             retryable = status in {408, 429, 500, 502, 503, 504} or error.code in {
                 'deepseek_web_timeout', 'deepseek_web_transport_error'}
@@ -141,6 +163,7 @@ class DeepSeekSearchProvider(SearchProvider):
 
     def __init__(self, client=None):
         self.client = client or DeepSeekWebClient()
+        self.last_search_diagnostics = {}
 
     async def search(self, query, *, time_window_hours, max_results):
         # Compatibility contract: explicit dates supersede legacy time windows;
@@ -156,9 +179,18 @@ class DeepSeekSearchProvider(SearchProvider):
         if not isinstance(body.get('results'), list):
             raise ToolExecutionError('deepseek_web_invalid_response', '缺少搜索结果列表')
         results = []
+        rejected = []
         seen = set()
-        for item in body['results'][:max_results]:
+        for index, item in enumerate(body['results'][:max_results]):
             if not isinstance(item, dict):
+                rejected.append(dict(result_index=index, reason='invalid_result_type'))
+                continue
+            reason = source_scope_reason(item.get('url'), sites)
+            if not reason and item.get('final_url'):
+                reason = source_scope_reason(item['final_url'], sites)
+            if reason:
+                # Do not log raw rejected URLs: they may contain credentials.
+                rejected.append(dict(result_index=index, reason=reason))
                 continue
             try:
                 url = canonicalize_public_url(item.get('url', ''))
@@ -176,6 +208,7 @@ class DeepSeekSearchProvider(SearchProvider):
                 content=content or None, metadata={**audit, 'query': query, 'original_url': item['url'],
                     **{k: item.get(k) for k in ('summary', 'authority', 'rerank_score', 'site_name', 'date')},
                     'trust_note': 'ranking_signals_not_truth'}))
+        self.last_search_diagnostics = dict(allowed_domains=list(sites), rejected_count=len(rejected), rejected=rejected)
         return results
 
 
@@ -195,6 +228,10 @@ class DeepSeekFetchProvider(FetchProvider):
         text = body.get('content')
         if not isinstance(text, str) or not text.strip():
             raise ToolExecutionError('deepseek_web_empty_body', '目标网页没有可用公开正文')
+        if len(text.strip()) < 1000 and re.search(
+                r'^(?:#*\s*)?(?:403\b|access denied\b|forbidden\b|captcha\b|验证后继续|访问被拒绝|请完成.{0,8}验证)',
+                text.strip(), re.I):
+            raise ToolExecutionError('deepseek_web_unusable_body', '网页返回访问限制或验证页；不会作为正文覆盖有效快照')
         if len(text) > settings.deepseek_web_max_content_chars:
             raise ToolExecutionError('deepseek_web_body_too_large', '正文超过本项目采集上限')
         return FetchResult(url=url, final_url=url, status_code=200, content_type='text/markdown',

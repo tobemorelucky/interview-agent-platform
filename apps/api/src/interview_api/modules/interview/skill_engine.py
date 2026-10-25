@@ -140,6 +140,12 @@ def evaluation_contract(config):
 def agent_payload(payload, route):
     """Evaluation receives a style-blind contract, including during retry hashing."""
     result = deepcopy(payload)
+    if route == "interview_main" and "memory_guided_plan" in result.get("snapshot", {}):
+        result["snapshot"].pop("recent_performance_observations", None)
+    if route == "answer_evaluation" and "memory_guided_plan" in result.get("snapshot", {}):
+        # Historical inference must not anchor independent grading, even without a Skill.
+        for key in ("memory_guided_plan", "approved_memory_context", "recent_performance_observations"):
+            result.get("snapshot", {}).pop(key, None)
     config = result.get("snapshot", {}).get("interviewer_config")
     if route != "answer_evaluation" or not config:
         return result

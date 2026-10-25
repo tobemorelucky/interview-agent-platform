@@ -16,7 +16,7 @@ from interview_api.core.url_safety import canonicalize_public_url
 from .models import PublicDataRefreshTask, Source, SourceSnapshot
 from .tool_models import ToolInvocation
 from .tools.contracts import ToolContext
-from .tools.deepseek_web import DeepSeekWebClient, DeepSeekSearchProvider, DeepSeekFetchProvider
+from .tools.deepseek_web import DeepSeekWebClient, DeepSeekSearchProvider, DeepSeekFetchProvider, source_scope_reason
 from .tools.errors import ToolExecutionError
 from .tools.factory import build_tool_gateway
 from .web_audit import WebHTTPAudit
@@ -56,6 +56,10 @@ async def resolve_web_snapshot(db, task):
         or sha256(snapshot.content_text.encode()).hexdigest() != snapshot.content_hash
         or not any(ref['source_snapshot_id'] == snapshot.id for ref in call.response_json.get('source_snapshot_refs', []))):
         raise ValueError('Web snapshot lacks successful audited body provenance')
+    discovery = await db.get(PublicDataRefreshTask, manifest.get('search_task_id'))
+    sites = json.loads(discovery.reason).get('parameters', {}).get('sites', []) if discovery else []
+    if source_scope_reason(source.canonical_url, sites):
+        raise ValueError('Web source violates discovery hostname scope; new scoped discovery required')
     return [snapshot]
 
 
@@ -125,6 +129,9 @@ class WebCollectionService:
             search = await db.get(PublicDataRefreshTask, search_task_id)
             if not search or search.target_type != 'WEB_DISCOVERY' or search.status != 'COMPLETED':
                 raise AppError('WEB_SEARCH_REQUIRED', '请先完成搜索并选择实际返回的网页', 409)
+            sites = json.loads(search.reason).get('parameters', {}).get('sites', [])
+            if source_scope_reason(url, sites):
+                raise AppError('WEB_SOURCE_OUT_OF_SCOPE', '网页不符合本次搜索的来源范围，请重新搜索', 422)
             calls = list((await db.scalars(select(ToolInvocation).where(
                 ToolInvocation.refresh_task_id == search_task_id, ToolInvocation.tool_name == 'public.search',
                 ToolInvocation.status == 'SUCCEEDED').order_by(ToolInvocation.id.desc()))).all())
@@ -176,6 +183,8 @@ class WebCollectionService:
                 body_call_id = call.id
         async with self.factory() as db:
             snapshot = await db.get(SourceSnapshot, snapshot_id)
+            if len((snapshot.content_text or '').strip()) < settings.deepseek_web_min_body_chars:
+                raise AppError('WEB_BODY_INSUFFICIENT', '正文不足，保留原有快照，不进入结构化提取', 422)
             manifest = dict(acquisition_mode=MODE, source_url=url, source_type=source_type,
                 source_snapshot_id=snapshot_id, content_hash=snapshot.content_hash, body_invocation_id=body_call_id,
                 document_type=document_type, search_task_id=search_task_id)

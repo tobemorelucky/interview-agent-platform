@@ -47,6 +47,7 @@ from interview_api.modules.memory.models import (  # noqa: F401
     UserMemoryEvent,
 )
 from interview_api.modules.memory import proposal_models as memory_proposal_models  # noqa: F401
+from interview_api.modules.memory import capability_models  # noqa: F401
 from interview_api.modules.interview_report import models as interview_report_models  # noqa: F401
 from interview_api.modules.audit.models import AuditLog  # noqa: F401
 from interview_api.modules.job_matching import models as job_matching_models  # noqa: F401

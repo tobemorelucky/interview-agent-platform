@@ -77,6 +77,9 @@ class ExperienceReviewService:
         question = await self.repo.get_question(question_id)
         if not question:
             raise LookupError("review_question_not_found")
+        anchor = (question.routing_json or {}).get('source_anchor')
+        if anchor and values.get('evidence') not in (None, anchor['raw_excerpt'][:500]):
+            raise ValueError('source_anchor_evidence_immutable')
         update_values: dict[str, Any] = {}
         for key in [
             "question",
@@ -240,6 +243,7 @@ class ExperienceReviewService:
             "standard_answer": question.standard_answer,
             "answer_source": question.answer_source,
             "evidence": question.evidence,
+            "source_anchor": (question.routing_json or {}).get('source_anchor'),
             "question_type": question.question_type,
             "technical_categories": question.technical_categories_json or [],
             "difficulty": question.difficulty,

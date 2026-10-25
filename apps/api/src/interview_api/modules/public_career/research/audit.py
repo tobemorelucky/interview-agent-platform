@@ -64,6 +64,15 @@ class ResearchModelCalls:
                 ) if key in parsed}
                 if "questions" in parsed:
                     summary["question_count"] = len(parsed["questions"])
+                    if schema.__name__ == 'FragmentInterviewExtraction':
+                        # Bounded public artifact only, enough to diagnose a
+                        # bad selection without storing raw provider responses.
+                        summary['question_selections'] = [dict(
+                            fragment_id=q['fragment_id'], kind=q['kind'],
+                            normalized_question=q.get('normalized_question'))
+                            for q in parsed['questions'][:20]]
+                        summary['identity_selection'] = {key: parsed[key] for key in (
+                            'company', 'position', 'round_name', 'identity_evidence_ids')}
                 step.output_json = {"schema": schema.__name__, "model_invocations": result.invocations, **summary}
                 await db.commit()
             return result.parsed

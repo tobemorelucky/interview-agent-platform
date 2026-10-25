@@ -107,7 +107,9 @@ def test_search_filters_are_official_query_syntax_not_invented_body_fields():
     prompts = WebSourcePromptRegistry()
     assert prompts.get('quality').version == '1.1.0'
     assert 'Extract public interview questions' not in prompts.get('quality').system
-    assert 'Extract public interview questions' in prompts.get('interview_extract').system
+    assert prompts.get('interview_extract').version == '1.2.0'
+    assert 'Select and classify existing source_fragments' in prompts.get('interview_extract').system
+    assert 'Extract public interview questions' in prompts.get('interview_extract', '1.1.0').system
     assert search_query('Python', sites=['example.com'], published_after='2026-01-01') == 'Python (site:example.com) after:2026-01-01'
     with pytest.raises(ToolExecutionError): search_query('a' * 129)
     with pytest.raises(ToolExecutionError): search_query('JD', sites=['example.com bad'])

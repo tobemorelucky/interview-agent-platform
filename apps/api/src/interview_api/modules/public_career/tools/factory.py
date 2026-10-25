@@ -78,7 +78,7 @@ def build_tool_gateway(
             for item in results
         ]
         return ToolResult(
-            data={"results": result_dicts},
+            data={"results": result_dicts, "source_filter": getattr(search_provider, "last_search_diagnostics", {})},
             source_candidates=[
                 SourceCandidatePayload(
                     canonical_url=item.url,

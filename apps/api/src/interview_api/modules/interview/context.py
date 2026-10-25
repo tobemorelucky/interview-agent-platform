@@ -103,6 +103,32 @@ async def build_context(db, user_id, request):
         if not request.interviewer_skill_id:
             raise AppError("INTERVIEWER_SKILL_REQUIRED", "系统设计面试须选择专业 Skill", 422)
         context["system_design"] = deepcopy(SCENARIO)
+    if request.adaptive_interview:
+        if request.design_interview or not request.interviewer_skill_id:
+            raise AppError("ADAPTIVE_MODE_INVALID", "自适应面试须选择专业 Skill，且不能与系统设计工具模式同时启用", 422)
+        from interview_api.modules.interview.adaptive import build_blueprint
+        from interview_api.modules.interview.adaptive_prompts import freeze_prompts
+        # Company-level/ambiguous roles are not company-job interview evidence.
+        # V1 keeps its historical selection; V2 requires exact job association.
+        related = {e.id for e in experiences if e.job_id == job.id}
+        selected = [q for q in questions if q.job_id == job.id and (q.experience_id is None or q.experience_id in related)
+            and ((q.routing_json or {}).get("source_anchor") or {}).get("kind") != "REPORTED_TOPIC"]
+        ids = {q.id for q in selected}
+        context["public_questions"] = [dict(row, source_anchor=deepcopy(next(q for q in selected if q.id == row["id"]).routing_json or {}).get("source_anchor"))
+            for row in context["public_questions"] if row["id"] in ids]
+        context["interview_experiences"] = [dict(row, reported_topics=deepcopy((next(e for e in experiences if e.id == row["id"]).extraction_output_json or {}).get("source_anchors", {}).get("reported_topics", []))[:12])
+            for row in context["interview_experiences"] if row["id"] in related]
+        context["adaptive_policy"] = dict(version="2.1.0", decision_contract="TARGET_SOURCE_PAIR_V1",
+            prompts=freeze_prompts(contract="TARGET_SOURCE_PAIR_V1", memory_guided=True), invalid_decision="FAIL_SAFE_RETRY_NO_EXTRA_CALL")
+        from interview_api.modules.memory.capability_service import CapabilityMemoryService
+        memory = CapabilityMemoryService(db)
+        states = await memory.refresh(user_id)
+        fresh = {r["topic"] for r in states if r["state"] == "VERIFIED" and not r["revoked"]}
+        # V2.2 has one inferred planning layer. Legacy report observations remain
+        # in the historical Snapshot/UI but must not bypass capability revocation.
+        context["adaptive_blueprint"] = build_blueprint({**context, "recent_performance_observations": dict(items=[])},
+            deprioritized_topics=fresh)
+        context["memory_guided_plan"] = await memory.plan(user_id, context["adaptive_blueprint"], states=states)
     return context, version.source_resume_id, digest(context)
 
 

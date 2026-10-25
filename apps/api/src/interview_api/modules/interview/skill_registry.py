@@ -92,4 +92,19 @@ def public_session_view(data):
             company_background=deepcopy(config["company_background"]))
     for question in snapshot.get("public_questions", []):
         question.pop("expected_points", None)
+    if snapshot.get("adaptive_policy"):
+        snapshot["adaptive_policy"] = {"version": snapshot["adaptive_policy"]["version"]}
+        snapshot["adaptive_blueprint"] = {"version": snapshot["adaptive_blueprint"]["version"],
+            "targets": [dict(label=t["label"]) for t in snapshot["adaptive_blueprint"]["targets"]]}
+        snapshot["public_questions"] = []  # Future questions are not a user-side preview.
+    if snapshot.get("memory_guided_plan"):
+        snapshot["memory_guided_plan"] = dict(inferred=True, items=[
+            {k: item[k] for k in ("label", "state", "history_summary")} for item in snapshot["memory_guided_plan"]["items"]])
+    def hide_planning(value):
+        if isinstance(value, dict):
+            return {k: hide_planning(v) for k, v in value.items() if k not in ("adaptive_decision", "adaptive_decisions", "adaptive_knowledge")}
+        if isinstance(value, list):
+            return [hide_planning(v) for v in value]
+        return value
+    result = hide_planning(result)
     return result

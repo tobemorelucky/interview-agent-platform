@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { knowledgeStateLabel } from '../types/adaptive-interview'
 import { computed, ref, watch } from "vue"
 import { displayLabel, publicName, userError } from "../i18n/zh-CN"
 import { useRoute, useRouter } from "vue-router"
@@ -180,6 +181,20 @@ watch(() => route.fullPath, () => { notice.value = ""; load() }, { immediate: tr
             <p class="overall">综合平均表现 {{ detail.statistics.overall_average ?? '—' }} / 5</p>
             <div class="stat-grid"><div v-for="field in countFields" :key="field.key"><span>{{ field.label }}</span><strong>{{ detail.statistics[field.key] }}</strong></div></div>
             <div class="dimension-grid"><div v-for="(label, key) in REPORT_DIMENSION_LABELS" :key="key"><span>{{ label }}</span><strong>{{ detail.statistics.dimension_averages[key] ?? '—' }} / 5</strong></div></div>
+          </article>
+          <article v-if="detail.adaptive_review" class="card"><h2>本场考察与练习重点</h2>
+            <p>{{ detail.adaptive_review.semantics }}</p>
+            <section v-for="target in detail.adaptive_review.targets" :key="target.label" class="findings">
+              <h3>{{ target.label }} · {{ knowledgeStateLabel(target.state) }}</h3>
+              <p v-if="target.missing_mechanisms.length">继续练习：{{ target.missing_mechanisms.join('；') }}</p>
+              <p v-else>本场未保留待澄清缺口；这不是永久能力认证。</p>
+              <details><summary>查看回答依据与补充过程</summary>
+                <div v-for="(observation, index) in target.observations" :key="index">
+                  <p>{{ knowledgeStateLabel(observation.state) }}<span v-if="observation.resolved_gap_count"> · 已补充先前缺口</span></p>
+                  <blockquote v-for="(span, i) in observation.answer_spans" :key="i">{{ span.excerpt }}</blockquote>
+                </div>
+              </details>
+            </section>
           </article>
           <details v-if="selectedReport" class="card ux-technical"><summary>报告技术详情</summary>
             <p>报告 ID {{ selectedReport.id }} · 版本 {{ selectedReport.generation_number ?? '—' }} · {{ displayLabel(reportGenerationStatus(selectedReport)) }}</p>

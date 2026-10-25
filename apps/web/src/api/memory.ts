@@ -1,4 +1,8 @@
 import client from "./client";
+import type { CapabilityMemory } from "../types/capability-memory"
+
+export const listCapabilities = (): Promise<{ items: CapabilityMemory[] }> => client.get("/memory/capabilities")
+export const correctCapability = (id: number, data: { expected_revision: number; excluded_evaluation_ids: number[]; note: string; revoke: boolean }): Promise<CapabilityMemory> => client.patch(`/memory/capabilities/${id}`, data)
 
 export interface UserMemoryItem {
   id: number

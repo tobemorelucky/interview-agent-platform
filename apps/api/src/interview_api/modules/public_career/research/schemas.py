@@ -12,6 +12,30 @@ from interview_api.modules.experience.agents.schemas import (
 EvidenceID = Annotated[str, Field(pattern=r"^ev_[a-f0-9]{24}$")]
 
 
+class FragmentInterviewQuestion(BaseModel):
+    """Selection/classification is model-owned; raw quotes/offsets are not."""
+    model_config = ConfigDict(extra="forbid")
+    fragment_id: EvidenceID
+    kind: Literal["QUESTION", "REPORTED_TOPIC"]
+    normalized_question: str | None = Field(default=None, min_length=5, max_length=200)
+    question_type: Literal["TECHNICAL", "PROJECT", "ALGORITHM", "SYSTEM_DESIGN", "HR", "OTHER"] | None = None
+    confidence: float = Field(ge=0, le=1)
+
+
+class FragmentInterviewExtraction(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    is_interview_experience: bool
+    company: str | None = None
+    position: str | None = None
+    round_name: str | None = None
+    experience_summary: str = Field(default="", max_length=2000)
+    questions: list[FragmentInterviewQuestion] = Field(default_factory=list, max_length=20)
+    evidence_ids: list[EvidenceID] = Field(min_length=1)
+    identity_evidence_ids: list[EvidenceID] = Field(default_factory=list)
+    source_quality_note: str | None = None
+    extraction_confidence: float = Field(ge=0, le=1)
+
+
 class SupportedStatement(BaseModel):
     model_config = ConfigDict(extra="forbid")
     statement: str = Field(min_length=1)

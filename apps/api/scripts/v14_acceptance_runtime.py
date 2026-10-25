@@ -76,6 +76,11 @@ else:
         web = FixtureWeb('browser-demo')
         app.dependency_overrides[web_router.get_web_service] = lambda: WebCollectionService(async_session_factory, web.gateway)
         web_router.PublicDataResearchAgent = FixtureResearchAgent
+    else:
+        def forbidden_web(*args):
+            from interview_api.core.exceptions import AppError
+            raise AppError('LIVE_REVIEW_NETWORK_DISABLED', '审阅验收模式禁止额外 Search/Fetch 调用', 409)
+        app.dependency_overrides[web_router.get_web_service] = lambda: WebCollectionService(async_session_factory, forbidden_web)
     async def forbidden(*args, **kwargs): raise RuntimeError('Additional LIVE models disabled in acceptance review runtime')
     CompatibleModelProvider.generate = forbidden
     import uvicorn

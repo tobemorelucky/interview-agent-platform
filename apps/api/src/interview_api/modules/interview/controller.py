@@ -30,6 +30,10 @@ def question_data(q, budget):
     guidance = (q.candidate_refs_json or {}).get("interviewer_guidance")
     if guidance:
         result["interviewer_guidance"] = guidance
+    decision = (q.candidate_refs_json or {}).get("adaptive_decision")
+    if decision:
+        from interview_api.modules.interview.adaptive import LABELS
+        result["assessment_topic"] = LABELS.get(decision["target_knowledge_id"].rsplit(":", 1)[-1], "技术实践")
     return result
 
 
@@ -209,9 +213,17 @@ class SessionController:
             raise conflict()
         snapshot = await self.db.get(InterviewContextSnapshot, session.context_snapshot_id)
         artifact = result.artifact
+        if snapshot.context_json.get("adaptive_policy"):
+            from interview_api.modules.interview.adaptive import planning_payload, validate_decision
+            fresh = planning_payload(snapshot.context_json, [], None, session.interview_plan_json)
+            if validate_decision(artifact, fresh) != policy:
+                raise conflict("首题决策与本场冻结策略不一致")
         if artifact.recommendation != "NEXT" or not artifact.question:
             raise AppError("INVALID_START_ARTIFACT", "首题输出无效", 422)
         q = await self._new_question(session, snapshot.context_json, [], artifact.question, policy)
+        if snapshot.context_json.get("adaptive_policy"):
+            q.candidate_refs_json = {**q.candidate_refs_json, "adaptive_decision": artifact.model_dump()}
+            q.candidate_refs_json["topic_policy"]["topic"] = artifact.target_knowledge_id.rsplit(":", 1)[-1]
         session.status, session.started_at = "IN_PROGRESS", datetime.now(timezone.utc)
         session.state_version += 1
         data = question_data(q, session.question_count)
@@ -294,8 +306,32 @@ class SessionController:
             raise conflict()
         _, context, questions, q, tokens = await self.state(session_id, user_id)
         artifact = evaluation.artifact
-        action = self.choose_action(context, questions, q, artifact.next_action_recommendation,
-            rounds=session.turn_count, tokens=tokens, started_at=session.started_at, evaluation=artifact.model_dump())
+        adaptive = bool(context.get("adaptive_policy"))
+        if adaptive:
+            from interview_api.modules.interview.adaptive import planning_payload, validate_decision, resolve_observations, knowledge_state, apply_observations, all_goals_demonstrated
+            message = await self.db.get(InterviewMessage, answer.message_id)
+            base_payload = planning_payload(context, questions, q, session.interview_plan_json,
+                answer=message.content, answer_id=answer_id)
+            resolved = resolve_observations(artifact, base_payload)
+            projected = apply_observations(knowledge_state(session.interview_plan_json), resolved,
+                question_id=q.id, answer_id=answer_id, evaluation_id=None)
+            exhausted = self.choose_action(context, questions, q, "NEXT", rounds=session.turn_count,
+                tokens=tokens, started_at=session.started_at) == "COMPLETE"
+            decision_payload = planning_payload(context, questions, q, session.interview_plan_json,
+                answer=message.content, answer_id=answer_id, evaluation=artifact, evaluation_run_id=evaluation.run_id)
+            terminal = exhausted or all_goals_demonstrated(context, projected) or not decision_payload["adaptive"]["choices"]
+            if requested_action == "COMPLETE" and not terminal:
+                raise conflict("尚有合法考察目标且预算未耗尽，不能直接结束")
+            action = "COMPLETE" if terminal else requested_action
+            if action != "COMPLETE":
+                if not main:
+                    raise AppError("INVALID_MAIN_ARTIFACT", "缺少有效面试决策，未推进会话", 422)
+                checked_policy = validate_decision(main.artifact, decision_payload)
+                if checked_policy != policy:
+                    raise conflict("本轮决策空间已变化，未覆盖原策略")
+        else:
+            action = self.choose_action(context, questions, q, artifact.next_action_recommendation,
+                rounds=session.turn_count, tokens=tokens, started_at=session.started_at, evaluation=artifact.model_dump())
         if action != "COMPLETE" and action != requested_action:
             raise conflict("预算或会话条件已变化，请重试")
         if action != "COMPLETE" and (not main or main.artifact.recommendation != action or not main.artifact.question):
@@ -308,6 +344,18 @@ class SessionController:
             structured_retry=evaluation.retry, token_usage_json=evaluation.usage, agent_run_id=evaluation.run_id)
         self.db.add(ev)
         await self.db.flush()
+        if adaptive:
+            state = apply_observations(knowledge_state(session.interview_plan_json), resolved,
+                question_id=q.id, answer_id=answer_id, evaluation_id=ev.id)
+            session.interview_plan_json = {**(session.interview_plan_json or {}), "adaptive_knowledge": state}
+            trace = deepcopy(session.planner_trace_json or {})
+            decisions = trace.get("adaptive_decisions", [])
+            decisions.append(dict(answer_id=answer_id, evaluation_id=ev.id, agent_run_id=main.run_id if main else None,
+                decision=main.artifact.model_dump() if main else None, executed_action=action,
+                verdict="NOT_EXECUTED_BUDGET" if main and action == "COMPLETE" else "ACCEPTED",
+                state_version=expected_version))
+            from interview_api.modules.interview.adaptive import bounded
+            session.planner_trace_json = bounded({**trace, "adaptive_decisions": decisions})
         q.status = "EVALUATED"
         score = round(sum(getattr(artifact, key) for key in DIMENSIONS) / len(DIMENSIONS), 2)
         eval_data = dict(artifact.model_dump(), score=score, question_id=q.id, answer_id=answer.id,
@@ -316,12 +364,19 @@ class SessionController:
         await self._message(session, "EVALUATION", artifact.evaluation, eval_data)
         q.status = "COMPLETED"
         if action == "COMPLETE":
+            answer.status = "COMPLETED"
             summary = await self.complete(session)
+            if adaptive:
+                summary["completion_reason"] = "BUDGET_LIMIT" if exhausted else "BLUEPRINT_COVERED" if all_goals_demonstrated(context, projected) else "NO_LEGAL_TARGET_WITHIN_POLICY"
+                session.completion_json = deepcopy(summary)
             events.append(["complete", summary])
             await self._message(session, "INTERVIEW_COMPLETE", "面试结束", summary)
         else:
             parent = q if action in ("FOLLOW_UP", "DEEP_DIVE") else None
             next_q = await self._new_question(session, context, questions, main.artifact.question, policy, kind=action, parent=parent)
+            if adaptive:
+                next_q.candidate_refs_json = {**next_q.candidate_refs_json, "adaptive_decision": main.artifact.model_dump()}
+                next_q.candidate_refs_json["topic_policy"]["topic"] = main.artifact.target_knowledge_id.rsplit(":", 1)[-1]
             if main.artifact.tool_result_ids:
                 next_q.candidate_refs_json = {**(next_q.candidate_refs_json or {}), "tool_result_ids": main.artifact.tool_result_ids}
             if parent:
@@ -361,6 +416,11 @@ class SessionController:
         summary["avg_score"] = summary["overall_average"]
         session.status, session.active_question_id = "COMPLETED", None
         session.completed_at, session.completion_json = datetime.now(timezone.utc), summary
+        await self.db.flush()
+        snapshot = await self.db.get(InterviewContextSnapshot, session.context_snapshot_id) if session.context_snapshot_id else None
+        if snapshot and snapshot.context_json.get("memory_guided_plan"):
+            from interview_api.modules.memory.capability_service import CapabilityMemoryService
+            await CapabilityMemoryService(self.db).refresh(session.user_id)
         return summary
 
     async def skip(self, session_id, user_id, question_id, expected_version, main, policy):
@@ -379,7 +439,16 @@ class SessionController:
         else:
             if not main or main.artifact.recommendation != "NEXT" or not main.artifact.question:
                 raise AppError("INVALID_MAIN_ARTIFACT", "下一题无效", 422)
+            if context.get("adaptive_policy"):
+                from interview_api.modules.interview.adaptive import planning_payload, validate_decision
+                payload = planning_payload(context, questions, q, session.interview_plan_json)
+                payload["adaptive"]["choices"] = [c for c in payload["adaptive"]["choices"] if "NEXT" in c["strategies"]]
+                if validate_decision(main.artifact, payload) != policy:
+                    raise conflict("跳题决策已变化")
             next_q = await self._new_question(session, context, questions, main.artifact.question, policy)
+            if context.get("adaptive_policy"):
+                next_q.candidate_refs_json = {**next_q.candidate_refs_json, "adaptive_decision": main.artifact.model_dump()}
+                next_q.candidate_refs_json["topic_policy"]["topic"] = main.artifact.target_knowledge_id.rsplit(":", 1)[-1]
             data = question_data(next_q, session.question_count)
             await self._message(session, "QUESTION", next_q.question, data)
             result = dict(skipped_question_id=q.id, next_question=data)

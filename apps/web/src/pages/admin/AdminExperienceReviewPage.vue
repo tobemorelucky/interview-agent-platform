@@ -67,6 +67,10 @@ const answerSourceOptions = ["ORIGINAL", "LLM_GENERATED", "HYBRID", "NONE"]
 const questionStatusOptions = ["WAITING_REVIEW", "APPROVED", "REJECTED"]
 
 const selectedQuestions = computed(() => selected.value?.questions || [])
+const reportedTopics = computed(() => {
+  const anchors = selected.value?.experience.extraction_json?.source_anchors as { reported_topics?: { raw_excerpt: string }[] } | undefined
+  return anchors?.reported_topics || []
+})
 
 function statusLabel(status?: string | null) {
   const found = statusOptions.find((item) => item.value === status)
@@ -404,15 +408,23 @@ onMounted(loadItems)
 
         <section class="info-section">
           <h4>题目列表</h4>
+          <details v-if="reportedTopics.length">
+            <summary>原帖仅报道的考察主题（不作为确切面试题）</summary>
+            <p v-for="(topic, i) in reportedTopics" :key="i">{{ topic.raw_excerpt }}</p>
+          </details>
           <article v-for="question in selectedQuestions" :key="question.question_id" class="question-editor">
             <div class="question-head">
               <strong>#{{ question.question_id }}</strong>
               <button :disabled="saving" @click="saveQuestion(question)">保存题目</button>
             </div>
-            <label>题目 <textarea v-model="questionDrafts[question.question_id].question" rows="2" /></label>
+            <template v-if="question.source_anchor">
+              <p class="muted">规范化题目仅供展示，不是原帖逐字引文。请对照原文审核，不能增加原文没有的考察内容。</p>
+              <blockquote><strong>原帖片段</strong><p>{{ question.source_anchor.raw_excerpt }}</p></blockquote>
+            </template>
+            <label>{{ question.source_anchor ? '规范化题目（待核对）' : '题目' }} <textarea v-model="questionDrafts[question.question_id].question" rows="2" /></label>
             <label>标准答案 <textarea v-model="questionDrafts[question.question_id].standard_answer" rows="3" /></label>
             <label>原文答案 <textarea v-model="questionDrafts[question.question_id].original_answer" rows="3" /></label>
-            <label>证据 <textarea v-model="questionDrafts[question.question_id].evidence" rows="2" /></label>
+            <label>证据{{ question.source_anchor ? '（原文锚点只读）' : '' }} <textarea v-model="questionDrafts[question.question_id].evidence" :readonly="!!question.source_anchor" rows="2" /></label>
             <div class="question-grid">
               <label>
                 答案来源

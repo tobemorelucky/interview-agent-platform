@@ -1,6 +1,7 @@
 """User memory API routes."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from interview_api.api.deps import get_current_user
@@ -25,6 +26,34 @@ from interview_api.modules.memory.service import MemoryService
 from interview_api.modules.users.models import User
 
 router = APIRouter(prefix="/api/v1/memory", tags=["memory"])
+
+
+@router.get("/capabilities")
+async def list_capabilities(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    from interview_api.modules.memory.capability_service import CapabilityMemoryService
+    return success(data=dict(items=await CapabilityMemoryService(db).list(current_user.id)))
+
+
+class CapabilityCorrection(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    expected_revision: int = Field(ge=1)
+    excluded_evaluation_ids: list[int] = Field(default_factory=list, max_length=100)
+    note: str = Field(min_length=1, max_length=500)
+    revoke: bool = False
+
+
+@router.patch("/capabilities/{memory_id}")
+async def correct_capability(memory_id: int, body: CapabilityCorrection,
+    _limit=Depends(memory_write_limit), current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    from interview_api.modules.memory.capability_service import CapabilityMemoryService
+    try:
+        result = await CapabilityMemoryService(db).correct(current_user.id, memory_id,
+            expected_revision=body.expected_revision, excluded=body.excluded_evaluation_ids, note=body.note, revoke=body.revoke)
+        await db.commit()
+        return success(data=result)
+    except Exception:
+        await db.rollback()
+        raise
 
 
 def _service(db: AsyncSession) -> MemoryService:
