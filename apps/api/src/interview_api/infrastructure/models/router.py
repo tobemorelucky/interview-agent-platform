@@ -5,7 +5,9 @@ from contextvars import ContextVar
 from weakref import WeakKeyDictionary
 
 from interview_api.core.config import settings
-from interview_api.infrastructure.models.provider import CompatibleModelProvider, ModelProvider
+from interview_api.infrastructure.models.provider import (
+    CompatibleModelProvider, ModelProvider, ModelScopeModelProvider, modelscope_connection,
+)
 
 
 EXTRACT_ROUTE = "public_research_extract"
@@ -53,7 +55,7 @@ class ModelRouter:
 
 def _configured_router(routes: dict[str, ModelProvider], *, concurrency: int) -> ModelRouter:
     fallbacks = {}
-    if settings.llm_fallback_model:
+    if not settings.use_modelscope and settings.llm_fallback_model:
         for name, provider in routes.items():
             if isinstance(provider, CompatibleModelProvider) and provider.model_name != settings.llm_fallback_model:
                 fallbacks[name] = CompatibleModelProvider(base_url=provider.base_url, api_key=provider.api_key,
@@ -65,13 +67,24 @@ def _configured_router(routes: dict[str, ModelProvider], *, concurrency: int) ->
     return ModelRouter(routes, concurrency=concurrency, fallback_routes=fallbacks)
 
 
+def _chat_provider(*, base_url: str, api_key: str, model: str, timeout_seconds: float,
+                   max_output_tokens: int, thinking_type: str | None) -> CompatibleModelProvider:
+    limits = dict(timeout_seconds=timeout_seconds, max_output_tokens=max_output_tokens)
+    if connection := modelscope_connection():
+        # Don't send a vendor-specific thinking parameter without a verified
+        # contract for this hosted deployment. JSON validation remains unchanged.
+        return ModelScopeModelProvider(**connection, **limits)
+    return CompatibleModelProvider(base_url=base_url, api_key=api_key, model=model,
+                                   thinking_type=thinking_type, **limits)
+
+
 def build_model_router() -> ModelRouter:
     routes: dict[str, ModelProvider] = {}
     for name, configured_model in (
         (EXTRACT_ROUTE, settings.public_research_extract_model),
         (QUALITY_ROUTE, settings.public_research_quality_model),
     ):
-        routes[name] = CompatibleModelProvider(
+        routes[name] = _chat_provider(
             base_url=settings.public_research_base_url or settings.llm_base_url,
             api_key=settings.public_research_api_key or settings.llm_api_key,
             model=configured_model or settings.llm_model,
@@ -84,7 +97,7 @@ def build_model_router() -> ModelRouter:
 
 def build_resume_profile_router() -> ModelRouter:
     """Same provider/router/guard, independently configured private-data route."""
-    return _configured_router({RESUME_PROFILE_ROUTE: CompatibleModelProvider(
+    return _configured_router({RESUME_PROFILE_ROUTE: _chat_provider(
         base_url=settings.resume_profile_base_url or settings.llm_base_url,
         api_key=settings.resume_profile_api_key or settings.llm_api_key,
         model=settings.resume_profile_model or settings.llm_model,
@@ -95,7 +108,7 @@ def build_resume_profile_router() -> ModelRouter:
 
 
 def build_interview_router() -> ModelRouter:
-    return _configured_router({route: CompatibleModelProvider(
+    return _configured_router({route: _chat_provider(
         base_url=settings.interview_model_base_url or settings.llm_base_url,
         api_key=settings.interview_model_api_key or settings.llm_api_key,
         model=model or settings.llm_model,
@@ -109,7 +122,7 @@ def build_interview_router() -> ModelRouter:
 
 def build_interview_coach_router() -> ModelRouter:
     """Reuse shared providers/guards; report failures never affect interview state."""
-    return _configured_router({INTERVIEW_COACH_ROUTE: CompatibleModelProvider(
+    return _configured_router({INTERVIEW_COACH_ROUTE: _chat_provider(
         base_url=settings.interview_coach_base_url or settings.interview_model_base_url or settings.llm_base_url,
         api_key=settings.interview_coach_api_key or settings.interview_model_api_key or settings.llm_api_key,
         model=settings.interview_coach_model or settings.llm_model,
@@ -120,7 +133,7 @@ def build_interview_coach_router() -> ModelRouter:
 
 
 def build_job_matching_router() -> ModelRouter:
-    return _configured_router({JOB_MATCHING_ROUTE: CompatibleModelProvider(
+    return _configured_router({JOB_MATCHING_ROUTE: _chat_provider(
         base_url=settings.job_matching_base_url or settings.llm_base_url,
         api_key=settings.job_matching_api_key or settings.llm_api_key,
         model=settings.job_matching_model or settings.llm_model,

@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -76,6 +76,8 @@ class Settings(BaseSettings):
     deepseek_web_min_body_chars: int = Field(200, ge=1, le=10000)
     deepseek_web_max_content_chars: int = Field(200000, ge=1000, le=1000000)
     llm_provider: str = ""
+    modelscope_api_key: SecretStr = SecretStr("")
+    modelscope_model: str = "deepseek-ai/DeepSeek-V4.1-Flash-1017"
     llm_base_url: str = ""
     llm_api_key: str = ""
     llm_model: str = ""
@@ -233,6 +235,10 @@ class Settings(BaseSettings):
                 ))):
             raise ValueError("JWT_SECRET_KEY must be a configured strong secret outside development/test")
         return self
+
+    @property
+    def use_modelscope(self) -> bool:
+        return self.llm_provider.strip().lower() == "modelscope"
 
 
 settings = Settings()

@@ -22,6 +22,13 @@ class AdaptiveReplayProvider(ModelProvider):
 
     async def generate(self, messages, *, schema):
         p = json.loads(messages[-1]["content"])["input"]
+        # Decode the documented shared-dictionary wire DTO at the model seam.
+        # No Controller/DB behavior is mocked; original candidate IDs stay exact.
+        if p.get('adaptive', {}).get('targets'):
+            a = p['adaptive']
+            a['candidates'] = [dict(c, label=a['targets'][c['target_knowledge_id']]['label'],
+                topic=a['targets'][c['target_knowledge_id']]['topic'],
+                source=a['sources'][c['source']['ref']]) for c in a['candidates']]
         title = schema["title"]
         self.calls.append(title)
         if title == "AdaptiveEvaluation":

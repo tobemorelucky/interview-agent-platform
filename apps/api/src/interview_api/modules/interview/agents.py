@@ -319,6 +319,7 @@ class AgentResult:
     prompt_version: str
     retry: int
     usage: dict
+    usage_complete: bool = True
 
 
 class InterviewAgent:
@@ -329,11 +330,24 @@ class InterviewAgent:
     def __init__(self, factory, router):
         self.factory, self.router = factory, router
 
+    async def failure_usage(self, run_id, exc):
+        exc.usage_audited = False
+        with anyio.CancelScope(shield=True):
+            async with self.factory() as db:
+                step = await db.scalar(select(ExperienceAgentStepRun).where(ExperienceAgentStepRun.agent_run_id == run_id))
+                if step and type((step.token_usage_json or {}).get('total_tokens')) is int:
+                    exc.usage = step.token_usage_json
+                    exc.usage_complete = (step.output_json or {}).get('usage_complete', True)
+                    exc.usage_audited = True
+
     async def interrupted(self, run_id, started, code):
         with anyio.CancelScope(shield=True):
             async with self.factory() as db:
                 for step in (await db.scalars(select(ExperienceAgentStepRun).where(
-                        ExperienceAgentStepRun.agent_run_id == run_id, ExperienceAgentStepRun.status == "RUNNING"))).all():
+                        ExperienceAgentStepRun.agent_run_id == run_id,
+                        ExperienceAgentStepRun.status.in_(['RUNNING', 'FAILED'])))).all():
+                    if step.status == 'FAILED' and step.error_message != 'CancelledError':
+                        continue
                     step.status, step.error_message = "FAILED", code
                     step.latency_ms = round((perf_counter() - started) * 1000)
                 await db.commit()
@@ -352,21 +366,21 @@ class InterviewAgent:
             await db.commit()
         started = perf_counter()
         try:
-            model_payload = payload
-            if payload.get("adaptive"):
-                from copy import deepcopy
-                model_payload = deepcopy(payload)
-                policy = model_payload["snapshot"]["adaptive_policy"]
-                model_payload["snapshot"]["adaptive_policy"] = dict(version=policy["version"],
-                    prompt_fingerprints={k: v["fingerprint"] for k, v in policy["prompts"].items()})
-                model_payload["snapshot"].pop("adaptive_blueprint", None)  # choices already contain the allowed goals
-                if policy.get("decision_contract") == "TARGET_SOURCE_PAIR_V1" and self.route == INTERVIEW_MAIN_ROUTE:
-                    model_payload["adaptive"].pop("choices", None)  # only indivisible legal pairs face the model
+            from interview_api.modules.interview.context_projection import model_payload as project
+            model_payload = project(payload, self.route)
             timeout = timeout_seconds or settings.interview_model_timeout_seconds
+            from interview_api.modules.interview.adaptive import AdaptiveSelection
+            from interview_api.modules.interview.director_repair import SupportingRefsRepair
+            # Only this selection schema has a bounded, ID-only subset exception.
+            repair_policy = SupportingRefsRepair(payload) if self.route == INTERVIEW_MAIN_ROUTE and self.schema is AdaptiveSelection else None
+            from interview_api.modules.interview.adaptive import AdaptiveEvaluation
+            if self.route == ANSWER_EVALUATION_ROUTE and self.schema is AdaptiveEvaluation:
+                from interview_api.modules.interview.evaluation_repair import EvaluationQuotesRepair
+                repair_policy = EvaluationQuotesRepair(payload)
             async with asyncio.timeout(timeout if payload.get("adaptive") else None):
                 artifact = await ResearchModelCalls(self.factory, self.router, run_id,
                     prompts=configured_prompt_registry(payload), timeout_seconds=timeout
-                ).call(self.route, self.route, model_payload, self.schema)
+                ).call(self.route, self.route, model_payload, self.schema, repair_policy=repair_policy)
             from interview_api.modules.interview.adaptive import AdaptiveSelection, resolve_selection
             if isinstance(artifact, AdaptiveSelection):
                 artifact = resolve_selection(artifact, payload)
@@ -378,21 +392,22 @@ class InterviewAgent:
             async with self.factory() as db:
                 step = await db.scalar(select(ExperienceAgentStepRun).where(ExperienceAgentStepRun.agent_run_id == run_id))
                 return AgentResult(artifact, run_id, step.provider_name, step.model_name, step.prompt_version,
-                                   step.structured_retry, step.token_usage_json or {})
+                                   step.structured_retry, step.token_usage_json or {},
+                                   (step.output_json or {}).get('usage_complete', True))
         except asyncio.TimeoutError as exc:
             from interview_api.infrastructure.models.provider import ModelProviderError
             await self.interrupted(run_id, started, "model_timeout")
-            raise ModelProviderError("model_timeout", "本轮模型含受控修复的总时限已到，未推进会话") from exc
-        except asyncio.CancelledError:
+            error = ModelProviderError("model_timeout", "本轮模型含受控修复的总时限已到，未推进会话")
+            await self.failure_usage(run_id, error)
+            raise error from exc
+        except asyncio.CancelledError as exc:
+            await self.failure_usage(run_id, exc)
             await self.interrupted(run_id, started, "interview_request_cancelled")
             raise
         except Exception as exc:
             # A successful provider call followed by business validation failure
             # still has real usage; do not charge its temporary reservation twice.
-            async with self.factory() as db:
-                step = await db.scalar(select(ExperienceAgentStepRun).where(ExperienceAgentStepRun.agent_run_id == run_id))
-                if step and isinstance((step.token_usage_json or {}).get("total_tokens"), int):
-                    exc.usage = step.token_usage_json
+            await self.failure_usage(run_id, exc)
             failure_output = None
             if payload.get("adaptive") and self.route == INTERVIEW_MAIN_ROUTE:
                 # Bounded IDs only, not the proposed question, resume, response
@@ -521,5 +536,6 @@ class AnswerEvaluationAgent(InterviewAgent):
                 artifact = stored_schema.model_validate(run.output_json["validated_artifact"])
                 self.validate_artifact(artifact, payload)
                 return AgentResult(artifact, run.id, step.provider_name, step.model_name, step.prompt_version,
-                    step.structured_retry, step.token_usage_json or {})
+                    step.structured_retry, step.token_usage_json or {},
+                    (step.output_json or {}).get('usage_complete', True))
         return None

@@ -32,6 +32,25 @@ class ModelProvider(ABC):
     async def generate(self, messages: list[dict], *, schema: dict) -> ModelResponse: ...
 
 
+def modelscope_connection() -> dict[str, str] | None:
+    """Shared opt-in for structured routes and legacy SDK chat/streaming."""
+    from interview_api.core.config import settings
+
+    if not settings.use_modelscope:
+        return None
+    key = settings.modelscope_api_key.get_secret_value().strip()
+    if not key:
+        raise ModelProviderError("model_config_missing", "Set MODELSCOPE_API_KEY for LLM_PROVIDER=modelscope")
+    model = settings.modelscope_model.strip()
+    if not model:
+        raise ModelProviderError("model_config_missing", "MODELSCOPE_MODEL must not be empty")
+    return {
+        "base_url": "https://api-inference.modelscope.cn/v1",
+        "api_key": key,
+        "model": model,
+    }
+
+
 class CompatibleModelProvider(ModelProvider):
     provider_name = "openai_compatible"
 
@@ -60,6 +79,7 @@ class CompatibleModelProvider(ModelProvider):
 
     async def _generate(self, messages: list[dict], *, schema: dict) -> ModelResponse:
         client = self.client or httpx.AsyncClient(timeout=self.timeout)
+        usage = {}
         try:
             body = {"model": self.model_name, "messages": messages,
                     "temperature": 0, "max_tokens": self.max_output_tokens,
@@ -74,12 +94,14 @@ class CompatibleModelProvider(ModelProvider):
             )
             response.raise_for_status()
             data = response.json()
-            choice = data["choices"][0]
             raw_usage = data.get("usage") or {}
+            raw_usage = raw_usage if isinstance(raw_usage, dict) else {}
+            details = raw_usage.get('completion_tokens_details') or {}
             usage = {"input_tokens": raw_usage.get("prompt_tokens"),
                      "output_tokens": raw_usage.get("completion_tokens"),
                      "total_tokens": raw_usage.get("total_tokens"),
-                     "reasoning_tokens": (raw_usage.get("completion_tokens_details") or {}).get("reasoning_tokens")}
+                     "reasoning_tokens": details.get('reasoning_tokens') if isinstance(details, dict) else None}
+            choice = data["choices"][0]
             if choice.get("finish_reason") == "length":
                 error = ModelProviderError("model_output_truncated", "Structured response was truncated")
                 error.usage = usage
@@ -109,11 +131,17 @@ class CompatibleModelProvider(ModelProvider):
             if known or missing or exc.response.status_code in (429, 502, 503, 504):
                 error.availability_reason = "provider_availability_http_" + str(exc.response.status_code)
             raise error from exc
-        except (httpx.HTTPError, KeyError, ValueError, IndexError) as exc:
-            raise ModelProviderError("model_request_failed", "Public research model request failed") from exc
+        except (httpx.HTTPError, KeyError, ValueError, IndexError, TypeError, AttributeError) as exc:
+            error = ModelProviderError("model_request_failed", "Public research model request failed")
+            error.usage = usage
+            raise error from exc
         finally:
             if self.client is None:
                 await client.aclose()
+
+
+class ModelScopeModelProvider(CompatibleModelProvider):
+    provider_name = "modelscope"
 
 
 class ReplayModelProvider(ModelProvider):

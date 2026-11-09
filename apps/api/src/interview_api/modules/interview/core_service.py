@@ -5,6 +5,7 @@ import asyncio
 from datetime import datetime, timezone
 import anyio
 from functools import cached_property
+from copy import deepcopy
 from uuid import uuid4
 from interview_api.core.config import settings
 from sqlalchemy import select
@@ -49,6 +50,9 @@ class MockInterviewService:
         return AnswerEvaluationAgent(self.factory, self.router)
 
     async def create(self, user_id, request):
+        if request.training_mode and request.training_request_key:
+            from interview_api.modules.interview.training import TrainingService
+            return await TrainingService(self.factory).create(user_id, request)
         async with self.factory() as db:
             session = await SessionController(db).create(user_id, request)
             await db.commit()
@@ -60,6 +64,8 @@ class MockInterviewService:
             return await SessionController(db).state(session_id, user_id)
 
     async def call_agent(self, agent, session_id, user_id, expected, payload, *, answer_id=None):
+        if agent.route == self.evaluator.route and payload.get('adaptive'):
+            payload = await self.evaluation_context(session_id, user_id, payload, answer_id=answer_id)
         if agent.route == self.evaluator.route and answer_id is not None:
             reused = await agent.reusable(session_id, answer_id, payload)
             if reused is not None:
@@ -71,8 +77,17 @@ class MockInterviewService:
         # An admission estimate is temporary, not permanent token usage. Include
         # UTF-8 input units and both bounded output attempts, then settle to audit.
         provider = self.router.resolve(agent.route)
+        admission_payload = payload
+        system_bytes = 0
+        from interview_api.modules.interview.context_projection import enabled, model_payload
+        if enabled(payload):
+            from interview_api.modules.interview.skill_engine import agent_payload
+            from interview_api.modules.interview.agents import configured_prompt_registry
+            sanitized = agent_payload(payload, agent.route)
+            admission_payload = model_payload(sanitized, agent.route)
+            system_bytes = len(configured_prompt_registry(sanitized).get(agent.route).system.encode('utf-8'))
         reservation = 0 if provider.provider_name == "replay" else (
-            len(json.dumps(payload, ensure_ascii=False).encode("utf-8")) +
+            len(json.dumps(admission_payload, ensure_ascii=False).encode("utf-8")) + system_bytes +
             len(json.dumps(agent.schema.model_json_schema()).encode("utf-8")) +
             2 * (settings.interview_model_max_output_tokens + 2048))
         call_key = uuid4().hex
@@ -82,18 +97,84 @@ class MockInterviewService:
         if timeout is None:
             return None
         usage_reported = provider.provider_name == "replay"
+        known_tokens = 0
         try:
             result = await agent.call(session_id, payload, answer_id=answer_id, timeout_seconds=timeout)
-            usage_reported = usage_reported or isinstance(result.usage.get("total_tokens"), int)
+            known_tokens = result.usage.get('total_tokens') or 0
+            usage_reported = usage_reported or (type(result.usage.get('total_tokens')) is int and result.usage_complete)
             return result
-        except Exception as exc:
-            usage_reported = usage_reported or isinstance((getattr(exc, "usage", {}) or {}).get("total_tokens"), int)
+        except BaseException as exc:
+            total = (getattr(exc, 'usage', {}) or {}).get('total_tokens')
+            audited = getattr(exc, 'usage_audited', True)
+            known_tokens = total if audited and type(total) is int and total >= 0 else 0
+            usage_reported = usage_reported or (audited and type(total) is int and total >= 0 and getattr(exc, 'usage_complete', True))
             raise
         finally:
             with anyio.CancelScope(shield=True):
                 async with self.factory() as db:
-                    await SessionController(db).settle_model_call(session_id, user_id, call_key, usage_reported)
+                    await SessionController(db).settle_model_call(session_id, user_id, call_key, usage_reported, known_tokens=known_tokens)
                     await db.commit()
+
+    async def evaluation_context(self, sid, uid, payload, *, answer_id=None):
+        """Read-only, deterministic single-parent projection, before reuse/hash/admission.
+
+        No history, past scores or inferred memory. An absent hint event is UNKNOWN.
+        Completed parent Q/A are immutable; bounded raw prefixes retain provenance.
+        """
+        from interview_api.modules.interview.context_projection import SCORING_VERSION
+        contract = payload['snapshot'].get('adaptive_policy', {}).get('evaluation_context')
+        if contract is None:
+            return payload  # historical frozen inputs are not upgraded
+        if contract != SCORING_VERSION:
+            raise AppError('SCORING_CONTEXT_UNSUPPORTED', '评分语境版本不可用', 409)
+        async with self.factory() as db:
+            session = await SessionController(db).owned(sid, uid)
+            snapshot = await db.get(InterviewContextSnapshot, session.context_snapshot_id)
+            if (snapshot.user_id != uid or snapshot.interview_session_id != sid or
+                    snapshot.context_json.get('adaptive_policy', {}).get('evaluation_context') != contract):
+                raise AppError('SCORING_CONTEXT_VERSION', '评分语境与本场冻结版本不一致', 409)
+            qid = (payload.get('current_question') or {}).get('question_id')
+            child = await db.scalar(select(InterviewSessionQuestion).where(
+                InterviewSessionQuestion.id == qid, InterviewSessionQuestion.session_id == sid))
+            if child is None:
+                raise AppError('SCORING_QUESTION_NOT_FOUND', '本场评分题目不存在', 404)
+            if answer_id is not None:
+                current = (await db.execute(select(InterviewAnswer, InterviewMessage).join(
+                    InterviewMessage, InterviewMessage.id == InterviewAnswer.message_id).where(
+                    InterviewAnswer.id == answer_id, InterviewAnswer.session_id == sid,
+                    InterviewAnswer.session_question_id == qid, InterviewMessage.session_id == sid,
+                    InterviewMessage.role == 'USER'))).first()
+                if current is None or current[1].content != payload.get('answer'):
+                    raise AppError('SCORING_ANSWER_NOT_FOUND', '评分回答不属于本场当前题目', 404)
+            kind = child.question_kind or 'UNKNOWN'
+            sc = dict(version=contract, question_kind=kind, parent_question_id=None,
+                parent_status='NOT_APPLICABLE' if kind == 'NEXT' and child.parent_question_id is None else 'UNAVAILABLE',
+                parent=None, assistance_status='UNKNOWN',
+                open_gaps=deepcopy(payload['adaptive']['knowledge_state']['items'].get(
+                    payload['adaptive']['active_knowledge_id'], {}).get('open_gaps', [])))
+            if child.parent_question_id is not None and kind in ('FOLLOW_UP', 'DEEP_DIVE'):
+                row = (await db.execute(select(InterviewSessionQuestion, InterviewAnswer, InterviewMessage)
+                    .join(InterviewAnswer, InterviewAnswer.session_question_id == InterviewSessionQuestion.id)
+                    .join(InterviewMessage, InterviewMessage.id == InterviewAnswer.message_id)
+                    .join(InterviewEvaluation, InterviewEvaluation.answer_id == InterviewAnswer.id)
+                    .where(InterviewSessionQuestion.id == child.parent_question_id,
+                        InterviewSessionQuestion.session_id == sid, InterviewSessionQuestion.status == 'COMPLETED',
+                        InterviewSessionQuestion.question_index < child.question_index,
+                        InterviewAnswer.session_id == sid, InterviewAnswer.status == 'COMPLETED',
+                        InterviewMessage.session_id == sid, InterviewMessage.role == 'USER',
+                        InterviewEvaluation.session_id == sid,
+                        InterviewEvaluation.session_question_id == InterviewSessionQuestion.id))).first()
+                if row:
+                    parent, answer, message = row
+                    def excerpt(text, identifier, limit):
+                        return dict(id=identifier, content=text[:limit], start=0, end=min(len(text), limit),
+                            total_chars=len(text), truncated=len(text) > limit)
+                    sc.update(parent_question_id=parent.id, parent_status='AVAILABLE', parent=dict(
+                        question=excerpt(parent.question, parent.id, 512),
+                        answer={**excerpt(message.content, answer.id, 1024), 'message_id': message.id}))
+        result = deepcopy(payload)
+        result['scoring_context'] = sc
+        return result
 
     @staticmethod
     def payload(context, questions, active, action, policy, *, answer=None, evaluation=None):
@@ -123,9 +204,15 @@ class MockInterviewService:
             if result is None:
                 raise AppError("INTERVIEW_BUDGET_EXHAUSTED", "首题预算不足", 409)
             policy = validate_decision(result.artifact, payload)
-            async with self.factory() as db:
-                data = await SessionController(db).start(session_id, user_id, session.state_version, result, policy)
-                await db.commit()
+            try:
+                async with self.factory() as db:
+                    data = await SessionController(db).start(session_id, user_id, session.state_version, result, policy)
+                    await db.commit()
+            except AppError as exc:
+                if context.get('training'):
+                    from interview_api.modules.interview.training import controller_rejection
+                    await controller_rejection(self.factory,result.run_id,exc.code)
+                raise
             return data
         policy = session_policy(context, questions)
         result = await self.call_agent(self.main, session_id, user_id, session.state_version,
@@ -229,9 +316,15 @@ class MockInterviewService:
                 raise AppError("INTERVIEW_BUDGET_EXHAUSTED", "下一题预算不足，回答已保存，未推进", 409)
             policy = validate_decision(main.artifact, payload)
             action = main.artifact.recommendation
-        async with self.factory() as db:
-            events = await SessionController(db).commit_answer(sid, uid, aid, expected, evaluation, main, action, policy)
-            await db.commit()
+        try:
+            async with self.factory() as db:
+                events = await SessionController(db).commit_answer(sid, uid, aid, expected, evaluation, main, action, policy)
+                await db.commit()
+        except AppError as exc:
+            if context.get('training') and main:
+                from interview_api.modules.interview.training import controller_rejection
+                await controller_rejection(self.factory,main.run_id,exc.code)
+            raise
         return events
 
     async def stream(self, session_id, user_id, request):

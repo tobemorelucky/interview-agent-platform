@@ -118,7 +118,7 @@ class SessionController:
                                       "reserved_model_tokens": sum(reservations.values()), "budget_exhausted": False}
         return min(settings.interview_model_timeout_seconds, remaining_time)
 
-    async def settle_model_call(self, session_id, user_id, call_key, usage_reported):
+    async def settle_model_call(self, session_id, user_id, call_key, usage_reported, *, known_tokens=0):
         """Audit holds actual usage; unknown failure usage cannot create free retries."""
         session = await self.owned(session_id, user_id, lock=True)
         plan = dict(session.interview_plan_json or {})
@@ -126,7 +126,9 @@ class SessionController:
         reserved = reservations.pop(call_key, 0)
         session.interview_plan_json = {**plan, "model_call_reservations": reservations,
             "reserved_model_tokens": sum(reservations.values()),
-            "unreported_model_tokens": plan.get("unreported_model_tokens", 0) + (0 if usage_reported else reserved)}
+            # Known response usage is already in StepRun. Retain only the net
+            # unreported reservation, never count that known portion twice.
+            "unreported_model_tokens": plan.get("unreported_model_tokens", 0) + (0 if usage_reported else max(0, reserved - known_tokens))}
 
     @staticmethod
     def adjusted_difficulty(active, evaluation):
@@ -222,7 +224,7 @@ class SessionController:
             raise AppError("INVALID_START_ARTIFACT", "首题输出无效", 422)
         q = await self._new_question(session, snapshot.context_json, [], artifact.question, policy)
         if snapshot.context_json.get("adaptive_policy"):
-            q.candidate_refs_json = {**q.candidate_refs_json, "adaptive_decision": artifact.model_dump()}
+            q.candidate_refs_json = {**q.candidate_refs_json, "adaptive_decision": artifact.model_dump(), 'main_agent_run_id': result.run_id}
             q.candidate_refs_json["topic_policy"]["topic"] = artifact.target_knowledge_id.rsplit(":", 1)[-1]
         session.status, session.started_at = "IN_PROGRESS", datetime.now(timezone.utc)
         session.state_version += 1
@@ -375,7 +377,7 @@ class SessionController:
             parent = q if action in ("FOLLOW_UP", "DEEP_DIVE") else None
             next_q = await self._new_question(session, context, questions, main.artifact.question, policy, kind=action, parent=parent)
             if adaptive:
-                next_q.candidate_refs_json = {**next_q.candidate_refs_json, "adaptive_decision": main.artifact.model_dump()}
+                next_q.candidate_refs_json = {**next_q.candidate_refs_json, "adaptive_decision": main.artifact.model_dump(), 'main_agent_run_id': main.run_id}
                 next_q.candidate_refs_json["topic_policy"]["topic"] = main.artifact.target_knowledge_id.rsplit(":", 1)[-1]
             if main.artifact.tool_result_ids:
                 next_q.candidate_refs_json = {**(next_q.candidate_refs_json or {}), "tool_result_ids": main.artifact.tool_result_ids}
@@ -421,6 +423,11 @@ class SessionController:
         if snapshot and snapshot.context_json.get("memory_guided_plan"):
             from interview_api.modules.memory.capability_service import CapabilityMemoryService
             await CapabilityMemoryService(self.db).refresh(session.user_id)
+        if snapshot and snapshot.context_json.get('training'):
+            from interview_api.modules.interview.training import completion_feedback
+            feedback = await completion_feedback(self.db, session, snapshot.context_json)
+            summary = {**summary, 'training_feedback': feedback}
+            session.completion_json = summary
         return summary
 
     async def skip(self, session_id, user_id, question_id, expected_version, main, policy):
@@ -447,7 +454,7 @@ class SessionController:
                     raise conflict("跳题决策已变化")
             next_q = await self._new_question(session, context, questions, main.artifact.question, policy)
             if context.get("adaptive_policy"):
-                next_q.candidate_refs_json = {**next_q.candidate_refs_json, "adaptive_decision": main.artifact.model_dump()}
+                next_q.candidate_refs_json = {**next_q.candidate_refs_json, "adaptive_decision": main.artifact.model_dump(), 'main_agent_run_id': main.run_id}
                 next_q.candidate_refs_json["topic_policy"]["topic"] = main.artifact.target_knowledge_id.rsplit(":", 1)[-1]
             data = question_data(next_q, session.question_count)
             await self._message(session, "QUESTION", next_q.question, data)

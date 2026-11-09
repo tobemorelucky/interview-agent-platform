@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "../stores/auth";
 
 const routes = [
+  { path: '/training', name: 'Training', component: () => import('../pages/TrainingPage.vue'), meta: { requiresAuth: true } },
   { path: "/admin/public-career", name: "AdminPublicCareer", component: () => import("../pages/admin/AdminPublicCareerPage.vue"), meta: { requiresAuth: true, requiresAdmin: true } },
   { path: "/career", name: "PublicCareer", component: () => import("../pages/PublicCareerPage.vue"), meta: { requiresAuth: true } },
   { path: "/:pathMatch(.*)*", name: "NotFound", component: () => import("../pages/NotFoundPage.vue"), meta: { requiresAuth: true } },

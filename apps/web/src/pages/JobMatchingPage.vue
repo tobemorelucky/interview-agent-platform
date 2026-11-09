@@ -112,6 +112,7 @@ function interview(candidate: MatchCandidate) {
         <ul v-if="card.presentation.eligibility.length"><li v-for="r in card.presentation.eligibility" :key="r.field">{{ displayLabel(r.field, '资格条件') }}<template v-if="r.required">（岗位要求：{{ r.required }}）</template> · {{ displayLabel(r.status) }}</li></ul>
         <p v-if="!card.presentation.eligibility.length">暂无需要额外核实的关键条件。</p>
         <button v-if="card.candidate.recommendation" @click="interview(card.candidate)">开始模拟面试</button>
+        <router-link v-if="card.candidate.recommendation" :to="{path:'/training',query:interviewTarget(card.candidate)}">选择个性化训练</router-link>
         <p v-if="card.candidate.interviewer_skill_recommendation" class="muted">面试 Skill：{{ card.candidate.interviewer_skill_recommendation.auto_select ? card.candidate.interviewer_skill_recommendation.ranking.find(s => s.skill_id === card.candidate.interviewer_skill_recommendation?.recommended_skill_id)?.label : '需手动选择' }} · {{ card.candidate.interviewer_skill_recommendation.reason }}</p>
         <details class="match-details">
           <summary>查看详细依据</summary>

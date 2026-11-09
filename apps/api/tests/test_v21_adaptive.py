@@ -125,7 +125,9 @@ def test_replay_goal_decisions_commit_observations_retry_and_switch(database_url
             request = self.responses.pop(0)
             payload = json.loads(messages[-1]["content"])["input"]
             choices = payload["adaptive"].get("choices") or [dict(target=dict(knowledge_id=c["target_knowledge_id"],
-                label=c["label"], sources=[c["source"]]), strategies=c["strategies"]) for c in payload["adaptive"]["candidates"]]
+                label=c.get('label') or payload['adaptive']['targets'][c['target_knowledge_id']]['label'],
+                sources=[payload['adaptive'].get('sources', {}).get(c['source']['ref'], c['source'])]),
+                strategies=c["strategies"]) for c in payload["adaptive"]["candidates"]]
             choice = next(c for c in choices if request["_strategy"] in c["strategies"] and
                 (not request["_kid"] or c["target"]["knowledge_id"] == request["_kid"]))
             source = choice["target"]["sources"][0]

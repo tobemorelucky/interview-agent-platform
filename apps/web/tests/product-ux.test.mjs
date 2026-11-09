@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { userNavigation, adminNavigation, navigationActive, displayLabel, userError, modelModeLabel, dimensionLabels } from '../src/i18n/zh-CN.ts'
 test('one navigation source covers the entire user journey and keeps administration separate', () => {
-  assert.deepEqual(userNavigation.map(n => n.label), ['首页','我的简历','我的画像','岗位推荐','公共资料','模拟面试','面试报告','成长记录'])
+  assert.deepEqual(userNavigation.map(n => n.label), ['首页','我的简历','我的画像','岗位推荐','公共资料','训练中心','模拟面试','面试报告','成长记录'])
   assert.ok(adminNavigation.every(n => n.path.startsWith('/admin/')))
   assert.ok(navigationActive('/jobs/matches/12', '/jobs/matches'))
   assert.ok(navigationActive('/resumes/12', '/resumes'))

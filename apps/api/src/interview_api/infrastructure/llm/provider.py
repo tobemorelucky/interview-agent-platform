@@ -1,6 +1,6 @@
 from collections.abc import AsyncIterator
 from interview_api.infrastructure.models.governance import governed_call, model_scope
-from interview_api.infrastructure.models.provider import ModelResponse
+from interview_api.infrastructure.models.provider import ModelResponse, modelscope_connection
 
 from openai import AsyncOpenAI
 
@@ -11,13 +11,16 @@ from . import LLMProvider
 
 class OpenAICompatibleLLMProvider:
     def __init__(self, *, user_id: int | None = None, public_system_task: bool = False) -> None:
+        connection = modelscope_connection() or {
+            "base_url": settings.llm_base_url, "api_key": settings.llm_api_key, "model": settings.llm_model,
+        }
         self._client = AsyncOpenAI(
-            base_url=settings.llm_base_url,
-            api_key=settings.llm_api_key,
+            base_url=connection["base_url"],
+            api_key=connection["api_key"],
             timeout=settings.llm_request_timeout_seconds,
             max_retries=0,  # Each HTTP retry must receive its own durable admission.
         )
-        self._model = settings.llm_model
+        self._model = connection["model"]
         self.user_id = user_id
         self.public_system_task = public_system_task
         self.model_name = self._model

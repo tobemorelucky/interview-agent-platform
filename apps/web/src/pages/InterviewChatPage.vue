@@ -67,6 +67,7 @@ const retryAnswer = ref<{ question_id: number; idempotency_key: string; content:
 const answerPersisted = ref(false)
 const profileContext = ref<InterviewSession["context_snapshot"]>()
 const memoryGuidance = computed(() => (profileContext.value as { memory_guided_plan?: { items: { label: string; history_summary: string }[] } } | undefined)?.memory_guided_plan?.items || [])
+const trainingLabel = computed(() => ({FULL:'完整模拟面试',WEAKNESS:'薄弱项专项训练',RECHECK:'冲突 / 遗忘独立复测'} as Record<string,string>)[(profileContext.value as {training?:{mode:string}}|undefined)?.training?.mode||''])
 const completion = ref<InterviewSession["completion_json"]>()
 const pageError = ref("")
 const streamErrorCode = ref("")
@@ -863,6 +864,7 @@ getInterviewTargets().then(async data => {
         <div class="resume-bar" v-if="activeSession()" style="flex-wrap:wrap">
           <template v-if="activeSession()?.workflow_mode === 'm4'">
             <strong>{{ publicName(profileContext?.company_name) }} · {{ publicName(profileContext?.job_title) }}</strong>
+            <p v-if="trainingLabel">本场训练：{{trainingLabel}} · 目标与起始状态已固定</p>
             <span v-if="activeInterviewer">{{ activeInterviewer.skill.label }} / {{ activeInterviewer.round.label }} / {{ activeInterviewer.style.label }}</span>
             <details v-if="activeInterviewer" class="session-context-detail"><summary>本场面试官配置（已固定）</summary>
               <p v-if="profileContext?.interviewer_selection">选择来源：{{ profileContext.interviewer_selection.source === 'AUTO_RECOMMENDED' ? '根据岗位自动推荐' : '用户手动选择' }}</p>

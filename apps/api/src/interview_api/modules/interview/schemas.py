@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 from interview_api.modules.interview.skill_engine import SkillId, RoundId, StyleId
@@ -21,6 +22,9 @@ class CreateSessionRequest(BaseModel):
     interviewer_selection_source: str = Field(default="USER_SELECTED", pattern=r"^(AUTO_RECOMMENDED|USER_SELECTED)$")
     design_interview: bool = False
     adaptive_interview: bool = False
+    training_mode: Literal['FULL', 'WEAKNESS', 'RECHECK'] | None = None
+    training_knowledge_id: str | None = Field(default=None, max_length=150)
+    training_request_key: str | None = Field(default=None, min_length=8, max_length=100)
 
 
 class SkillRecommendationRequest(BaseModel):

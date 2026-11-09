@@ -91,8 +91,12 @@ async def governed_call(provider, messages, operation):
     factory, owner, uid, route = scope
     reserve = len(json.dumps(messages, ensure_ascii=False).encode("utf-8")) + provider.max_output_tokens
     governance = ModelGovernance(factory)
-    key = await governance.reserve(owner, user_id=uid, route=route, model=provider.model_name,
-                                   tokens=reserve, timeout=provider.timeout)
+    try:
+        key = await governance.reserve(owner, user_id=uid, route=route, model=provider.model_name,
+                                       tokens=reserve, timeout=provider.timeout)
+    except Exception as exc:
+        exc.request_sent = False
+        raise
     sent = False
     async def execute():
         nonlocal sent
@@ -106,6 +110,7 @@ async def governed_call(provider, messages, operation):
     try:
         result = await asyncio.wait_for(execute(), provider.timeout)
     except BaseException as exc:
+        exc.request_sent = sent
         usage = getattr(exc, "usage", None) if sent else {"total_tokens": 0}
         await asyncio.shield(governance.settle(key, usage))
         raise

@@ -2,6 +2,7 @@
 
 from datetime import datetime, timezone
 import time
+import anyio
 
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
@@ -20,7 +21,7 @@ class ResearchModelCalls:
         self.prompts = prompts if prompts is not None else PromptRegistry()
         self.timeout_seconds = timeout_seconds if timeout_seconds is not None else settings.public_research_model_timeout_seconds
 
-    async def call(self, prompt_name: str, route: str, payload: dict, schema):
+    async def call(self, prompt_name: str, route: str, payload: dict, schema, *, repair_policy=None):
         prompt = self.prompts.get(prompt_name)
         provider = self.router.primary(route)
         async with self.factory() as db:
@@ -33,6 +34,15 @@ class ResearchModelCalls:
                             "thinking_type": getattr(provider, "thinking_type", None)},
             )
             db.add(step)
+            if route == 'interview_main' and payload.get('snapshot', {}).get('training'):
+                from interview_api.modules.candidate_profile.evidence import digest
+                plan = payload['snapshot'].get('memory_guided_plan', {})
+                step.input_json = {**step.input_json, 'memory_usage': dict(
+                    model_input='PREPARED', payload_fingerprint=digest(payload),
+                    plan_fingerprint=plan.get('fingerprint'),
+                    candidate_memory=[dict(knowledge_id=i['knowledge_id'], memory_revision=i['memory_revision']) for i in plan.get('items', [])],
+                    deprioritized_targets=[i['knowledge_id'] for i in plan.get('deprioritized_targets', [])],
+                    semantics='Input prepared, not proof of model attention or causal benefit')}
             await db.commit()
             step_id = step.id
         started = time.perf_counter()
@@ -46,6 +56,7 @@ class ResearchModelCalls:
                 self.router, route, system=prompt.system, payload=payload,
                 response_model=schema,
                 timeout_seconds=self.timeout_seconds,
+                repair_policy=repair_policy,
             )
             async with self.factory() as db:
                 step = await db.get(ExperienceAgentStepRun, step_id)
@@ -73,21 +84,30 @@ class ResearchModelCalls:
                             for q in parsed['questions'][:20]]
                         summary['identity_selection'] = {key: parsed[key] for key in (
                             'company', 'position', 'round_name', 'identity_evidence_ids')}
-                step.output_json = {"schema": schema.__name__, "model_invocations": result.invocations, **summary}
+                step.output_json = {"schema": schema.__name__, "model_invocations": result.invocations,
+                                    "usage_complete": result.usage_complete, **summary}
                 await db.commit()
             return result.parsed
-        except Exception as exc:
-            async with self.factory() as db:
-                step = await db.get(ExperienceAgentStepRun, step_id)
-                actual = self.router.resolve(route)
-                step.provider_name, step.model_name = actual.provider_name, actual.model_name
-                step.status = "FAILED"
-                step.latency_ms = round((time.perf_counter() - started) * 1000)
-                step.token_usage_json = getattr(exc, "usage", {})
-                step.structured_retry = int(getattr(exc, "retried", False))
-                step.error_message = getattr(exc, "code", type(exc).__name__)
-                step.output_json = {"schema": schema.__name__, "model_invocations": getattr(exc, "invocations", [])}
-                await db.commit()
+        except BaseException as exc:
+            # Cancellation is control flow, not permission to discard usage from
+            # a response already received. Persist under the existing shield.
+            known_result = locals().get('result')
+            if known_result is not None and not getattr(exc, 'usage', None):
+                exc.usage, exc.usage_complete = known_result.usage, known_result.usage_complete
+            with anyio.CancelScope(shield=True):
+                async with self.factory() as db:
+                    step = await db.get(ExperienceAgentStepRun, step_id)
+                    actual = self.router.resolve(route)
+                    step.provider_name, step.model_name = actual.provider_name, actual.model_name
+                    step.status = "FAILED"
+                    step.latency_ms = round((time.perf_counter() - started) * 1000)
+                    step.token_usage_json = getattr(exc, "usage", {})
+                    step.structured_retry = int(getattr(exc, "retried", False))
+                    step.error_message = getattr(exc, "code", type(exc).__name__)
+                    step.output_json = {"schema": schema.__name__, "model_invocations": getattr(exc, "invocations", []),
+                                        "usage_complete": getattr(exc, 'usage_complete', False),
+                                        "validation_errors": getattr(exc, "validation_errors", [])}
+                    await db.commit()
             raise
         finally:
             if scope_token is not None:

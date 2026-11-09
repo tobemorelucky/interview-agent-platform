@@ -40,6 +40,7 @@ onMounted(load)
       <p v-if="item.scope_differences.length">不同岗位或难度下的表现不同，暂不归为同一条件下的冲突。</p>
       <p v-if="item.state === 'VERIFIED' && !item.revoked">近期已有独立验证，下一场会降低重复考察优先级；岗位特别需要时仍可核对。</p>
       <p v-if="!item.revoked && ['GAP_SUSPECTED', 'PRACTICING', 'CONFLICTED', 'RECHECK_DUE'].includes(item.state)">下一场为什么考察：岗位相关时，面试官可用新场景核对上述机制；不会强制重复已验证内容。</p>
+      <router-link v-if="!item.revoked" :to="{path:'/training',query:{mode:['CONFLICTED','RECHECK_DUE'].includes(item.state)?'RECHECK':['GAP_SUSPECTED','PRACTICING'].includes(item.state)?'WEAKNESS':'FULL'}}">选择岗位并发起训练 / 复测</router-link>
       <p v-if="item.correction_note">本人更正：{{ item.correction_note }}</p>
       <details><summary>查看表现变化与依据</summary>
         <ol><li v-for="row in item.observations" :key="row.evaluation_id">{{ time(row.observed_at) }} · {{ row.assisted ? '提示或追问后作答' : '独立作答' }} · {{ row.state === 'DEMONSTRATED_IN_SESSION' ? '本轮已有支持' : '本轮仍需验证' }}<span v-if="row.open_gaps.length">：{{ row.open_gaps.join('；') }}</span> <router-link :to="`/interview?session_id=${row.session_id}`">查看本次面试</router-link></li></ol>

@@ -27,6 +27,18 @@ def build_core():
     return MockInterviewService(async_session_factory)
 
 
+@router.post('/training/workbench')
+async def training_workbench(body: CreateSessionRequest, current_user=Depends(get_current_user)):
+    from interview_api.modules.interview.training import TrainingService
+    return success(data=await TrainingService(build_core().factory).workbench(current_user.id,body))
+
+
+@router.get('/training/sessions/{session_id}')
+async def training_feedback(session_id: int, current_user=Depends(get_current_user)):
+    from interview_api.modules.interview.training import TrainingService
+    return success(data=await TrainingService(build_core().factory).feedback(current_user.id,session_id))
+
+
 @router.get("/interviewer-options")
 async def interviewer_options(current_user=Depends(get_current_user)):
     from interview_api.modules.interview.skill_engine import SkillRegistry

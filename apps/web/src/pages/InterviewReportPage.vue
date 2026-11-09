@@ -4,6 +4,7 @@ import { computed, ref, watch } from "vue"
 import { displayLabel, publicName, userError } from "../i18n/zh-CN"
 import { useRoute, useRouter } from "vue-router"
 import ReferenceAnswerView from '../components/ReferenceAnswer.vue'
+import TrainingFeedbackView from '../components/TrainingFeedback.vue'
 import DesignTraceView from '../components/DesignTrace.vue'
 import {
   approveMemoryProposal, correctMemoryProposal, generateInterviewReport, getInterviewReport,
@@ -166,6 +167,7 @@ watch(() => route.fullPath, () => { notice.value = ""; load() }, { immediate: tr
       <main class="report-detail">
         <p v-if="loading" class="card">正在读取持久化报告…</p>
         <template v-if="detail">
+          <TrainingFeedbackView :session-id="detail.session.id" />
           <article class="card"><h2>{{ publicName(detail.session.company_name) }} · {{ publicName(detail.session.job_title) }}</h2>
             <p>{{ displayLabel(detail.session.status) }} · {{ detail.session.title ? publicName(detail.session.title) : '模拟面试' }}</p>
             <p v-if="reportModeLabel(selectedReport, detail.statistics)" class="mode">{{ reportModeLabel(selectedReport, detail.statistics) }}</p>

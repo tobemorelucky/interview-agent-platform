@@ -119,7 +119,10 @@ async def build_context(db, user_id, request):
         context["interview_experiences"] = [dict(row, reported_topics=deepcopy((next(e for e in experiences if e.id == row["id"]).extraction_output_json or {}).get("source_anchors", {}).get("reported_topics", []))[:12])
             for row in context["interview_experiences"] if row["id"] in related]
         context["adaptive_policy"] = dict(version="2.1.0", decision_contract="TARGET_SOURCE_PAIR_V1",
-            prompts=freeze_prompts(contract="TARGET_SOURCE_PAIR_V1", memory_guided=True), invalid_decision="FAIL_SAFE_RETRY_NO_EXTRA_CALL")
+            context_projection="ROLE_CONTEXT_V1",
+            evaluation_context="FOLLOWUP_SCORING_V1",
+            prompts=freeze_prompts(contract="TARGET_SOURCE_PAIR_V1", memory_guided=True, context_projection=True,
+                evaluation_context=True), invalid_decision="FAIL_SAFE_RETRY_NO_EXTRA_CALL")
         from interview_api.modules.memory.capability_service import CapabilityMemoryService
         memory = CapabilityMemoryService(db)
         states = await memory.refresh(user_id)
@@ -129,6 +132,14 @@ async def build_context(db, user_id, request):
         context["adaptive_blueprint"] = build_blueprint({**context, "recent_performance_observations": dict(items=[])},
             deprioritized_topics=fresh)
         context["memory_guided_plan"] = await memory.plan(user_id, context["adaptive_blueprint"], states=states)
+        if request.training_mode:
+            from interview_api.modules.interview.training import freeze_training
+            # Find legitimate Skill goals BEFORE the ordinary question-count cap.
+            full = build_blueprint({**context, 'budgets': {**context['budgets'], 'question_count': 8},
+                'recent_performance_observations': dict(items=[])}, deprioritized_topics=fresh)
+            freeze_training(context, request, states, full)
+    elif request.training_mode:
+        raise AppError('TRAINING_REQUIRES_ADAPTIVE', '训练须启用自适应面试并选择专业 Skill', 422)
     return context, version.source_resume_id, digest(context)
 
 

@@ -11,6 +11,7 @@
 - **自适应面试官**：根据回答、知识缺口和已覆盖主题选择追问、举例、深挖或换题；程序校验合法目标—题源组合及会话预算。
 - **独立评价与复盘**：Evaluation 对当前回答进行五维评分，Controller 原子提交；报告统计来自持久化评价。
 - **跨场次能力记忆**：区分提示后改善、独立验证、冲突和待复测，用户可更正或撤销；下一场使用冻结的 MemoryGuidedPlan。
+- **个性化训练中心**：支持弱点专项、独立复测及完成反馈；Main 和 Evaluation 使用各自的上下文投影，评价可引用同场合法的父问答。
 - **共享职业资料**：管理员采集、证据校验、审核后发布；普通用户只查询已发布资料，不触发收费抓取。
 
 保留六个 Agent：**Research、Resume/Profile、Job Matching、Interview Main、Answer Evaluation、Summary/Coach**。
@@ -21,6 +22,12 @@ Agent 通过结构化产物协作；权限、证据、版本、幂等、预算�
 Vue 3 / TypeScript · FastAPI · SQLAlchemy / Alembic · PostgreSQL · Redis / Celery · MinIO
 
 模型采用 Provider / ModelRouter 配置；Search/Fetch 使用独立凭证。Milvus 仅用于已发布知识检索，不参与能力记忆聚合，也不是当前演示的必需依赖。
+
+## 模型测试配置
+
+ModelScope 为可选测试入口。要启用，在项目根目录的本地 `.env` 中保留一条 `LLM_PROVIDER=modelscope`，填写 `MODELSCOPE_API_KEY`，再重启 API 和 Worker。默认模型为 `deepseek-ai/DeepSeek-V4.1-Flash-1017`；可用 `MODELSCOPE_MODEL=Qwen/Qwen3.5-35B-A3B` 手动切换。恢复原 `LLM_PROVIDER` 值即可恢复原有路由配置。ModelScope 模式不会自动回退到旧模型。
+
+1017 与 Qwen 均已通过单次真实纯文本请求；**ModelScope 的 JSON 模式、原生工具调用及完整面试尚未验收**。单次 JSON 探测入口为 `apps/api/scripts/smoke_modelscope.py --send-once`，会消耗实际额度，不会自动重试。仅做演示时使用下方 Replay，不需要调用外部模型。
 
 ## 本地运行与演示
 
@@ -46,9 +53,8 @@ node scripts/v21_acceptance_web.mjs
 
 ## 验收与边界
 
-- V2.2 完整隔离回归记录：后端 **510 passed**、前端 **43/43**，并完成真实浏览器 Replay 闭环；这是历史验收结果，非每次启动重新测试。
-- DeepSeek 记忆联动：**6 次请求、35,585 Token**；已验证 Kafka 后选择 Redis，能力冲突时主动验证 Kafka。属于 **Replay 历史 + Live 决策**，不是完整多场次 Live。
-- 工程收尾复查：后端定向 28 passed、前端 43/43；未将未执行项目计为通过。
+- **Replay**：隔离 PostgreSQL 完成 20 轮问答、Coach 报告及下一场 MemoryGuidedPlan。20 轮整批中性估算约 **25.2 万 Token**，含 Coach 和 Repair 预留，不是 Live 用量。
+- **Live**：历史 DeepSeek 记忆联动为“Replay 历史 + Live 决策”。完整长面试在第二答因 `UNRESOLVED_KNOWLEDGE_GAP` 停止；该故障仍可复现，不能把合法样本的 Replay 通过视为完整 Live 通过。
 
 项目是个人工程实践，不宣称生产规模、校准后的掌握概率或模型准确率提升。学历等硬资格缺少可靠结构化依据时保持 UNKNOWN；模型语义质量和外部网页可用性仍有限。旧面经发布失败记录保留，不包装成全部在线链路成功。
 
@@ -57,4 +63,5 @@ node scripts/v21_acceptance_web.mjs
 - [文档索引](docs/README.md) / [演示指南](docs/54_repeatable_demo_guide.md)
 - [V2.1.1 自适应决策契约](docs/50_director_source_contract_v2_1_1.md) / [V2.2 能力记忆](docs/51_capability_memory_v2_2.md)
 - [真实 DeepSeek 记忆验收](docs/53_v22_live_memory_acceptance.md) / [0026 发布检查](docs/57_production_0026_release_checklist.md)
+- [训练中心](docs/58_personalized_interview_training_v2_3.md) / [长面试 Live 停止记录](docs/69_v23_final_live_acceptance.md) / [20 轮 Replay 与成本估算](docs/70_v23_replay20_token_estimate.md)
 - [源码讲解](docs/interview/09_v21_v22_source_map.md) / [秋招口述稿与24个追问](docs/interview/10_v21_v22_interview_materials.md)

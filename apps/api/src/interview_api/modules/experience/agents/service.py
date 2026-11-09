@@ -108,9 +108,10 @@ class ExperienceAgentService:
             return payload
 
         llm = self.llm or self._build_default_llm()
-        extraction_agent = ExtractionAgent(llm, model_name=settings.llm_model)
-        routing_agent = RoutingAgent(llm, model_name=settings.llm_model)
-        reliability_agent = ReliabilityAgent(llm, model_name=settings.llm_model)
+        model_name = getattr(llm, "model_name", settings.llm_model)
+        extraction_agent = ExtractionAgent(llm, model_name=model_name)
+        routing_agent = RoutingAgent(llm, model_name=model_name)
+        reliability_agent = ReliabilityAgent(llm, model_name=model_name)
         input_hash = hashlib.sha256(raw_text.encode("utf-8")).hexdigest()
         run = await self.repo.create_run(
             source_item_id=source.id,
@@ -160,7 +161,7 @@ class ExperienceAgentService:
                     started,
                     input_json=step_input,
                     error_message=error,
-                    model_name=settings.llm_model,
+                    model_name=model_name,
                 )
                 return {
                     "validation_errors": [f"extraction_parse_failed: {error}"],
@@ -179,7 +180,7 @@ class ExperienceAgentService:
                     "question_count": len(result.questions),
                     "extraction_confidence": result.extraction_confidence,
                 },
-                model_name=settings.llm_model,
+                model_name=model_name,
             )
             return {"extraction_result": payload, "status": "EXTRACTED"}
 
@@ -255,7 +256,7 @@ class ExperienceAgentService:
                     started,
                     input_json={"question_count": len(extraction.questions)},
                     error_message=error,
-                    model_name=settings.llm_model,
+                    model_name=model_name,
                 )
                 return {
                     "validation_errors": state.get("validation_errors", [])
@@ -276,7 +277,7 @@ class ExperienceAgentService:
                         1 for item in result.question_results if item.should_index
                     ),
                 },
-                model_name=settings.llm_model,
+                model_name=model_name,
             )
             return {"routing_result": payload}
 
@@ -303,7 +304,7 @@ class ExperienceAgentService:
                     started,
                     input_json={"has_extraction_result": True},
                     error_message=error,
-                    model_name=settings.llm_model,
+                    model_name=model_name,
                 )
                 return {
                     "validation_errors": state.get("validation_errors", [])
@@ -324,7 +325,7 @@ class ExperienceAgentService:
                     "spam_risk_score": result.spam_risk_score,
                     "risk_flags": result.risk_flags,
                 },
-                model_name=settings.llm_model,
+                model_name=model_name,
             )
             return {"reliability_result": payload}
 
@@ -450,7 +451,7 @@ class ExperienceAgentService:
         }
 
     def _build_default_llm(self) -> LLMProvider:
-        if not settings.llm_api_key or not settings.llm_model:
+        if not settings.use_modelscope and (not settings.llm_api_key or not settings.llm_model):
             raise AppError(
                 "LLM_NOT_CONFIGURED",
                 "LLM is not configured. Please set LLM_API_KEY and LLM_MODEL.",

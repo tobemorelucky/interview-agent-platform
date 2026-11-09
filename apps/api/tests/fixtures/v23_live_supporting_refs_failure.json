@@ -1,0 +1,25 @@
+{
+  "provenance": "Exact business output of HTTP 7 in V2.3 LIVE DEMO attempt 20261026_a; reduced request keeps the original allowed refs and selected pair. Not a new Live response.",
+  "payload": {
+    "snapshot": {"adaptive_policy": {"decision_contract": "TARGET_SOURCE_PAIR_V1"}},
+    "answer": "这里用了余弦相似度，我主要希望比较语义方向，不让向量长度直接影响排名。如果把向量都做 L2 归一化，内积和余弦的排序就一样，可以用内积索引实现。不能只把距离名称替换掉，得确认编码模型建议的度量以及索引入库和查询的归一化一致。我没有对几种度量做独立实验，所以不会说余弦在所有检索任务里都更好。",
+    "adaptive": {
+      "allowed_refs": ["answer:3", "evaluation_run:7", "fact:1", "fact:2", "fact:3", "fact:4", "fact:5", "fact:6", "fact:7", "question:1", "question:2", "question:3", "requirement:1", "requirement:2", "requirement:3", "requirement:5", "skill:ai_agent_application@1.0.0"],
+      "current_answer_ref": "answer:3",
+      "current_evaluation_ref": "evaluation_run:7",
+      "candidates": [{"candidate_id": "C_6fbaf249a8e8a389386dd23b", "target_knowledge_id": "ai_agent_application:agent", "strategies": ["NEXT"], "source": {"ref": "requirement:3", "source_type": "JOB_REQUIREMENT", "source_id": 3}}]
+    }
+  },
+  "output": {
+    "candidate_id": "C_6fbaf249a8e8a389386dd23b",
+    "strategy": "NEXT",
+    "supporting_refs": ["answer:3", "evaluation_run:7", "fact:1", "fact:2", "fact:3", "fact:4", "fact:5", "fact:6", "fact:7", "question:1", "question:2", "question:3", "requirement:1", "requirement:2", "requirement:3", "requirement:5", "skill:ai_agent_application@1.0.0"],
+    "reason_tags": ["COOLDOWN_SWITCH", "COVERAGE_SWITCH"],
+    "proposed_question": {
+      "question": "换个方向，你在训练助手里用 Python 实现了 Agent 工具调用，并提到采用 Schema 校验和工具白名单。能具体说一下一次工具调用从模型给出参数到真正执行之间，你的程序做了哪些校验和权限控制吗？",
+      "expected_points": ["说明模型输出参数先经过 Schema 校验", "说明工具白名单如何限制可调用工具", "说明校验失败时的处理方式", "说明工具执行与模型建议之间的程序责任边界"],
+      "dimension": "agent",
+      "difficulty": "MEDIUM"
+    }
+  }
+}

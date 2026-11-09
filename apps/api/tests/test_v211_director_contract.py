@@ -59,7 +59,7 @@ def test_new_prompt_uses_pairs_and_old_prompt_remains_frozen():
     new = freeze_prompts(contract="TARGET_SOURCE_PAIR_V1")
     assert AdaptivePromptRegistry(dict(prompts=old)).get("interview_main").version == "2.1.0"
     prompt = AdaptivePromptRegistry(dict(prompts=new)).get("interview_main")
-    assert prompt.version == "2.1.1" and "candidate_id" in prompt.system
+    assert prompt.version == "2.1.2" and "candidate_id" in prompt.system
     assert old["answer_evaluation"] == new["answer_evaluation"]
 
 
@@ -346,6 +346,8 @@ def test_frozen_legacy_and_pair_sessions_execute_without_upgrading_history(datab
 
             async def historical_creation(db, user_id, req):
                 context, resume_id, _ = await original_builder(db, user_id, req)
+                context['adaptive_policy'].pop('evaluation_context', None)
+                context['adaptive_policy'].pop('context_projection', None)
                 context["adaptive_policy"].pop("decision_contract")
                 context["adaptive_policy"]["prompts"] = freeze_prompts()
                 context.pop("memory_guided_plan", None)
@@ -355,15 +357,50 @@ def test_frozen_legacy_and_pair_sessions_execute_without_upgrading_history(datab
                 historical = await core.create(uid, request)
             async def pair_creation(db, user_id, req):
                 context, resume_id, _ = await original_builder(db, user_id, req)
-                context["adaptive_policy"]["prompts"] = freeze_prompts(contract="TARGET_SOURCE_PAIR_V1")
+                context['adaptive_policy'].pop('evaluation_context', None)
+                context['adaptive_policy'].pop('context_projection', None)
+                from interview_api.modules.interview.adaptive_prompts import MAIN_PAIRS, EVALUATION
+                context["adaptive_policy"]["prompts"] = {p.name: dict(version=p.version,system=p.system,
+                    fingerprint=p.content_hash) for p in (MAIN_PAIRS,EVALUATION)}
                 context.pop("memory_guided_plan", None)
                 return context, resume_id, digest(context)
             with patch.object(controller, "build_context", pair_creation):
                 paired = await core.create(uid, request)
+            async def old_memory_creation(db, user_id, req):
+                context, resume_id, _ = await original_builder(db, user_id, req)
+                context['adaptive_policy'].pop('evaluation_context', None)
+                context['adaptive_policy'].pop('context_projection', None)
+                from interview_api.modules.interview.adaptive_prompts import MAIN_MEMORY, EVALUATION
+                context["adaptive_policy"]["prompts"] = {p.name: dict(version=p.version,system=p.system,
+                    fingerprint=p.content_hash) for p in (MAIN_MEMORY,EVALUATION)}
+                return context, resume_id, digest(context)
+            with patch.object(controller, "build_context", old_memory_creation):
+                old_memory = await core.create(uid, request)
+            async def reference_creation(db, user_id, req):
+                context, resume_id, _ = await original_builder(db, user_id, req)
+                context['adaptive_policy'].pop('evaluation_context', None)
+                from interview_api.modules.interview.adaptive_prompts import MAIN_MEMORY_REFS, EVALUATION
+                context['adaptive_policy'].pop('context_projection', None)
+                context['adaptive_policy']['prompts'] = {p.name: dict(version=p.version, system=p.system,
+                    fingerprint=p.content_hash) for p in (MAIN_MEMORY_REFS, EVALUATION)}
+                return context, resume_id, digest(context)
+            with patch.object(controller, 'build_context', reference_creation):
+                old_references = await core.create(uid, request)
+            async def projected_creation(db, user_id, req):
+                context, resume_id, _ = await original_builder(db, user_id, req)
+                from interview_api.modules.interview.adaptive_prompts import freeze_prompts
+                context['adaptive_policy'].pop('evaluation_context', None)
+                context['adaptive_policy']['prompts'] = freeze_prompts(context_projection=True)
+                return context, resume_id, digest(context)
+            with patch.object(controller, 'build_context', projected_creation):
+                old_projected = await core.create(uid, request)
             modern = await core.create(uid, request)
             for detail, version, schema in [(historical, "2.1.0", "AdaptiveDecision"),
                                              (paired, "2.1.1", "AdaptiveSelection"),
-                                             (modern, "2.2.0", "AdaptiveSelection")]:
+                                             (old_memory, "2.2.0", "AdaptiveSelection"),
+                                             (old_references, "2.2.1", "AdaptiveSelection"),
+                                             (old_projected, "2.3.1", "AdaptiveSelection"),
+                                             (modern, "2.3.1", "AdaptiveSelection")]:
                 pinned = deepcopy(detail["context_snapshot"])
                 sid = detail["id"]
                 question = await core.start(sid, uid)
@@ -381,6 +418,11 @@ def test_frozen_legacy_and_pair_sessions_execute_without_upgrading_history(datab
                         .where(InterviewAgentCall.session_id == sid,
                                ExperienceAgentStepRun.step_name == "interview_main"))).all()
                     assert versions and set(versions) == {version}
+                    evaluation_versions = (await db.scalars(select(ExperienceAgentStepRun.prompt_version)
+                        .join(InterviewAgentCall, InterviewAgentCall.agent_run_id == ExperienceAgentStepRun.agent_run_id)
+                        .where(InterviewAgentCall.session_id == sid,
+                               ExperienceAgentStepRun.step_name == 'answer_evaluation'))).all()
+                    assert set(evaluation_versions) == {pinned['adaptive_policy']['prompts']['answer_evaluation']['version']}
         finally:
             await engine.dispose()
 

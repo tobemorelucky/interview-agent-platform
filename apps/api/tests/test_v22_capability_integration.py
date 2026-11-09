@@ -110,8 +110,8 @@ def test_memory_is_planning_only_and_prompt_compatibility():
     assert "memory_guided_plan" in agent_payload(payload, "interview_main")["snapshot"]
     payload["snapshot"]["recent_performance_observations"] = dict(items=["revoked historical weakness"])
     assert "recent_performance_observations" not in agent_payload(payload, "interview_main")["snapshot"]
-    assert freeze_prompts(contract="TARGET_SOURCE_PAIR_V1")["interview_main"]["version"] == "2.1.1"
-    assert freeze_prompts(contract="TARGET_SOURCE_PAIR_V1", memory_guided=True)["interview_main"]["version"] == "2.2.0"
+    assert freeze_prompts(contract="TARGET_SOURCE_PAIR_V1")["interview_main"]["version"] == "2.1.2"
+    assert freeze_prompts(contract="TARGET_SOURCE_PAIR_V1", memory_guided=True)["interview_main"]["version"] == "2.2.1"
 
 
 def test_replay_memory_actually_changes_choice_but_cannot_grant_source_authority():
