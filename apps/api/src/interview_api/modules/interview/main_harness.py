@@ -33,6 +33,10 @@ TOOL_STEP = "main_harness_tool"
 logger = logging.getLogger(__name__)
 
 
+class _AdmissionRefused(Exception):
+    """The session budget refused this logical call before any HTTP was sent."""
+
+
 class EmptyArguments(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
@@ -298,6 +302,14 @@ class MainHarness:
             await finish_research_run(self.factory, run_id, status="SUCCEEDED",
                 output={"validated_artifact": artifact.model_dump(), "harness_version": VERSION})
             return result
+        except _AdmissionRefused:
+            # Preserve the audited run as FAILED, then hand the refusal back as
+            # None exactly like the non-harness Main path.
+            with anyio.CancelScope(shield=True):
+                await finish_research_run(self.factory, run_id, status="FAILED",
+                    error="INTERVIEW_BUDGET_EXHAUSTED",
+                    output={"harness_version": VERSION, "terminal": False})
+            return None
         except BaseException as exc:
             code = getattr(exc, "code", type(exc).__name__)
             with anyio.CancelScope(shield=True):
@@ -344,7 +356,9 @@ class MainHarness:
                     timeout_seconds=timeout).call(route, route, packet, schema, checkpoint_action=True,
                     max_repair_input_bytes=repair_bytes, repair_policy=FinalSelectionRepair(payload) if allow_repair else None))
             if result is None:
-                raise AppError("INTERVIEW_BUDGET_EXHAUSTED", "Main 预算不足，未提交题目", 409)
+                # Same signal as the non-harness path: nothing was sent, so the
+                # caller may end the session lawfully instead of retrying.
+                raise _AdmissionRefused()
             http_slots += len(result.invocations)
             repaired = repaired or bool(result.structured_retry)
             action = result.parsed.root if isinstance(result.parsed, MainHarnessAction) else result.parsed

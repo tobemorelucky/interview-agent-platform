@@ -92,6 +92,20 @@ class InterviewReportService:
                     question_kind=q.question_kind, status=q.status, candidate_refs=q.candidate_refs_json,
                     job_requirement_id=q.job_requirement_id) for q in questions],
                 evaluations=evaluations, evaluation_fingerprint=fingerprint)
+            completion = session.completion_json or {}
+            if completion.get("completion_reason"):
+                # Termination facts only. Counts stay derived from persisted
+                # evaluations, never from this summary.
+                evaluated = completion.get("evaluated_count") or 0
+                budget = completion.get("question_budget")
+                payload["session_completion"] = dict(
+                    completion_reason=completion.get("completion_reason"),
+                    completion_detail=completion.get("completion_detail"),
+                    question_budget=budget,
+                    answered_count=completion.get("answered_count"),
+                    evaluated_count=completion.get("evaluated_count"),
+                    early_terminated=bool(budget) and evaluated < budget,
+                    semantics="CONTROLLER_TERMINATION_FACT_NOT_PERFORMANCE_EVIDENCE")
             if snapshot.context_json.get("adaptive_policy"):
                 from interview_api.modules.interview.adaptive import review_projection
                 payload["snapshot"].pop("adaptive_policy", None)

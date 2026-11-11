@@ -301,7 +301,8 @@ class SessionController:
                 session.interview_plan_json = {**(session.interview_plan_json or {}), "answer_processing": None}
                 # ANSWERED is retained. Never mark EVALUATED or advance on model failure.
 
-    async def commit_answer(self, session_id, user_id, answer_id, expected_version, evaluation, main, requested_action, policy):
+    async def commit_answer(self, session_id, user_id, answer_id, expected_version, evaluation, main, requested_action, policy,
+                            *, terminal_detail=None):
         session = await self.owned(session_id, user_id, lock=True)
         answer = await self.db.get(InterviewAnswer, answer_id)
         if session.state_version != expected_version or session.active_question_id != answer.session_question_id or answer.status != "RUNNING":
@@ -309,6 +310,9 @@ class SessionController:
         _, context, questions, q, tokens = await self.state(session_id, user_id)
         artifact = evaluation.artifact
         adaptive = bool(context.get("adaptive_policy"))
+        if terminal_detail is not None and not adaptive:
+            # Ordinary mode keeps its own budget rules; no caller may shorten it.
+            raise AppError("INVALID_TERMINAL_REQUEST", "预算终止仅适用于自适应面试", 422)
         if adaptive:
             from interview_api.modules.interview.adaptive import planning_payload, validate_decision, resolve_observations, knowledge_state, apply_observations, all_goals_demonstrated
             message = await self.db.get(InterviewMessage, answer.message_id)
@@ -322,6 +326,13 @@ class SessionController:
             decision_payload = planning_payload(context, questions, q, session.interview_plan_json,
                 answer=message.content, answer_id=answer_id, evaluation=artifact, evaluation_run_id=evaluation.run_id)
             terminal = exhausted or all_goals_demonstrated(context, projected) or not decision_payload["adaptive"]["choices"]
+            if terminal_detail is not None:
+                # Only the interview service may ask for this, and only when the
+                # next question could not be admitted. The evaluated answer is
+                # still committed below; no question is invented for the gap.
+                if requested_action != "COMPLETE" or main is not None:
+                    raise AppError("INVALID_TERMINAL_REQUEST", "预算终止只能用于没有下一题时的结束", 422)
+                terminal = True
             if requested_action == "COMPLETE" and not terminal:
                 raise conflict("尚有合法考察目标且预算未耗尽，不能直接结束")
             action = "COMPLETE" if terminal else requested_action
@@ -354,7 +365,8 @@ class SessionController:
             decisions = trace.get("adaptive_decisions", [])
             decisions.append(dict(answer_id=answer_id, evaluation_id=ev.id, agent_run_id=main.run_id if main else None,
                 decision=main.artifact.model_dump() if main else None, executed_action=action,
-                verdict="NOT_EXECUTED_BUDGET" if main and action == "COMPLETE" else "ACCEPTED",
+                verdict=("TERMINATED_BUDGET" if terminal_detail else
+                         "NOT_EXECUTED_BUDGET" if main and action == "COMPLETE" else "ACCEPTED"),
                 state_version=expected_version))
             from interview_api.modules.interview.adaptive import bounded
             session.planner_trace_json = bounded({**trace, "adaptive_decisions": decisions})
@@ -369,7 +381,14 @@ class SessionController:
             answer.status = "COMPLETED"
             summary = await self.complete(session)
             if adaptive:
-                summary["completion_reason"] = "BUDGET_LIMIT" if exhausted else "BLUEPRINT_COVERED" if all_goals_demonstrated(context, projected) else "NO_LEGAL_TARGET_WITHIN_POLICY"
+                # Build a new dict: complete() stores the same object it returns,
+                # so mutating it in place is invisible to the ORM's change check.
+                summary = {**summary, "completion_reason": ("BUDGET_LIMIT" if exhausted or terminal_detail else
+                    "BLUEPRINT_COVERED" if all_goals_demonstrated(context, projected) else "NO_LEGAL_TARGET_WITHIN_POLICY")}
+                if terminal_detail:
+                    # Stable sub-code so reports/UI can tell "no next question could
+                    # be afforded" apart from "the whole session budget was spent".
+                    summary = {**summary, "completion_detail": terminal_detail}
                 session.completion_json = deepcopy(summary)
             events.append(["complete", summary])
             await self._message(session, "INTERVIEW_COMPLETE", "面试结束", summary)

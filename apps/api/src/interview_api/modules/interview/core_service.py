@@ -314,6 +314,7 @@ class MockInterviewService:
         exhausted = SessionController.choose_action(context, questions, active, "NEXT", rounds=session.turn_count,
             tokens=tokens, started_at=session.started_at) == "COMPLETE"
         main, policy, action = None, {}, "COMPLETE"
+        terminal_detail = None
         if not exhausted and not all_goals_demonstrated(context, payload["adaptive"]["knowledge_state"]) and payload["adaptive"]["choices"]:
             async with self.factory() as db:
                 await SessionController(db).answer_stage(sid, uid, aid, expected, "generating_next_question")
@@ -321,12 +322,18 @@ class MockInterviewService:
             if on_stage: on_stage("generating_next_question")
             main = await self.call_agent(self.main.adaptive(payload), sid, uid, expected, payload, answer_id=aid)
             if main is None:
-                raise AppError("INTERVIEW_BUDGET_EXHAUSTED", "下一题预算不足，回答已保存，未推进", 409)
-            policy = validate_decision(main.artifact, payload)
-            action = main.artifact.recommendation
+                # call_agent returns None only when the session budget refused this
+                # logical call before any HTTP was sent. The evaluation above is
+                # already validated and reused for this answer, so commit it and
+                # end the session with an explicit reason instead of dropping it.
+                terminal_detail = "NEXT_QUESTION_RESERVATION"
+            else:
+                policy = validate_decision(main.artifact, payload)
+                action = main.artifact.recommendation
         try:
             async with self.factory() as db:
-                events = await SessionController(db).commit_answer(sid, uid, aid, expected, evaluation, main, action, policy)
+                events = await SessionController(db).commit_answer(sid, uid, aid, expected, evaluation, main, action, policy,
+                    terminal_detail=terminal_detail)
                 await db.commit()
         except AppError as exc:
             if main and (context.get('training') or context["adaptive_policy"].get("main_harness_version")):
