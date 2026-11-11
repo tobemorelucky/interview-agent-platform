@@ -137,3 +137,17 @@
 - 上限建议：≤10 次 HTTP、≤120,000 Token、≤20 分钟；
 - 必须核对：Coach 请求字节 < 200,000、`thinking` 参数真实出现在请求体、报告 `COMPLETED`、观察只引用本场正式评价；
 - 不做：不为了验证而放宽任何校验、不重开多场刷成功率。
+
+### 5.1 更正（第六轮核查，2026-11-11）
+
+第六轮用归档 `usage` 复核发现上表一行的数字有误，原文保留、此处更正：
+
+| 请求 | max_tokens | thinking | completion（**含**推理） | 其中 reasoning | finish | 正文 |
+|---|---:|---|---:|---:|---|---|
+| 2 | 3,000 | enabled | 3,000（=上限） | 3,000 | length | 空 |
+| 9 | 8,000 | enabled | 8,000（=上限） | 8,000 | length | 空 |
+| 10 | 12,000 | enabled | **8,196** | **6,880** | stop | 合法 JSON（2,699 字符） |
+
+口径说明：`reasoning_tokens` 由托管端以 `completion_tokens_details.reasoning_tokens` 返回，且**计入**
+`completion_tokens`；因此 `completion_tokens` 不能当作纯正文 Token。结论（推理与 JSON 共用同一份 completion
+预算，3,000/8,000 会被推理吃光）不变。详见 `docs/85_workbuddy_long_coach_live.md` §2.2。
