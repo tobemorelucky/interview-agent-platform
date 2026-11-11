@@ -16,7 +16,11 @@ CHINESE_DIGITS = {"一": 1, "二": 2, "两": 2, "三": 3, "四": 4, "五": 5, "�
                   "七": 7, "八": 8, "九": 9, "十": 10, "百": 100}
 # "一次" is idiomatic in this domain (at-least-once delivery, one round trip,
 # first attempt). Every larger Chinese count must be a server-provided number.
+# "一次" stops being an idiom as soon as it is scoped to this interview, because
+# then it is a claim about how many times the candidate actually answered.
 ONE_TIME_IDIOM = re.compile(r"[至最多少再第首每]?一次(?!性)")
+SESSION_SCOPE = re.compile(r"(本场|这场|该场|全场|本次|整场|总共|一共|合计|累计)")
+ONLY_COUNT_VERB = re.compile(r"(只|仅)(回答|作答|答|说|讲|做|写|用)了$")
 ARABIC_CLAIM = re.compile(r"(?<![0-9.])(\d+(?:\.\d+)?)\s*(分|%|/\s*5|次|道题|场面试|轮回答)")
 CHINESE_CLAIM = re.compile(r"([一二两三四五六七八九十百]+)\s*(分|%|次|道题|场面试|轮回答)")
 ENGLISH_CLAIM = re.compile(r"\b(score|average|count|occurrences?)\s*(?:is|of|:|=)\s*(\d+(?:\.\d+)?)", re.IGNORECASE)
@@ -68,6 +72,16 @@ def supported_statistics(statistics, evaluations=()):
     return dict(scores=scores, counts=counts)
 
 
+def _scoped_once(text, start):
+    """True when the "一次" counts something that happened in this interview.
+
+    "本场只回答一次" / "一共只答了一次" are claims about the session, so they must
+    match the server count. "至少一次投递" / "再试一次" stay idiomatic.
+    """
+    window = text[max(0, start - 8):start]
+    return bool(SESSION_SCOPE.search(window) or ONLY_COUNT_VERB.search(window))
+
+
 def _unsupported(text, catalog):
     """Return (phrase, unit, value) for the first statistic the server did not provide."""
     for match in ARABIC_CLAIM.finditer(text or ""):
@@ -81,7 +95,7 @@ def _unsupported(text, catalog):
             return phrase, unit, value
     for match in CHINESE_CLAIM.finditer(text or ""):
         phrase, unit = match.group(0), match.group(2)
-        if unit == "次" and ONE_TIME_IDIOM.fullmatch(phrase):
+        if unit == "次" and ONE_TIME_IDIOM.fullmatch(phrase) and not _scoped_once(text or "", match.start()):
             continue
         value = _chinese_number(match.group(1))
         if value is None:

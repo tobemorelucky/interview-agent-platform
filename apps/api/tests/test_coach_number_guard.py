@@ -93,3 +93,39 @@ def test_the_guard_is_still_applied_through_the_resolver():
         resolve_coach_artifact(CoachArtifact.model_validate(value), data["evaluations"], data["statistics"])
     assert error.value.code == "COACH_COMPUTED_NUMBER"
     assert error.value.diagnostics["matched_number"] == "六轮回答"
+
+
+# "一次" is idiomatic only while it does not count this interview's turns.
+@pytest.mark.parametrize("text", [
+    "本场只回答一次",
+    "本场一共只答了一次",
+    "只回答了一次",
+])
+def test_a_once_claim_about_this_session_is_checked_against_the_count(text):
+    """The server counted 18 answers, so claiming one is a fabricated statistic."""
+    with pytest.raises(AppError) as error:
+        _qualitative(text, "overall_summary", numbers())
+    assert error.value.code == "COACH_COMPUTED_NUMBER"
+    assert error.value.diagnostics["rule"] == "FABRICATED_STATISTIC"
+    assert error.value.diagnostics["unit"] == "次"
+    assert error.value.diagnostics["value"] == 1.0
+
+
+def test_a_once_claim_is_legal_when_the_session_really_had_one_answer():
+    single = supported_statistics(dict(answered_count=1, evaluated_count=1, total_questions=1))
+    assert _qualitative("本场只回答一次", "overall_summary", single)
+
+
+@pytest.mark.parametrize("text", [
+    "建议每题只答一次就进入追问",
+    "至少一次投递不等于只投一次",
+])
+def test_generic_advice_and_idioms_keep_passing(text):
+    assert _qualitative(text, "recommended_actions.0", numbers()) == text
+
+
+def test_an_arabic_count_matching_the_server_count_is_accepted():
+    assert _qualitative("本场回答 18 次，全部有评价", "overall_summary", numbers())
+    with pytest.raises(AppError) as error:
+        _qualitative("本场回答 19 次，全部有评价", "overall_summary", numbers())
+    assert error.value.diagnostics["matched_number"] == "19 次"
