@@ -52,13 +52,14 @@
 
 - 阶段：Codex 侧完成 Phase 4–8 的自适应面试、能力记忆、训练中心、Main Harness V1 与长场可靠性修复；HEAD `62333df` 一次性提交 docs/71–80。
 - 最近一轮真实 Live（docs/80，批次 `p1_thinking_long_20261110`）：45 HTTP / 456,618 Token；长场 18 题 / 18 答 / **17 条正式 Evaluation**；第 18 答在"下一题预留 81,129、已用 399,420、冻结上限 460,000"处被拒，Session 停在 `IN_PROGRESS`、`state_version=38`、Answer 18 `FAILED`。
-- 该现场已封存于隔离库 `interview_agent_thinking_long_20261110`，只读。代码侧的合法终止修复见 `bd2e7b2`，**未回写该会话**。
+- 该现场已封存于隔离库 `interview_agent_thinking_long_20261110`，只读。代码侧的合法终止修复见 `bd2e7b2` / `874903c`，**未回写该会话**。
+- 2026-11-11 第三轮真实短程验收（`wb_budget_live_20261111`）：5 HTTP / 41,633 Token，2 答 2 条正式评价后以 `BUDGET_LIMIT / NEXT_QUESTION_RESERVATION` 正常结束，Coach live 完成，下一场记忆只引用这两条评价。**20 轮 Live 仍未跑**。
 
 ## 4. 当前问题（按优先级）
 
 ### P0
 
-- **P1.2a（已修复，`bd2e7b2`）**：合法 Evaluation 已通过 `resolve_observations`，但"下一题 Main 无法通过会话 Token 准入"时 `core_service.adaptive_answer` 原会直接抛 `INTERVIEW_BUDGET_EXHAUSTED`，Evaluation 只剩 AgentRun 审计、从未落 `InterviewEvaluation`；`controller.commit_answer` 的终止判定只认 `tokens >= max_model_tokens`。现状：该拒绝改为提交 Evaluation + `completion_reason=BUDGET_LIMIT` / `completion_detail=NEXT_QUESTION_RESERVATION`，Harness OFF/ON 同一路径。详见 `docs/81_workbuddy_budget_termination.md`。
+- **P1.2a（已修复 + Live 短程已验证，`bd2e7b2` / `874903c`）**：合法 Evaluation 已通过 `resolve_observations`，但"下一题 Main 无法通过会话 Token 准入"时 `core_service.adaptive_answer` 原会直接抛 `INTERVIEW_BUDGET_EXHAUSTED`，Evaluation 只剩 AgentRun 审计、从未落 `InterviewEvaluation`；`controller.commit_answer` 的终止判定只认 `tokens >= max_model_tokens`。现状：该拒绝改为提交 Evaluation + `completion_reason=BUDGET_LIMIT` / `completion_detail=NEXT_QUESTION_RESERVATION`，时长拒绝另记 `DURATION_LIMIT`，Harness OFF/ON 同一路径。详见 `docs/81`、`docs/82`。
 - **预算默认值低于实测需求**：默认 200,000 vs 实测 ≈22k/答（18 答 399,420）、docs/70 中性估算 20 答含 Coach 251,982。属部署决策，**本轮不改代码默认值**。
 
 ### P1
@@ -110,9 +111,9 @@
 
 ### 交接区（每轮结束更新）
 
-- 当前 HEAD：`bd2e7b2`（业务修复）；此前为本文件初始化提交 `e4df029`
+- 当前 HEAD：`f61aaf6`（第三轮文档）；业务修复见 `874903c`，第二轮 `bd2e7b2`/`e4df029`
 - 工作区：干净（本轮收尾时核实）
-- 下一轮入口：见「轮次记录」最后一条
+- 下一轮入口：见「轮次记录」最后一轮
 
 ## 轮次记录
 
@@ -150,6 +151,43 @@
 
 **下一轮入口**
 
-1. （需单独授权与额度）Live 短程复验：新建隔离库 + 故意截断的短场，确认真实 Provider 下同样以 `BUDGET_LIMIT / NEXT_QUESTION_RESERVATION` 收尾，并跑通 Coach 与下一场 MemoryGuidedPlan。
-2. 或：普通模式同根因修复（`core_service.answer`），与自适应终止语义对齐。
-3. 或：预算默认值与题量匹配（配置决策，先与你确认再动）。
+1. （需单独授权与额度）20 轮 Live 长面试：单场预算需覆盖 20 × 每答实测用量 + 末段峰值预留；本批实测每答 ≈11k、末次下一题预留 >35.9k，建议 ≥500k 单场、45–60 次 HTTP 上限。
+2. 或：把 `choose_action` 的 COMPLETE 拆成 QUESTION_BUDGET / ROUND_BUDGET / DURATION_LIMIT / TOKEN_BUDGET，再更新 20 轮 Replay 断言。
+3. 或：普通模式同根因修复（`core_service.answer`）。
+
+### 2026-11-11 · 第三轮（语义检查 + 真实 Live 短程）
+
+**提交**
+
+| Hash | 内容 |
+|---|---|
+| `874903c` | `fix(workbuddy): distinguish duration from token admission refusals` — 3 文件；+4 专项测试 |
+| `f61aaf6` | `docs(workbuddy): record budget-refusal semantics and the live short acceptance` — `docs/82` 新建、`docs/81` 追加 |
+
+**两个语义检查（事实）**
+
+- `reserve_model_call` 只在两类条件下返回 `None`：会话时长到期、Token 不足（`used >= max` 或 `used + reservation > max`）。用户日额度/并发/身份属于 `ModelGovernance` 的 `AppError`，不会变成 `None`。原实现两者共用 `budget_exhausted=True`，会被一律写成 `BUDGET_LIMIT`。
+- 现记录 `budget_exhausted_reason`（`DURATION`/`TOKENS`），映射为 `(BUDGET_LIMIT, NEXT_QUESTION_RESERVATION)` 或 `(DURATION_LIMIT, NEXT_QUESTION_DURATION)`；读不到原因不终止，继续抛错。
+- `MainHarness.call` 只有准入拒绝一条 `None` 路径；Schema 非法、模型错误、业务校验、Controller 拒绝都会记为 FAILED 并重新抛出。**该文件本轮未改**，只补 Harness ON 的拒绝测试。
+
+**真实 Live 短程（批次 `wb_budget_live_20261111`，隔离库 `interview_agent_wb_budget_live_20261111`，Alembic 0026）**
+
+- 5 HTTP / 41,633 Token / HTTP 时间窗 224 s：Main 6,021 → Eval 4,129 → Main 8,218 → Eval 4,548 → Coach 18,717；0 Repair、0 重试、0 回退。
+- 会话 2：`COMPLETED`、`state_version=5`、2 题 2 答 2 条正式评价、`completion_reason=BUDGET_LIMIT`、`completion_detail=NEXT_QUESTION_RESERVATION`、`budget_exhausted_reason=TOKENS`、已用 22,916 / 冻结 58,860、预留表为空；**第 3 题没有任何 HTTP**。
+- 报告 1 `COMPLETED:SUMMARY_COACH_AGENT`（live），Coach 输入含 `session_completion`（2/6、early_terminated=true）。
+- 下一场 session 3 的 `MemoryGuidedPlan`：`ai_agent_application:agent` / PRACTICING / `observation_refs=["evaluation:1","evaluation:2"]`。
+- 账本 5 条 SETTLED，charged=actual=41,633；5 条响应各精确回放 2 次，改输入被拒。
+- 隔离实例开关：仅本批 Main/Evaluation `thinking_type="disabled"`，输出上限保持生产 3,000，Coach 保持默认。正式 Provider/`.env` 未改。
+
+**测试**：专项 12 passed；十一文件回归 **202 passed、0 failed、0 skipped**（隔离库 `interview_agent_wb_p12a_20261111`，Alembic 0026）。
+
+**未验证 / 遗留（事实）**
+
+- 未跑 20 轮 Live；长场自然结束、Coach 长场表现、跨场记忆质量仍未验证。
+- `DURATION` 分支只有单测：真实会话中 `choose_action` 会先按同一阈值返回 COMPLETE，该分支几乎不可达。
+- `choose_action` 的 COMPLETE 仍把"题数用满/轮次用满/时长/Token"统一记为 `BUDGET_LIMIT`。
+- 生产默认 `interview_max_model_tokens=200,000` 低于实测需求（≈11k/答 + 每答预留）。
+- 非自适应 `core_service.answer` 同根因死路未修。
+
+**交接备注**：批次目录 `.runtime/acceptance/wb_budget_live_20261111/` 已封存（`batch_state.stop=COLLECTION_COMPLETE`）；首次达成终态时的 `TARGET_STATE_REACHED` 是本地书签、当时无在途请求，已按 `docs/82` §10 说明清除，HTTP 数未增加。
+
