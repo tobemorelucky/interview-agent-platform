@@ -45,12 +45,18 @@ class SummaryCoachAgent:
             await db.commit()
         try:
             envelope = dict(input=payload, schema=CoachArtifact.model_json_schema(), system=COACH_PROMPT.system)
-            if len(json.dumps(envelope, ensure_ascii=False).encode("utf-8")) > settings.interview_coach_max_input_bytes:
-                raise AppError("COACH_INPUT_BUDGET", "面试材料超过 Coach 输入预算，未静默删除证据", 422)
+            envelope_bytes = len(json.dumps(envelope, ensure_ascii=False).encode("utf-8"))
+            if envelope_bytes > settings.interview_coach_max_input_bytes:
+                error = AppError("COACH_INPUT_BUDGET", "面试材料超过 Coach 输入预算，未静默删除证据", 422)
+                error.diagnostics = dict(rule="COACH_INPUT_BUDGET", bytes=envelope_bytes,
+                    max_bytes=settings.interview_coach_max_input_bytes,
+                    section_bytes={key: len(json.dumps(value, ensure_ascii=False).encode("utf-8"))
+                                   for key, value in payload.items()})
+                raise error
             artifact = await ResearchModelCalls(self.factory, self.router, run_id,
                 prompts=CoachPromptRegistry(), timeout_seconds=settings.interview_coach_timeout_seconds
             ).call(COACH_PROMPT.name, INTERVIEW_COACH_ROUTE, payload, CoachArtifact)
-            resolved = resolve_coach_artifact(artifact, payload["evaluations"])
+            resolved = resolve_coach_artifact(artifact, payload["evaluations"], payload.get("statistics"))
             await finish_research_run(self.factory, run_id, status="SUCCEEDED", output={"schema": "CoachArtifact"})
             async with self.factory() as db:
                 step = await db.scalar(select(ExperienceAgentStepRun).where(ExperienceAgentStepRun.agent_run_id == run_id))

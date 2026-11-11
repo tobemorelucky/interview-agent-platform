@@ -1,4 +1,5 @@
 """Report generation is independent from completed InterviewSession state."""
+import logging
 from copy import deepcopy
 from datetime import datetime, timezone
 from functools import cached_property
@@ -15,6 +16,8 @@ from interview_api.modules.interview_report.statistics import interview_records,
 from interview_api.modules.memory.proposal_service import create_report_proposals, MemoryProposalService
 from interview_api.modules.public_career.research.audit import finish_research_run
 from interview_api.modules.experience.models import ExperienceAgentRun, ExperienceAgentStepRun
+
+logger = logging.getLogger(__name__)
 
 
 def report_conflict(message="报告生成状态已变化，请刷新后重试"):
@@ -87,18 +90,14 @@ class InterviewReportService:
             db.add(attempt)
             await db.flush()
             report_id, attempt_id, expected = report.id, attempt.id, report.attempt_version
-            payload = dict(snapshot=deepcopy(snapshot.context_json), statistics=statistics,
-                questions=[dict(id=q.id, question=q.question, standard_answer=q.standard_answer, source=q.source,
-                    question_kind=q.question_kind, status=q.status, candidate_refs=q.candidate_refs_json,
-                    job_requirement_id=q.job_requirement_id) for q in questions],
-                evaluations=evaluations, evaluation_fingerprint=fingerprint)
             completion = session.completion_json or {}
+            completion_fact = None
             if completion.get("completion_reason"):
                 # Termination facts only. Counts stay derived from persisted
                 # evaluations, never from this summary.
                 evaluated = completion.get("evaluated_count") or 0
                 budget = completion.get("question_budget")
-                payload["session_completion"] = dict(
+                completion_fact = dict(
                     completion_reason=completion.get("completion_reason"),
                     completion_detail=completion.get("completion_detail"),
                     question_budget=budget,
@@ -106,10 +105,18 @@ class InterviewReportService:
                     evaluated_count=completion.get("evaluated_count"),
                     early_terminated=bool(budget) and evaluated < budget,
                     semantics="CONTROLLER_TERMINATION_FACT_NOT_PERFORMANCE_EVIDENCE")
+            review = None
             if snapshot.context_json.get("adaptive_policy"):
                 from interview_api.modules.interview.adaptive import review_projection
-                payload["snapshot"].pop("adaptive_policy", None)
-                payload["adaptive_review"] = review_projection(snapshot.context_json, session.interview_plan_json)
+                review = review_projection(snapshot.context_json, session.interview_plan_json)
+            from interview_api.modules.interview_report.evidence import coach_evidence
+            payload, projection = coach_evidence(snapshot=snapshot.context_json, statistics=statistics,
+                questions=[dict(id=q.id, question=q.question, standard_answer=q.standard_answer, source=q.source,
+                    question_kind=q.question_kind, status=q.status, candidate_refs=q.candidate_refs_json,
+                    job_requirement_id=q.job_requirement_id) for q in questions],
+                evaluations=evaluations, completion=completion_fact, review=review, fingerprint=fingerprint)
+            logger.info("coach evidence projection %s bytes=%s sections=%s", projection["version"],
+                        projection["bytes"], projection["section_bytes"])
             await db.commit()
         result, published = None, False
         try:

@@ -121,7 +121,10 @@ def test_coach_prose_numeric_guard_is_not_weakened_and_has_safe_field_diagnostic
     with pytest.raises(AppError) as exc:
         resolve_coach_artifact(CoachArtifact.model_validate(value), [])
     assert exc.value.code == "COACH_COMPUTED_NUMBER"
-    assert exc.value.diagnostics == dict(field_path="overall_summary", rule="DETERMINISTIC_NUMBERS_ONLY", matched_number="三轮回答")
+    # The claim is still rejected; only the rule name now says why (a statistic
+    # the server never computed, not "any number at all").
+    assert exc.value.diagnostics == dict(field_path="overall_summary", rule="FABRICATED_STATISTIC",
+        matched_number="三轮回答", unit="轮回答", value=3.0)
     assert "本场" not in str(exc.value.diagnostics)
     registry = CoachPromptRegistry()
     assert registry.get(INTERVIEW_COACH_ROUTE).version == "1.0.3"
