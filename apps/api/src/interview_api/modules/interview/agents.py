@@ -370,9 +370,10 @@ class InterviewAgent:
             model_payload = project(payload, self.route)
             timeout = timeout_seconds or settings.interview_model_timeout_seconds
             from interview_api.modules.interview.adaptive import AdaptiveSelection
-            from interview_api.modules.interview.director_repair import SupportingRefsRepair
-            # Only this selection schema has a bounded, ID-only subset exception.
-            repair_policy = SupportingRefsRepair(payload) if self.route == INTERVIEW_MAIN_ROUTE and issubclass(self.schema, AdaptiveSelection) else None
+            from interview_api.modules.interview.director_repair import MainSelectionRepair
+            # Bounded exceptions only: a flattened question draft, or an ID-only
+            # supporting_refs subset. No other field may change.
+            repair_policy = MainSelectionRepair(payload) if self.route == INTERVIEW_MAIN_ROUTE and issubclass(self.schema, AdaptiveSelection) else None
             from interview_api.modules.interview.adaptive import AdaptiveEvaluation
             if self.route == ANSWER_EVALUATION_ROUTE and self.schema is AdaptiveEvaluation:
                 from interview_api.modules.interview.evaluation_repair import EvaluationQuotesRepair

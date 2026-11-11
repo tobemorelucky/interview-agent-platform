@@ -1,0 +1,60 @@
+{
+  "source": "wb_full_live_20261111 sequences 17 (malformed) and 18 (authorised repair)",
+  "note": "Real hosted-model output. Strings are identical; only the nesting differs.",
+  "original": {
+    "candidate_id": "C_75fa4a330307721c106f6a02",
+    "strategy": "FOLLOW_UP",
+    "supporting_refs": [
+      "skill:ai_agent_application@1.0.0",
+      "answer:5",
+      "evaluation_run:14"
+    ],
+    "reason_tags": [
+      "MISSING_MECHANISM",
+      "VERIFY_TRADEOFF"
+    ],
+    "proposed_question": "你提到用向量相似度超过 0.8 来判断“这句有依据”。但有些片段和句子主题很像、实际却不支持甚至矛盾，相似度也会很高。这种情况你会怎么判断片段到底支不支持这句话？另外，如果线上发现某句引用的编号存在、但片段其实不支持，自动链路接下来该怎么处理？",
+    "focus_gap_ids": [
+      "gap_13ef8a4b8eebd14b5cfe71e0",
+      "gap_18e4a3ecb6ddee33ba961103",
+      "gap_f6283fd0ad79ef4096dd1267"
+    ],
+    "proposed_question_meta": {
+      "dimension": "检索与 RAG 引用证据质量",
+      "difficulty": "MEDIUM",
+      "expected_points": [
+        "区分“主题相关”和“断言被支持”，用 NLI、交叉编码器或小模型判断支持/矛盾/无关",
+        "对编号存在但片段不支持的断言定义程序侧动作：重生成、换引用、降级为无引用答案或拒答",
+        "说明如何用标注样本校准判断阈值，避免固定 0.8"
+      ]
+    }
+  },
+  "repaired": {
+    "candidate_id": "C_75fa4a330307721c106f6a02",
+    "strategy": "FOLLOW_UP",
+    "supporting_refs": [
+      "skill:ai_agent_application@1.0.0",
+      "answer:5",
+      "evaluation_run:14"
+    ],
+    "reason_tags": [
+      "MISSING_MECHANISM",
+      "VERIFY_TRADEOFF"
+    ],
+    "proposed_question": {
+      "question": "你提到用向量相似度超过 0.8 来判断“这句有依据”。但有些片段和句子主题很像、实际却不支持甚至矛盾，相似度也会很高。这种情况你会怎么判断片段到底支不支持这句话？另外，如果线上发现某句引用的编号存在、但片段其实不支持，自动链路接下来该怎么处理？",
+      "expected_points": [
+        "区分“主题相关”和“断言被支持”，用 NLI、交叉编码器或小模型判断支持/矛盾/无关",
+        "对编号存在但片段不支持的断言定义程序侧动作：重生成、换引用、降级为无引用答案或拒答",
+        "说明如何用标注样本校准判断阈值，避免固定 0.8"
+      ],
+      "dimension": "检索与 RAG 引用证据质量",
+      "difficulty": "MEDIUM"
+    },
+    "focus_gap_ids": [
+      "gap_13ef8a4b8eebd14b5cfe71e0",
+      "gap_18e4a3ecb6ddee33ba961103",
+      "gap_f6283fd0ad79ef4096dd1267"
+    ]
+  }
+}
