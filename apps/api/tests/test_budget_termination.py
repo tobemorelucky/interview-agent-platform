@@ -5,6 +5,7 @@ budget, Controller transaction and PostgreSQL writes are real.
 """
 import asyncio
 import json
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -13,7 +14,7 @@ from sqlalchemy import select
 
 from interview_api.core.config import settings
 from interview_api.core.exceptions import AppError
-from interview_api.infrastructure.models.provider import ModelProvider, ModelResponse, ReplayModelProvider
+from interview_api.infrastructure.models.provider import ModelProvider, ModelProviderError, ModelResponse, ReplayModelProvider
 from interview_api.infrastructure.models.router import ModelRouter
 from interview_api.modules.interview.adaptive import AdaptiveEvaluation
 from interview_api.modules.interview.controller import SessionController
@@ -227,9 +228,165 @@ def test_controller_rejects_a_budget_termination_that_keeps_a_next_question(data
         async with factory() as db:
             with pytest.raises(AppError) as error:
                 await SessionController(db).commit_answer(sid, uid, answer.id, expected, evaluation,
-                    None, "NEXT", {}, terminal_detail="NEXT_QUESTION_RESERVATION")
+                    None, "NEXT", {}, terminal_detail="NEXT_QUESTION_RESERVATION", terminal_reason="BUDGET_LIMIT")
             await db.rollback()
         assert error.value.code == "INVALID_TERMINAL_REQUEST"
+
+    asyncio.run(run_with_database(database_url, run))
+
+
+def test_reserve_model_call_separates_token_and_duration_refusals(database_url, monkeypatch):
+    """A refusal must say which limit refused it, not assume tokens."""
+    monkeypatch.setattr(settings, "interview_max_model_tokens", BUDGET)
+
+    async def run(factory):
+        provider = BudgetProvider()
+        uid, core, _, sid, _ = await open_session(factory, provider)
+
+        async with factory() as db:
+            controller = SessionController(db)
+            session = await controller.owned(sid, uid)
+            assert await controller.reserve_model_call(sid, uid, session.state_version, BUDGET + 1, "wb-tokens") is None
+            await db.commit()
+        session, context, _, _, _ = await core.read_state(sid, uid)
+        plan = session.interview_plan_json
+        assert plan["budget_exhausted"] is True and plan["budget_exhausted_reason"] == "TOKENS"
+        assert plan["model_call_reservations"] == {}
+
+        # A successful reservation clears the previous refusal label.
+        async with factory() as db:
+            controller = SessionController(db)
+            session = await controller.owned(sid, uid)
+            assert await controller.reserve_model_call(sid, uid, session.state_version, 10, "wb-ok") is not None
+            await db.commit()
+        session, _, _, _, _ = await core.read_state(sid, uid)
+        assert "budget_exhausted_reason" not in session.interview_plan_json
+        async with factory() as db:
+            await SessionController(db).settle_model_call(sid, uid, "wb-ok", True, known_tokens=0)
+            await db.commit()
+
+        # Session duration is a different refusal than tokens.
+        async with factory() as db:
+            session = await SessionController(db).owned(sid, uid)
+            session.started_at = datetime.now(timezone.utc) - timedelta(seconds=10_000)
+            await db.commit()
+        async with factory() as db:
+            controller = SessionController(db)
+            session = await controller.owned(sid, uid)
+            assert await controller.reserve_model_call(sid, uid, session.state_version, 10, "wb-time") is None
+            await db.commit()
+        session, _, _, _, _ = await core.read_state(sid, uid)
+        assert session.interview_plan_json["budget_exhausted_reason"] == "DURATION"
+
+    asyncio.run(run_with_database(database_url, run))
+
+
+def test_unidentified_admission_refusal_is_not_a_budget_completion(database_url, monkeypatch):
+    """No recorded limit means no termination: the answer stays retryable."""
+    monkeypatch.setattr(settings, "interview_max_model_tokens", BUDGET)
+    original = SessionController.reserve_model_call
+
+    async def run(factory):
+        provider = BudgetProvider()
+        calls = {"count": 0}
+
+        async def refuse_without_reason(self, *args, **kwargs):
+            calls["count"] += 1
+            if calls["count"] < 3:      # opening, then evaluation
+                return await original(self, *args, **kwargs)
+            return None                 # next question, no reason recorded
+
+        with monkeypatch.context() as patch:
+            patch.setattr(SessionController, "reserve_model_call", refuse_without_reason)
+            uid, core, _, sid, question = await open_session(factory, provider)
+            with pytest.raises(AppError) as error:
+                await core.answer(sid, uid, question["question_id"], "wb-unknown-refusal", ANSWER)
+        assert error.value.code == "INTERVIEW_BUDGET_EXHAUSTED"
+        assert calls["count"] == 3
+        detail = await core.detail(sid, uid)
+        assert detail["status"] == "IN_PROGRESS" and detail["completion_json"] is None
+        assert await committed_evaluations(factory, sid) == []
+
+    asyncio.run(run_with_database(database_url, run))
+
+
+def test_duration_stop_is_recorded_as_duration_not_budget(database_url, monkeypatch):
+    """The controller writes the supplied reason and stage verbatim."""
+    monkeypatch.setattr(settings, "interview_max_model_tokens", BUDGET)
+
+    async def run(factory):
+        provider = BudgetProvider()
+        uid, core, _, sid, question = await open_session(factory, provider)
+        detail = await core.detail(sid, uid)
+        target = detail["questions"][0]["evidence"]["adaptive_decision"]["target_knowledge_id"]
+        answer_text = "作答用于校验时长终止原因。"
+
+        async with factory() as db:
+            answer, expected, _ = await SessionController(db).prepare_answer(
+                sid, uid, question["question_id"], "wb-duration-answer", answer_text)
+            await db.commit()
+        artifact = AdaptiveEvaluation(technical_correctness=3, coverage=3, depth=3, relevance=3,
+            communication=3, evaluation="时长终止用例", covered_points=[], missing_points=[],
+            factual_or_reasoning_issues=[], follow_up_focus=[], next_action_recommendation="NEXT",
+            knowledge_observations=[dict(knowledge_id=target, state="PARTIALLY_DEMONSTRATED",
+                answer_quotes=[answer_text], missing_mechanisms=[], resolved_gap_ids=[])])
+        evaluation = SimpleNamespace(artifact=artifact, run_id=1, provider="replay", model="fixture",
+            prompt_version="2.3.3", retry=0, usage={"total_tokens": 0})
+        async with factory() as db:
+            await SessionController(db).commit_answer(sid, uid, answer.id, expected, evaluation, None,
+                "COMPLETE", {}, terminal_detail="NEXT_QUESTION_DURATION", terminal_reason="DURATION_LIMIT")
+            await db.commit()
+        detail = await core.detail(sid, uid)
+        assert detail["status"] == "COMPLETED"
+        assert detail["completion_json"]["completion_reason"] == "DURATION_LIMIT"
+        assert detail["completion_json"]["completion_detail"] == "NEXT_QUESTION_DURATION"
+        assert len(detail["questions"]) == 1
+
+    asyncio.run(run_with_database(database_url, run))
+
+
+def test_harness_rejections_are_not_turned_into_a_budget_completion(database_url, monkeypatch):
+    """Model/schema/business rejections must surface, never become a completion."""
+    monkeypatch.setattr(settings, "interview_max_model_tokens", BUDGET)
+
+    class IllegalFinal(BudgetProvider):
+        async def generate(self, messages, *, schema):
+            if schema["title"] == "MainHarnessAction":
+                self.calls.append("MainHarnessAction")
+                return ModelResponse(json.dumps(dict(kind="final", selection=dict(
+                    candidate_id="C_not_a_candidate", strategy="NEXT", supporting_refs=["skill:none"],
+                    reason_tags=["OPENING"], focus_gap_ids=[], proposed_question=dict(
+                        question="请说明检索机制与边界？", expected_points=["机制"], dimension="检索",
+                        difficulty="MEDIUM")))), {"total_tokens": 100})
+            return await super().generate(messages, schema=schema)
+
+    class BrokenAction(BudgetProvider):
+        async def generate(self, messages, *, schema):
+            if schema["title"] == "MainHarnessAction":
+                self.calls.append("MainHarnessAction")
+                return ModelResponse(json.dumps(dict(kind="tool", name="read_active_knowledge_gaps",
+                    arguments={"unexpected": 1})), {"total_tokens": 100})
+            return await super().generate(messages, schema=schema)
+
+    async def run(factory):
+        uid, core, request = await interview_fixture(factory, IllegalFinal(), 3)
+        session = await core.create(uid, request.model_copy(update={"main_harness": True}))
+        with pytest.raises(AppError) as illegal:
+            await core.start(session["id"], uid)
+        assert illegal.value.code == "UNKNOWN_DIRECTOR_CANDIDATE"
+        detail = await core.detail(session["id"], uid)
+        assert detail["status"] == "READY" and detail["questions"] == []
+        assert detail["completion_json"] is None
+        assert detail["interview_plan_json"]["model_call_reservations"] == {}
+
+        uid2, core2, request2 = await interview_fixture(factory, BrokenAction(), 3)
+        session2 = await core2.create(uid2, request2.model_copy(update={"main_harness": True}))
+        with pytest.raises(ModelProviderError):
+            await core2.start(session2["id"], uid2)
+        detail2 = await core2.detail(session2["id"], uid2)
+        assert detail2["status"] == "READY" and detail2["questions"] == []
+        assert detail2["completion_json"] is None
+        assert detail2["interview_plan_json"]["model_call_reservations"] == {}
 
     asyncio.run(run_with_database(database_url, run))
 

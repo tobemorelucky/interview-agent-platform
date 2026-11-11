@@ -314,7 +314,7 @@ class MockInterviewService:
         exhausted = SessionController.choose_action(context, questions, active, "NEXT", rounds=session.turn_count,
             tokens=tokens, started_at=session.started_at) == "COMPLETE"
         main, policy, action = None, {}, "COMPLETE"
-        terminal_detail = None
+        terminal_detail = terminal_reason = None
         if not exhausted and not all_goals_demonstrated(context, payload["adaptive"]["knowledge_state"]) and payload["adaptive"]["choices"]:
             async with self.factory() as db:
                 await SessionController(db).answer_stage(sid, uid, aid, expected, "generating_next_question")
@@ -322,18 +322,25 @@ class MockInterviewService:
             if on_stage: on_stage("generating_next_question")
             main = await self.call_agent(self.main.adaptive(payload), sid, uid, expected, payload, answer_id=aid)
             if main is None:
-                # call_agent returns None only when the session budget refused this
-                # logical call before any HTTP was sent. The evaluation above is
-                # already validated and reused for this answer, so commit it and
-                # end the session with an explicit reason instead of dropping it.
-                terminal_detail = "NEXT_QUESTION_RESERVATION"
+                # call_agent returns None only when the session refused this logical
+                # call before any HTTP was sent. The evaluation above is already
+                # validated and reused, so commit it and end with the real limit.
+                session, _, _, _, _ = await self.read_state(sid, uid)
+                refused = (session.interview_plan_json or {}).get("budget_exhausted_reason")
+                if refused == "TOKENS":
+                    terminal_detail, terminal_reason = "NEXT_QUESTION_RESERVATION", "BUDGET_LIMIT"
+                elif refused == "DURATION":
+                    terminal_detail, terminal_reason = "NEXT_QUESTION_DURATION", "DURATION_LIMIT"
+                else:
+                    # Unidentified refusal is not proof of a budget stop.
+                    raise AppError("INTERVIEW_BUDGET_EXHAUSTED", "下一题预算不足，回答已保存，未推进", 409)
             else:
                 policy = validate_decision(main.artifact, payload)
                 action = main.artifact.recommendation
         try:
             async with self.factory() as db:
                 events = await SessionController(db).commit_answer(sid, uid, aid, expected, evaluation, main, action, policy,
-                    terminal_detail=terminal_detail)
+                    terminal_detail=terminal_detail, terminal_reason=terminal_reason)
                 await db.commit()
         except AppError as exc:
             if main and (context.get('training') or context["adaptive_policy"].get("main_harness_version")):

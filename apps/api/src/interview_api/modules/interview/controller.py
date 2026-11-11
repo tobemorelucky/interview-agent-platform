@@ -20,6 +20,11 @@ def conflict(message="会话或题目已变化，请刷新后重试"):
     return AppError("INTERVIEW_CONFLICT", message, 409)
 
 
+# Reasons the service may end an adaptive session when no next question fits.
+# BUDGET_LIMIT keeps its historical meaning (token budget / planned question count).
+TERMINAL_REASONS = ("BUDGET_LIMIT", "DURATION_LIMIT")
+
+
 def question_data(q, budget):
     result = dict(question_id=q.id, question_index=q.question_index, total_questions=budget,
                 question=q.question, dimension=q.dimension, difficulty=q.difficulty,
@@ -109,9 +114,13 @@ class SessionController:
         if session.started_at:
             remaining_time -= (datetime.now(timezone.utc) - session.started_at).total_seconds()
         if remaining_time <= 0 or used >= context["budgets"]["max_model_tokens"] or used + reservation > context["budgets"]["max_model_tokens"]:
-            session.interview_plan_json = {**(session.interview_plan_json or {}), "budget_exhausted": True}
+            # Record which limit refused this call. "Budget exhausted" alone would
+            # report a duration stop as a token stop to the terminal reason.
+            session.interview_plan_json = {**(session.interview_plan_json or {}), "budget_exhausted": True,
+                "budget_exhausted_reason": "DURATION" if remaining_time <= 0 else "TOKENS"}
             return None
         plan = dict(session.interview_plan_json or {})
+        plan.pop("budget_exhausted_reason", None)
         reservations = dict(plan.get("model_call_reservations", {}))
         reservations[call_key] = reservation
         session.interview_plan_json = {**plan, "model_call_reservations": reservations,
@@ -302,7 +311,7 @@ class SessionController:
                 # ANSWERED is retained. Never mark EVALUATED or advance on model failure.
 
     async def commit_answer(self, session_id, user_id, answer_id, expected_version, evaluation, main, requested_action, policy,
-                            *, terminal_detail=None):
+                            *, terminal_detail=None, terminal_reason=None):
         session = await self.owned(session_id, user_id, lock=True)
         answer = await self.db.get(InterviewAnswer, answer_id)
         if session.state_version != expected_version or session.active_question_id != answer.session_question_id or answer.status != "RUNNING":
@@ -310,6 +319,10 @@ class SessionController:
         _, context, questions, q, tokens = await self.state(session_id, user_id)
         artifact = evaluation.artifact
         adaptive = bool(context.get("adaptive_policy"))
+        if (terminal_detail is None) != (terminal_reason is None):
+            raise AppError("INVALID_TERMINAL_REQUEST", "预算终止须同时给出阶段与原因", 422)
+        if terminal_reason is not None and terminal_reason not in TERMINAL_REASONS:
+            raise AppError("INVALID_TERMINAL_REQUEST", "未知的预算终止原因", 422)
         if terminal_detail is not None and not adaptive:
             # Ordinary mode keeps its own budget rules; no caller may shorten it.
             raise AppError("INVALID_TERMINAL_REQUEST", "预算终止仅适用于自适应面试", 422)
@@ -383,8 +396,8 @@ class SessionController:
             if adaptive:
                 # Build a new dict: complete() stores the same object it returns,
                 # so mutating it in place is invisible to the ORM's change check.
-                summary = {**summary, "completion_reason": ("BUDGET_LIMIT" if exhausted or terminal_detail else
-                    "BLUEPRINT_COVERED" if all_goals_demonstrated(context, projected) else "NO_LEGAL_TARGET_WITHIN_POLICY")}
+                summary = {**summary, "completion_reason": (terminal_reason or ("BUDGET_LIMIT" if exhausted else
+                    "BLUEPRINT_COVERED" if all_goals_demonstrated(context, projected) else "NO_LEGAL_TARGET_WITHIN_POLICY"))}
                 if terminal_detail:
                     # Stable sub-code so reports/UI can tell "no next question could
                     # be afforded" apart from "the whole session budget was spent".
