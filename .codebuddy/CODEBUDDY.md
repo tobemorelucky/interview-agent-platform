@@ -52,13 +52,13 @@
 
 - 阶段：Codex 侧完成 Phase 4–8 的自适应面试、能力记忆、训练中心、Main Harness V1 与长场可靠性修复；HEAD `62333df` 一次性提交 docs/71–80。
 - 最近一轮真实 Live（docs/80，批次 `p1_thinking_long_20261110`）：45 HTTP / 456,618 Token；长场 18 题 / 18 答 / **17 条正式 Evaluation**；第 18 答在"下一题预留 81,129、已用 399,420、冻结上限 460,000"处被拒，Session 停在 `IN_PROGRESS`、`state_version=38`、Answer 18 `FAILED`。
-- 该现场已封存于隔离库 `interview_agent_thinking_long_20261110`，只读。
+- 该现场已封存于隔离库 `interview_agent_thinking_long_20261110`，只读。代码侧的合法终止修复见 `bd2e7b2`，**未回写该会话**。
 
 ## 4. 当前问题（按优先级）
 
 ### P0
 
-- **P1.2a（本轮处理）**：合法 Evaluation 已通过 `resolve_observations`，但"下一题 Main 无法通过会话 Token 准入"时 `core_service.adaptive_answer` 直接抛 `INTERVIEW_BUDGET_EXHAUSTED`，Evaluation 只剩 AgentRun 审计、从未落 `InterviewEvaluation`；同时 `controller.commit_answer` 的终止判定只看 `tokens >= max_model_tokens`，会以"预算未耗尽"再拒一次。
+- **P1.2a（已修复，`bd2e7b2`）**：合法 Evaluation 已通过 `resolve_observations`，但"下一题 Main 无法通过会话 Token 准入"时 `core_service.adaptive_answer` 原会直接抛 `INTERVIEW_BUDGET_EXHAUSTED`，Evaluation 只剩 AgentRun 审计、从未落 `InterviewEvaluation`；`controller.commit_answer` 的终止判定只认 `tokens >= max_model_tokens`。现状：该拒绝改为提交 Evaluation + `completion_reason=BUDGET_LIMIT` / `completion_detail=NEXT_QUESTION_RESERVATION`，Harness OFF/ON 同一路径。详见 `docs/81_workbuddy_budget_termination.md`。
 - **预算默认值低于实测需求**：默认 200,000 vs 实测 ≈22k/答（18 答 399,420）、docs/70 中性估算 20 答含 Coach 251,982。属部署决策，**本轮不改代码默认值**。
 
 ### P1
@@ -110,13 +110,46 @@
 
 ### 交接区（每轮结束更新）
 
-- 当前 HEAD：见下方「轮次记录」
-- 工作区：干净
+- 当前 HEAD：`bd2e7b2`（业务修复）；此前为本文件初始化提交 `e4df029`
+- 工作区：干净（本轮收尾时核实）
 - 下一轮入口：见「轮次记录」最后一条
 
 ## 轮次记录
 
 ### 2026-11-11 · 第二轮（初始化 + P1.2a）
 
-- 初始化本文件。
-- 本轮代码改动与测试结果见文末追加记录。
+**提交**
+
+| Hash | 内容 |
+|---|---|
+| `e4df029` | `docs(workbuddy): initialize independent project memory` — 本文件 |
+| `bd2e7b2` | `fix(workbuddy): terminate adaptive interview safely on next-question budget limit` — 6 个文件，+489/−8 |
+
+**已完成（事实）**
+
+- 初始化本文件并通过独立提交入库。
+- P1.2a：下一题 Main 因会话 Token 准入被拒（未发出任何 HTTP）时，已通过校验的 Evaluation 会正式提交，Session 以 `completion_reason=BUDGET_LIMIT`、`completion_detail=NEXT_QUESTION_RESERVATION` 结束。Harness OFF/ON 共用同一路径。
+- 顺带修掉潜伏缺陷：`complete()` 把同一个 dict 对象存进 `completion_json`，就地改 `summary` 导致自适应会话的 `completion_reason` 从未落库。现改为构造新 dict。历史会话未回填。
+- Coach 输入新增有界 `session_completion` 事实块（reason/detail/题量/已评价数/`early_terminated`），统计仍只来自持久化评价。
+- 改动文件：`interview/core_service.py`、`interview/controller.py`、`interview/main_harness.py`、`interview_report/service.py`、新增 `tests/test_budget_termination.py`、新增 `docs/81_workbuddy_budget_termination.md`。无迁移、无 API 契约变更、无 Provider/.env 变更。
+
+**测试（真实计数）**
+
+- 隔离库：`interview_agent_wb_p12a_20261111`（本轮新建，Alembic `0026`，66 表）。历史验收库与 `.runtime/acceptance/**` 未写入。
+- 命令前缀：`DATABASE_URL` 与 `M1_TEST_DATABASE_URL` 同时指向该库，`apps/api/.venv/Scripts/python.exe -m pytest -q -p no:cacheprovider`。
+- 专项 `tests/test_budget_termination.py`：**8 passed、0 failed、0 skipped**。
+- 十一文件完整回归（含专项）：**198 passed、0 failed、0 skipped**（169.85 s）。含 `test_main_harness`、`test_gap_scope_contract`（Harness OFF/ON 各 20 轮 Replay + Coach + 下一场记忆）、`test_m4_interview`（既有 pre-call 预算停止）、`test_m5_*`、`test_v23_training` 等。
+- `git diff --check` 通过；真实模型 HTTP = 0。
+
+**未验证 / 遗留（事实）**
+
+- 未重跑 Live；第 18 答现场未回写、未补提交（属封存验收数据，禁止改写）。
+- 非自适应 `core_service.answer` 仍有同根因死路，未改。
+- `interview_max_model_tokens` 默认 200,000 仍低于实测需求（≈22k/答；docs/70 中性 20 答含 Coach 251,982）。
+- `completion_detail` 前端未展示；`docs/README.md` 索引仍未收录 71–81。
+
+**下一轮入口**
+
+1. （需单独授权与额度）Live 短程复验：新建隔离库 + 故意截断的短场，确认真实 Provider 下同样以 `BUDGET_LIMIT / NEXT_QUESTION_RESERVATION` 收尾，并跑通 Coach 与下一场 MemoryGuidedPlan。
+2. 或：普通模式同根因修复（`core_service.answer`），与自适应终止语义对齐。
+3. 或：预算默认值与题量匹配（配置决策，先与你确认再动）。
