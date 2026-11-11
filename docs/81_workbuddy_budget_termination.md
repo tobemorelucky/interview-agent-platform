@@ -119,3 +119,16 @@ Coach 输入新增有界事实块 `session_completion`：`completion_reason`、`
 1. **Live 短程复验**（需另行授权与额度）：在新建隔离库跑一场"明显会被预算截断"的短场，确认真实 Provider 下同样以 `BUDGET_LIMIT / NEXT_QUESTION_RESERVATION` 收尾，并跑通 Coach 与下一场 MemoryGuidedPlan。仅此一项即可补上本轮唯一的 Live 缺口。
 2. 普通模式同根因修复（`core_service.answer`），与自适应保持一致的终止语义。
 3. 预算默认值与题量的匹配（配置/部署决策），避免生产 20 题默认配置在第 9～11 答就撞墙。
+
+## 10. 追加：第三轮的预算语义区分与真实短程验收
+
+`reserve_model_call` 的 `None` 实际只来自两类上限（会话时长、Token）。第三轮补上了拒绝原因标记
+`budget_exhausted_reason`（`DURATION` / `TOKENS`），并据此区分终态：
+
+| 原因 | `completion_reason` | `completion_detail` |
+|---|---|---|
+| Token 不足以准入下一题 | `BUDGET_LIMIT` | `NEXT_QUESTION_RESERVATION` |
+| 会话时长到期 | `DURATION_LIMIT` | `NEXT_QUESTION_DURATION` |
+
+读不到原因时不再终止，继续抛 `INTERVIEW_BUDGET_EXHAUSTED`。真实模型短程验收（5 HTTP / 41,633 Token）确认了
+`TOKENS` 分支的完整闭环，见 [P1.2a 真实模型短程验收](82_workbuddy_budget_live_acceptance.md)。
