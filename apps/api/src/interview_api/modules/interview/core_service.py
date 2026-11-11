@@ -64,6 +64,9 @@ class MockInterviewService:
             return await SessionController(db).state(session_id, user_id)
 
     async def call_agent(self, agent, session_id, user_id, expected, payload, *, answer_id=None):
+        if agent.route == self.main.route and payload.get("snapshot", {}).get("adaptive_policy", {}).get("main_harness_version"):
+            from interview_api.modules.interview.main_harness import MainHarness
+            return await MainHarness(self, agent).call(session_id, user_id, expected, payload, answer_id)
         if agent.route == self.evaluator.route and payload.get('adaptive'):
             payload = await self.evaluation_context(session_id, user_id, payload, answer_id=answer_id)
         if agent.route == self.evaluator.route and answer_id is not None:
@@ -86,10 +89,15 @@ class MockInterviewService:
             sanitized = agent_payload(payload, agent.route)
             admission_payload = model_payload(sanitized, agent.route)
             system_bytes = len(configured_prompt_registry(sanitized).get(agent.route).system.encode('utf-8'))
+        output_cap = getattr(provider, "max_output_tokens", settings.interview_model_max_output_tokens)
         reservation = 0 if provider.provider_name == "replay" else (
             len(json.dumps(admission_payload, ensure_ascii=False).encode("utf-8")) + system_bytes +
             len(json.dumps(agent.schema.model_json_schema()).encode("utf-8")) +
-            2 * (settings.interview_model_max_output_tokens + 2048))
+            2 * (output_cap + 2048))
+        return await self.with_model_reservation(session_id, user_id, expected, provider, reservation,
+            lambda timeout: agent.call(session_id, payload, answer_id=answer_id, timeout_seconds=timeout))
+
+    async def with_model_reservation(self, session_id, user_id, expected, provider, reservation, operation):
         call_key = uuid4().hex
         async with self.factory() as db:
             timeout = await SessionController(db).reserve_model_call(session_id, user_id, expected, reservation, call_key)
@@ -99,7 +107,7 @@ class MockInterviewService:
         usage_reported = provider.provider_name == "replay"
         known_tokens = 0
         try:
-            result = await agent.call(session_id, payload, answer_id=answer_id, timeout_seconds=timeout)
+            result = await operation(timeout)
             known_tokens = result.usage.get('total_tokens') or 0
             usage_reported = usage_reported or (type(result.usage.get('total_tokens')) is int and result.usage_complete)
             return result
@@ -209,7 +217,7 @@ class MockInterviewService:
                     data = await SessionController(db).start(session_id, user_id, session.state_version, result, policy)
                     await db.commit()
             except AppError as exc:
-                if context.get('training'):
+                if context.get('training') or context["adaptive_policy"].get("main_harness_version"):
                     from interview_api.modules.interview.training import controller_rejection
                     await controller_rejection(self.factory,result.run_id,exc.code)
                 raise
@@ -321,7 +329,7 @@ class MockInterviewService:
                 events = await SessionController(db).commit_answer(sid, uid, aid, expected, evaluation, main, action, policy)
                 await db.commit()
         except AppError as exc:
-            if context.get('training') and main:
+            if main and (context.get('training') or context["adaptive_policy"].get("main_harness_version")):
                 from interview_api.modules.interview.training import controller_rejection
                 await controller_rejection(self.factory,main.run_id,exc.code)
             raise
@@ -373,6 +381,9 @@ class MockInterviewService:
                 from interview_api.modules.interview.adaptive import planning_payload, validate_decision
                 payload = planning_payload(context, questions, active, session.interview_plan_json)
                 payload["adaptive"]["choices"] = [c for c in payload["adaptive"]["choices"] if "NEXT" in c["strategies"]]
+                if context["adaptive_policy"].get("main_harness_version"):
+                    payload["adaptive"]["candidates"] = [c for c in payload["adaptive"]["candidates"]
+                        if "NEXT" in c["strategies"]]
                 result = await self.call_agent(self.main.adaptive(payload), session_id, user_id, session.state_version, payload)
                 if result:
                     policy = validate_decision(result.artifact, payload)

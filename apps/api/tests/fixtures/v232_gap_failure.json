@@ -1,0 +1,156 @@
+{
+  "provenance": "docs/69, HTTP 1–4; exact DEMO Live business output, no credentials",
+  "calls": [
+    {
+      "route": "interview_main",
+      "answer": null,
+      "output": {
+        "candidate_id": "C_2a1341950f83b2a1ceb5144f",
+        "strategy": "NEXT",
+        "supporting_refs": [
+          "skill:ai_agent_application@1.0.0",
+          "requirement:6"
+        ],
+        "reason_tags": [
+          "OPENING",
+          "MISSING_MECHANISM"
+        ],
+        "proposed_question": {
+          "question": "在 RAG 检索链路里，如果同时使用 BM25 和向量检索，你通常如何把两路结果合并成最终排序？请说明你采用的融合方式，以及它相比直接按单一分数排序解决了什么问题。",
+          "expected_points": [
+            "说明 BM25 与向量检索分别捕捉关键词匹配和语义相似度",
+            "解释 RRF 等融合方式的基本计算过程",
+            "说明融合能降低单一检索方式的偏差或漏召回",
+            "提及排序稳定性或可解释性"
+          ],
+          "dimension": "rag_retrieval",
+          "difficulty": "MEDIUM"
+        },
+        "fallback_action": "SAFE_RETRY"
+      },
+      "usage": 6700
+    },
+    {
+      "route": "answer_evaluation",
+      "answer": "我在检索项目里先各取BM25和Dense的前二十条，再用RRF融合。因为两路原始分数的量纲不一样，不能简单比较。我理解RRF是给排名靠前的结果更高权重再求和，不过当时融合常数k直接沿用了默认值，没有系统调参；同一文档被切成多个chunk时，我只按chunk ID去重，还没有处理相近片段重复占位。",
+      "output": {
+        "technical_correctness": 4,
+        "coverage": 4,
+        "depth": 3,
+        "relevance": 5,
+        "communication": 4,
+        "evaluation": "回答准确说明了 BM25 与 Dense 检索分数量纲不同、不能直接比较，并正确描述了 RRF 的基本思想：对排名靠前的结果赋予更高权重后求和。同时主动指出融合常数 k 沿用默认值未调参，以及 chunk 去重只按 ID、未处理相近片段重复占位，体现了对边界条件的意识。主要不足是未展开 RRF 的具体公式，也未说明融合相比单一排序在降低漏召回或偏差方面的机制，且未提及排序稳定性或可解释性。",
+        "covered_points": [
+          "说明 BM25 与向量检索分别捕捉关键词匹配和语义相似度",
+          "解释 RRF 融合的基本思想：排名靠前权重更高并求和",
+          "指出两路原始分数量纲不同，不能直接比较",
+          "主动说明 k 未调参和 chunk 去重边界"
+        ],
+        "missing_points": [
+          "未给出 RRF 的具体计算公式",
+          "未明确说明融合如何降低单一检索方式的偏差或漏召回",
+          "未提及排序稳定性或可解释性"
+        ],
+        "factual_or_reasoning_issues": [],
+        "follow_up_focus": [
+          "RRF 中 k 值对排序结果的影响及调参方法",
+          "相近 chunk 重复占位对最终排序和引用质量的影响",
+          "如何评估融合后排序的稳定性与可解释性"
+        ],
+        "next_action_recommendation": "FOLLOW_UP",
+        "knowledge_observations": [
+          {
+            "knowledge_id": "ai_agent_application:rag_retrieval",
+            "state": "PARTIALLY_DEMONSTRATED",
+            "answer_quotes": [
+              "先各取BM25和Dense的前二十条，再用RRF融合",
+              "两路原始分数的量纲不一样，不能简单比较",
+              "RRF是给排名靠前的结果更高权重再求和"
+            ],
+            "missing_mechanisms": [
+              "未说明 RRF 的具体计算公式及 k 值作用",
+              "未解释融合如何降低单一检索方式的偏差或漏召回",
+              "未说明相近 chunk 重复占位对最终排序的具体影响"
+            ],
+            "resolved_gap_ids": []
+          }
+        ]
+      },
+      "usage": 3852
+    },
+    {
+      "route": "interview_main",
+      "answer": "我在检索项目里先各取BM25和Dense的前二十条，再用RRF融合。因为两路原始分数的量纲不一样，不能简单比较。我理解RRF是给排名靠前的结果更高权重再求和，不过当时融合常数k直接沿用了默认值，没有系统调参；同一文档被切成多个chunk时，我只按chunk ID去重，还没有处理相近片段重复占位。",
+      "output": {
+        "candidate_id": "C_2a1341950f83b2a1ceb5144f",
+        "strategy": "FOLLOW_UP",
+        "supporting_refs": [
+          "skill:ai_agent_application@1.0.0",
+          "answer:4",
+          "evaluation_run:9"
+        ],
+        "reason_tags": [
+          "MISSING_MECHANISM"
+        ],
+        "proposed_question": {
+          "question": "你提到 RRF 的融合常数 k 直接沿用了默认值。请具体说明 RRF 的计算公式，以及 k 值变大或变小时，对最终排序通常会产生什么影响。",
+          "expected_points": [
+            "给出 RRF 公式：score(d)=Σ 1/(k+rank_i(d))",
+            "说明 k 用于平滑排名差异，避免头部排名权重过大",
+            "说明 k 增大时各排名分数更接近，排序更平滑",
+            "说明 k 减小时头部排名优势更明显，排序更敏感"
+          ],
+          "dimension": "rag_retrieval",
+          "difficulty": "MEDIUM"
+        },
+        "fallback_action": "SAFE_RETRY"
+      },
+      "usage": 8099
+    },
+    {
+      "route": "answer_evaluation",
+      "answer": "RRF对一个chunk的得分是各路1除以k加上该chunk在这一路的排名之和，排名从1开始；没有召回到的那一路不贡献分数。k大时不同名次的权重差更平缓，多路同时出现的结果更占优势；k小时头部名次的优势更明显。它用排名避免直接比较BM25和向量分数，但会丢失原始分数差距。我没有线上指标，只能用固定的人工相关性样本比较Recall和排序效果，不能说默认值一定最好。",
+      "output": {
+        "technical_correctness": 5,
+        "coverage": 5,
+        "depth": 4,
+        "relevance": 5,
+        "communication": 5,
+        "evaluation": "回答准确给出了 RRF 公式：score(d)=Σ 1/(k+rank_i(d))，并说明排名从 1 开始、未召回路径不贡献分数。对 k 值影响的解释正确：k 增大时不同名次权重差更平缓，多路同时出现的结果更占优势；k 减小时头部名次优势更明显。同时指出 RRF 用排名避免直接比较 BM25 和向量分数，但会丢失原始分数差距，体现了对机制边界的理解。回答还诚实说明没有线上指标，只用固定人工相关性样本比较 Recall 和排序效果，不能断言默认值一定最好，符合项目背景。整体覆盖了当前问题的全部 rubric 要点，表达清晰、因果明确。",
+        "covered_points": [
+          "给出 RRF 公式：score(d)=Σ 1/(k+rank_i(d))",
+          "说明排名从 1 开始，未召回路径不贡献分数",
+          "说明 k 增大时各排名分数更接近，排序更平滑",
+          "说明 k 减小时头部排名优势更明显，排序更敏感",
+          "说明 RRF 用排名避免直接比较 BM25 和向量分数",
+          "说明 RRF 会丢失原始分数差距",
+          "说明没有线上指标，只用固定人工相关性样本比较 Recall 和排序效果"
+        ],
+        "missing_points": [],
+        "factual_or_reasoning_issues": [],
+        "follow_up_focus": [
+          "如何设计离线评估集来比较不同 k 值的排序效果",
+          "相近 chunk 重复占位对 RRF 最终排序的具体影响及去重策略",
+          "RRF 相比加权求和或学习排序的适用场景与局限"
+        ],
+        "next_action_recommendation": "FOLLOW_UP",
+        "knowledge_observations": [
+          {
+            "knowledge_id": "ai_agent_application:rag_retrieval",
+            "state": "DEMONSTRATED_IN_SESSION",
+            "answer_quotes": [
+              "RRF对一个chunk的得分是各路1除以k加上该chunk在这一路的排名之和，排名从1开始；没有召回到的那一路不贡献分数。",
+              "k大时不同名次的权重差更平缓，多路同时出现的结果更占优势；k小时头部名次的优势更明显。",
+              "它用排名避免直接比较BM25和向量分数，但会丢失原始分数差距。"
+            ],
+            "missing_mechanisms": [],
+            "resolved_gap_ids": [
+              "gap_ebf04b4e255cc571e5412c3e"
+            ]
+          }
+        ]
+      },
+      "usage": 4419
+    }
+  ]
+}

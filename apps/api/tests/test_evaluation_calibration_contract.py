@@ -139,7 +139,9 @@ def test_draft_cases_reach_public_evaluation_boundary_without_changing_scoring_i
                 created, state, context, questions, active, before = sessions[c['target'].split(':')[0]]
                 p = planning_payload(context, questions, active, state.interview_plan_json, answer=c['answer'])
                 # Keep the already audited 2.1.0/2.3.1 counterfactual arms frozen;
-                # current service Sessions now use 2.3.2, tested separately below.
+                # Current service Sessions freeze the new scoped contract.
+                p['snapshot']['adaptive_policy'].pop('gap_scope_contract', None)
+                p['adaptive'].pop('focus_gap_ids', None)
                 p['snapshot']['adaptive_policy'].pop('evaluation_context', None)
                 if projected:
                     p['snapshot']['adaptive_policy']['prompts'] = freeze_prompts(context_projection=True)

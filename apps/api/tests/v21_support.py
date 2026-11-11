@@ -4,13 +4,17 @@ import json
 from interview_api.infrastructure.models.provider import ModelProvider, ModelResponse
 
 
-def selection_artifact(value, payload):
+def selection_artifact(value, payload, *, scoped=False):
     """Translate an explicitly constructed test artifact, not a LIVE response."""
     pair = next(c for c in payload["adaptive"]["candidates"] if
         c["target_knowledge_id"] == value["target_knowledge_id"] and c["source"]["ref"] == value["question_source_ref"])
     draft = {k: value["proposed_question"][k] for k in ("question", "expected_points", "dimension", "difficulty")}
-    return dict(candidate_id=pair["candidate_id"], strategy=value["strategy"],
+    result = dict(candidate_id=pair["candidate_id"], strategy=value["strategy"],
         supporting_refs=value["supporting_refs"], reason_tags=value["reason_tags"], proposed_question=draft)
+    if scoped:
+        gaps = payload["adaptive"]["knowledge_state"]["items"].get(pair["target_knowledge_id"], {}).get("open_gaps", [])
+        result["focus_gap_ids"] = [g["id"] for g in gaps[:5]] if value["strategy"] == "FOLLOW_UP" else []
+    return result
 
 
 class AdaptiveReplayProvider(ModelProvider):
@@ -74,7 +78,7 @@ class AdaptiveReplayProvider(ModelProvider):
                     expected_points=["机制", "异常边界"], dimension=target["label"], difficulty=p["desired_difficulty"],
                     source_type="FOLLOW_UP" if strategy == "REQUEST_EXAMPLE" else "DYNAMIC_GENERATED"))
             if title == "AdaptiveSelection":
-                value = selection_artifact(value, p)
+                value = selection_artifact(value, p, scoped="focus_gap_ids" in schema.get("properties", {}))
         elif title == "CoachArtifact":
             value = dict(overall_summary="DEMO：本场根据实际回答补问并切换技术主题，观察仅反映本场表现。",
                 strengths=[], weaknesses=[], recurring_issues=[], job_alignment=[],

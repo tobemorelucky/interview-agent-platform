@@ -3,7 +3,7 @@ from copy import deepcopy
 import json
 from typing import Annotated, Literal
 
-from pydantic import Field, ValidationError
+from pydantic import ConfigDict, Field, ValidationError
 
 from interview_api.core.exceptions import AppError
 from interview_api.modules.candidate_profile.evidence import digest
@@ -47,6 +47,9 @@ class ResolvedObservation(KnowledgeObservation):
     evaluation_id: int | None
     open_gaps: list[Gap] = Field(max_length=200)
     answer_spans: list[AnswerSpan] = Field(max_length=3)
+    # Leave old persisted observations (and their payload fingerprints) untouched.
+    question_state: STATES | None = Field(default=None, exclude_if=lambda value: value is None)
+    focus_gap_ids: list[str] | None = Field(default=None, max_length=5, exclude_if=lambda value: value is None)
 
 
 class KnowledgeState(StrictArtifact):
@@ -80,6 +83,7 @@ class AdaptiveDecision(StrictArtifact):
 
 
 PAIR_CONTRACT = "TARGET_SOURCE_PAIR_V1"
+GAP_SCOPE_CONTRACT = "QUESTION_GAP_SCOPE_V1"
 
 
 class QuestionDraft(StrictArtifact):
@@ -105,8 +109,29 @@ class ResolvedAdaptiveDecision(AdaptiveDecision):
     candidate_id: str = Field(min_length=1, max_length=64)
 
 
+class ScopedAdaptiveSelection(AdaptiveSelection):
+    model_config = ConfigDict(title="AdaptiveSelection")
+    focus_gap_ids: list[str] = Field(max_length=5)
+
+
+class ResolvedScopedAdaptiveDecision(ResolvedAdaptiveDecision):
+    focus_gap_ids: list[str] = Field(max_length=5)
+
+
 def uses_pairs(payload):
     return payload.get("snapshot", {}).get("adaptive_policy", {}).get("decision_contract") == PAIR_CONTRACT
+
+
+def uses_gap_scope(payload):
+    return payload.get("snapshot", {}).get("adaptive_policy", {}).get("gap_scope_contract") == GAP_SCOPE_CONTRACT
+
+
+def validate_gap_scope(focus, gaps, *, required=False):
+    if (focus is None and required or focus is not None and (
+            not isinstance(focus, list) or len(focus) > 5 or
+            any(not isinstance(identifier, str) or identifier not in gaps for identifier in focus)
+            or len(set(focus)) != len(focus))):
+        raise AppError("INVALID_QUESTION_GAP_SCOPE", "本题聚焦缺口必须是本场同一目标的有效开放缺口", 422)
 
 
 def decision_candidates(context, choices):
@@ -165,7 +190,8 @@ def resolve_selection(selection, payload):
         if fact is None:
             raise AppError("UNKNOWN_CANDIDATE_EVIDENCE", "组合引用的事实不属于本场", 422)
         provenance.update(candidate_fact_ids=[fact["id"]], candidate_evidence_ids=list(fact["evidence_ids"]))
-    return ResolvedAdaptiveDecision(decision_version=VERSION, candidate_id=selection.candidate_id,
+    schema = ResolvedScopedAdaptiveDecision if uses_gap_scope(payload) else ResolvedAdaptiveDecision
+    return schema(decision_version=VERSION, candidate_id=selection.candidate_id,
         target_knowledge_id=pair["target_knowledge_id"], question_source_ref=source["ref"],
         **selection.model_dump(exclude={"candidate_id", "proposed_question"}),
         proposed_question=QuestionArtifact(**selection.proposed_question.model_dump(), **provenance))
@@ -243,6 +269,10 @@ def resolve_observations(artifact, payload):
     answer = payload["answer"]
     old = adaptive["knowledge_state"]["items"].get(active_id, {})
     gaps = {g["id"]: g for g in old.get("open_gaps", [])}
+    scoped = uses_gap_scope(payload)
+    focus = adaptive.get("focus_gap_ids") if scoped else None
+    if scoped:
+        validate_gap_scope(focus, gaps)
     result = []
     for item in artifact.knowledge_observations:
         if item.knowledge_id != active_id:
@@ -256,10 +286,20 @@ def resolve_observations(artifact, payload):
         missing = [dict(id="gap_" + digest([active_id, text])[:24], text=text) for text in dict.fromkeys(item.missing_mechanisms)]
         remaining = [g for key, g in gaps.items() if key not in item.resolved_gap_ids]
         remaining = list({g["id"]: g for g in remaining + missing}.values())
-        if item.state == "DEMONSTRATED_IN_SESSION" and remaining:
+        # Unknown scope is not empty scope. Preserve the old strict check
+        # when a historical or incomplete question has no reliable metadata.
+        unresolved_here = remaining if focus is None else (
+            missing or [g for g in remaining if g["id"] in focus])
+        if item.state == "DEMONSTRATED_IN_SESSION" and unresolved_here:
             raise AppError("UNRESOLVED_KNOWLEDGE_GAP", "仍有具体未解决缺口，不能标记本场充分展示", 422)
-        result.append(dict(item.model_dump(), open_gaps=remaining,
-            answer_spans=[dict(start=answer.index(q), end=answer.index(q) + len(q), excerpt=q) for q in item.answer_quotes]))
+        row = dict(item.model_dump(), open_gaps=remaining,
+            answer_spans=[dict(start=answer.index(q), end=answer.index(q) + len(q), excerpt=q) for q in item.answer_quotes])
+        if scoped:
+            row["question_state"] = item.state
+            row["focus_gap_ids"] = focus
+            if remaining and item.state == "DEMONSTRATED_IN_SESSION":
+                row["state"] = "PARTIALLY_DEMONSTRATED"
+        result.append(row)
     return result
 
 
@@ -320,6 +360,10 @@ def planning_payload(context, questions, active, plan, *, answer=None, answer_id
         history=[dict(question_id=q.id, question=q.question, status=q.status,
             knowledge_id=((q.candidate_refs_json or {}).get("adaptive_decision") or {}).get("target_knowledge_id")) for q in questions],
         evaluation=evaluation.model_dump() if evaluation else None)
+    if uses_gap_scope(payload) and active:
+        # Controller already persists the validated decision atomically with
+        # the question. Evaluation never supplies or changes this scope.
+        adaptive["focus_gap_ids"] = ((active.candidate_refs_json or {}).get("adaptive_decision") or {}).get("focus_gap_ids")
     if evaluation:
         observations = resolve_observations(evaluation, payload)
         # Pending projection is NOT persisted until the Evaluation commits.
@@ -337,7 +381,10 @@ def planning_payload(context, questions, active, plan, *, answer=None, answer_id
         legal_targets = {c["target_knowledge_id"] for c in adaptive["candidates"]}
         adaptive["choices"] = [c for c in adaptive["choices"] if c["target"]["knowledge_id"] in legal_targets]
         adaptive["allowed_refs"] = sorted(refs | {c["source"]["ref"] for c in adaptive["candidates"]})
-    return bounded(payload)
+    from interview_api.modules.interview.context_projection import enabled
+    # The internal plan retains full provenance, frozen prompts and observation
+    # evidence. Versioned role DTOs are separately bounded at their wire seam.
+    return bounded(payload, maximum=192_000 if enabled(payload) else 96_000)
 
 
 def validate_decision(artifact, payload):
@@ -345,6 +392,13 @@ def validate_decision(artifact, payload):
     choice = next((c for c in adaptive["choices"] if c["target"]["knowledge_id"] == artifact.target_knowledge_id), None)
     if not choice or artifact.strategy not in choice["strategies"]:
         raise AppError("ADAPTIVE_DECISION_REJECTED", "目标或策略不在当前合法空间，原回答可安全重试", 422)
+    if uses_gap_scope(payload):
+        gaps = {g["id"] for g in adaptive["knowledge_state"]["items"].get(
+            artifact.target_knowledge_id, {}).get("open_gaps", [])}
+        focus = getattr(artifact, "focus_gap_ids", None)
+        validate_gap_scope(focus, gaps, required=True)
+        if gaps and not focus and artifact.strategy == "FOLLOW_UP":
+            raise AppError("INVALID_QUESTION_GAP_SCOPE", "追问已有缺口时须明确聚焦至少一个开放缺口", 422)
     if set(artifact.supporting_refs) - set(adaptive["allowed_refs"]):
         raise AppError("UNKNOWN_DIRECTOR_REFERENCE", "面试决策引用不存在或不属于本场", 422)
     if payload.get("answer") is not None and not set(artifact.supporting_refs) & {adaptive["current_answer_ref"], adaptive["current_evaluation_ref"]}:

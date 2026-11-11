@@ -15,11 +15,11 @@ MAX_CONSECUTIVE = 3
 TECHNICAL_WEIGHTS = {"PROJECT": .4, "FOUNDATION": .3, "JOB_TECHNICAL": .2, "SCENARIO": .1}
 TOPICS = {
     "data_security": r"数据安全|敏感信息|脱敏|权限|授权|认证|审计|访问控制",
-    "rag_retrieval": r"\brag\b|\brrf\b|\bbm25\b|\bdense\b|检索|召回|向量|重排",
+    "rag_retrieval": r"\brag\b|\brrf\b|\bbm25\b|\bdense\b|检索|召回|向量|重排|排名融合",
     "kafka_reliability": r"\bkafka\b|消息队列|消息可靠|消息消费|异步下单|重复消费|不丢单",
     "redis": r"\bredis\b|缓存|秒杀|分布式锁",
     "mysql_consistency": r"\bmysql\b|数据库|事务|隔离级别|一致性|索引",
-    "agent": r"\bagent\b|工具调用|多智能体|智能体",
+    "agent": r"\bagent\b|工具调用|工具工作流|工具执行|执行工具|多智能体|智能体",
     "llm": r"大模型|语言模型|\btransformer\b|注意力|微调|\bllm\b",
     "java": r"\bjava\b|\bjvm\b|\bspring\b|线程|垃圾回收",
     "python": r"\bpython\b|\bgil\b|协程",
@@ -27,11 +27,18 @@ TOPICS = {
 }
 BACKGROUND = {
     "education": r"学历|学校|毕业院校|哪所大学|本科|硕士|博士|研究生|教育背景|专业背景|什么专业|就读|所学专业",
-    "motivation": r"为什么(?:选择|投|应聘|加入)|投递动机|求职动机|职业规划|为什么.*计算机",
+    "motivation": r"为什么(?:投|应聘|加入|学计算机|转行做计算机)|投递动机|求职动机|职业规划",
     "introduction": r"自我介绍|介绍一下自己|介绍下自己|个人背景|求职背景",
     "behavior": r"优缺点|个人优势|个人劣势|团队合作|团队协作|抗压|工作压力|冲突处理|加班|工作制度|工作强度",
 }
 HARD_CONDITION = r"学历|学位|博士|硕士|本科|毕业|院校|专业要求|专业背景|专业为|相关专业|\bdegree\b|\bmajor\b"
+CHOICE = r"为什么(?:会|要|想)?选择([^，。？！；,\n.?!;]*)"
+CAREER_CHOICE = (
+    r"^(?:加入|应聘|投递|入职|(?:我们|贵|本)(?:公司|团队)(?!的))"
+    r"|(?:公司|岗位|职位|团队|雇主|职业|行业|专业|学校)\s*$"
+)
+TOPIC_SIGNOFF = re.compile(r"^\s*[^，。？！；,.?!;\n]{1,24}?(?:这块|这部分|这个话题)"
+                           r"先(?:聊到这(?:里)?|放一放|告一段落)[，。,.]\s*(?=\S)")
 
 
 def classify(text):
@@ -39,6 +46,14 @@ def classify(text):
     for topic, pattern in BACKGROUND.items():
         if re.search(pattern, text):
             return {"category": "BACKGROUND", "topic": topic}
+        if topic == "motivation" and any(
+            re.search(CAREER_CHOICE, choice.strip()) or not mentioned_topics(choice)
+            for choice in re.findall(CHOICE, text)
+        ):
+            # Only technical evidence in the object of this choice can exempt it.
+            # An unrelated technical phrase elsewhere cannot exempt a career question.
+            return {"category": "BACKGROUND", "topic": topic}
+    text = TOPIC_SIGNOFF.sub("", text, count=1)
     # A project opening can mention several stacks; its intent is still one opening.
     if re.search(r"介绍.*项目|项目.*(?:背景|职责|负责|技术栈)|代表性.*项目", text):
         return {"category": "PROJECT", "topic": "project_opening"}
@@ -56,7 +71,8 @@ def is_hard_condition(text):
 def mentioned_topics(text):
     # Technical ASCII names commonly touch Chinese text (e.g. Kafka的可靠性).
     # Unicode word boundaries treat both as word characters and miss the topic.
-    return [topic for topic, pattern in TOPICS.items() if re.search(pattern, (text or "").casefold(), re.ASCII)]
+    text = TOPIC_SIGNOFF.sub("", (text or "").casefold(), count=1)
+    return [topic for topic, pattern in TOPICS.items() if re.search(pattern, text, re.ASCII)]
 
 
 def question_topic(question):

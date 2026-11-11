@@ -9,7 +9,7 @@ import pytest
 from sqlalchemy import select, func, update
 
 from interview_api.core.errors import AppError
-from interview_api.infrastructure.models.governance import ModelGovernance, model_scope, governed_call, run_owner
+from interview_api.infrastructure.models.governance import ModelGovernance, model_scope, governed_call, provider_guard, run_owner
 from interview_api.infrastructure.models.governance_models import ModelAdmission
 from interview_api.infrastructure.models.provider import CompatibleModelProvider
 from interview_api.modules.public_career.library import PublicCareerLibrary
@@ -154,6 +154,82 @@ def test_actual_http_calls_go_through_quota_without_network(database_url):
         async with factory() as db:
             row = await db.scalar(select(ModelAdmission).where(ModelAdmission.owner_key == owner))
             assert row.status == "SETTLED" and row.actual_tokens == 10 and len(calls) == 1
+    asyncio.run(run_with_database(database_url, scenario))
+
+
+@pytest.mark.parametrize("phase", ["before_send", "after_send", "response_before_parse", "settlement"])
+def test_interrupted_http_budget_recovers_without_resending(database_url, phase):
+    async def scenario(factory):
+        owner = "test:" + uuid4().hex
+        outbound = []
+        parsed = asyncio.Event()
+        db_unavailable = False
+
+        def available_factory():
+            if db_unavailable:
+                raise ConnectionError("injected database outage during settlement")
+            return factory()
+
+        def handler(request):
+            outbound.append(request)
+            if phase == "after_send":
+                raise httpx.ReadError("injected lost response", request=request)
+            return httpx.Response(200, json={"choices": [{"message": {"content": "{}"}, "finish_reason": "stop"}],
+                "usage": {"prompt_tokens": 5, "completion_tokens": 5, "total_tokens": 10}})
+
+        async def response_hook(response):
+            nonlocal db_unavailable
+            if phase == "response_before_parse":
+                raise httpx.ReadError("injected interruption after HTTP headers", request=response.request)
+            if phase == "settlement":
+                db_unavailable = True
+
+        class BeforeSend:
+            async def __aenter__(self):
+                parsed.set()
+                await asyncio.Event().wait()
+
+            async def __aexit__(self, *exc):
+                pass
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler),
+                                     event_hooks={"response": [response_hook]}) as client:
+            provider = CompatibleModelProvider(base_url="https://offline.invalid", api_key="TEST", model="offline",
+                timeout_seconds=5, max_output_tokens=10, client=client, governed=True)
+            scope = model_scope.set((available_factory, owner, None, "test"))
+            guard = provider_guard.set(BeforeSend() if phase == "before_send" else None)
+            try:
+                messages = [dict(role="user", content="test")]
+                if phase == "before_send":
+                    task = asyncio.create_task(provider.generate(messages, schema={}))
+                    await asyncio.wait_for(parsed.wait(), 5)
+                    task.cancel()
+                    with pytest.raises(asyncio.CancelledError):
+                        await task
+                else:
+                    with pytest.raises((ConnectionError, RuntimeError)) as failure:
+                        await provider.generate(messages, schema={})
+                    assert type(failure.value) is ConnectionError if phase == "settlement" else failure.value.request_sent
+            finally:
+                provider_guard.reset(guard)
+                model_scope.reset(scope)
+
+        db_unavailable = False
+        async with factory() as db:
+            row = (await db.scalars(select(ModelAdmission).where(ModelAdmission.owner_key == owner))).one()
+        assert row.status == {"before_send": "SETTLED", "settlement": "RESERVED"}.get(phase, "UNKNOWN")
+        if phase == "settlement":
+            # Recovery knows the ledger key but has no durable usage receipt.
+            await ModelGovernance(factory).settle(row.call_key)
+        async with factory() as db:
+            recovered = (await db.scalars(select(ModelAdmission).where(ModelAdmission.owner_key == owner))).one()
+        if phase == "before_send":
+            assert recovered.actual_tokens == recovered.charged_tokens == 0
+            assert not outbound
+        else:
+            assert recovered.status == "UNKNOWN" and recovered.actual_tokens is None
+            assert recovered.charged_tokens == recovered.reserved_tokens
+            assert len(outbound) == 1
     asyncio.run(run_with_database(database_url, scenario))
 
 

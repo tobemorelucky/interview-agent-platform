@@ -159,7 +159,7 @@ def test_training_safely_retries_rejected_selection_and_keeps_user_controls(data
                 payload=json.loads(messages[-1]['content'])['input']
                 if schema['title']=='AdaptiveSelection' and not payload.get('answer'):
                     c=next(c for c in payload['adaptive']['candidates'] if c['target_knowledge_id'].endswith(':redis'))
-                    return ModelResponse(json.dumps(dict(candidate_id=c['candidate_id'],strategy='NEXT',supporting_refs=[c['source']['ref']],reason_tags=['OPENING'],
+                    return ModelResponse(json.dumps(dict(candidate_id=c['candidate_id'],strategy='NEXT',supporting_refs=[c['source']['ref']],reason_tags=['OPENING'],focus_gap_ids=[],
                         proposed_question=dict(question='DEMO Redis 缓存如何处理并发一致性？',expected_points=['缓存一致性'],dimension='缓存',difficulty='MEDIUM'))),dict(total_tokens=0))
                 result=await super().generate(messages,schema=schema)
                 if schema['title']=='AdaptiveSelection' and not self.rejected:

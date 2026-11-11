@@ -21,7 +21,8 @@ class ResearchModelCalls:
         self.prompts = prompts if prompts is not None else PromptRegistry()
         self.timeout_seconds = timeout_seconds if timeout_seconds is not None else settings.public_research_model_timeout_seconds
 
-    async def call(self, prompt_name: str, route: str, payload: dict, schema, *, repair_policy=None):
+    async def call(self, prompt_name: str, route: str, payload: dict, schema, *, repair_policy=None,
+                   checkpoint_action=False, max_repair_input_bytes=None):
         prompt = self.prompts.get(prompt_name)
         provider = self.router.primary(route)
         async with self.factory() as db:
@@ -34,6 +35,10 @@ class ResearchModelCalls:
                             "thinking_type": getattr(provider, "thinking_type", None)},
             )
             db.add(step)
+            if checkpoint_action:
+                from interview_api.modules.candidate_profile.evidence import digest
+                step.input_json = {**step.input_json, "payload_fingerprint": digest(payload),
+                                   "max_http": 2 if max_repair_input_bytes is not None else 1}
             if route == 'interview_main' and payload.get('snapshot', {}).get('training'):
                 from interview_api.modules.candidate_profile.evidence import digest
                 plan = payload['snapshot'].get('memory_guided_plan', {})
@@ -57,6 +62,9 @@ class ResearchModelCalls:
                 response_model=schema,
                 timeout_seconds=self.timeout_seconds,
                 repair_policy=repair_policy,
+                bounded_repair_only=checkpoint_action,
+                allow_fallback=not checkpoint_action,
+                max_repair_input_bytes=max_repair_input_bytes,
             )
             async with self.factory() as db:
                 step = await db.get(ExperienceAgentStepRun, step_id)
@@ -86,14 +94,18 @@ class ResearchModelCalls:
                             'company', 'position', 'round_name', 'identity_evidence_ids')}
                 step.output_json = {"schema": schema.__name__, "model_invocations": result.invocations,
                                     "usage_complete": result.usage_complete, **summary}
+                if checkpoint_action:
+                    step.output_json = {**step.output_json, "main_action": parsed}
                 await db.commit()
-            return result.parsed
+            return result if checkpoint_action else result.parsed
         except BaseException as exc:
             # Cancellation is control flow, not permission to discard usage from
             # a response already received. Persist under the existing shield.
             known_result = locals().get('result')
             if known_result is not None and not getattr(exc, 'usage', None):
                 exc.usage, exc.usage_complete = known_result.usage, known_result.usage_complete
+            if checkpoint_action:
+                exc.usage_audited = False
             with anyio.CancelScope(shield=True):
                 async with self.factory() as db:
                     step = await db.get(ExperienceAgentStepRun, step_id)
@@ -104,10 +116,17 @@ class ResearchModelCalls:
                     step.token_usage_json = getattr(exc, "usage", {})
                     step.structured_retry = int(getattr(exc, "retried", False))
                     step.error_message = getattr(exc, "code", type(exc).__name__)
+                    errors = getattr(exc, "validation_errors", [])
+                    if checkpoint_action:
+                        # No discriminator values, arbitrary JSON field names,
+                        # or other untrusted text in rejected action diagnostics.
+                        errors = [{"type": item["type"]} for item in errors[:8]]
                     step.output_json = {"schema": schema.__name__, "model_invocations": getattr(exc, "invocations", []),
                                         "usage_complete": getattr(exc, 'usage_complete', False),
-                                        "validation_errors": getattr(exc, "validation_errors", [])}
+                                        "validation_errors": errors}
                     await db.commit()
+                    if checkpoint_action:
+                        exc.usage_audited = True
             raise
         finally:
             if scope_token is not None:

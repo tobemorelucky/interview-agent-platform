@@ -55,6 +55,35 @@ def test_background_limit_first_five_and_overall():
     assert not coverage(prior, 20)['background_allowed']
 
 
+@pytest.mark.parametrize(('text', 'topic'), [
+    ('我们先聊 RAG 检索：你在检索助手里把 BM25 和向量召回按排名融合，具体融合步骤是怎样的，为什么选择按排名融合，而不是直接合并两边的原始分数？', 'rag_retrieval'),
+    ('为什么选择RRF？', 'rag_retrieval'),
+    ('为什么选择Redis？', 'redis'),
+])
+def test_technical_choice_keeps_its_topic_even_after_background_quota_is_used(text, topic):
+    prior = [row(0, '为什么选择这个岗位')]
+    policy = dict(target_category='TECHNICAL', topic_coverage=coverage(prior, 20))
+    validate_topic(SimpleNamespace(question=text), policy)
+    assert classify(text)['topic'] == topic
+    assert coverage([*prior, row(1, text)], 20)['background_count'] == 1
+
+
+@pytest.mark.parametrize('text', [
+    '为什么选择我们公司？',
+    '为什么选择这个 Redis 岗位？',
+    '为什么选择我们公司做 Redis 项目？',
+    '你提到做过 RAG，为什么选择加入我们公司？',
+    'RAG 项目之后，为什么选择我们公司？顺便谈一下 Redis。',
+    '为什么选择这个？',
+])
+def test_career_or_unclear_choice_cannot_bypass_background_quota(text):
+    prior = [row(0, '请介绍一下自己')]
+    policy = dict(target_category='BACKGROUND', topic_coverage=coverage(prior, 20))
+    with pytest.raises(AppError) as error:
+        validate_topic(SimpleNamespace(question=text), policy)
+    assert error.value.code == 'INTERVIEW_BACKGROUND_LIMIT'
+
+
 def test_three_technical_turns_force_switch_even_if_agent_requests_follow_up():
     c = context()
     prior = [row(0, 'RAG 检索怎么设计'), row(1, 'RRF 如何融合排名', parent=1), row(2, 'BM25 如何处理冲突', parent=1)]
@@ -65,6 +94,24 @@ def test_three_technical_turns_force_switch_even_if_agent_requests_follow_up():
     with pytest.raises(AppError) as error:
         validate_topic(SimpleNamespace(question='再介绍 RAG 的检索流程'), policy)
     assert error.value.code == 'INTERVIEW_TOPIC_COOLDOWN'
+
+
+def test_archived_agent_question_after_rag_signoff_can_switch_topics():
+    from interview_api.modules.interview.topics import mentioned_topics
+    text = ('检索这块先聊到这。回到你简历里的工具工作流：模型给出调用意图后，服务端要落库任务状态再真正执行工具。'
+            '这两步的先后和事务边界你会怎么安排？比如先写“执行中”再调工具，如果写库成功但调用前进程挂了，'
+            '或者工具已经执行但结果没回写，分别怎么收敛？')
+    prior = [row(i, 'RAG 检索和 RRF 如何实现') for i in range(3)]
+    policy = dict(target_category='TECHNICAL', target_topic='agent', source_type='CANDIDATE_PROFILE',
+                  topic_coverage=coverage(prior, 20))
+    assert 'agent' in mentioned_topics(text)
+    assert 'rag_retrieval' not in mentioned_topics(text)
+    validate_topic(SimpleNamespace(question=text), policy)
+    assert classify(text)['topic'] == 'agent'
+    for other in ('检索这块先聊到这。RRF 的参数怎么调？', '检索这块先聊到这吗？然后讲一下工具调用。'):
+        with pytest.raises(AppError) as error:
+            validate_topic(SimpleNamespace(question=other), policy)
+        assert error.value.code == 'INTERVIEW_TOPIC_COOLDOWN'
 
 
 def test_eligibility_is_not_an_interview_question_source():

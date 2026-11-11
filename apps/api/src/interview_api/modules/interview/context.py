@@ -103,10 +103,12 @@ async def build_context(db, user_id, request):
         if not request.interviewer_skill_id:
             raise AppError("INTERVIEWER_SKILL_REQUIRED", "系统设计面试须选择专业 Skill", 422)
         context["system_design"] = deepcopy(SCENARIO)
+    if request.main_harness and not request.adaptive_interview:
+        raise AppError("MAIN_HARNESS_REQUIRES_ADAPTIVE", "Main 工具模式仅支持自适应面试", 422)
     if request.adaptive_interview:
         if request.design_interview or not request.interviewer_skill_id:
             raise AppError("ADAPTIVE_MODE_INVALID", "自适应面试须选择专业 Skill，且不能与系统设计工具模式同时启用", 422)
-        from interview_api.modules.interview.adaptive import build_blueprint
+        from interview_api.modules.interview.adaptive import GAP_SCOPE_CONTRACT, build_blueprint
         from interview_api.modules.interview.adaptive_prompts import freeze_prompts
         # Company-level/ambiguous roles are not company-job interview evidence.
         # V1 keeps its historical selection; V2 requires exact job association.
@@ -120,9 +122,15 @@ async def build_context(db, user_id, request):
             for row in context["interview_experiences"] if row["id"] in related]
         context["adaptive_policy"] = dict(version="2.1.0", decision_contract="TARGET_SOURCE_PAIR_V1",
             context_projection="ROLE_CONTEXT_V1",
-            evaluation_context="FOLLOWUP_SCORING_V1",
+            evaluation_context="FOLLOWUP_SCORING_V1", gap_scope_contract=GAP_SCOPE_CONTRACT,
             prompts=freeze_prompts(contract="TARGET_SOURCE_PAIR_V1", memory_guided=True, context_projection=True,
-                evaluation_context=True), invalid_decision="FAIL_SAFE_RETRY_NO_EXTRA_CALL")
+                evaluation_context=True, gap_scope=True), invalid_decision="FAIL_SAFE_RETRY_NO_EXTRA_CALL")
+        if request.main_harness:
+            from interview_api.modules.interview.main_harness import VERSION as HARNESS_VERSION
+            from interview_api.modules.interview.adaptive_prompts import MAIN_HARNESS_CONTEXT_HINTS as prompt
+            context["adaptive_policy"]["main_harness_version"] = HARNESS_VERSION
+            context["adaptive_policy"]["prompts"]["interview_main"] = dict(
+                version=prompt.version, system=prompt.system, fingerprint=prompt.content_hash)
         from interview_api.modules.memory.capability_service import CapabilityMemoryService
         memory = CapabilityMemoryService(db)
         states = await memory.refresh(user_id)

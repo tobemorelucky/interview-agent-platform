@@ -138,7 +138,8 @@ def test_replay_goal_decisions_commit_observations_retry_and_switch(database_url
                     dimension="可靠性", difficulty="MEDIUM", source_type="DYNAMIC_GENERATED" if request["_strategy"] in ("NEXT", "DEEP_DIVE") else "FOLLOW_UP")))
         if schema["title"] == "AdaptiveSelection" and self.responses and "target_knowledge_id" in self.responses[0]:
             from v21_support import selection_artifact
-            self.responses[0] = selection_artifact(self.responses[0], payload)
+            self.responses[0] = selection_artifact(self.responses[0], payload,
+                scoped="focus_gap_ids" in schema.get("properties", {}))
         return await original(self, messages, schema=schema)
     from unittest.mock import patch
     with patch.object(ReplayModelProvider, "generate", generate):

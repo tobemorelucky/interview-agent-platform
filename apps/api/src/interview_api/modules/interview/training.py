@@ -134,8 +134,9 @@ class TrainingService:
             calls=(await db.execute(select(ExperienceAgentRun,ExperienceAgentStepRun).join(InterviewAgentCall,
                 InterviewAgentCall.agent_run_id==ExperienceAgentRun.id).join(ExperienceAgentStepRun,
                 ExperienceAgentStepRun.agent_run_id==ExperienceAgentRun.id).where(
-                InterviewAgentCall.session_id==session_id,ExperienceAgentRun.agent_role=='InterviewMainAgent')
-                .order_by(ExperienceAgentRun.id).limit(80))).all()
+                InterviewAgentCall.session_id==session_id,ExperienceAgentRun.agent_role=='InterviewMainAgent',
+                ExperienceAgentStepRun.prompt_name=='interview_main')
+                .distinct(ExperienceAgentRun.id).order_by(ExperienceAgentRun.id,ExperienceAgentStepRun.id).limit(80))).all()
             for run,step in calls:
                 audit=(step.input_json or {}).get('memory_usage', {})
                 artifact=(run.output_json or {}).get('validated_artifact', {})

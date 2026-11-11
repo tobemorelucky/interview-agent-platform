@@ -16,6 +16,25 @@ def packet():
     return planning_payload(ctx, [], None, None)
 
 
+def test_role_projection_has_separate_internal_and_wire_byte_limits():
+    import json
+    from interview_api.modules.interview.adaptive import build_blueprint, planning_payload
+    from interview_api.modules.interview.adaptive_prompts import freeze_prompts
+    from interview_api.modules.interview.context_projection import model_payload
+    ctx = context()
+    ctx["adaptive_blueprint"] = build_blueprint(ctx)
+    ctx["recent_performance_observations"] = {"items": [{"content": "未投影的历史信息" * 4000}]}
+    ctx["adaptive_policy"] = dict(version="2.1.0", decision_contract="TARGET_SOURCE_PAIR_V1",
+        context_projection="ROLE_CONTEXT_V1", prompts=freeze_prompts(context_projection=True))
+    plan = planning_payload(ctx, [], None, None)
+    assert len(json.dumps(plan, ensure_ascii=False).encode("utf-8")) > 96_000
+    assert "recent_performance_observations" not in model_payload(plan, "interview_main")["snapshot"]
+    plan["answer"] = "实" * 33_000
+    with pytest.raises(AppError) as error:
+        model_payload(plan, "interview_main")
+    assert error.value.code == "ADAPTIVE_CONTEXT_BUDGET"
+
+
 def test_main_selects_one_legal_pair_without_writing_source_or_target_ids():
     from interview_api.modules.interview.adaptive import AdaptiveSelection, resolve_selection, validate_decision
     payload = packet()
@@ -346,6 +365,7 @@ def test_frozen_legacy_and_pair_sessions_execute_without_upgrading_history(datab
 
             async def historical_creation(db, user_id, req):
                 context, resume_id, _ = await original_builder(db, user_id, req)
+                context['adaptive_policy'].pop('gap_scope_contract')
                 context['adaptive_policy'].pop('evaluation_context', None)
                 context['adaptive_policy'].pop('context_projection', None)
                 context["adaptive_policy"].pop("decision_contract")
@@ -357,6 +377,7 @@ def test_frozen_legacy_and_pair_sessions_execute_without_upgrading_history(datab
                 historical = await core.create(uid, request)
             async def pair_creation(db, user_id, req):
                 context, resume_id, _ = await original_builder(db, user_id, req)
+                context['adaptive_policy'].pop('gap_scope_contract')
                 context['adaptive_policy'].pop('evaluation_context', None)
                 context['adaptive_policy'].pop('context_projection', None)
                 from interview_api.modules.interview.adaptive_prompts import MAIN_PAIRS, EVALUATION
@@ -368,6 +389,7 @@ def test_frozen_legacy_and_pair_sessions_execute_without_upgrading_history(datab
                 paired = await core.create(uid, request)
             async def old_memory_creation(db, user_id, req):
                 context, resume_id, _ = await original_builder(db, user_id, req)
+                context['adaptive_policy'].pop('gap_scope_contract')
                 context['adaptive_policy'].pop('evaluation_context', None)
                 context['adaptive_policy'].pop('context_projection', None)
                 from interview_api.modules.interview.adaptive_prompts import MAIN_MEMORY, EVALUATION
@@ -378,6 +400,7 @@ def test_frozen_legacy_and_pair_sessions_execute_without_upgrading_history(datab
                 old_memory = await core.create(uid, request)
             async def reference_creation(db, user_id, req):
                 context, resume_id, _ = await original_builder(db, user_id, req)
+                context['adaptive_policy'].pop('gap_scope_contract')
                 context['adaptive_policy'].pop('evaluation_context', None)
                 from interview_api.modules.interview.adaptive_prompts import MAIN_MEMORY_REFS, EVALUATION
                 context['adaptive_policy'].pop('context_projection', None)
@@ -388,6 +411,7 @@ def test_frozen_legacy_and_pair_sessions_execute_without_upgrading_history(datab
                 old_references = await core.create(uid, request)
             async def projected_creation(db, user_id, req):
                 context, resume_id, _ = await original_builder(db, user_id, req)
+                context['adaptive_policy'].pop('gap_scope_contract')
                 from interview_api.modules.interview.adaptive_prompts import freeze_prompts
                 context['adaptive_policy'].pop('evaluation_context', None)
                 context['adaptive_policy']['prompts'] = freeze_prompts(context_projection=True)
@@ -400,7 +424,7 @@ def test_frozen_legacy_and_pair_sessions_execute_without_upgrading_history(datab
                                              (old_memory, "2.2.0", "AdaptiveSelection"),
                                              (old_references, "2.2.1", "AdaptiveSelection"),
                                              (old_projected, "2.3.1", "AdaptiveSelection"),
-                                             (modern, "2.3.1", "AdaptiveSelection")]:
+                                             (modern, "2.3.3", "AdaptiveSelection")]:
                 pinned = deepcopy(detail["context_snapshot"])
                 sid = detail["id"]
                 question = await core.start(sid, uid)

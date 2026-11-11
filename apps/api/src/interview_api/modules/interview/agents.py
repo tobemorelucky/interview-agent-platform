@@ -372,7 +372,7 @@ class InterviewAgent:
             from interview_api.modules.interview.adaptive import AdaptiveSelection
             from interview_api.modules.interview.director_repair import SupportingRefsRepair
             # Only this selection schema has a bounded, ID-only subset exception.
-            repair_policy = SupportingRefsRepair(payload) if self.route == INTERVIEW_MAIN_ROUTE and self.schema is AdaptiveSelection else None
+            repair_policy = SupportingRefsRepair(payload) if self.route == INTERVIEW_MAIN_ROUTE and issubclass(self.schema, AdaptiveSelection) else None
             from interview_api.modules.interview.adaptive import AdaptiveEvaluation
             if self.route == ANSWER_EVALUATION_ROUTE and self.schema is AdaptiveEvaluation:
                 from interview_api.modules.interview.evaluation_repair import EvaluationQuotesRepair
@@ -458,9 +458,13 @@ class InterviewMainAgent(InterviewAgent):
 
     def adaptive(self, payload=None):
         from copy import copy
-        from interview_api.modules.interview.adaptive import AdaptiveDecision, AdaptiveSelection, uses_pairs
+        from interview_api.modules.interview.adaptive import (
+            AdaptiveDecision, AdaptiveSelection, ScopedAdaptiveSelection, uses_gap_scope, uses_pairs,
+        )
         agent = copy(self)
         agent.schema = AdaptiveSelection if uses_pairs(payload or {}) else AdaptiveDecision
+        if uses_gap_scope(payload or {}):
+            agent.schema = ScopedAdaptiveSelection
         return agent
 
     async def reusable(self, session_id, answer_id, payload):
@@ -531,8 +535,11 @@ class AnswerEvaluationAgent(InterviewAgent):
                 .order_by(ExperienceAgentRun.id.desc()).limit(1))).first()
             if row and (row[0].output_json or {}).get("validated_artifact"):
                 run, step = row
-                from interview_api.modules.interview.adaptive import AdaptiveSelection, ResolvedAdaptiveDecision
-                stored_schema = ResolvedAdaptiveDecision if self.schema is AdaptiveSelection else self.schema
+                from interview_api.modules.interview.adaptive import (
+                    AdaptiveSelection, ResolvedAdaptiveDecision, ScopedAdaptiveSelection, ResolvedScopedAdaptiveDecision,
+                )
+                stored_schema = (ResolvedScopedAdaptiveDecision if self.schema is ScopedAdaptiveSelection else
+                                 ResolvedAdaptiveDecision if self.schema is AdaptiveSelection else self.schema)
                 artifact = stored_schema.model_validate(run.output_json["validated_artifact"])
                 self.validate_artifact(artifact, payload)
                 return AgentResult(artifact, run.id, step.provider_name, step.model_name, step.prompt_version,
