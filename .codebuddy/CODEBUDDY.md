@@ -65,7 +65,7 @@
 ### P1
 
 - Coach + 下一场 MemoryGuidedPlan 依赖 `session COMPLETED`（`interview_report/service.py:47`、`memory/capability_service.py:44`），因此被 P0 阻断。
-- ModelScope 路由下按角色选推理模式失效：`config.py` 有 4 个 `*_thinking`，但 `router.py::_chat_provider` 在 ModelScope 分支不传 `thinking_type`。
+- ~~ModelScope 路由下按角色选推理模式失效~~ **已修复（`67a39b1`）**：`_chat_provider` 现在透传 `thinking_type`，且 thinking=enabled 的角色输出上限自动抬到 `settings.thinking_output_tokens`（12000）；禁用角色保持不变。
 - 生产入口缺跨进程发送围栏：`ModelAdmission` 无 send-intent / provider request id，`governed_call` 每次新 `uuid4` call_key。
 - 题面主题仍靠正则词典（长尾技术词可能保守误判）。
 - 非自适应 `core_service.answer` 存在同一预算死路（本轮只记录，不扩大范围）。
@@ -111,7 +111,7 @@
 
 ### 交接区（每轮结束更新）
 
-- 当前 HEAD：`e1dc2e1`（第四轮文档）；业务修复见 `307d273`（终止原因）、`5a24f75`（Main 结构修复）
+- 当前 HEAD：`b37103e`（第五轮文档）；业务修复见 `70da7e6`（Coach）、`67a39b1`（角色推理）
 - 工作区：干净（本轮收尾时核实）
 - 下一轮入口：见「轮次记录」最后一轮
 
@@ -224,3 +224,32 @@
 2. 决定 Evaluation 思考模式与输出上限的生产策略（配置或路由层），一并处理 `router.py` 丢弃 `thinking_type`。
 3. `structured_output_failed` 的受控一次重采样。
 4. 预算/题量匹配：20 题需 ≥700k，或把 `question_count` 与预算绑定。
+
+### 2026-11-11 · 第五轮（长场 Coach 与 Evaluation 稳定性，0 次真实 HTTP）
+
+**提交**
+
+| Hash | 内容 |
+|---|---|
+| `70da7e6` | `fix(workbuddy): let long interviews reach the Coach, and stop rejecting idioms` — 8 文件 |
+| `67a39b1` | `fix(workbuddy): forward role-level thinking and give enabled roles output headroom` — 3 文件 |
+| `b37103e` | `docs(workbuddy): record the coach and evaluation reliability fixes` |
+
+**已完成（事实）**
+
+- 数字校验改为"单位 + 服务端统计白名单"：`至少一次` / `一次调用` 等惯用语放行；`六轮回答`、`总分 5 分`、`85%`、`9 道题` 仍拒绝；分数只接受已发布的维度/总体均值。诊断含 `rule=FABRICATED_STATISTIC`、unit、value。
+- 新增 `COACH_EVIDENCE_V1`（`interview_report/evidence.py`）：18 轮真实信封 227,061 → 90,615 字节（input 221,493 → 85,047），20 轮 99,749（+9,134）；保留评价 ID、题目/维度、五维分、作答、结论、覆盖/遗漏点、事实问题、追问方向、未解决 gap、有效题数与结束原因，移除项逐项登记在 `evidence_projection.omitted`；仍超限抛 `COACH_EVIDENCE_BUDGET`（含分节字节）。
+- 角色推理：`_chat_provider` 不再丢弃 `thinking_type`；仅 thinking=enabled 的角色把输出上限抬到 `thinking_output_tokens`（12000），Main 仍 3000。用 MockTransport 抓请求体核对 `thinking={"type":"enabled"}` + `max_tokens=12000`，`None` 时请求体无该字段。
+- 第四轮原始 Coach 响应（请求 47）离线重放可通过新校验；请求 2/9（截断）与 47 各精确回放 2 次。
+- 20 条归档 Evaluation 一致性审计：18 条可解析、2 条截断（无假分数）、0 条不支持引用、0 条 gap 越界。
+
+**未完成 / 待真实模型验证（事实）**
+
+- 压缩后的 Coach 输入尚未经过真实模型，报告质量未验证。
+- `thinking_output_tokens=12000` 只在参数层验证，未经真实 Evaluation 复跑。
+- Evaluation 思考/非思考质量对比缺配对样本（20 条全为 enabled），不作降质/不降质结论。
+- 本轮真实模型 HTTP = 0；未改生产配置、未改历史验收数据。
+
+**`.workbuddy/`（事实）**
+
+- 只有一个 4KB 的 `memory/2026-11-11.md`，是工具侧工作区记忆摘要，与本文重复、无敏感内容；未删除、未提交、未改 `.gitignore`。后续只写指针，不写规范；如需消除，可在设置里关闭工作区记忆或把它加入 `.gitignore`（需你/Codex 决定）。
