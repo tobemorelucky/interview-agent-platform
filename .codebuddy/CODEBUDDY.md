@@ -111,7 +111,7 @@
 
 ### 交接区（每轮结束更新）
 
-- 当前 HEAD：`f61aaf6`（第三轮文档）；业务修复见 `874903c`，第二轮 `bd2e7b2`/`e4df029`
+- 当前 HEAD：`e1dc2e1`（第四轮文档）；业务修复见 `307d273`（终止原因）、`5a24f75`（Main 结构修复）
 - 工作区：干净（本轮收尾时核实）
 - 下一轮入口：见「轮次记录」最后一轮
 
@@ -191,3 +191,36 @@
 
 **交接备注**：批次目录 `.runtime/acceptance/wb_budget_live_20261111/` 已封存（`batch_state.stop=COLLECTION_COMPLETE`）；首次达成终态时的 `TARGET_STATE_REACHED` 是本地书签、当时无在途请求，已按 `docs/82` §10 说明清除，HTTP 数未增加。
 
+
+### 2026-11-11 · 第四轮（终止原因分类 + 18/20 真实长场）
+
+**提交**
+
+| Hash | 内容 |
+|---|---|
+| `307d273` | `fix(workbuddy): classify the interview stop cause instead of one BUDGET_LIMIT` — 4 文件 |
+| `5a24f75` | `fix(workbuddy): authorise the one structural repair the model actually needs` — 4 文件（含真实响应夹具） |
+| `e1dc2e1` | `docs(workbuddy): record the 18/20 live long interview and its blockers` |
+
+**已完成（事实）**
+
+- `SessionController.stop_reason` 成为唯一终止判定：`QUESTION_COUNT_REACHED / ROUND_LIMIT / TOKEN_LIMIT / DURATION_LIMIT`，题数优先，答满题数不再标成预算结束。`BUDGET_LIMIT` 仅作旧值兼容，不回写历史行。
+- `FlattenedQuestionRepair` 授权"扁平草稿→嵌套结构"的唯一归一化，修复后的内容必须由原始字符串拼出；与 `SupportingRefsRepair` 组合。契约与事实校验未改。
+- Live 批次 `wb_full_live_20261111`（库 `interview_agent_wb_full_live_20261111`，Alembic 0026）：47 HTTP / 588,586 Token / 约 45 分钟；18 题、18 条正式评价；`COMPLETED` + `TOKEN_LIMIT / NEXT_QUESTION_RESERVATION`；第 19 题零 HTTP；下一场 MemoryGuidedPlan 3 条、引用 `evaluation:10–18`。
+- 参数落地已用请求体核对：Main 26 次全 `disabled`，Evaluation 20 次 + Coach 1 次全 `enabled`。
+- 离线：专项 9 + 7 passed；11/13 文件回归 211 / 218 passed（隔离库 `interview_agent_wb_p12a_20261111`，Alembic 0026）。真实模型仅在本轮 Live 批次内调用。
+
+**未完成 / 新增问题（事实）**
+
+- 未跑满 20 题：650k 单场预算按实测每答 ≈31.6k 只够 18 题；第 19、20 题未提问。
+- Coach 未生成报告：真实调用 68,248 Token 被 `COACH_COMPUTED_NUMBER` 误判（"至少一次"），重试分别被 `CAPTURE_GUARD` 与 `MODEL_USER_QUOTA` 拦住。详见 docs/83 §5.3。
+- 三个新 P0：思考模式 Evaluation 与 3000 输出上限不匹配（3k/8k 均截断，12k 才通过）；Coach 200KB 输入上限使长场无法进入；数字围栏误杀技术惯用语。
+- P1：`structured_output_failed` 无授权修复时不可恢复（需受控重采样）；采集围栏在准入后中断会留下 UNKNOWN 计费（本批 291,808 Token）；`router.py` 仍丢弃 `thinking_type`。
+- 本轮禁止改口径：未放宽任何校验规则、未改生产配置、未在运行中改库、未重开会话刷成功率。
+
+**下一轮入口**
+
+1. 修 Coach 两项（输入上限策略 + 数字围栏），再补一次 Coach 真实重跑（需额度）。
+2. 决定 Evaluation 思考模式与输出上限的生产策略（配置或路由层），一并处理 `router.py` 丢弃 `thinking_type`。
+3. `structured_output_failed` 的受控一次重采样。
+4. 预算/题量匹配：20 题需 ≥700k，或把 `question_count` 与预算绑定。
