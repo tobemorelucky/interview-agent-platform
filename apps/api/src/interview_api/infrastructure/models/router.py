@@ -69,11 +69,16 @@ def _configured_router(routes: dict[str, ModelProvider], *, concurrency: int) ->
 
 def _chat_provider(*, base_url: str, api_key: str, model: str, timeout_seconds: float,
                    max_output_tokens: int, thinking_type: str | None) -> CompatibleModelProvider:
+    # Reasoning tokens are drawn from the same completion budget, so an enabled
+    # role needs room for both; disabled roles keep their configured cap.
+    if thinking_type == "enabled":
+        max_output_tokens = max(max_output_tokens, settings.thinking_output_tokens)
     limits = dict(timeout_seconds=timeout_seconds, max_output_tokens=max_output_tokens)
     if connection := modelscope_connection():
-        # Don't send a vendor-specific thinking parameter without a verified
-        # contract for this hosted deployment. JSON validation remains unchanged.
-        return ModelScopeModelProvider(**connection, **limits)
+        # The hosted deployment accepts the same role-level thinking parameter as
+        # the compatible provider (verified in the docs/80 and docs/82 batches);
+        # dropping it here silently changed the request the role was configured for.
+        return ModelScopeModelProvider(**connection, thinking_type=thinking_type, **limits)
     return CompatibleModelProvider(base_url=base_url, api_key=api_key, model=model,
                                    thinking_type=thinking_type, **limits)
 

@@ -171,6 +171,11 @@ class Settings(BaseSettings):
     interview_model_api_key: str = ""
     interview_model_timeout_seconds: float = 60.0
     interview_model_max_output_tokens: int = 3000
+    # Reasoning and the JSON answer share one completion budget. When a role has
+    # thinking enabled, its output cap is raised to at least this value; roles with
+    # thinking disabled keep their own cap (a 3000 cap spent entirely on reasoning
+    # produced an empty evaluation in the round-4 live batch).
+    thinking_output_tokens: int = 12000
     interview_provider_concurrency: int = 2
     interview_max_rounds: int = 40
     interview_max_duration_seconds: int = 7200
