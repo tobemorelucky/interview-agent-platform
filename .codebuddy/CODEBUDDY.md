@@ -111,7 +111,7 @@
 
 ### 交接区（每轮结束更新）
 
-- 当前 HEAD：`b37103e`（第五轮文档）；业务修复见 `70da7e6`（Coach）、`67a39b1`（角色推理）
+- 当前 HEAD：`50198be`（第六轮文档）；业务修复见 `e45386f`（一次性断言）、`70da7e6`（Coach）、`67a39b1`（角色推理）
 - 工作区：干净（本轮收尾时核实）
 - 下一轮入口：见「轮次记录」最后一轮
 
@@ -253,3 +253,41 @@
 **`.workbuddy/`（事实）**
 
 - 只有一个 4KB 的 `memory/2026-11-11.md`，是工具侧工作区记忆摘要，与本文重复、无敏感内容；未删除、未提交、未改 `.gitignore`。后续只写指针，不写规范；如需消除，可在设置里关闭工作区记忆或把它加入 `.gitignore`（需你/Codex 决定）。
+
+### 2026-11-11 · 第六轮（18 条归档评价的真实长场 Coach + 定向 Evaluation）
+
+**提交**
+
+| Hash | 内容 |
+|---|---|
+| `e45386f` | `fix(workbuddy): check a one-time claim about this session against the count` — 2 文件 |
+| `50198be` | `docs(workbuddy): record the long-session coach reached live, and the token accounting` — docs/85 新建、docs/84 追加更正 |
+
+**已完成（事实）**
+
+- 数字校验补漏：会话作用域内的 `一次`（本场/这场/全场/本次/一共/合计… 或 `只…了`）不再当惯用语，改走服务端计数白名单；`至少一次投递` 等仍放行。专项 23 passed。
+- 归档 Evaluation Token 口径核实：`max_tokens` 是 completion 上限，推理与正文共用；`reasoning_tokens` 在 `completion_tokens_details.reasoning_tokens` 且计入 completion。docs/84 的错误数字已追加更正（10 号请求是 8,196/6,880，不是 11,879）。
+- 18 轮数据复制：`pg_dump` 只读快照 → `pg_restore` 到 `interview_agent_wb_coach_live2_20261111`（Alembic 0026）；evaluations/questions/sessions 1–3 逐表 md5 与源库一致，源库未写入。
+- 真实 Coach（1 HTTP / 30,661 Token / 46.8 s）：请求体 `thinking={"type":"enabled"}`、`max_tokens=12000`；输入 87,342 字节（旧 223,769）、输入 Token 22,303（旧 59,798）；`COACH_EVIDENCE_V1`，删减项在 `evidence_projection.omitted` 登记。
+- Report 1：`COMPLETED`、`is_current=true`、`SUMMARY_COACH_AGENT`、modelscope，attempt 5（前 4 次失败记录保留）；5 优势 / 6 弱项 / 3 重复问题 / 5 对齐 / 5 建议 / 6 练习 / 3 记忆提案，全部引用 1–18 的正式评价；逐条与第 11/12、17/18、5/6、14/15 轮对照一致，无编造数字或候选人事实。
+- 下一场 session 4 的 `MemoryGuidedPlan`：3 条，引用 `evaluation:10–18`，`refs_resolve=true`。
+- Evaluation 探针（2 HTTP）：同一归档输入（第四轮请求 9） enabled+12000 → 合法评价，五维与归档 id=3 完全一致、同样的 2 个 gap；disabled+12000 → 4 条引用超上限 3，Schema 不合法（服务端会拒绝，不落分数）。**只有 1 对样本，不作质量结论。**
+- 全批 **3 HTTP / 52,660 Token**（上限 8 / 220k），0 Repair、0 重试、0 非 200；3 条响应各精确回放 2 次，账本 known=charged。
+- 离线回归 264 passed / 0 failed / 0 skipped（隔离库 `interview_agent_wb_r6_20261111`，Alembic 0026）。
+
+**失败现场（保留，未当成功）**
+
+- 第一次尝试（`.runtime/acceptance/wb_coach_attempt1_20261111/`，库 `interview_agent_wb_coach_live_20261111`）0 次 HTTP：采集作用域漏 `category` → `capture.request` 抛 `KeyError` → provider 兜底映射成 `model_request_failed`；准入留 `UNKNOWN/105,103`。夹具已修，产品错误映射**未改**（记录为待评估）。
+
+**未验证 / 遗留（事实）**
+
+- 生产默认 `interview_coach_thinking=disabled` + 6,000 输出：本轮用 enabled+12000，默认组合未验证。
+- Evaluation 思考/非思考质量差异：1 对样本，不结论。
+- 20 轮 Live 仍未跑（第 19、20 题未提问）。
+- 发送围栏 P1 仍在；`KeyError`→`model_request_failed` 映射建议单独评估；`docs/README.md` 索引仍停在 70。
+
+**下一轮入口**
+
+1. 决定 Coach / Evaluation 的思考模式与输出上限生产默认值（配置决策）。
+2. 若要做 20 轮 Live：单场预算 ≥700k，并先解决 Coach 输入在 30 轮规模的字节增长。
+3. 发送围栏（send-intent + provider request id）与错误码分类。
