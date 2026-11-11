@@ -21,8 +21,12 @@ def conflict(message="会话或题目已变化，请刷新后重试"):
 
 
 # Reasons the service may end an adaptive session when no next question fits.
-# BUDGET_LIMIT keeps its historical meaning (token budget / planned question count).
-TERMINAL_REASONS = ("BUDGET_LIMIT", "DURATION_LIMIT")
+# BUDGET_LIMIT is only accepted for rows/paths written before the split; new
+# sessions always carry the specific stop reason below.
+TERMINAL_REASONS = ("BUDGET_LIMIT", "TOKEN_LIMIT", "DURATION_LIMIT")
+# Deterministic stop causes, in classification order. Finishing the planned
+# question count is normal completion, so it wins over any budget also spent.
+STOP_REASONS = ("QUESTION_COUNT_REACHED", "ROUND_LIMIT", "TOKEN_LIMIT", "DURATION_LIMIT")
 
 
 def question_data(q, budget):
@@ -158,10 +162,30 @@ class SessionController:
         return sum(q.question_kind in ("FOLLOW_UP", "DEEP_DIVE") and root_id(q) == root for q in questions)
 
     @staticmethod
+    def stop_reason(context, questions, *, rounds, tokens, started_at):
+        """The single deterministic stop test, and the reason it stopped.
+
+        Order is the classification order: the planned question count is the
+        normal end of an interview, so it is reported as completion rather than
+        as an early budget stop even when a budget happens to be spent too.
+        """
+        budgets = context["budgets"]
+        if len(questions) >= budgets["question_count"]:
+            return "QUESTION_COUNT_REACHED"
+        if rounds >= budgets["max_rounds"]:
+            return "ROUND_LIMIT"
+        if tokens >= budgets["max_model_tokens"]:
+            return "TOKEN_LIMIT"
+        if started_at:
+            elapsed = (datetime.now(timezone.utc) - started_at).total_seconds()
+            if elapsed >= budgets["max_duration_seconds"]:
+                return "DURATION_LIMIT"
+        return None
+
+    @staticmethod
     def choose_action(context, questions, active, recommendation, *, rounds, tokens, started_at, evaluation=None):
         budgets = context["budgets"]
-        elapsed = (datetime.now(timezone.utc) - started_at).total_seconds() if started_at else 0
-        if len(questions) >= budgets["question_count"] or rounds >= budgets["max_rounds"] or tokens >= budgets["max_model_tokens"] or elapsed >= budgets["max_duration_seconds"]:
+        if SessionController.stop_reason(context, questions, rounds=rounds, tokens=tokens, started_at=started_at):
             return "COMPLETE"
         recommendation = style_recommendation(context, recommendation, evaluation)
         count = SessionController.follow_up_consumption(questions, active)
@@ -334,8 +358,9 @@ class SessionController:
             resolved = resolve_observations(artifact, base_payload)
             projected = apply_observations(knowledge_state(session.interview_plan_json), resolved,
                 question_id=q.id, answer_id=answer_id, evaluation_id=None)
-            exhausted = self.choose_action(context, questions, q, "NEXT", rounds=session.turn_count,
-                tokens=tokens, started_at=session.started_at) == "COMPLETE"
+            stop = self.stop_reason(context, questions, rounds=session.turn_count,
+                tokens=tokens, started_at=session.started_at)
+            exhausted = stop is not None
             decision_payload = planning_payload(context, questions, q, session.interview_plan_json,
                 answer=message.content, answer_id=answer_id, evaluation=artifact, evaluation_run_id=evaluation.run_id)
             terminal = exhausted or all_goals_demonstrated(context, projected) or not decision_payload["adaptive"]["choices"]
@@ -396,7 +421,7 @@ class SessionController:
             if adaptive:
                 # Build a new dict: complete() stores the same object it returns,
                 # so mutating it in place is invisible to the ORM's change check.
-                summary = {**summary, "completion_reason": (terminal_reason or ("BUDGET_LIMIT" if exhausted else
+                summary = {**summary, "completion_reason": (terminal_reason or stop or (
                     "BLUEPRINT_COVERED" if all_goals_demonstrated(context, projected) else "NO_LEGAL_TARGET_WITHIN_POLICY"))}
                 if terminal_detail:
                     # Stable sub-code so reports/UI can tell "no next question could

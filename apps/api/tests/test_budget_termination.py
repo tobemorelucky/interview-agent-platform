@@ -134,7 +134,7 @@ def test_valid_evaluation_commits_and_session_ends_on_next_question_budget(datab
 
         detail = await core.detail(sid, uid)
         assert detail["status"] == "COMPLETED" and detail["active_question_id"] is None
-        assert detail["completion_json"]["completion_reason"] == "BUDGET_LIMIT"
+        assert detail["completion_json"]["completion_reason"] == "TOKEN_LIMIT"
         assert detail["completion_json"]["completion_detail"] == "NEXT_QUESTION_RESERVATION"
         assert detail["completion_json"]["answered_count"] == 1
         assert detail["completion_json"]["evaluated_count"] == 1
@@ -402,7 +402,7 @@ def test_client_payload_has_no_way_to_request_early_termination():
 
 
 def test_planned_question_count_completion_still_persists_its_reason(database_url, monkeypatch):
-    """The pre-existing exhaustion path must keep working, and its reason must persist."""
+    """Finishing the planned question count is normal completion, not a budget stop."""
     monkeypatch.setattr(settings, "interview_max_model_tokens", BUDGET)
 
     async def run(factory):
@@ -412,7 +412,7 @@ def test_planned_question_count_completion_still_persists_its_reason(database_ur
 
         detail = await core.detail(sid, uid)
         assert detail["status"] == "COMPLETED"
-        assert detail["completion_json"]["completion_reason"] == "BUDGET_LIMIT"
+        assert detail["completion_json"]["completion_reason"] == "QUESTION_COUNT_REACHED"
         assert "completion_detail" not in detail["completion_json"]
         assert [row[0] for row in events] == ["evaluation", "complete", "done"]
         assert len(await committed_evaluations(factory, sid)) == 1
@@ -438,7 +438,7 @@ def test_coach_receives_the_committed_evaluation_and_the_termination_reason(data
 
         payload = coach.requests[-1]
         completion = payload["session_completion"]
-        assert completion["completion_reason"] == "BUDGET_LIMIT"
+        assert completion["completion_reason"] == "TOKEN_LIMIT"
         assert completion["completion_detail"] == "NEXT_QUESTION_RESERVATION"
         assert completion["early_terminated"] is True
         assert completion["evaluated_count"] == 1 and completion["question_budget"] == 3

@@ -328,7 +328,7 @@ class MockInterviewService:
                 session, _, _, _, _ = await self.read_state(sid, uid)
                 refused = (session.interview_plan_json or {}).get("budget_exhausted_reason")
                 if refused == "TOKENS":
-                    terminal_detail, terminal_reason = "NEXT_QUESTION_RESERVATION", "BUDGET_LIMIT"
+                    terminal_detail, terminal_reason = "NEXT_QUESTION_RESERVATION", "TOKEN_LIMIT"
                 elif refused == "DURATION":
                     terminal_detail, terminal_reason = "NEXT_QUESTION_DURATION", "DURATION_LIMIT"
                 else:
