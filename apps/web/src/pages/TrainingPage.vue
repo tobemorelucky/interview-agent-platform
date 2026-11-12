@@ -2,39 +2,64 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import client from '../api/client'
-import { getInterviewTargets, getInterviewerOptions, startInterview, type InterviewTarget } from '../api/interview'
+import { getInterviewTargets, getInterviewerOptions, getSession, startInterview, type InterviewTarget } from '../api/interview'
 import { trainingBoard, type TrainingBoard, type TrainingMode } from '../api/training'
+import { listTargets } from '../api/job-target'
+import type { JobTarget } from '../types/job-target'
 import type { InterviewerOptions } from '../types/interview'
 import { capabilityLabels, capabilityReasons } from '../types/capability-memory'
 import { publicName } from '../i18n/zh-CN'
 const route=useRoute(), router=useRouter()
 const jobs=ref<InterviewTarget[]>([]), options=ref<InterviewerOptions|null>(null)
+const privateTargets=ref<JobTarget[]>([]), privateTargetId=ref('')
 const jobId=ref(''), skill=ref(''), round=ref('technical_screen'), style=ref('standard'), count=ref(4)
 const mode=ref<TrainingMode>('FULL'), goal=ref(''), board=ref<TrainingBoard|null>(null)
 const loading=ref(false), stage=ref(''), error=ref(''), saved=ref<number|null>(null)
+const needsProfile=ref(false)
 const manualSkill=ref(false)
 let sequence=0
 const job=computed(()=>jobs.value.find(j=>String(j.job_id)===jobId.value))
+const privateTarget=computed(()=>privateTargets.value.find(t=>String(t.id)===privateTargetId.value))
+const hasSource=computed(()=>!!(privateTargetId.value||jobId.value))
 const available=computed(()=>board.value?.targets.filter(t=>t.available_modes.includes(mode.value))||[])
 function selectTarget(id:string, selected:TrainingMode){mode.value=selected;goal.value=id}
 const reason=(tags:string[])=>tags.map(t=>capabilityReasons[t]||'结合新的岗位场景继续验证').join('；')
-function request(){return {company_id:job.value?.company_id,job_id:job.value?.job_id,interviewer_skill_id:skill.value,
-  adaptive_interview:true,interview_round:round.value,interviewer_style:style.value,question_count:count.value}}
+function request(){
+  // Exactly one job source; the server re-checks ownership for private ids.
+  const source=privateTargetId.value
+    ? {job_target_id:Number(privateTargetId.value)}
+    : {company_id:job.value?.company_id,job_id:job.value?.job_id}
+  return {...source,interviewer_skill_id:skill.value,
+    adaptive_interview:true,interview_round:round.value,interviewer_style:style.value,question_count:count.value}
+}
 async function load(){
-  const current=++sequence; board.value=null; error.value=''
-  if(!job.value||!skill.value){loading.value=false;return}
+  const current=++sequence; board.value=null; error.value=''; needsProfile.value=false
+  if(!hasSource.value||!skill.value){loading.value=false;return}
   loading.value=true
   try { const result=await trainingBoard(request()); if(current===sequence)board.value=result }
-  catch(e){if(current===sequence)error.value=e instanceof Error?e.message:'训练目标读取失败，请重试'}
+  catch(e){if(current===sequence){
+    error.value=e instanceof Error?e.message:'训练目标读取失败，请重试'
+    // A missing profile is actionable: point at the resume upload instead of
+    // leaving the user on a page that can never load.
+    needsProfile.value=(e as {code?:string}).code==='PROFILE_REQUIRED'
+  }}
   finally{if(current===sequence)loading.value=false}
 }
 function chooseJob(){
+  if(jobId.value)privateTargetId.value=''
   if(!manualSkill.value)skill.value=job.value?.interviewer_skill_recommendation?.recommended_skill_id||''
   goal.value=''; void load()
 }
+function choosePrivateTarget(){
+  if(privateTargetId.value)jobId.value=''
+  // A private JD has no public job to inherit a Skill from; the user picks one.
+  goal.value=''; void load()
+}
+watch(privateTargetId,choosePrivateTarget)
+watch(jobId,chooseJob)
 async function begin(){
   error.value=''; saved.value=null
-  if(!job.value||!skill.value||!board.value?.targets.length||(mode.value!=='FULL'&&!goal.value))return
+  if(!hasSource.value||!skill.value||!board.value?.targets.length||(mode.value!=='FULL'&&!goal.value))return
   const body={...request(),training_mode:mode.value,training_knowledge_id:mode.value==='FULL'?null:goal.value}
   const signature=JSON.stringify(body)
   let pending: {signature:string;key:string}|null=null
@@ -55,9 +80,26 @@ watch(mode,()=>{if(!available.value.some(t=>t.knowledge_id===goal.value))goal.va
 onMounted(async()=>{
   loading.value=true
   try{
-    const [targets,catalog]=await Promise.all([getInterviewTargets(),getInterviewerOptions()]);jobs.value=targets;options.value=catalog
-    jobId.value=String(route.query.job_id||targets[0]?.job_id||'')
-    skill.value=String(route.query.recommended_skill_id||job.value?.interviewer_skill_recommendation?.recommended_skill_id||'')
+    const [targets,catalog,privateList]=await Promise.all([
+      getInterviewTargets(),getInterviewerOptions(),listTargets().catch(()=>[] as JobTarget[])
+    ])
+    jobs.value=targets; options.value=catalog
+    privateTargets.value=privateList.filter(t=>t.parse_status==='CONFIRMED')
+    // From a report: read the frozen private target and Skill from that session,
+    // never from a mutable JD that may have been edited afterwards.
+    let privateId=String(route.query.job_target_id||''), frozenSkill=''
+    const sessionId=Number(route.query.session_id||0)
+    if(!privateId&&sessionId){
+      const detail=await getSession(sessionId) as unknown as {context_snapshot?:{
+        job_target?:{id?:number};interviewer_config?:{skill?:{id?:string}}}}
+      privateId=String(detail.context_snapshot?.job_target?.id||'')
+      frozenSkill=detail.context_snapshot?.interviewer_config?.skill?.id||''
+    }
+    manualSkill.value=!!(route.query.recommended_skill_id||frozenSkill)
+    if(privateId&&privateTargets.value.some(t=>String(t.id)===privateId))privateTargetId.value=privateId
+    else jobId.value=String(route.query.job_id||targets[0]?.job_id||'')
+    skill.value=String(route.query.recommended_skill_id||frozenSkill||
+      (privateTargetId.value?'':job.value?.interviewer_skill_recommendation?.recommended_skill_id||''))
     await load()
     const intended=String(route.query.mode||'FULL')
     if(['FULL','WEAKNESS','RECHECK'].includes(intended))mode.value=intended as TrainingMode
@@ -70,13 +112,17 @@ onMounted(async()=>{
 <template>
   <main class="training-page">
     <header><h1>个性化面试训练</h1><p>选定目标岗位，先看哪些知识需要练习，再决定如何开始。</p></header>
-    <p v-if="error" role="alert">{{ error }} <button @click="load">重试读取</button></p>
+    <p v-if="error" role="alert">{{ error }} <button @click="load">重试读取</button>
+      <router-link v-if="needsProfile" to="/resumes">去上传简历</router-link></p>
     <section class="setup" aria-label="训练配置">
-      <label>目标岗位<select v-model="jobId" @change="chooseJob"><option value="">请选择已发布岗位</option><option v-for="j in jobs" :key="j.job_id" :value="String(j.job_id)">{{ publicName(j.company_name) }} · {{ publicName(j.job_title) }}</option></select></label>
+      <label>目标岗位<select v-model="jobId"><option value="">请选择已发布岗位</option><option v-for="j in jobs" :key="j.job_id" :value="String(j.job_id)">{{ publicName(j.company_name) }} · {{ publicName(j.job_title) }}</option></select></label>
+      <label v-if="privateTargets.length">我的岗位（自己提供的 JD）<select v-model="privateTargetId"><option value="">不使用私人岗位</option><option v-for="t in privateTargets" :key="t.id" :value="String(t.id)">{{ t.company_name }} · {{ t.job_title }} （第 {{ t.version }} 版）</option></select></label>
       <label>专业方向<select v-model="skill" @change="manualSkill=true"><option value="">请选择专业 Skill</option><option v-for="s in options?.skills" :key="s.id" :value="s.id">{{ s.label }}</option></select></label>
       <label>面试轮次<select v-model="round"><option v-for="r in options?.rounds" :key="r.id" :value="r.id">{{ r.label }}</option></select></label>
       <label>面试官风格<select v-model="style"><option v-for="s in options?.styles" :key="s.id" :value="s.id">{{ s.label }}</option></select></label>
     </section>
+    <p v-if="privateTarget" class="provenance" role="note">当前目标来自你自己提供的 JD（{{ privateTarget.company_name }} · {{ privateTarget.job_title }}，第 {{ privateTarget.version }} 版），{{ privateTarget.source_label }}。训练只使用该目标已确认的岗位要求，以及你在上方选择的平台专业 Skill；它不会进入公开招聘岗位或公共题库。</p>
+    <p v-if="privateTarget && !skill" role="note">请先在上方「专业方向」里选择一个已注册 Skill；平台只会在你选定的 Skill 与你确认的岗位要求范围内生成训练目标。</p>
     <p v-if="loading" role="status">正在核对岗位范围和有效历史表现…</p>
     <section v-if="board" class="targets"><h2>这个岗位适合练什么</h2>
       <p v-if="!board.targets.length">当前岗位与专业规则没有合法考察目标，请更换专业方向，暂不创建训练任务。</p>
@@ -98,7 +144,7 @@ onMounted(async()=>{
       <p v-if="stage" role="status">{{stage}}</p>
       <router-link v-if="saved&&error" :to="`/interview?session_id=${saved}`">查看已创建的训练并安全恢复</router-link>
     </section>
-    <p v-if="!loading&&!jobs.length">当前没有可用的已发布岗位，请等待管理员审核资料。</p>
+    <p v-if="!loading&&!jobs.length&&!privateTargets.length">当前没有可用的已发布岗位，也没有已确认的私人岗位。请先在「我的岗位」里粘贴 JD 并确认，或等待管理员审核资料。</p>
     <router-link to="/memory">查看全部成长记录</router-link>
   </main>
 </template>

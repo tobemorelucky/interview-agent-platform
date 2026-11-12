@@ -6,11 +6,16 @@ export interface TrainingTarget {
   observations: { session_id: number; assisted: boolean; state: string; observed_at: string }[]
 }
 export interface TrainingBoard {
-  company_id: number; job_id: number; company_name: string; job_title: string;
-  targets: TrainingTarget[]; coverage: { reviewed_question_count: number; fallback: string }
+  /** A private JD has no public company/job ids; exactly one source is set. */
+  company_id: number | null; job_id: number | null; job_target_id: number | null;
+  source_label: string | null;
+  company_name: string; job_title: string; skill_id?: string;
+  targets: TrainingTarget[]; coverage: { reviewed_question_count: number; fallback: string };
+  recommendations?: { knowledge_id: string }[]
 }
 export interface TrainingFeedback {
-  available: boolean; status: string; message?: string; company_id?: number; job_id?: number; skill_id?: string;
+  available: boolean; status: string; message?: string;
+  company_id?: number | null; job_id?: number | null; job_target_id?: number | null; skill_id?: string;
   targets: { knowledge_id: string; label: string; before_state: string; after_state: string;
     effective_evaluations: number; independent_evaluations: number; conflict_status: string; result: string; next_action: string }[];
   questions?: { question_id: number; question: string; strategy: string; knowledge_id: string }[]

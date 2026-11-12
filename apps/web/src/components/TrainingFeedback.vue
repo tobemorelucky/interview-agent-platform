@@ -19,7 +19,8 @@ const conflict:Record<string,string>={OPEN:'冲突仍未解决',RESOLVED:'已有
       </section>
       <details v-if="data.questions?.length"><summary>查看实际考察过程</summary><p v-for="q in data.questions" :key="q.question_id">{{q.strategy==='NEXT'?'切换 / 开场':q.strategy==='DEEP_DIVE'?'技术深挖':q.strategy==='REQUEST_EXAMPLE'?'要求具体例子':'针对性追问'}}：{{q.question}}</p></details>
       <details v-if="data.memory_usage?.length"><summary>记忆计划与实际考察说明</summary><p>准备输入不等于模型一定采纳；选择相关目标也不证明因果收益。无法核对的阶段保留未知。</p><p v-for="(u,i) in data.memory_usage" :key="u.run_id">第 {{i+1}} 次出题：{{u.model_input==='PREPARED'?'已准备包含冻结计划的模型输入':'输入记录未知'}}；{{u.selection==='RELATED_TARGET_SELECTED'?'选择了计划相关目标':u.selection==='OTHER_TARGET_SELECTED'?'选择了其他合法目标':'目标选择未知'}}；{{u.controller_verdict==='ACCEPTED'?'已通过会话校验并提交':u.controller_verdict==='REJECTED'?'被会话校验拒绝':u.controller_verdict==='NOT_REACHED'?'未进入会话提交':'提交裁决未知'}}。</p></details>
-      <router-link v-if="data.job_id" :to="{path:'/training',query:{company_id:data.company_id,job_id:data.job_id,recommended_skill_id:data.skill_id}}">根据当前状态选择下一步训练</router-link>
+      <router-link v-if="data.job_target_id" :to="{path:'/training',query:{job_target_id:data.job_target_id,recommended_skill_id:data.skill_id}}">根据当前状态继续本私人岗位训练</router-link>
+      <router-link v-else-if="data.job_id" :to="{path:'/training',query:{company_id:data.company_id,job_id:data.job_id,recommended_skill_id:data.skill_id}}">根据当前状态选择下一步训练</router-link>
     </template>
   </article>
 </template>

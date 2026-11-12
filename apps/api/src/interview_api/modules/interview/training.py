@@ -150,8 +150,11 @@ class TrainingService:
                     controller_verdict='ACCEPTED' if run.id in accepted else 'REJECTED' if rejected else
                         'NOT_REACHED' if run.status=='FAILED' else 'UNKNOWN',
                     error=run.error_message or (rejected or {}).get('error')))
-        return dict(available=True,status=detail['status'],job_id=detail['context_snapshot']['job_id'],
-            company_id=detail['context_snapshot']['company_id'],skill_id=detail['context_snapshot']['interviewer_config']['skill']['id'],
+        snapshot = detail['context_snapshot']
+        return dict(available=True,status=detail['status'],job_id=snapshot['job_id'],
+            company_id=snapshot['company_id'],
+            job_target_id=(snapshot.get('job_target') or {}).get('id'),
+            skill_id=snapshot['interviewer_config']['skill']['id'],
             memory_usage=usage,
             **(stored or dict(mode=training['mode'],targets=[],message='训练尚未完成，暂不生成成长结论')))
 
@@ -162,7 +165,12 @@ class TrainingService:
             try:
                 context, _, _ = await build_context(db, user_id, request)
                 states = await CapabilityMemoryService(db).list(user_id)
+                # A private JD has no public company/job ids. Keep the same
+                # response shape and add its own reference so the page can
+                # offer training without inventing a public job.
                 return dict(company_id=context['company_id'], job_id=context['job_id'],
+                    job_target_id=(context.get('job_target') or {}).get('id'),
+                    source_label=("用户提供（未经企业核实）" if context.get('job_target') else None),
                     company_name=context['company_name'], job_title=context['job_title'],
                     skill_id=context['interviewer_config']['skill']['id'],
                     targets=target_views(context, states),
