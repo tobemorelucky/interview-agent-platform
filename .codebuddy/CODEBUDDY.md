@@ -66,15 +66,18 @@
 
 - Coach + 下一场 MemoryGuidedPlan 依赖 `session COMPLETED`（`interview_report/service.py:47`、`memory/capability_service.py:44`），因此被 P0 阻断。
 - ~~ModelScope 路由下按角色选推理模式失效~~ **已修复（`67a39b1`）**：`_chat_provider` 现在透传 `thinking_type`，且 thinking=enabled 的角色输出上限自动抬到 `settings.thinking_output_tokens`（12000）；禁用角色保持不变。
-- 生产入口缺跨进程发送围栏：`ModelAdmission` 无 send-intent / provider request id，`governed_call` 每次新 `uuid4` call_key。
+- ~~生产入口缺跨进程发送围栏~~ **答题路径已围栏（`2273cb7`）**：`settle_model_call` 把「已离开进程但没有 usage 回执」的调用按 `answer_id` 记入 `interview_plan_json.unknown_model_calls`；租约过期后 `prepare_answer` 抛 `INTERVIEW_OUTCOME_UNKNOWN`（409）且不发 HTTP，只有 `confirm_unknown_retry=true` 才放行一次并入 `unknown_model_retries`。**仍未覆盖**：`ModelAdmission` 无 `business_key` / provider request id，Celery 重投递路径未验证（推断未围栏）。
+- ~~`KeyError`→`model_request_failed`~~ **已修（`804d385`）**：provider 把「发送」与「解析」分段；连接未建立或 `client.post` 抛非 httpx 异常 → `model_request_not_sent`（`request_sent=False`，账本 SETTLED/0）；收到响应后的问题才记 `model_request_failed`。三类语义见 `docs/86` §2。
 - 题面主题仍靠正则词典（长尾技术词可能保守误判）。
 - 非自适应 `core_service.answer` 存在同一预算死路（本轮只记录，不扩大范围）。
 
 ### P2
 
 - `docs/README.md` 索引停在 70。
+- 5 个既有断言已陈旧（`test_modelscope_provider` 4 例断言请求体无 `thinking`、`test_product_polish` 1 例断言统一模型名），在有 `.env` 的环境必失败；未纳入历史回归集，待单独一次 `test(workbuddy)` 修正。
+- `test_08/test_09` 迁移用例只能在空库跑；在有数据的库上返回非零（不损坏库）。
 - 测试隔离只靠人工 `M1_TEST_DATABASE_URL`，`conftest.py` 无库名白名单，测试写入不清理。
-- 前端不暴露 Harness 开关、不展示提前结束原因。
+- 前端不暴露 Harness 开关、不展示提前结束原因、未暴露 `confirm_unknown_retry`。
 - docs/71 规划的 `apps/api/scripts/evals/` 尚未实现。
 
 ## 5. WorkBuddy 专属协作规则
@@ -106,14 +109,15 @@
 - 部署环境真实 `interview_max_model_tokens`（本轮未读 `.env`）。
 - 与 GitHub `origin` 的同步状态（未 fetch）。
 - Harness ON 在长场中的工具收益、Coach 在真实长场自然结束后的表现（均无 Live 证据）。
+- Celery worker 重投递是否被 `ModelAdmission` 拦住（未测）。
 
 ---
 
 ### 交接区（每轮结束更新）
 
-- 当前 HEAD：`50198be`（第六轮文档）；业务修复见 `e45386f`（一次性断言）、`70da7e6`（Coach）、`67a39b1`（角色推理）
-- 工作区：干净（本轮收尾时核实）
-- 下一轮入口：见「轮次记录」最后一轮
+- 当前 HEAD：`25f18fd`（第七轮文档）；业务修复见 `804d385`（发送前失败分类）、`2273cb7`（答题重试围栏）
+- 工作区：干净（仅 `.workbuddy/` 未跟踪）
+- 下一轮入口：见「轮次记录」最后一轮（私有 JD Workbench V1，需先批准 1 张新表迁移）
 
 ## 轮次记录
 
@@ -291,3 +295,47 @@
 1. 决定 Coach / Evaluation 的思考模式与输出上限生产默认值（配置决策）。
 2. 若要做 20 轮 Live：单场预算 ≥700k，并先解决 Coach 输入在 30 轮规模的字节增长。
 3. 发送围栏（send-intent + provider request id）与错误码分类。
+
+### 2026-11-12 · 第七轮（请求安全收口 + 产品化路径审查，0 次真实 HTTP）
+
+**提交**
+
+| Hash | 内容 |
+|---|---|
+| `804d385` | `fix(workbuddy): stop reporting a local pre-send failure as a provider fault` — 3 文件 |
+| `2273cb7` | `fix(workbuddy): require an explicit accept before replaying an unknown answer` — 6 文件 |
+| `25f18fd` | `docs(workbuddy): audit the request-safety chain and the self-service path` — `docs/86` 新建 |
+
+**已完成（事实）**
+
+- 根因链复现：httpx request hook 抛 `KeyError` → provider 兜底 `except (…, KeyError, …)` 记 `model_request_failed` → `governed_call` 的 `sent` 已为 True、`usage={}` → `settle` 判 `UNKNOWN` 并按预留全额计费。
+- `_generate` 拆「发送 / 解析」两段：`ConnectError|ConnectTimeout|PoolTimeout` 与 `client.post` 抛出的非 httpx 异常 → `model_request_not_sent` + `request_sent=False` + `usage.total_tokens=0`；读/写超时与传输错误保持 UNKNOWN；收到响应后的信封问题记 `model_request_failed` + `request_sent=True`。
+- `governed_call` 以异常自报的 `request_sent` 优先；已确证未发送走 `settle(…, {"total_tokens": 0})` → `SETTLED / actual=0 / charged=0`（沿用 `test_v13_shared_governance` 的 `before_send` 既有口径），未新增账本状态、未直接改审计字段。
+- 答题围栏：`settle_model_call(request_sent=…, answer_id=…)` 记录 `unknown_model_calls`；`prepare_answer` 在租约过期且存在滞留预留/未知调用时抛 `INTERVIEW_OUTCOME_UNKNOWN`（409，零 HTTP）；`SendMessageRequest.confirm_unknown_retry` 可显式放行一次，写 `unknown_model_retries`；SSE 错误事件带 `requires_confirmation`。
+- 用户路径审查（`docs/86` §5）：注册/登录、简历上传、Job Matching、Evaluation+Coach、Memory 训练为完整实现；**粘贴 JD 与私有岗位完全缺失**；创建 Session 硬依赖 `ACTIVE` 公司/岗位 + `PUBLISHED` JD + requirement + 画像。
+- 私有 JD 方案对比后推荐「新增 1 张 `user_job_targets`」而不是改 `companies/jobs/job_descriptions`（后者要改 4 张公共表与 3 个全局唯一约束，泄露风险靠每处查询自觉）。迁移**未实施**，等批准。
+
+**测试（真实计数）**
+
+- 隔离库 `interview_agent_wb_r7_20261112`（本轮新建，Alembic `0026`，66 表）；Redis 容器本轮启动，收工未停。
+- 专项：`test_request_safety.py` 5 passed；`test_answer_retry_fence.py` 3 passed；与 `test_interview_recovery_performance.py` 合并 16 passed。
+- 全量（排除 `test_0[0-9]_*` 迁移用例）：**721 passed / 5 failed / 1 skipped**（165 s）。
+- 5 failed 全为既有且与本轮无关：4 例 `test_modelscope_provider` 断言 `"thinking" not in body`（`disabled` 现在也会显式发送）、1 例 `test_product_polish` 断言统一模型名（本机 `USE_MODELSCOPE=true`）。
+- `git diff --check` 通过；真实模型 HTTP = 0。
+
+**改变了既有行为（需知悉）**
+
+- 旧行为：租约过期后同一幂等键直接重发一次真实 HTTP。新行为：默认拒绝，需 `confirm_unknown_retry=true`。`test_interview_recovery_performance::test_expired_processing_lease_fences_old_answer_without_duplication` 已按新语义更新，仍保留原意（旧结果不能覆盖已提交答案、只产生 1 条 Answer）。
+
+**未验证 / 遗留（事实）**
+
+- 用户级账本仍无 `business_key` / provider request id，无法与供应商账单对账；worker 重投递路径未测。
+- UNKNOWN 会话只能显式确认或新建，没有管理员对账入口。
+- 私有 JD 的隐私/留存策略、解析失败时的降级体验未设计。
+- 前端未接入 `confirm_unknown_retry`，用户目前只会看到 409 文案。
+
+**下一轮入口**
+
+1. 批准并实施私有 JD Workbench V1：迁移 `0027_user_job_targets`（1 表 + 1 唯一索引），后端 8 个文件、前端 8 个文件，见 `docs/86` §7。
+2. 或先做「用私有目标创建面试」的最小纵切（`job_target` 只读 + `context.py` 分支），把 JD 解析留到下一步。
+3. 顺手可做：修正 5 个陈旧断言（单独 `test(workbuddy)` 提交），避免 CI 绿灯失真。
