@@ -2,6 +2,7 @@
 export const userNavigation = [
   { label: '首页', path: '/dashboard' }, { label: '我的简历', path: '/resumes' },
   { label: '我的画像', path: '/profile' }, { label: '岗位推荐', path: '/jobs/matches' },
+  { label: '我的目标岗位', path: '/jobs/targets' },
   { label: '公共资料', path: '/career' },
   { label: '训练中心', path: '/training' },
   { label: '模拟面试', path: '/interview' }, { label: '面试报告', path: '/interview/reports' },

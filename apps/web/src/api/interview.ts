@@ -22,6 +22,14 @@ export async function createSession(
   return response as unknown as InterviewSession;
 }
 
+export async function createSessionForTarget(
+  jobTargetId: number, questionCount = 20, title?: string, interviewer?: InterviewerSelection
+): Promise<InterviewSession> {
+  // Same endpoint and Controller; the server re-checks ownership and confirmation.
+  const response = await client.post("/interview/sessions", { title, job_target_id: jobTargetId, question_count: questionCount, ...interviewer });
+  return response as unknown as InterviewSession;
+}
+
 export interface InterviewTarget { company_id: number; company_name: string; job_id: number; job_title: string; interviewer_skill_recommendation?: SkillRecommendation }
 export async function getInterviewerOptions(): Promise<InterviewerOptions> {
   return await client.get("/interview/interviewer-options") as unknown as InterviewerOptions;

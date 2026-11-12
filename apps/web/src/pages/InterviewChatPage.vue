@@ -11,6 +11,7 @@ import { displayLabel, publicName, dimensionLabels, userError } from "../i18n/zh
 import { useRoute, useRouter } from "vue-router"
 import {
   createSession,
+  createSessionForTarget,
   listSessions,
   getSession,
   bindResume,
@@ -25,6 +26,8 @@ import {
   type InterviewTarget,
 } from "../api/interview"
 import { uploadResume, getResume as apiGetResume } from "../api/resume"
+import { listTargets } from "../api/job-target"
+import type { JobTarget } from "../types/job-target"
 import { ApiError } from "../api/client"
 import type { InterviewSession, InterviewMessage, InterviewQuestionSummary } from "../types/interview"
 import { sourceLabel, sourceColor } from "../types/interview"
@@ -38,6 +41,9 @@ const sessions = ref<InterviewSession[]>([])
 const targets = ref<InterviewTarget[]>([])
 const targetsLoading = ref(true), sessionsLoading = ref(true)
 const selectedJobId = ref<number | null>(null)
+// Private user-supplied targets are a separate source from published jobs.
+const jobTargets = ref<JobTarget[]>([])
+const selectedTargetId = ref<number | null>(null)
 const createBudget = ref(6)
 const interviewerOptions = ref<InterviewerOptions | null>(null)
 const interviewerOptionsError = ref('')
@@ -54,7 +60,10 @@ const interviewerSelection = computed<InterviewerSelection>(() => ({ ...roundAnd
   design_interview: designInterview.value,
   adaptive_interview: adaptiveInterview.value,
   interviewer_selection_source: skillChoice.value.source || 'USER_SELECTED' }))
-const skillRecommendation = computed(() => targets.value.find(t => t.job_id === selectedJobId.value)?.interviewer_skill_recommendation)
+const skillRecommendation = computed(() => selectedTargetId.value ? undefined
+  : targets.value.find(t => t.job_id === selectedJobId.value)?.interviewer_skill_recommendation)
+watch(selectedJobId, value => { if (value != null) selectedTargetId.value = null })
+watch(selectedTargetId, value => { if (value != null) selectedJobId.value = null })
 const manualSkillMismatch = computed(() => skillChoice.value.source === 'USER_SELECTED' && !!selectedJobId.value &&
   (!skillRecommendation.value?.auto_select || skillRecommendation.value.recommended_skill_id !== skillChoice.value.skill_id))
 watch([skillRecommendation, interviewerOptions], () => {
@@ -259,9 +268,13 @@ async function handleCreateSession() {
   if (creatingSession.value || !interviewerOptions.value || !skillChoice.value.skill_id) return
   creatingSession.value = true
   try {
-    const target = targets.value.find(t => t.job_id === selectedJobId.value)
-    if (!target) { alert("请选择公司和岗位；需先完成候选人画像"); return }
-    const session = await createSession(target.company_id, target.job_id, createBudget.value, undefined, interviewerSelection.value)
+    const session = selectedTargetId.value
+      ? await createSessionForTarget(selectedTargetId.value, createBudget.value, undefined, interviewerSelection.value)
+      : await (async () => {
+          const target = targets.value.find(t => t.job_id === selectedJobId.value)
+          if (!target) throw new ApiError('INVALID_COMPANY_JOB', '请选择已发布岗位或我的目标岗位；需先完成候选人画像')
+          return await createSession(target.company_id, target.job_id, createBudget.value, undefined, interviewerSelection.value)
+        })()
     sessions.value.unshift(session)
     await selectSession(session.id)
     await handleStart()
@@ -760,6 +773,7 @@ onUnmounted(() => {
 getInterviewerOptions().then(data => { interviewerOptions.value = data })
   .catch(() => { interviewerOptionsError.value = '面试官配置读取失败，请刷新后重试。' })
 loadSessions().then(() => { const id = Number(route.query.session_id); if (sessions.value.some(s => s.id === id)) selectSession(id); })
+listTargets().then(data => { jobTargets.value = data }).catch(() => { jobTargets.value = [] })
 getInterviewTargets().then(async data => {
   targets.value = data
   const jobId = Number(entryRoute.query.job_id), companyId = Number(entryRoute.query.company_id)
@@ -771,6 +785,13 @@ getInterviewTargets().then(async data => {
   if (!target) { alert('该岗位当前已关闭或不可用，无法创建新的模拟面试；历史推荐保留。'); return }
   selectedJobId.value = jobId
   // Select the current target, then let the user choose interviewer configuration.
+}).then(() => {
+  const targetId = Number(entryRoute.query.job_target_id)
+  if (!targetId) return
+  entryRouter.replace({ path: '/interview' })
+  const picked = jobTargets.value.find(t => t.id === targetId && t.parse_status === 'CONFIRMED')
+  if (!picked) { alert('该目标岗位不存在、未确认或不属于当前账号，请重新选择。'); return }
+  selectedTargetId.value = targetId
 }).catch(e => { pageError.value = e instanceof Error ? e.message : "岗位读取失败，请重试" }).finally(() => { targetsLoading.value = false })
 </script>
 
@@ -782,7 +803,7 @@ getInterviewTargets().then(async data => {
     <aside class="session-sidebar">
       <div class="sidebar-header">
         <h3>面试会话</h3>
-        <button class="btn-new" :disabled="creatingSession || !interviewerOptions || !selectedJobId || !skillChoice.skill_id" @click="handleCreateSession">{{ creatingSession ? '正在创建…' : '+ 新建' }}</button>
+        <button class="btn-new" :disabled="creatingSession || !interviewerOptions || (!selectedJobId && !selectedTargetId) || !skillChoice.skill_id" @click="handleCreateSession">{{ creatingSession ? '正在创建…' : '+ 新建' }}</button>
       </div>
       <div style="padding:12px;display:grid;gap:8px">
         <label>公司 / 岗位
@@ -790,6 +811,18 @@ getInterviewTargets().then(async data => {
             <option :value="null">请选择已发布岗位</option>
             <option v-for="t in targets" :key="t.job_id" :value="t.job_id">{{ publicName(t.company_name) }} · {{ publicName(t.job_title) }}</option>
           </select>
+        </label>
+        <label>我的目标岗位
+          <select v-model="selectedTargetId" aria-label="我的目标岗位" style="width:100%">
+            <option :value="null">不使用（只用已发布岗位）</option>
+            <option v-for="t in jobTargets.filter(t => t.parse_status === 'CONFIRMED')" :key="t.id" :value="t.id">
+              {{ t.company_name }} · {{ t.job_title }}（第 {{ t.version }} 版）
+            </option>
+          </select>
+          <small v-if="!jobTargets.some(t => t.parse_status === 'CONFIRMED')">
+            还没有已确认的目标岗位，可在「我的目标岗位」粘贴 JD 并确认。
+          </small>
+          <small v-else>私人岗位不自动推荐 Skill，请手动选择；来源为用户提供，未经企业核实。</small>
         </label>
         <label>面试轮数（含追问）<input v-model.number="createBudget" type="number" min="1" max="40" style="width:60px"></label>
         <label><input type="checkbox" v-model="designInterview" aria-label="系统设计验证面试"> 系统设计验证面试（限量预约场景）</label>
