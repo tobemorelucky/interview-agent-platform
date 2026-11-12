@@ -75,8 +75,9 @@
 
 - `docs/README.md` 索引停在 70。
 - ~~5 个陈旧断言~~ **已修（`71c8405`，第八轮）**：改为断言「线上 thinking == 角色配置」与「显式选择非 ModelScope 分支」；第九轮全量回归 0 failed。
-- `test_08/test_09` 迁移用例只能在空库跑；在有数据的库上返回非零（不损坏库）。
-- 测试隔离只靠人工 `M1_TEST_DATABASE_URL`，`conftest.py` 无库名白名单，测试写入不清理。
+- `test_08/test_09` 迁移用例只能在空库跑；在有数据的库上返回非零（不损坏库）。本轮确认：10 个迁移用例在专用空库 `interview_agent_v21_wb_r10_20261112` **10/10 通过**；在承载数据的回归库里必然失败（第十轮）。
+- ~~测试隔离只靠人工 `M1_TEST_DATABASE_URL`，`conftest.py` 无库名白名单~~ **已修（`9eb66a8` / `3b99f6c`，第十轮）**：`conftest.py` 加 session 级 autouse 闸（前缀 + 测试后缀 + 黑名单 + 两个环境变量必须一致，否则 `pytest.exit(2)`），`scripts/run-workbuddy-tests.py` 在运行前拒绝生产/E2E/历史 Live 库。**未覆盖**：`delivery.py migrate`、启动脚本、`prepare_v23_demo.py` 仍按 `.env` 行事。
+- 私人 JD 训练的 RECHECK 未验证（需要真正 `CONFLICTED` 的观察）；能力记忆按 `(user, topic)` 聚合，没有岗位维度（第十轮）。
 - 前端不暴露 Harness 开关、不展示提前结束原因、未暴露 `confirm_unknown_retry`。
 - docs/71 规划的 `apps/api/scripts/evals/` 尚未实现。
 
@@ -115,9 +116,9 @@
 
 ### 交接区（每轮结束更新）
 
-- 当前 HEAD：`49d5600`（第九轮文档）；业务见 `6fbbcdd`（启动脚本迁移头）、`aea1748`（简历抽取截断）
-- 工作区：干净（仅 `.workbuddy/` 未跟踪）
-- 下一轮入口：见「轮次记录」最后一轮（真实模型额度本轮已用满 12/12）
+- 当前 HEAD：`1789cca`（第十轮文档）；业务见 `7715ccc`（私人 JD 训练）、`b7d4cb9`（界面如实）、`8354b2a`（归属顺序）、`9eb66a8`（测试库闸）、`3b99f6c`（运行器）
+- 工作区：干净（仅 `.workbuddy/` 未跟踪，按第五轮约定不提交）
+- 下一轮入口：见「轮次记录」最后一轮（第十轮真实模型 HTTP = 0，额度未消耗）
 
 ## 轮次记录
 
@@ -491,3 +492,63 @@ Chrome 真实 UI 操作、12 次真实模型 HTTP。正式库与历史 Live 库�
 1. 先修 `build_context` 归属检查顺序（小改动 + 专项测试，0 模型）。
 2. 若用户再批额度：做一次**带 Capture/Replay 归档**的有界 Live，重点验证 JD 要求驱动出题与编造项拒绝。
 3. 训练中心接入私有目标（需按 `job_target` 分支，属新功能，须单独批准）。
+
+### 2026-11-12 · 第十轮（私人 JD 训练闭环 + 测试库隔离 + 归属顺序，0 次真实 HTTP）
+
+开工 `8354b2a` 之上，工作区有 8 个未提交的改动文件（第十轮中途中断处）。本轮续做并收口。
+真实模型 HTTP = **0**；未使用历史 Live Capture 回放；未迁移；未操作浏览器。
+
+**提交（6 + 1）**
+
+| Hash | 内容 |
+|---|---|
+| `9eb66a8` | `test(workbuddy)`: pytest 拒绝写入 E2E / 生产 / 历史 Live 库 |
+| `8354b2a` | `fix(workbuddy)`: 私人 JD 归属先于其他校验 |
+| `1f2071f` | `fix(workbuddy)`: JD 复用与逐事实证据计数如实汇报 |
+| `7715ccc` | `feat(workbuddy)`: 用已确认的私人 JD 进入训练（+ 4 条新测试） |
+| `b7d4cb9` | `fix(workbuddy)`: 岗位页与报告页不再误报自身状态 |
+| `3b99f6c` | `test(workbuddy)`: 带闸门的隔离测试运行器 |
+| `1789cca` | `docs(workbuddy)`: `docs/89` 十节记录 |
+
+**已完成（事实）**
+
+- **测试库隔离两道闸**：`conftest.py` session 级 autouse 判定（`interview_agent_` 前缀 + `_test/_regression/_mig` 后缀或 `interview_agent_v21_` 豁免 + 黑名单 + `DATABASE_URL == M1_TEST_DATABASE_URL`，否则 `pytest.exit(2)`；9 条离线判定表）；`scripts/run-workbuddy-tests.py` 在运行前拒绝对生产库/E2E 库/历史 Live 库**指向**，建库但从不 drop，只迁移目标库，并把同一 URL 同时给两个环境变量。
+- **归属顺序**：`build_context` 先解析来源与归属（`JOB_SOURCE_CONFLICT` / `JOB_SOURCE_REQUIRED` / 统一 `JOB_TARGET_NOT_FOUND` 404），再查画像；存在性预言机消除，正常用户仍 `PROFILE_REQUIRED`；会话创建与训练入口共用。
+- **私人 JD 训练闭环（无迁移）**：`build_context` 早已支持 `job_target_id` 并写入冻结快照，缺的只是投影与入口。workbench/feedback 增加 `job_target_id` 与 `source_label`，`company_id/job_id` 改为可空；训练页支持私人岗位下拉 + `?job_target_id=` / `?session_id=`（从该场快照解出目标与 Skill，不读可变的 JD），无画像时给上传简历入口。
+- **FULL 已证**：私人 FULL 会话快照冻结 `job_target.version=1`；用户随后改要求并重新确认到 v2，该会话 `context_snapshot` 逐字节不变；`companies/jobs/job_description_versions/job_requirements` 四表计数不变（不产生公共数据）。
+- **WEAKNESS 已证**：全新用户在私人目标下 `available_modes` 全为 `FULL`，直接建 WEAKNESS 被 `TRAINING_TARGET_INVALID`(422) 拒绝；跑完一场私人 FULL 产生 1 条正式评价后，面板出现可用弱项目标，创建成功且 blueprint 收敛到该单一目标。
+- **公开岗位训练无回归**：同一用户公开入口仍 `job_target_id=None`、`source_label=None`、原 `company_id/job_id`。
+
+**测试（真实计数，分列不混合）**
+
+- 全量后端 @ `interview_agent_wb_r10_test_20261112`（0027，67 表）：**757 passed / 10 failed / 1 skipped**（246.95 s）。
+- 10 个 failed 全是 `test_00`–`test_09` 迁移用例：承载数据的库不是空库，且 `test_09` 强制库名前缀 `interview_agent_v21_`。在专用空库 `interview_agent_v21_wb_r10_20261112`：**10 passed / 0 failed**（64.52 s）。**0 个失败落在业务代码上。**
+- 受影响子集（私人训练 + 岗位 + 训练 + 隔离闸）：**31 passed**（27.85 s）；运行器冒烟 13 passed。
+- 前端 `npm run build`（`vue-tsc && vite build`）通过，0 类型错误。
+- `scripts/run-workbuddy-tests.py` 拒绝路径实测：`interview_agent`、`..._r10_e2e_...`、`interview_agent_thinking_long_20261110` 三种名字均被拒。
+
+**数据库（全部名字与用途）**
+
+| 库 | 用途 | 状态 |
+|---|---|---|
+| `interview_agent` | 生产 | 未被任何测试/迁移连接 |
+| `interview_agent_wb_r10_test_20261112` | 后端回归 | 0027 / 67 表 |
+| `interview_agent_v21_wb_r10_20261112` | 迁移用例（空库） | 跑完停在 0027 / 67 表，不能二次跑迁移用例 |
+| `interview_agent_wb_r10_e2e_20261112` | 浏览器验收（预留） | 0027 / 67 表 / `companies=0`，本轮未写入 |
+| 历史 Live 库 | 封存 | 只读 |
+
+**未验证 / 遗留（事实）**
+
+- **未操作浏览器**：私人 JD → 训练 → 报告链路只有构建与读码验证；界面类修改同理。
+- 私人 `RECHECK` 未验证（造不出 `CONFLICTED`）。
+- 闸门未覆盖 `delivery.py migrate`、启动脚本、`prepare_v23_demo.py`。
+- 能力记忆按 `(user, topic)` 聚合，私人与公开训练共用一个根，无法按岗位区分。
+- 私人目标下没有 Skill 推荐接口（后端有 `recommend_for_target`，前端只能手选；页面措辞已按"请你选择"写）。
+- `training_mode` 单独出现（无 `training_request_key`）会绕过 `TrainingService.create` 的幂等。
+
+**下一轮入口**
+
+1. `/training` 的私人链路做一次**真实浏览器**验证（需要前端 + API 起在隔离库；训练首题会触发真实 HTTP，须先批额度或用离线 provider）。
+2. 把库名闸前移到 `delivery.py migrate`。
+3. 请求记录 ↔ 业务审计三向 join 的最小方案（`docs/89` §10.1）：`agent_runs.call_key` + `provider_request_id`、`ModelResponse.request_id`、capture 行写 `call_key`。历史批次不得标成"可精确回放"。
+4. 私人 `RECHECK`：用离线 provider 造两条相反评价，把它从"未验证"变成"有证据"。
