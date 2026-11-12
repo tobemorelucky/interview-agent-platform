@@ -11,8 +11,11 @@ from interview_api.modules.interview.system_design import DesignPlan
 
 class CreateSessionRequest(BaseModel):
     title: str | None = None
-    company_id: int = Field(gt=0)
-    job_id: int = Field(gt=0)
+    # Exactly one source: a published company/job pair, or the caller's own
+    # confirmed JD target. Both stay optional so either path is expressible.
+    company_id: int | None = Field(default=None, gt=0)
+    job_id: int | None = Field(default=None, gt=0)
+    job_target_id: int | None = Field(default=None, gt=0)
     candidate_profile_version_id: int | None = Field(default=None, gt=0)
     job_description_version_id: int | None = Field(default=None, gt=0)
     question_count: int = Field(default=20, ge=1, le=40)
@@ -27,7 +30,6 @@ class CreateSessionRequest(BaseModel):
     training_mode: Literal['FULL', 'WEAKNESS', 'RECHECK'] | None = None
     training_knowledge_id: str | None = Field(default=None, max_length=150)
     training_request_key: str | None = Field(default=None, min_length=8, max_length=100)
-
 
 class SkillRecommendationRequest(BaseModel):
     job_ids: list[int] = Field(min_length=1, max_length=50)

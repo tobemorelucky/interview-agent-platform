@@ -83,6 +83,24 @@ def recommend(job, *, root=ROOT):
         reason=first["reason"] if automatic else messages[status], ranking=ranked)
 
 
+def recommend_for_target(target):
+    """Same deterministic rules, fed from a private target's confirmed requirements.
+
+    A private target is never written into the public tables this module reads,
+    and its own text is used verbatim; nothing is inferred from a company name.
+    """
+    requirements = [dict(id=row.get("id"), statement=row.get("statement", ""))
+                    for row in (target.requirements_json or [])]
+    structured = target.structured_json if isinstance(target.structured_json, dict) else {}
+    duties = structured.get("responsibilities") or []
+    if isinstance(duties, str):
+        duties = [duties]
+    return recommend(dict(job_id=None, title=target.job_title, job_family=None, jd_id=None,
+        jd_fingerprint=target.content_fingerprint,
+        responsibilities=[d.get("statement", "") if isinstance(d, dict) else d for d in duties] if isinstance(duties, list) else [],
+        requirements=requirements, tags=[]))
+
+
 async def recommend_jobs(db, job_ids):
     """Batch public reads; no N+1 queries and no full raw JD reparsing."""
     ids = sorted(set(job_ids))

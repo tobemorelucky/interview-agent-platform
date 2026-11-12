@@ -83,6 +83,7 @@ class SessionController:
         snapshot = InterviewContextSnapshot(user_id=user_id, interview_session_id=session.id,
             candidate_profile_version_id=context["candidate_profile_version_id"], company_id=context["company_id"],
             job_id=context["job_id"], job_description_version_id=context["job_description_version_id"],
+            job_target_id=(context.get("job_target") or {}).get("id"),
             context_json=context, content_fingerprint=fingerprint)
         self.db.add(snapshot)
         await self.db.flush()
@@ -233,12 +234,19 @@ class SessionController:
             fact_ids = list(dict.fromkeys(fact_ids + inherited.get("fact_ids", [])))
             evidence_ids = list(dict.fromkeys(evidence_ids + inherited.get("evidence_ids", [])))
             evidence = [e for e in context["candidate_evidence"] if e["key"] in evidence_ids]
+        # A private target's requirement ids are local indices, not rows in
+        # job_requirements: persisting one would point at an unrelated public
+        # requirement. Keep the ref in the snapshot refs instead.
+        private_target = context.get("job_target") is not None
+        requirement_id = None if private_target else artifact.job_requirement_id
         q = InterviewSessionQuestion(session_id=session.id, question_index=max((q.question_index for q in questions), default=-1) + 1,
             question=artifact.question, standard_answer="\n".join(artifact.expected_points),
             dimension=artifact.dimension, difficulty=artifact.difficulty, source=artifact.source_type,
-            source_question_id=artifact.source_question_id, job_requirement_id=artifact.job_requirement_id,
+            source_question_id=artifact.source_question_id, job_requirement_id=requirement_id,
             source_fingerprint=public["fingerprint"] if public else None,
             candidate_refs_json=dict(fact_ids=fact_ids, evidence_ids=evidence_ids, evidence=evidence,
+                **({"job_target_requirement": artifact.job_requirement_id} if private_target
+                   and artifact.job_requirement_id is not None else {}),
                 **({"interviewer_guidance": policy["interaction"]["guidance"]}
                    if (policy.get("interaction") or {}).get("guidance") else {}),
                 project_ids=[p["id"] for p in context["normalized"]["projects"] if p["fact_id"] in fact_ids],

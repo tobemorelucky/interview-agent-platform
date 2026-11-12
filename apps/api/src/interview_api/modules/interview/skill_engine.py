@@ -67,12 +67,18 @@ class SkillRegistry:
         except (OSError, KeyError, ValueError, TypeError) as exc:
             raise AppError("INTERVIEWER_CONFIG_UNAVAILABLE", "面试官配置不可用，请联系维护者；未创建会话", 503) from exc
         # Source identity is metadata, not proof of a company's interview preferences.
-        sourced = bool(jd_source and requirements)
-        background = dict(mode="SOURCED_JOB_CONTEXT" if sourced else "GENERIC_SKILL_FALLBACK",
-            source=deepcopy(jd_source) if sourced else None,
-            requirement_ids=[r["id"] for r in requirements] if sourced else [],
-            instruction="仅依照本场已发布 JD 和已审核题源，不推断公司必考题或内部面试偏好。" if sourced else
-                        "公司资料依据不足，使用通用岗位 Skill；岗位名称不能证明公司面试偏好。")
+        # A pasted JD is a third provenance: real text, but not a published JD and
+        # not evidence about how the company actually interviews.
+        supplied = bool(jd_source and jd_source.get("source_type") == "USER_SUPPLIED" and requirements)
+        sourced = bool(jd_source and requirements) and not supplied
+        mode = "USER_PROVIDED_JD_CONTEXT" if supplied else "SOURCED_JOB_CONTEXT" if sourced else "GENERIC_SKILL_FALLBACK"
+        instruction = ("仅依照用户本场粘贴的 JD 原文与已确认要求；该 JD 未经企业核实，不代表企业官方要求或真实面试偏好。"
+                       if supplied else
+                       "仅依照本场已发布 JD 和已审核题源，不推断公司必考题或内部面试偏好。" if sourced else
+                       "公司资料依据不足，使用通用岗位 Skill；岗位名称不能证明公司面试偏好。")
+        background = dict(mode=mode, source=deepcopy(jd_source) if (supplied or sourced) else None,
+            requirement_ids=[r["id"] for r in requirements] if (supplied or sourced) else [],
+            instruction=instruction)
         definition = skill.model_dump()
         frozen = dict(engine_version="1.1.0", registry_manifest=metadata, skill={**definition, "instructions": instructions,
             "content_fingerprint": digest([definition, instructions])}, round=round_policy, style=style_policy,

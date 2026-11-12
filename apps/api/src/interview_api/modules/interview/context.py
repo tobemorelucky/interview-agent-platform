@@ -18,6 +18,31 @@ from interview_api.modules.interview.skill_engine import SkillRegistry, selectio
 APPROVED = ("APPROVED", "AUTO_APPROVED")
 
 
+async def private_target(db, user_id, request):
+    """The user's own confirmed JD, or None for the public path.
+
+    Ownership is checked here, not in the router: a target id that belongs to
+    someone else must never become interview context.
+    """
+    target_id = getattr(request, "job_target_id", None)
+    if not target_id:
+        return None
+    from interview_api.modules.job_target.models import CONFIRMED, UserJobTarget
+    target = await db.scalar(select(UserJobTarget).where(UserJobTarget.id == target_id,
+        UserJobTarget.user_id == user_id).with_for_update(read=True, key_share=True))
+    if target is None:
+        raise AppError("JOB_TARGET_NOT_FOUND", "目标岗位不存在", 404)
+    if target.parse_status != CONFIRMED or not target.requirements_json:
+        raise AppError("JOB_TARGET_NOT_CONFIRMED", "请先解析并确认岗位要求，再开始面试", 409)
+    return target
+
+
+def target_requirements(target) -> list[dict]:
+    return [dict(id=row["id"], statement=row["statement"], importance=row.get("importance") or "UNKNOWN",
+                 topic=row.get("topic"), source=row.get("source") or "USER")
+            for row in (target.requirements_json or [])]
+
+
 async def build_context(db, user_id, request):
     service = CandidateProfileService(db)
     version = (await db.get(CandidateProfileVersion, request.candidate_profile_version_id)
@@ -25,46 +50,69 @@ async def build_context(db, user_id, request):
     if not version:
         raise AppError("PROFILE_REQUIRED", "请先完成候选人画像", 409)
     profile = await service.serialize(user_id, version)
-    company, job = await db.get(Company, request.company_id), await db.get(Job, request.job_id)
-    if not company or not job or job.company_id != company.id or job.status != "ACTIVE" or company.status != "ACTIVE":
-        raise AppError("INVALID_COMPANY_JOB", "岗位必须属于所选公司且可用", 422)
-    query = select(JobDescriptionVersion).where(JobDescriptionVersion.job_id == job.id,
-        JobDescriptionVersion.publication_status == "PUBLISHED")
-    if request.job_description_version_id:
-        query = query.where(JobDescriptionVersion.id == request.job_description_version_id)
-    jd = await db.scalar(query.order_by(JobDescriptionVersion.version_number.desc()).limit(1))
-    if not jd:
-        raise AppError("PUBLISHED_JD_REQUIRED", "所选岗位缺少已发布 JD；本流程不会触发 Research", 409)
-    requirements = (await db.scalars(select(JobRequirement).where(JobRequirement.job_description_version_id == jd.id).order_by(JobRequirement.id)
-        .with_for_update(read=True, key_share=True))).all()
-    if not requirements:
-        raise AppError("REQUIREMENTS_REQUIRED", "所选 JD 缺少岗位要求", 409)
-    # Exact public FKs only. A company-level record with unknown Job is permitted;
-    # records assigned to another Job/company are never guessed into this pool.
-    def scope(table):
-        return or_(table.job_id == job.id, (table.job_id.is_(None) & (table.company_id == company.id))) & or_(table.company_id.is_(None), table.company_id == company.id)
-    experiences = (await db.scalars(select(InterviewExperience).where(scope(InterviewExperience),
-        InterviewExperience.review_status.in_(APPROVED)).order_by(InterviewExperience.id).limit(30)
-        .with_for_update(read=True, key_share=True))).all()
-    exp_ids = {e.id for e in experiences}
-    questions = (await db.scalars(select(InterviewQuestion).where(scope(InterviewQuestion),
-        InterviewQuestion.review_status.in_(APPROVED), InterviewQuestion.should_index.is_(True),
-        or_(InterviewQuestion.experience_id.is_(None), InterviewQuestion.experience_id.in_(exp_ids)))
-        .order_by(InterviewQuestion.id).limit(100).with_for_update(read=True, key_share=True))).all()
+    # Exactly one job source. Checked here so the error is a normal API error
+    # rather than a schema detail that hides which source the user must provide.
+    if getattr(request, "job_target_id", None):
+        if request.company_id or request.job_id or request.job_description_version_id:
+            raise AppError("JOB_SOURCE_CONFLICT", "公共岗位与私人目标岗位只能二选一", 422)
+    elif not request.company_id or not request.job_id:
+        raise AppError("JOB_SOURCE_REQUIRED", "请选择已发布岗位，或先创建并确认自己的目标岗位", 422)
+    target = await private_target(db, user_id, request)
+    if target is not None:
+        # A user-supplied JD is its own source. No public company/job/JD row is
+        # read, created or imitated, and its public question pool is empty.
+        company = job = jd = None
+        requirements = target_requirements(target)
+        experiences, questions = [], []
+    else:
+        company, job = await db.get(Company, request.company_id), await db.get(Job, request.job_id)
+        if not company or not job or job.company_id != company.id or job.status != "ACTIVE" or company.status != "ACTIVE":
+            raise AppError("INVALID_COMPANY_JOB", "岗位必须属于所选公司且可用", 422)
+        query = select(JobDescriptionVersion).where(JobDescriptionVersion.job_id == job.id,
+            JobDescriptionVersion.publication_status == "PUBLISHED")
+        if request.job_description_version_id:
+            query = query.where(JobDescriptionVersion.id == request.job_description_version_id)
+        jd = await db.scalar(query.order_by(JobDescriptionVersion.version_number.desc()).limit(1))
+        if not jd:
+            raise AppError("PUBLISHED_JD_REQUIRED", "所选岗位缺少已发布 JD；本流程不会触发 Research", 409)
+        requirements = (await db.scalars(select(JobRequirement).where(JobRequirement.job_description_version_id == jd.id).order_by(JobRequirement.id)
+            .with_for_update(read=True, key_share=True))).all()
+        if not requirements:
+            raise AppError("REQUIREMENTS_REQUIRED", "所选 JD 缺少岗位要求", 409)
+        # Exact public FKs only. A company-level record with unknown Job is permitted;
+        # records assigned to another Job/company are never guessed into this pool.
+        def scope(table):
+            return or_(table.job_id == job.id, (table.job_id.is_(None) & (table.company_id == company.id))) & or_(table.company_id.is_(None), table.company_id == company.id)
+        experiences = (await db.scalars(select(InterviewExperience).where(scope(InterviewExperience),
+            InterviewExperience.review_status.in_(APPROVED)).order_by(InterviewExperience.id).limit(30)
+            .with_for_update(read=True, key_share=True))).all()
+        exp_ids = {e.id for e in experiences}
+        questions = (await db.scalars(select(InterviewQuestion).where(scope(InterviewQuestion),
+            InterviewQuestion.review_status.in_(APPROVED), InterviewQuestion.should_index.is_(True),
+            or_(InterviewQuestion.experience_id.is_(None), InterviewQuestion.experience_id.in_(exp_ids)))
+            .order_by(InterviewQuestion.id).limit(100).with_for_update(read=True, key_share=True))).all()
     facts = (await db.scalars(select(CandidateFact).where(CandidateFact.version_id == version.id).order_by(CandidateFact.id))).all()
     context = dict(
-        candidate_profile_version_id=version.id, company_id=company.id, job_id=job.id,
-        job_description_version_id=jd.id,
-        company_name=company.canonical_name, job_title=job.canonical_title,
+        candidate_profile_version_id=version.id, company_id=company.id if company else None,
+        job_id=job.id if job else None,
+        job_description_version_id=jd.id if jd else None,
+        company_name=target.company_name if target is not None else company.canonical_name,
+        job_title=target.job_title if target is not None else job.canonical_title,
+        job_target=dict(id=target.id, version=target.version, content_fingerprint=target.content_fingerprint,
+                        source_type=target.source_type, parse_mode=target.parse_mode) if target is not None else None,
         profile=deepcopy(profile["snapshot"]), normalized=profile["normalized"],
         candidate_facts=[dict(id=f.id, field_path=f.field_path, statement=f.statement,
                               evidence_ids=_fact_keys(profile["snapshot"], f.field_path)) for f in facts],
         candidate_evidence=profile["evidence"],
-        profile_version_number=version.version_number, jd_version_number=jd.version_number,
+        profile_version_number=version.version_number,
+        jd_version_number=jd.version_number if jd else None,
         profile_producer=version.producer,
-        jd_fingerprint=jd.content_fingerprint,
-        requirements=[dict(id=r.id, statement=r.statement, importance=r.importance,
-                           fingerprint=compute_content_fingerprint(r.statement)) for r in requirements],
+        jd_fingerprint=jd.content_fingerprint if jd else target.content_fingerprint,
+        requirements=[dict(id=r["id"], statement=r["statement"], importance=r["importance"],
+                           fingerprint=compute_content_fingerprint(r["statement"]),
+                           topic=r.get("topic"), source=r.get("source")) if isinstance(r, dict)
+                      else dict(id=r.id, statement=r.statement, importance=r.importance,
+                                fingerprint=compute_content_fingerprint(r.statement)) for r in requirements],
         public_questions=[dict(id=q.id, question=q.question, expected_points=(q.standard_answer or q.original_answer or "").splitlines(),
                                dimension=q.category or "综合", difficulty=q.difficulty,
                                fingerprint=compute_question_fingerprint(q.question), experience_id=q.experience_id) for q in questions],
@@ -80,7 +128,12 @@ async def build_context(db, user_id, request):
     context.update(await build_memory_snapshot(db, user_id))
     if request.interviewer_skill_id:
         jd_source = None
-        if jd.source_snapshot_id:
+        if target is not None:
+            # Provenance stays explicit: user-supplied, never company-confirmed.
+            jd_source = dict(source_type="USER_SUPPLIED", job_target_id=target.id,
+                             version=target.version, content_hash=target.content_fingerprint,
+                             jd_version_id=None)
+        elif jd.source_snapshot_id:
             source_snapshot = await db.get(SourceSnapshot, jd.source_snapshot_id)
             source = await db.get(Source, source_snapshot.source_id) if source_snapshot else None
             if source:
@@ -89,8 +142,12 @@ async def build_context(db, user_id, request):
                     content_hash=source_snapshot.content_hash, jd_version_id=jd.id)
         context["interviewer_config"] = SkillRegistry().freeze(request.interviewer_skill_id,
             request.interview_round, request.interviewer_style, requirements=context["requirements"], jd_source=jd_source)
-        from interview_api.modules.interview.skill_recommendation import recommend_jobs
-        recommendation = (await recommend_jobs(db, [job.id])).get(job.id)
+        if target is not None:
+            from interview_api.modules.interview.skill_recommendation import recommend_for_target
+            recommendation = recommend_for_target(target)
+        else:
+            from interview_api.modules.interview.skill_recommendation import recommend_jobs
+            recommendation = (await recommend_jobs(db, [job.id])).get(job.id)
         automatic = request.interviewer_selection_source == "AUTO_RECOMMENDED"
         if automatic and (not recommendation or recommendation["recommended_skill_id"] != request.interviewer_skill_id):
             raise AppError("SKILL_RECOMMENDATION_CHANGED", "岗位或推荐已变化，请重新确认专业 Skill", 409)
@@ -112,14 +169,19 @@ async def build_context(db, user_id, request):
         from interview_api.modules.interview.adaptive_prompts import freeze_prompts
         # Company-level/ambiguous roles are not company-job interview evidence.
         # V1 keeps its historical selection; V2 requires exact job association.
-        related = {e.id for e in experiences if e.job_id == job.id}
-        selected = [q for q in questions if q.job_id == job.id and (q.experience_id is None or q.experience_id in related)
-            and ((q.routing_json or {}).get("source_anchor") or {}).get("kind") != "REPORTED_TOPIC"]
-        ids = {q.id for q in selected}
-        context["public_questions"] = [dict(row, source_anchor=deepcopy(next(q for q in selected if q.id == row["id"]).routing_json or {}).get("source_anchor"))
-            for row in context["public_questions"] if row["id"] in ids]
-        context["interview_experiences"] = [dict(row, reported_topics=deepcopy((next(e for e in experiences if e.id == row["id"]).extraction_output_json or {}).get("source_anchors", {}).get("reported_topics", []))[:12])
-            for row in context["interview_experiences"] if row["id"] in related]
+        if job is not None:
+            related = {e.id for e in experiences if e.job_id == job.id}
+            selected = [q for q in questions if q.job_id == job.id and (q.experience_id is None or q.experience_id in related)
+                and ((q.routing_json or {}).get("source_anchor") or {}).get("kind") != "REPORTED_TOPIC"]
+            ids = {q.id for q in selected}
+            context["public_questions"] = [dict(row, source_anchor=deepcopy(next(q for q in selected if q.id == row["id"]).routing_json or {}).get("source_anchor"))
+                for row in context["public_questions"] if row["id"] in ids]
+            context["interview_experiences"] = [dict(row, reported_topics=deepcopy((next(e for e in experiences if e.id == row["id"]).extraction_output_json or {}).get("source_anchors", {}).get("reported_topics", []))[:12])
+                for row in context["interview_experiences"] if row["id"] in related]
+        else:
+            # A private target has no reviewed public question or experience pool.
+            # The Skill still supplies the knowledge targets; nothing is borrowed.
+            context["public_questions"], context["interview_experiences"] = [], []
         context["adaptive_policy"] = dict(version="2.1.0", decision_contract="TARGET_SOURCE_PAIR_V1",
             context_projection="ROLE_CONTEXT_V1",
             evaluation_context="FOLLOWUP_SCORING_V1", gap_scope_contract=GAP_SCOPE_CONTRACT,
@@ -200,7 +262,11 @@ def question_policy(context, questions, action="NEXT"):
         return interaction_policy(context, dict(source_type="FOLLOW_UP" if action == "FOLLOW_UP" else "DYNAMIC_GENERATED", source_id=None,
                     target_topic=pacing["recent_topic"], target_category="TECHNICAL", topic_coverage=pacing))
     used_public = {q.source_question_id for q in questions}
-    used_requirements = {q.job_requirement_id for q in questions}
+    used_requirements = {q.job_requirement_id for q in questions if q.job_requirement_id is not None}
+    # Private targets keep their requirement refs in the question refs, because
+    # job_requirement_id must never point at an unrelated public row.
+    used_requirements |= {(q.candidate_refs_json or {}).get("job_target_requirement") for q in questions
+                          if (q.candidate_refs_json or {}).get("job_target_requirement") is not None}
     used_facts = {key for q in questions for key in (q.candidate_refs_json or {}).get("fact_ids", [])}
     pool = []
     seen_intents = set()

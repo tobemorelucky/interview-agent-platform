@@ -144,9 +144,14 @@ class InterviewContextSnapshot(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
     interview_session_id: Mapped[int] = mapped_column(ForeignKey("interview_sessions.id", ondelete="CASCADE"), unique=True)
     candidate_profile_version_id: Mapped[int] = mapped_column(ForeignKey("candidate_profile_versions.id", ondelete="RESTRICT"))
-    company_id: Mapped[int] = mapped_column(ForeignKey("companies.id", ondelete="RESTRICT"))
-    job_id: Mapped[int] = mapped_column(ForeignKey("jobs.id", ondelete="RESTRICT"))
-    job_description_version_id: Mapped[int] = mapped_column(ForeignKey("job_description_versions.id", ondelete="RESTRICT"))
+    # Exactly one source: the public company/job/JD triple, or a private user
+    # target. A private paste never fabricates a public company/job/JD row.
+    company_id: Mapped[int | None] = mapped_column(ForeignKey("companies.id", ondelete="RESTRICT"), nullable=True)
+    job_id: Mapped[int | None] = mapped_column(ForeignKey("jobs.id", ondelete="RESTRICT"), nullable=True)
+    job_description_version_id: Mapped[int | None] = mapped_column(
+        ForeignKey("job_description_versions.id", ondelete="RESTRICT"), nullable=True)
+    job_target_id: Mapped[int | None] = mapped_column(
+        ForeignKey("user_job_targets.id", ondelete="RESTRICT"), nullable=True)
     context_json: Mapped[dict] = mapped_column(JSON)
     content_fingerprint: Mapped[str] = mapped_column(String(64))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
