@@ -157,7 +157,11 @@ class JobTargetService:
             UserJobTarget.user_id == user_id, UserJobTarget.content_fingerprint == digest))
         if existing is not None:
             # Idempotent for the same owner and the same text; never a second row.
-            return self.serialize(existing)
+            # The caller must be told this was a reuse, otherwise a repeated
+            # paste silently looks like a brand-new target.
+            value = self.serialize(existing)
+            value["reused"] = True
+            return value
         target = UserJobTarget(user_id=user_id, company_name=(request.company_name or "未提供").strip()[:255],
             job_title=(request.job_title or "未提供").strip()[:255], raw_text=raw,
             source_type=SOURCE_USER_SUPPLIED, source_reference=(request.source_reference or None),
@@ -165,7 +169,9 @@ class JobTargetService:
         self.db.add(target)
         await self.db.flush()
         await self.db.refresh(target)
-        return self.serialize(target)
+        value = self.serialize(target)
+        value["reused"] = False
+        return value
 
     # ── parse ──
     # The model call never runs inside a transaction or while a row is locked.
@@ -265,8 +271,17 @@ class JobTargetService:
                    requirement_type="skill", normalized_value=row.get("topic")) for row in target.requirements_json])
         rows = evidence_matrix(job, profile)
         band = ranking_components(dict(evidence_matrix=rows, eligibility_status="UNKNOWN"))
+        # `counts` is per requirement (the strongest support wins); the same row
+        # can still contain weaker PARTIAL facts. Report both so the panel never
+        # appears to contradict the supports it lists underneath.
+        support_counts: dict[str, int] = {}
+        for row in rows:
+            for support in row.get("supports", []):
+                state = support.get("status") or "UNKNOWN"
+                support_counts[state] = support_counts.get(state, 0) + 1
         return dict(target_id=target.id, candidate_profile_version_id=profile["id"],
-            counts=band["counts"], applicable_requirements=band["applicable_requirements"],
+            counts=band["counts"], support_counts=support_counts,
+            applicable_requirements=band["applicable_requirements"],
             evidence_band=band["fit_band_ceiling"], rows=rows,
             disclaimer="证据覆盖来自当前简历事实与岗位要求的确定性文本交集，不是能力分数，也不代表已掌握或满足硬性条件。")
 
