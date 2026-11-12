@@ -95,9 +95,10 @@ class MockInterviewService:
             len(json.dumps(agent.schema.model_json_schema()).encode("utf-8")) +
             2 * (output_cap + 2048))
         return await self.with_model_reservation(session_id, user_id, expected, provider, reservation,
-            lambda timeout: agent.call(session_id, payload, answer_id=answer_id, timeout_seconds=timeout))
+            lambda timeout: agent.call(session_id, payload, answer_id=answer_id, timeout_seconds=timeout),
+            answer_id=answer_id)
 
-    async def with_model_reservation(self, session_id, user_id, expected, provider, reservation, operation):
+    async def with_model_reservation(self, session_id, user_id, expected, provider, reservation, operation, *, answer_id=None):
         call_key = uuid4().hex
         async with self.factory() as db:
             timeout = await SessionController(db).reserve_model_call(session_id, user_id, expected, reservation, call_key)
@@ -106,6 +107,7 @@ class MockInterviewService:
             return None
         usage_reported = provider.provider_name == "replay"
         known_tokens = 0
+        request_sent = None
         try:
             result = await operation(timeout)
             known_tokens = result.usage.get('total_tokens') or 0
@@ -114,13 +116,15 @@ class MockInterviewService:
         except BaseException as exc:
             total = (getattr(exc, 'usage', {}) or {}).get('total_tokens')
             audited = getattr(exc, 'usage_audited', True)
+            request_sent = getattr(exc, 'request_sent', None)
             known_tokens = total if audited and type(total) is int and total >= 0 else 0
             usage_reported = usage_reported or (audited and type(total) is int and total >= 0 and getattr(exc, 'usage_complete', True))
             raise
         finally:
             with anyio.CancelScope(shield=True):
                 async with self.factory() as db:
-                    await SessionController(db).settle_model_call(session_id, user_id, call_key, usage_reported, known_tokens=known_tokens)
+                    await SessionController(db).settle_model_call(session_id, user_id, call_key, usage_reported,
+                        known_tokens=known_tokens, request_sent=request_sent, answer_id=answer_id)
                     await db.commit()
 
     async def evaluation_context(self, sid, uid, payload, *, answer_id=None):
@@ -232,13 +236,15 @@ class MockInterviewService:
             await db.commit()
         return data
 
-    async def answer(self, session_id, user_id, question_id, key, content, on_stage=None, design_plan=None):
+    async def answer(self, session_id, user_id, question_id, key, content, on_stage=None, design_plan=None,
+                     allow_unknown_retry=False):
         _, initial_context, _, _, _ = await self.read_state(session_id, user_id)
         if bool(initial_context.get("system_design")) != (design_plan is not None):
             raise AppError("DESIGN_PLAN_REQUIRED", "系统设计面试须同时提交结构化方案；普通面试不接收方案", 422)
         # Retrying the same key resumes one persisted Answer, not a new user message.
         async with self.factory() as db:
-            answer, expected, reused = await SessionController(db).prepare_answer(session_id, user_id, question_id, key, content)
+            answer, expected, reused = await SessionController(db).prepare_answer(session_id, user_id, question_id, key, content,
+                allow_unknown_retry=allow_unknown_retry)
             if design_plan is not None:
                 revision = await SessionController(db).bind_design_plan(session_id, user_id, answer, expected, design_plan)
             await db.commit()
@@ -354,7 +360,8 @@ class MockInterviewService:
         stages = asyncio.Queue()
         task = asyncio.create_task(self.answer(session_id, user_id, request.question_id,
             request.idempotency_key, request.content, on_stage=stages.put_nowait,
-            design_plan=request.design_plan.model_dump() if request.design_plan else None))
+            design_plan=request.design_plan.model_dump() if request.design_plan else None,
+            allow_unknown_retry=request.confirm_unknown_retry))
         stage = "evaluating"
         try:
             while not task.done():
@@ -372,6 +379,7 @@ class MockInterviewService:
             yield sse("error", {"code": getattr(exc, "code", "INTERVIEW_MODEL_FAILED"),
                 "message": exc.message if isinstance(exc, AppError) else "模型处理失败，未评分或推进面试；请使用同一回答重试",
                 "retryable": not isinstance(exc, AppError) or exc.status_code != 404,
+                "requires_confirmation": getattr(exc, "code", "") == "INTERVIEW_OUTCOME_UNKNOWN",
                 "idempotency_key": request.idempotency_key})
         finally:
             if not task.done():

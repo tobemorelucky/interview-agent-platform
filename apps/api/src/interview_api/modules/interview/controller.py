@@ -131,14 +131,24 @@ class SessionController:
                                       "reserved_model_tokens": sum(reservations.values()), "budget_exhausted": False}
         return min(settings.interview_model_timeout_seconds, remaining_time)
 
-    async def settle_model_call(self, session_id, user_id, call_key, usage_reported, *, known_tokens=0):
+    async def settle_model_call(self, session_id, user_id, call_key, usage_reported, *, known_tokens=0,
+                                request_sent=None, answer_id=None):
         """Audit holds actual usage; unknown failure usage cannot create free retries."""
         session = await self.owned(session_id, user_id, lock=True)
         plan = dict(session.interview_plan_json or {})
         reservations = dict(plan.get("model_call_reservations", {}))
         reserved = reservations.pop(call_key, 0)
+        unknown = dict(plan.get("unknown_model_calls") or {})
+        if reserved > 0 and not usage_reported and request_sent is not False:
+            # The call left this process without a durable usage receipt. Keep
+            # it so a later request cannot silently resend the same operation.
+            unknown[call_key] = {"answer_id": answer_id, "reserved_tokens": reserved,
+                                 "recorded_at": datetime.now(timezone.utc).isoformat()}
+            while len(unknown) > 20:
+                unknown.pop(next(iter(unknown)))
         session.interview_plan_json = {**plan, "model_call_reservations": reservations,
             "reserved_model_tokens": sum(reservations.values()),
+            "unknown_model_calls": unknown,
             # Known response usage is already in StepRun. Retain only the net
             # unreported reservation, never count that known portion twice.
             "unreported_model_tokens": plan.get("unreported_model_tokens", 0) + (0 if usage_reported else max(0, reserved - known_tokens))}
@@ -266,7 +276,7 @@ class SessionController:
         await self._message(session, "QUESTION", q.question, data)
         return data
 
-    async def prepare_answer(self, session_id, user_id, question_id, key, content):
+    async def prepare_answer(self, session_id, user_id, question_id, key, content, *, allow_unknown_retry=False):
         session = await self.owned(session_id, user_id, lock=True)
         answer = await self.db.scalar(select(InterviewAnswer).where(InterviewAnswer.session_id == session_id, InterviewAnswer.idempotency_key == key))
         if answer:
@@ -280,6 +290,28 @@ class SessionController:
                 expires = datetime.fromisoformat(lease["expires_at"]) if lease.get("answer_id") == answer.id and lease.get("expires_at") else answer.created_at + timedelta(seconds=2 * settings.interview_model_timeout_seconds + 30)
                 if expires > datetime.now(timezone.utc):
                     raise AppError("INTERVIEW_ANSWER_RUNNING", "回答正在评价或生成追问，请等待或刷新查看；不会重复提交。", 409)
+                plan = dict(session.interview_plan_json or {})
+                calls = plan.get("unknown_model_calls") or {}
+                uncertain = bool(plan.get("model_call_reservations")) or any(
+                    (row or {}).get("answer_id") == answer.id for row in calls.values())
+                if uncertain and not allow_unknown_retry:
+                    # The vanished process reserved (and may have sent) a call for
+                    # this answer. Lease expiry is not evidence the request never
+                    # left, so a resend needs the user's explicit acceptance.
+                    answer.status, answer.error = "FAILED", "interview_outcome_unknown"
+                    raise AppError("INTERVIEW_OUTCOME_UNKNOWN",
+                        "上一次回答的模型调用未能确认是否已发出，系统不会自动重发；请新建一场面试，或确认后重试", 409)
+                if uncertain:
+                    # Explicit, user-confirmed resend. Keep a bounded audit trail
+                    # instead of silently forgetting that a call is unaccounted.
+                    retries = list(plan.get("unknown_model_retries") or [])
+                    retries.append({"answer_id": answer.id,
+                                    "call_keys": sorted(plan.get("model_call_reservations") or {}),
+                                    "at": datetime.now(timezone.utc).isoformat()})
+                    plan["unknown_model_retries"] = retries[-20:]
+                    plan["unknown_model_calls"] = {k: v for k, v in calls.items()
+                                                   if (v or {}).get("answer_id") != answer.id}
+                    session.interview_plan_json = plan
                 # Fence a vanished request. Keep the exact Answer and all successful audit history.
                 runs = (await self.db.scalars(select(ExperienceAgentRun).join(InterviewAgentCall,
                     InterviewAgentCall.agent_run_id == ExperienceAgentRun.id).where(

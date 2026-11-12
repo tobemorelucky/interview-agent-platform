@@ -75,7 +75,12 @@ def test_expired_processing_lease_fences_old_answer_without_duplication(database
                 'answer_processing': {'answer_id': answer.id, 'expires_at': (datetime.now(timezone.utc) - timedelta(seconds=1)).isoformat()}}
             await db.commit(); aid = answer.id
         assert (await core.detail(sid, uid))['pending_answer']['retryable']
-        await core.answer(sid, uid, req.question_id, req.idempotency_key, req.content)
+        with pytest.raises(AppError) as refused:
+            await core.answer(sid, uid, req.question_id, req.idempotency_key, req.content)
+        assert refused.value.code == 'INTERVIEW_OUTCOME_UNKNOWN'
+        # A vanished attempt keeps its conservative hold until the user accepts
+        # one resend explicitly; only then is the previous reservation released.
+        await core.answer(sid, uid, req.question_id, req.idempotency_key, req.content, allow_unknown_retry=True)
         final = await core.detail(sid, uid)
         assert final['pending_answer'] is None
         assert final['interview_plan_json']['unreported_model_tokens'] == 20

@@ -48,6 +48,9 @@ class SendMessageRequest(BaseModel):
     question_id: int = Field(gt=0)
     idempotency_key: str = Field(min_length=8, max_length=100)
     design_plan: DesignPlan | None = None
+    # The user knowingly accepts one resend after a vanished attempt whose
+    # outcome is UNKNOWN. Never implied by a plain retry of the same key.
+    confirm_unknown_retry: bool = False
 
 
 class ConsolidateMemoryRequest(BaseModel):

@@ -288,7 +288,7 @@ class MainHarness:
         try:
             try:
                 async with asyncio.timeout(settings.interview_model_timeout_seconds):
-                    artifact = await self._loop(run_id, sid, uid, expected, payload, wire, registry, prompt, provider)
+                    artifact = await self._loop(run_id, sid, uid, expected, payload, wire, registry, prompt, provider, aid)
             except TimeoutError as exc:
                 raise ModelProviderError("main_harness_timeout", "本轮 Main 执行超时，未提交题目") from exc
             # An illegal FINAL is a business rejection, not a repair opportunity.
@@ -317,7 +317,7 @@ class MainHarness:
                     output={"harness_version": VERSION, "terminal": terminal or code == "MAIN_HARNESS_LIMIT"})
             raise
 
-    async def _loop(self, run_id, sid, uid, expected, payload, wire, registry, prompt, provider):
+    async def _loop(self, run_id, sid, uid, expected, payload, wire, registry, prompt, provider, aid=None):
         route = self.agent.route
         steps = await self._steps(run_id)
         models = [step for step in steps if step.step_name != TOOL_STEP]
@@ -354,7 +354,8 @@ class MainHarness:
             result = await self.service.with_model_reservation(sid, uid, expected, provider, reservation,
                 lambda timeout: ResearchModelCalls(self.factory, self.agent.router, run_id, prompts=registry,
                     timeout_seconds=timeout).call(route, route, packet, schema, checkpoint_action=True,
-                    max_repair_input_bytes=repair_bytes, repair_policy=FinalSelectionRepair(payload) if allow_repair else None))
+                    max_repair_input_bytes=repair_bytes, repair_policy=FinalSelectionRepair(payload) if allow_repair else None),
+                answer_id=aid)
             if result is None:
                 # Same signal as the non-harness path: nothing was sent, so the
                 # caller may end the session lawfully instead of retrying.
