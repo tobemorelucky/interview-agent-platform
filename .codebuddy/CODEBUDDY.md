@@ -74,7 +74,7 @@
 ### P2
 
 - `docs/README.md` 索引停在 70。
-- 5 个既有断言已陈旧（`test_modelscope_provider` 4 例断言请求体无 `thinking`、`test_product_polish` 1 例断言统一模型名），在有 `.env` 的环境必失败；未纳入历史回归集，待单独一次 `test(workbuddy)` 修正。
+- ~~5 个陈旧断言~~ **已修（`71c8405`，第八轮）**：改为断言「线上 thinking == 角色配置」与「显式选择非 ModelScope 分支」；第九轮全量回归 0 failed。
 - `test_08/test_09` 迁移用例只能在空库跑；在有数据的库上返回非零（不损坏库）。
 - 测试隔离只靠人工 `M1_TEST_DATABASE_URL`，`conftest.py` 无库名白名单，测试写入不清理。
 - 前端不暴露 Harness 开关、不展示提前结束原因、未暴露 `confirm_unknown_retry`。
@@ -115,9 +115,9 @@
 
 ### 交接区（每轮结束更新）
 
-- 当前 HEAD：`5082756`（第八轮文档）；业务见 `71c8405`（CI 断言）、`9ec6416`（私有岗位后端+0027）、`98cfbbc`（前端）
+- 当前 HEAD：`49d5600`（第九轮文档）；业务见 `6fbbcdd`（启动脚本迁移头）、`aea1748`（简历抽取截断）
 - 工作区：干净（仅 `.workbuddy/` 未跟踪）
-- 下一轮入口：见「轮次记录」最后一轮
+- 下一轮入口：见「轮次记录」最后一轮（真实模型额度本轮已用满 12/12）
 
 ## 轮次记录
 
@@ -391,3 +391,103 @@
 2. 训练中心接入私有目标（`training.py` 返回 `company_id/job_id` 为 None，需要按 `job_target` 分支）。
 3. 单目标匹配报告（是否落表、如何避免与公共 Job Matching 混淆）需要设计。
 4. 私有 JD 的留存/删除/导出策略与隐私说明。
+
+### 2026-11-12 · 第九轮（真实浏览器 E2E + 私有 JD 安全核验 + 有界 Live）
+
+开工 `8eb65c0`。本轮按用户显式授权：新建隔离库并执行 0027 迁移、启动本地前后端与 Worker、
+Chrome 真实 UI 操作、12 次真实模型 HTTP。正式库与历史 Live 库未触碰。
+
+**提交**
+
+| Hash | 内容 |
+|---|---|
+| `6fbbcdd` | `fix(workbuddy): read the migration head from the scripts, not a constant` — `scripts/delivery.py` + 2 个测试文件 |
+| `aea1748` | `fix(workbuddy): stop reasoning from truncating the resume extraction JSON` — `llm/provider.py`、`resume/processor.py`、`resume_tasks.py`、新增 `test_resume_extraction_budget.py` |
+| `49d5600` | `docs(workbuddy): record the real-browser private-JD E2E and its limits` — `docs/88` |
+
+**发现的两个真实产品链路缺陷（事实）**
+
+1. `scripts/delivery.py::migrate` 把迁移头与数据库版本都写死 `0024`。在正确迁移到 `0027` 的库上实测
+   `MIGRATION_FAILED (RuntimeError)`，即 `start-dev.bat` 在 0025+ 环境必然启动失败。改为从
+   `ScriptDirectory` 读 head；修复后 `{revision: "0027"}`。
+2. 真实 UI 上传 604 字合成简历失败：`Unterminated string starting at ... char 2011`，且原始异常文本
+   被写进用户可见字段。账本显示 6,852 token 只换来 2,043 字符 —— 简历结构化调用没带 thinking 策略，
+   DeepSeek-V4.1-Flash 把 6,000 输出预算耗在推理上，JSON 被截断。修复：抽取调用固定
+   `thinking_type=disabled`、`finish_reason=length` → `MODEL_OUTPUT_TRUNCATED`（`request_sent=True`）、
+   用户可见错误文案脱敏、Worker 不覆盖已记录原因。修复后 resume 238 `COMPLETED`，画像版本 1 真实生成。
+
+**真实浏览器 UI（事实）**
+
+- 无 Playwright 包；用 Node 22 内置 WebSocket 直连 Chrome 157 CDP（`.runtime/ui/cdp.mjs`），
+  驱动真实 Vue 页面完成点击/输入/下拉/文件上传/截图。截图 16 张在 `.runtime/ui/shots/`，
+  脚本在 `.runtime/ui/`（`.gitignore:31` 忽略，不进 Git）。
+- 11 步全部走通：注册登录 → 合成简历上传+真实画像 → 粘贴公开 JD → LLM 解析 4 条逐字证据要求 →
+  前端改/删/补 → 证据面板 → 确认 v1 → 选 Skill 建 session 321 → 3 答 → 正式评价 3.6/1.2/1.2
+  → Coach 报告 44 `COMPLETED` → 批准记忆提案 → 第二场 322 / 第三场 323 读取跨场 Memory。
+- **偏差**（不得抹掉）：① E2E 库被全量回归夹具写入 219 ACTIVE 公司 / 347 PUBLISHED JD，前端下拉出现
+  `DEMO ...`；用户 A 全链路未引用它们（快照公共三外键 NULL）。另建 `..._r9_clean`（`companies=0,users=0`）
+  跑 105 项离线专项证明空库可建私有 JD 面试。② 第三场用正式 API 创建且未 start（UI 会自动 start，
+  会超 12 次额度）。③ Capture/Replay 本轮未启用。
+
+**真实模型（事实）**
+
+- **12 / 12 HTTP，75,706 token，全部 `SETTLED`，0 UNKNOWN**（`model_admissions` 可查）：
+  resume_report 6,852（失败）+ 1,822（修复后）、resume_profile 2,332、legacy_llm/JD 解析 1,367、
+  interview_main 7,817 + 9,691 + 9,794 + 7,933、answer_evaluation 7,380/7,353/7,532、interview_coach 5,833。
+- 解析 route 实际是 `legacy_llm`（不是 `public_research_extract`）；模型 `deepseek-ai/DeepSeek-V4.1-Flash-1017`。
+- LLM 解析 560 字公开 JD → 4 条要求，全部带原文逐字 evidence；本轮模型**未输出编造项**，
+  所以「拒绝编造」只有离线 fixture 证据，不能说真实模型已证明。
+- 私有 JD 快照生效（`USER_PROVIDED_JD_CONTEXT`），但本场 3 题均来自候选人画像/追问，
+  **没有一题显式引用 JD requirement** —— 短场未触发，不能宣称已验证「JD 驱动出题」。
+- RULE 降级只在离线测试覆盖，未与 LLM 做同 JD 并列对比。
+- 连续调用窗口 03:33–03:37 + 06:42–06:55 UTC（会话中断分成两段），均在 20 分钟内。
+
+**私有数据安全（0 模型，HTTP 探针 12 项断言全通过）**
+
+- 用户 B 列表为空；详情/匹配/PATCH/DELETE/读 A 会话/读 A 报告全 `404`；
+  用 A 的 target 建会话得 `409 PROFILE_REQUIRED`（**归属检查排在画像检查之后，错误码顺序可探测**）。
+- 未确认版本 `JOB_TARGET_NOT_CONFIRMED`、混合来源 `JOB_SOURCE_CONFLICT`、不存在 ID `404`。
+- 编辑 A 的 JD 后快照 320/321/322 的 `md5(context_json::text)` 前后完全一致；
+  删除返回 `JOB_TARGET_IN_USE`，历史会话不失效。
+- 三场题目 `job_requirement_id` 计数 0；公共研究/题源 7 张表对私有文本命中全 0。
+- XSS：B 的 `<img onerror>` / `<script>` 以纯文本渲染，注入 DOM 元素 0、`alert` 0。
+- Prompt injection：注入指令未进入 Skill 配置、未添加工具策略，`company_background` 仍为
+  `USER_PROVIDED_JD_CONTEXT` + `USER_SUPPLIED` + 固定「未经企业核实」文案。
+
+**测试计数（分列，不混合）**
+
+- 全量回归（排除迁移用例）：**739 passed / 0 failed / 1 skipped**（217 s）。
+  跳过仍是 `test_v142_source_fragments.py:96` 缺 V1.4.1 快照库。
+- 迁移专项：空库 `..._r9_migbase` 跑 00–08 → **9 passed**；`interview_agent_v21_wb_r9_20261112`
+  跑 09 → **1 passed**（该用例强制库名前缀 `interview_agent_v21_`）。
+- `0026→0027→0026→0027` 往返四步全成功；`ck_interview_snapshot_source` 在库中确认存在。
+- 干净库离线专项 6 文件：**105 passed / 0 failed / 0 skipped**，0 真实 HTTP。
+- 前端 `vue-tsc --noEmit` 0 错误、`npm run build` 成功。
+- 运行期 HTTP 安全探针不计入 pytest 数字。
+
+**环境（事实）**
+
+- 启动脚本 `start-dev.bat` / `start-interview-platform.ps1` 会**自动执行迁移**；环境变量
+  `DATABASE_URL` 优先于 `.env`，已用 `delivery.py config` 确认指向隔离库。
+- 该脚本能完整拉起 API/Worker/Vue，但 `Start-Process` 的子进程随外层会话被回收；
+  改用同一套 `delivery.py api|worker` + `scripts/serve-web.mjs` 常驻后台任务。
+- Windows 同时存在 `HTTPS_PROXY` 与 `https_proxy` 时 Windows PS 5.1 的 `Start-Process` 抛
+  「已添加项」；本轮清除小写项绕过，**未改代码**，建议后续在 `platform-common.ps1` 去重硬化。
+
+**仍需修复（事实/待办）**
+
+1. `build_context` 归属检查前置（统一 404，避免错误码探测）。
+2. Capture/Replay 缺口：12 次真实调用无归档，无法精确重放；**本轮未满足用户这一项要求**，
+   需下一轮新预算单独批准带 capture 的有界批次。
+3. 前端 `handleCreateSession` 总会自动 `handleStart()`，无法只创建会话。
+4. 证据面板顶部计数按行 status，行内却展示 PARTIAL 支撑事实；报告生成中提示与
+   「暂无成功的 Coach 分析」并存，易误读；相同 JD 重复创建会 version+1 且无提示。
+5. 训练中心仍不支持私有目标；私有 JD 留存/删除/导出策略与隐私说明未定义。
+6. 仍待真实模型：LLM vs RULE 同 JD 对比、编造项丢弃率、JD requirement 显式驱动出题、
+   Harness ON 在私有目标下、Coach 长场稳定性。
+
+**下一轮入口**
+
+1. 先修 `build_context` 归属检查顺序（小改动 + 专项测试，0 模型）。
+2. 若用户再批额度：做一次**带 Capture/Replay 归档**的有界 Live，重点验证 JD 要求驱动出题与编造项拒绝。
+3. 训练中心接入私有目标（需按 `job_target` 分支，属新功能，须单独批准）。
