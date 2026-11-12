@@ -110,8 +110,17 @@ async def governed_call(provider, messages, operation):
     try:
         result = await asyncio.wait_for(execute(), provider.timeout)
     except BaseException as exc:
+        # A provider that positively knows nothing was written outranks the
+        # coarse "we entered the guarded section" flag. Only a classified
+        # pre-send failure may release the hold; everything else stays UNKNOWN.
+        claimed = getattr(exc, "request_sent", None)
+        sent = sent if claimed is None else claimed
         exc.request_sent = sent
-        usage = getattr(exc, "usage", None) if sent else {"total_tokens": 0}
+        usage = getattr(exc, "usage", None)
+        if sent is False:
+            usage = {"total_tokens": 0}
+        elif not (isinstance(usage, dict) and type(usage.get("total_tokens")) is int and usage["total_tokens"] >= 0):
+            usage = None
         await asyncio.shield(governance.settle(key, usage))
         raise
     await asyncio.shield(governance.settle(key, result.usage))

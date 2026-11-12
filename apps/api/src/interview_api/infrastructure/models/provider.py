@@ -22,6 +22,9 @@ class ModelProviderError(RuntimeError):
         self.usage: dict[str, int | None] = {}
         self.availability_reason: str | None = None
         self.invocations: list[dict] = []
+        # None means "not classified here"; governed_call falls back to its own
+        # flag. False is a positive claim that no bytes reached the provider.
+        self.request_sent: bool | None = None
 
 
 class ModelProvider(ABC):
@@ -86,12 +89,33 @@ class CompatibleModelProvider(ModelProvider):
                     "response_format": {"type": "json_object"}}
             if self.thinking_type is not None:
                 body["thinking"] = {"type": self.thinking_type}
-            response = await client.post(
-                f"{self.base_url}/chat/completions",
-                headers={"Authorization": f"Bearer {self.api_key}"},
-                json=body,
-                timeout=self.timeout,
-            )
+            try:
+                response = await client.post(
+                    f"{self.base_url}/chat/completions",
+                    headers={"Authorization": f"Bearer {self.api_key}"},
+                    json=body,
+                    timeout=self.timeout,
+                )
+            except (httpx.ConnectError, httpx.ConnectTimeout, httpx.PoolTimeout) as exc:
+                # No connection was established, so nothing can have reached the
+                # provider. This is a proven pre-send failure, not an unknown one.
+                error = ModelProviderError("model_request_not_sent", "Model endpoint was not reachable")
+                error.request_sent, error.usage = False, {"total_tokens": 0}
+                error.availability_reason = "provider_connect_failed"
+                raise error from exc
+            except httpx.TimeoutException as exc:
+                # A read/write timeout cannot be attributed to either side.
+                raise ModelProviderError("model_timeout", "Public research model request timed out") from exc
+            except httpx.HTTPError as exc:
+                raise ModelProviderError("model_request_failed", "Public research model request failed") from exc
+            except Exception as exc:
+                # httpx runs request hooks before the transport writes, so an
+                # exception raised by our own code here (payload assembly or a
+                # client-side guard) is local: it must not be reported as a
+                # provider network failure, nor charged as an unknown send.
+                error = ModelProviderError("model_request_not_sent", "Model request failed before it was sent")
+                error.request_sent, error.usage = False, {"total_tokens": 0}
+                raise error from exc
             response.raise_for_status()
             data = response.json()
             raw_usage = data.get("usage") or {}
@@ -112,10 +136,10 @@ class CompatibleModelProvider(ModelProvider):
                 error.usage = usage
                 raise error
             return ModelResponse(message.get("content") or "", usage)
-        except httpx.TimeoutException as exc:
-            raise ModelProviderError("model_timeout", "Public research model request timed out") from exc
         except httpx.HTTPStatusError as exc:
+            # The response arrived; only its billing remains unknown.
             error = ModelProviderError("model_request_failed", "Public research model request failed")
+            error.request_sent = True
             try:
                 envelope = exc.response.json().get("error") or {}
                 code = str(envelope.get("code") or "")
@@ -131,9 +155,11 @@ class CompatibleModelProvider(ModelProvider):
             if known or missing or exc.response.status_code in (429, 502, 503, 504):
                 error.availability_reason = "provider_availability_http_" + str(exc.response.status_code)
             raise error from exc
-        except (httpx.HTTPError, KeyError, ValueError, IndexError, TypeError, AttributeError) as exc:
-            error = ModelProviderError("model_request_failed", "Public research model request failed")
-            error.usage = usage
+        except (KeyError, ValueError, IndexError, TypeError, AttributeError) as exc:
+            # Reached only after a response: an unusable envelope is a provider
+            # response problem, never a local pre-send failure.
+            error = ModelProviderError("model_request_failed", "Public research model returned an unusable response")
+            error.request_sent, error.usage = True, usage
             raise error from exc
         finally:
             if self.client is None:
