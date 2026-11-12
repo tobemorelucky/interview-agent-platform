@@ -176,6 +176,7 @@ watch(() => route.fullPath, () => { notice.value = ""; load() }, { immediate: tr
               <button :disabled="loading || generating" @click="generate(false)">{{ generating ? '生成中…' : selectedReport ? '安全重试 / 查看当前报告' : '生成面试报告' }}</button>
               <button v-if="detail.current_report" :disabled="loading || generating" @click="generate(true)">{{ regenerateRequest?.sessionId === detail.session.id ? '重试本次重新生成' : '明确重新生成' }}</button>
               <button v-if="reportId" :disabled="generating" @click="selectSession(detail.session.id)">查看本场当前报告</button>
+              <router-link :to="{ path: '/training', query: { session_id: String(detail.session.id) } }">针对本场岗位继续训练</router-link>
             </div>
           </article>
           <article class="card statistics"><h2>总体表现 · 本场数据</h2>
@@ -221,6 +222,7 @@ watch(() => route.fullPath, () => { notice.value = ""; load() }, { immediate: tr
             <h3>下一场建议 · 按优先级准备</h3><ol><li v-for="(item, index) in [...new Set(analysis.recommended_actions)]" :key="index">{{ text(item) }}</li></ol>
             <h3>练习计划</h3><ol><li v-for="(item, index) in [...new Set(analysis.practice_plan)]" :key="index">{{ text(item) }}</li></ol>
           </article>
+          <article v-else-if="generating" class="card" role="status">正在生成 Coach 分析。本场评分与完成状态已经保存；请勿重复点击「生成面试报告」，生成完成后点「刷新」查看结果。</article>
           <article v-else class="card">暂无成功的 Coach 分析。可以生成 / 安全重试；本场评分与完成状态已经保存。</article>
           <article class="card proposals"><h2>本场建议记住</h2><p>长期记忆建议：尚未批准不会影响下一场，也不会修改候选人画像。批准后可在成长记录查看，下次新建面试时固定使用。表现观察只描述来源场次。</p>
             <p v-if="!proposals.length">该报告暂无记忆提案。</p>

@@ -53,7 +53,9 @@ async function create() {
     rawText.value = ''; companyName.value = ''; jobTitle.value = ''; sourceReference.value = ''
     await load()
     await open(created.id)
-    notice.value = '已保存。下一步解析岗位要求。'
+    notice.value = created.reused
+      ? `这段 JD 与已有目标内容相同，已打开原来的目标（第 ${created.version} 版），没有新建重复岗位。`
+      : '已保存。下一步解析岗位要求。'
   } catch (e) { error.value = message(e) } finally { busy.value = false }
 }
 
@@ -81,7 +83,7 @@ async function save() {
   try {
     current.value = await updateRequirements(current.value.id, rows)
     draft.value = (current.value.requirements || []).map(row => ({ statement: row.statement, importance: row.importance }))
-    notice.value = '要求已保存；确认后才能用于面试。'
+    notice.value = `要求已保存在第 ${current.value.version} 版草稿中；再次确认会生成第 ${current.value.version + 1} 版，已开始的面试仍使用原冻结版本。`
     await load()
   } catch (e) { error.value = message(e) } finally { busy.value = false }
 }
@@ -117,6 +119,7 @@ async function inspect() {
 function addRow() { draft.value.push({ statement: '', importance: 'UNKNOWN' }) }
 function dropRow(index: number) { draft.value.splice(index, 1) }
 function useInInterview() { if (current.value) router.push({ path: '/interview', query: { job_target_id: String(current.value.id) } }) }
+function useInTraining() { if (current.value) router.push({ path: '/training', query: { job_target_id: String(current.value.id) } }) }
 
 load()
 </script>
@@ -149,7 +152,7 @@ load()
       <ul>
         <li v-for="item in targets" :key="item.id">
           <button @click="open(item.id)">{{ item.company_name }} · {{ item.job_title }}</button>
-          <span> {{ statusLabels[item.parse_status] }} · {{ item.requirement_count }} 条要求 · 第 {{ item.version }} 版</span>
+          <span> {{ item.source_label }} · {{ statusLabels[item.parse_status] }} · {{ item.requirement_count }} 条要求 · 第 {{ item.version }} 版</span>
         </li>
       </ul>
     </section>
@@ -166,6 +169,7 @@ load()
         <button :disabled="busy || confirmed || !draft.length" @click="confirm">确认用于面试</button>
         <button :disabled="busy" @click="inspect">查看材料证据</button>
         <button :disabled="busy" @click="useInInterview">用这个岗位开始面试</button>
+        <button :disabled="busy || !confirmed" @click="useInTraining">用这个岗位开始训练</button>
         <button :disabled="busy" @click="remove">删除</button>
       </div>
 
@@ -197,7 +201,11 @@ load()
       <div v-if="match">
         <h4>材料证据（不是匹配分数）</h4>
         <p>{{ match.disclaimer }}</p>
-        <p>有材料支持 {{ match.counts.SUPPORTED || 0 }} · 部分支持 {{ match.counts.PARTIAL || 0 }} · 无证据 {{ match.counts.NO_EVIDENCE || 0 }}</p>
+        <p>按「要求」的最终证据等级：有材料支持 {{ match.counts.SUPPORTED || 0 }} · 部分支持 {{ match.counts.PARTIAL || 0 }} · 无证据 {{ match.counts.NO_EVIDENCE || 0 }}</p>
+        <p v-if="match.support_counts">
+          按引用到的「材料事实」：SUPPORTED {{ match.support_counts.SUPPORTED || 0 }} 条 · PARTIAL {{ match.support_counts.PARTIAL || 0 }} 条。
+          一条要求只要有一条强证据就整体记为「有材料支持」，所以两处数字不必相等。
+        </p>
         <ul>
           <li v-for="row in match.rows" :key="row.id">
             <strong>{{ row.statement }}</strong> — {{ evidenceLabels[row.status] }}

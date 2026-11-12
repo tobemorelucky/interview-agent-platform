@@ -30,6 +30,8 @@ export interface JobTarget {
   raw_text?: string
   requirements?: JobTargetRequirement[]
   structured?: { responsibilities?: string[] }
+  /** Only present on a create response: the same text already existed. */
+  reused?: boolean
 }
 
 export interface JobTargetMatchRow {
@@ -42,7 +44,10 @@ export interface JobTargetMatchRow {
 
 export interface JobTargetMatch {
   target_id: number
+  /** Per-requirement: the strongest support wins, so one row may hold weaker facts. */
   counts: Record<string, number>
+  /** Per cited fact: explains why a row can show PARTIAL while counts.PARTIAL is 0. */
+  support_counts: Record<string, number>
   applicable_requirements: number
   evidence_band: string
   rows: JobTargetMatchRow[]
