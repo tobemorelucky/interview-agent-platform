@@ -45,7 +45,7 @@
 | 自适应版本 | `2.1.0`（决策/知识状态） | `interview/adaptive.py` |
 | Prompt 版本 | Main `2.4.0-harness.*`（Harness ON）/ `2.3.3`（OFF）、Evaluation `2.3.3` | `interview/adaptive_prompts.py` |
 | 主题策略 | `technical-topics@1.0.0` | `interview/topics.py` |
-| Alembic head | `0026_capability_memory`（共 26 个版本） | `apps/api/alembic/versions/` |
+| Alembic head | `0027_user_job_targets`（共 27 个版本） | `apps/api/alembic/versions/` |
 | 单场预算默认 | `max_model_tokens=200000`、`max_rounds=40`、`max_duration=7200s`、默认 `question_count=20` | `core/config.py` / `interview/schemas.py` |
 
 ## 3. 开发阶段（事实）
@@ -115,9 +115,9 @@
 
 ### 交接区（每轮结束更新）
 
-- 当前 HEAD：`25f18fd`（第七轮文档）；业务修复见 `804d385`（发送前失败分类）、`2273cb7`（答题重试围栏）
+- 当前 HEAD：`5082756`（第八轮文档）；业务见 `71c8405`（CI 断言）、`9ec6416`（私有岗位后端+0027）、`98cfbbc`（前端）
 - 工作区：干净（仅 `.workbuddy/` 未跟踪）
-- 下一轮入口：见「轮次记录」最后一轮（私有 JD Workbench V1，需先批准 1 张新表迁移）
+- 下一轮入口：见「轮次记录」最后一轮
 
 ## 轮次记录
 
@@ -339,3 +339,55 @@
 1. 批准并实施私有 JD Workbench V1：迁移 `0027_user_job_targets`（1 表 + 1 唯一索引），后端 8 个文件、前端 8 个文件，见 `docs/86` §7。
 2. 或先做「用私有目标创建面试」的最小纵切（`job_target` 只读 + `context.py` 分支），把 JD 解析留到下一步。
 3. 顺手可做：修正 5 个陈旧断言（单独 `test(workbuddy)` 提交），避免 CI 绿灯失真。
+
+### 2026-11-12 · 第八轮（CI 收口 + 私有 JD Workbench V1，0 次真实 HTTP）
+
+**提交**
+
+| Hash | 内容 |
+|---|---|
+| `71c8405` | `test(workbuddy): assert the real thinking policy and the non-hosted model branch` — 2 文件 |
+| `9ec6416` | `feat(workbuddy): interview against a JD the user pasted themselves` — 迁移 0027 + `modules/job_target` 6 文件 + Interview 5 文件 + 测试 |
+| `98cfbbc` | `feat(workbuddy): paste, review and confirm a JD from the web app` — 前端 7 文件 |
+| `5082756` | `docs(workbuddy): record the private JD workbench and the snapshot constraint` — `docs/87` |
+
+**CI 五项（事实）**
+
+- 4 例 `test_modelscope_provider`：断言写死「无 thinking 键」，而 `67a39b1` 之后角色策略原样上线（`disabled` 也显式发送）。改为断言「线上 thinking == 角色配置；None 时无键」。
+- 1 例 `test_product_polish`：只在非 ModelScope 部署成立；`use_modelscope` 是只读属性，改为 patch `llm_provider`。
+- 两文件由 9 passed / 5 failed → **14 passed / 0 failed**。
+
+**私有 JD（事实）**
+
+- 新表 `user_job_targets`：`user_id` 归属、`raw_text`、`source_type=USER_SUPPLIED`（CHECK）、`content_fingerprint`（同用户唯一）、`requirements_json`、`parse_status`（CHECK）、`parse_mode`（LLM/RULE）、`version`、`confirmed_at`。
+- **一张表不够**：`interview_context_snapshots` 原有 3 个 NOT NULL 公共外键，唯一替代方案是伪造公共 Company/Job/JD（本轮禁止）。0027 改为可空 + `job_target_id` + CHECK「恰好一个来源」；`downgrade` 在有私有快照时**主动拒绝**（实测报 `39 interview snapshots…`）。
+- 解析复用 `public_research_extract` route 与 `generate_structured`；每条要求必须带**原文逐字** `evidence`，否则丢弃；公司/岗位原文没写就留 `null`；模型不可用降级 `RULE` 并如实标注。
+- 私有要求索引（1..n）**绝不写入** `interview_session_questions.job_requirement_id`（会指向无关公共要求），改存 `candidate_refs_json.job_target_requirement`；`question_policy` 同时读两处去重。
+- `skill_engine.freeze` 新增 `USER_PROVIDED_JD_CONTEXT` 来源模式，不冒充 `SOURCED_JOB_CONTEXT`；私有岗位不做自动 Skill 推荐，前端强制手选。
+- 快照冻结：改要求 → `PARSED`、`version` 不变；再确认 → `version+1`；已有 Session 的 `context_snapshot` 逐字节不变（测试断言 `reread == frozen`）。
+
+**测试（真实计数）**
+
+- 隔离库 `interview_agent_wb_r8_20261112`（`0027`，67 表）。
+- 专项 `test_job_target.py`：**8 passed**；全量（排除迁移用例）：**734 passed / 0 failed / 1 skipped**（204 s）。
+- 前端：`vue-tsc --noEmit` 与 `npm run build` 均通过。
+- 接口级联调（本地 uvicorn + 离线替身 `127.0.0.1:8899`，**非真实模型**）：注册 → 建 target → 解析（`LLM`，3 条中 2 条留存，编造的那条被逐字校验丢弃）→ 确认 `version=1`。
+
+**未验证（事实）**
+
+- 真实模型对真实 JD 的抽取质量未验证。
+- **未做浏览器操作**：无可用浏览器自动化通道，`npm run dev` 未在 5173 监听；只做了类型检查、生产构建与真实 HTTP 接口联调。
+- 未跑「上传简历 → 画像 → 私有岗位面试」的完整 UI 流程（画像需 Worker + 模型）。
+
+**新增风险**
+
+- Job Matching 仅复用确定性 `evidence_matrix` 做单目标证据视图，**未接入**批量推荐，也不写 `job_match_*`。
+- 训练中心仍只支持公共岗位。
+- 私有 JD 留存期/脱敏策略未定义。
+
+**下一轮入口**
+
+1. 用真实模型验收私有 JD 解析质量（需额度），并对比 LLM 与 RULE 的差异。
+2. 训练中心接入私有目标（`training.py` 返回 `company_id/job_id` 为 None，需要按 `job_target` 分支）。
+3. 单目标匹配报告（是否落表、如何避免与公共 Job Matching 混淆）需要设计。
+4. 私有 JD 的留存/删除/导出策略与隐私说明。
