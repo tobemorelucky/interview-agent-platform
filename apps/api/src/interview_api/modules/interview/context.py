@@ -44,20 +44,24 @@ def target_requirements(target) -> list[dict]:
 
 
 async def build_context(db, user_id, request):
-    service = CandidateProfileService(db)
-    version = (await db.get(CandidateProfileVersion, request.candidate_profile_version_id)
-               if request.candidate_profile_version_id else await service.current(user_id))
-    if not version:
-        raise AppError("PROFILE_REQUIRED", "请先完成候选人画像", 409)
-    profile = await service.serialize(user_id, version)
-    # Exactly one job source. Checked here so the error is a normal API error
-    # rather than a schema detail that hides which source the user must provide.
+    # Resolve the job-source reference first. A job_target_id is an untrusted
+    # cross-user reference: resolving ownership before the profile lookup means
+    # "missing" and "someone else's" always take the same 404 path, and no
+    # company name, JD text, requirement or candidate evidence can leak through
+    # a different error code. Both session creation and the training workbench
+    # call this function, so the order is enforced for both.
     if getattr(request, "job_target_id", None):
         if request.company_id or request.job_id or request.job_description_version_id:
             raise AppError("JOB_SOURCE_CONFLICT", "公共岗位与私人目标岗位只能二选一", 422)
     elif not request.company_id or not request.job_id:
         raise AppError("JOB_SOURCE_REQUIRED", "请选择已发布岗位，或先创建并确认自己的目标岗位", 422)
     target = await private_target(db, user_id, request)
+    service = CandidateProfileService(db)
+    version = (await db.get(CandidateProfileVersion, request.candidate_profile_version_id)
+               if request.candidate_profile_version_id else await service.current(user_id))
+    if not version:
+        raise AppError("PROFILE_REQUIRED", "请先完成候选人画像", 409)
+    profile = await service.serialize(user_id, version)
     if target is not None:
         # A user-supplied JD is its own source. No public company/job/JD row is
         # read, created or imitated, and its public question pool is empty.
