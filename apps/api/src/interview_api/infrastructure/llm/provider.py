@@ -10,7 +10,8 @@ from . import LLMProvider
 
 
 class OpenAICompatibleLLMProvider:
-    def __init__(self, *, user_id: int | None = None, public_system_task: bool = False) -> None:
+    def __init__(self, *, user_id: int | None = None, public_system_task: bool = False,
+                 thinking_type: str | None = None, max_output_tokens: int = 6000) -> None:
         connection = modelscope_connection() or {
             "base_url": settings.llm_base_url, "api_key": settings.llm_api_key, "model": settings.llm_model,
         }
@@ -25,19 +26,31 @@ class OpenAICompatibleLLMProvider:
         self.public_system_task = public_system_task
         self.model_name = self._model
         self.timeout = settings.llm_request_timeout_seconds
-        self.max_output_tokens = 6000
+        self.max_output_tokens = max_output_tokens
+        # Extraction is not a reasoning task: an unset policy lets the model spend
+        # the whole output budget on reasoning and cut the JSON mid-string.
+        self.thinking_type = thinking_type
 
     async def chat(self, messages: list[dict], **kwargs) -> str:
         from interview_api.core.errors import AppError
         if not 1 <= kwargs.get("max_tokens", self.max_output_tokens) <= self.max_output_tokens:
             raise AppError("MODEL_OUTPUT_BUDGET", "输出预算超过当前请求允许范围", 422)
+        policy = {"thinking": {"type": self.thinking_type}} if self.thinking_type else {}
+
         async def operation():
             response = await self._client.chat.completions.create(
                 model=self._model, messages=messages,
-                **{"max_tokens": self.max_output_tokens, **kwargs})
+                **{"max_tokens": self.max_output_tokens, **kwargs}, extra_body=policy or None)
+            choice = response.choices[0] if response.choices else None
+            if choice is not None and choice.finish_reason == "length":
+                # The body is empty/partial because the budget ran out. Reporting
+                # this as a JSON error hides the real cause from the user.
+                error = AppError("MODEL_OUTPUT_TRUNCATED", "模型输出被截断，未生成完整结果；请重试", 503)
+                error.request_sent = True
+                raise error
             usage = response.usage
-            return ModelResponse(response.choices[0].message.content or "", {
-                "total_tokens": usage.total_tokens if usage else None})
+            text = (choice.message.content if choice else None) or ""
+            return ModelResponse(text, {"total_tokens": usage.total_tokens if usage else None})
         token = None
         if self.user_id is not None:
             from interview_api.infrastructure.db.session import async_session_factory

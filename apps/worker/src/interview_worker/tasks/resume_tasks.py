@@ -42,17 +42,24 @@ def process_resume(self, resume_id: int):
 async def _mark_resume_failed(resume_id: int, exc: Exception) -> None:
     """Best-effort status update for failures before the shared processor runs."""
     from interview_api.infrastructure.db.session import async_session_factory
+    from interview_api.modules.resume.models import Resume
     from interview_api.modules.resume.repository import ResumeRepository
 
-    error_text = f"Worker task failed before resume processing completed: {exc}"
+    logger.error("Resume %s failed before processing: %s", resume_id, exc)
     async with async_session_factory() as db:
+        current = await db.get(Resume, resume_id)
+        if current is not None and current.status == "FAILED" and current.error_message:
+            # The pipeline already recorded a user-facing reason; a raw exception
+            # string must not replace it.
+            logger.info("Resume %s keeps its recorded failure reason", resume_id)
+            return
         repo = ResumeRepository(db)
         await repo.mark_processing_finished(
             resume_id,
             "FAILED",
-            error_message=error_text,
+            error_message="简历解析未完成，请稍后重试。",
         )
-        await repo.update_processing_stage(resume_id, "FAILED", error_text[:500])
+        await repo.update_processing_stage(resume_id, "FAILED", "简历解析未完成")
         await db.commit()
 
 

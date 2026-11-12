@@ -90,7 +90,9 @@ async def _run_pipeline(resume_id: int) -> None:
     resume = await _get_resume_snapshot(resume_id)
     if resume is None:
         raise ValueError(f"Resume {resume_id} not found")
-    llm = OpenAICompatibleLLMProvider(user_id=resume.user_id)
+    # Deterministic JSON extraction: reasoning tokens share the same output
+    # budget and were truncating the body before the JSON closed.
+    llm = OpenAICompatibleLLMProvider(user_id=resume.user_id, thinking_type="disabled")
 
     logger.info("[resume %s] ========== PARSING_RESUME ==========", resume_id)
     await _update_stage(resume_id, "PARSING_RESUME", "Parsing resume file...")
@@ -272,8 +274,14 @@ def _parse_json_response(raw: str) -> dict:
 
 
 def _format_error() -> str:
+    """User-facing failure text. The exception detail stays in the log."""
     import sys
 
-    exc_type, exc_value, _ = sys.exc_info()
-    msg = f"{exc_type.__name__}: {exc_value}" if exc_type else str(exc_value)
-    return msg[:2000]
+    from interview_api.core.errors import AppError
+
+    _, exc_value, _ = sys.exc_info()
+    if isinstance(exc_value, AppError) and exc_value.code == "MODEL_OUTPUT_TRUNCATED":
+        return "简历解析未完成：模型输出被截断，请重新上传或稍后重试。"
+    if isinstance(exc_value, AppError) and exc_value.status_code < 500:
+        return f"简历解析未完成：{exc_value.message}"
+    return "简历解析未完成，请稍后重试。"
