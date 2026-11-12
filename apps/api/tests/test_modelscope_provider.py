@@ -90,7 +90,11 @@ def test_modelscope_structured_wire_and_no_availability_fallback(configured, htt
     body = json.loads(seen[0].content)
     assert body["model"] == MODEL
     assert body["response_format"] == {"type": "json_object"}
-    assert "thinking" not in body
+    # The wire must carry the role's configured policy verbatim: dropping it
+    # silently changed the request the role was configured for, and inventing
+    # one would override the deployment. A None policy leaves the key out.
+    policy = settings.answer_evaluation_thinking
+    assert body.get("thinking") == ({"type": policy} if policy else None)
 
 
 def test_modelscope_missing_key_does_not_use_old_credentials(configured, monkeypatch):

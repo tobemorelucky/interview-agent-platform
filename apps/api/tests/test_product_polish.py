@@ -66,6 +66,11 @@ def test_model_projection_removes_duplicate_prose_but_preserves_provenance(datab
 def test_live_routes_inherit_unified_model_and_low_latency_policy(monkeypatch):
     from interview_api.core.config import settings
     from interview_api.infrastructure.models import router
+    # This policy is about the non-ModelScope deployment: when the hosted
+    # endpoint is enabled every route resolves to its hosted model instead, so
+    # the branch under test must be selected explicitly rather than inherited
+    # from whatever .env the machine happens to have.
+    monkeypatch.setattr(settings,'llm_provider','openai_compatible')
     monkeypatch.setattr(settings,'llm_model','doubao-seed-2-1-turbo-260628')
     for field in ('public_research_extract_model','public_research_quality_model','resume_profile_model',
                   'interview_main_model','answer_evaluation_model','interview_coach_model','job_matching_model'):
