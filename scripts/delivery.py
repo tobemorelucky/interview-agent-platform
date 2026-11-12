@@ -63,13 +63,18 @@ def migrate(settings, demo):
         asyncio.run(ensure_demo())
     os.chdir(ROOT / "apps/api")
     cfg = Config("alembic.ini")
-    if ScriptDirectory.from_config(cfg).get_heads() != ["0024"]:
-        raise RuntimeError("UNEXPECTED_MIGRATION_HEAD")
+    # The head belongs to the checked-in migration scripts, never to a
+    # constant: pinning one revision here silently blocks every later
+    # migration from ever starting the platform.
+    heads = ScriptDirectory.from_config(cfg).get_heads()
+    if len(heads) != 1:
+        raise RuntimeError("AMBIGUOUS_MIGRATION_HEAD")
+    head = heads[0]
     # Normal mode never creates, drops or rebuilds a database.
     command.upgrade(cfg, "head")
-    if asyncio.run(revision(settings)) != ["0024"]:
-        raise RuntimeError("REVISION_NOT_0024")
-    print(json.dumps({"revision": "0024", "mode": "DEMO_REPLAY" if demo else "LOCAL_LIVE"}))
+    if asyncio.run(revision(settings)) != [head]:
+        raise RuntimeError("REVISION_MISMATCH")
+    print(json.dumps({"revision": head, "mode": "DEMO_REPLAY" if demo else "LOCAL_LIVE"}))
 
 
 def seed_if_missing():

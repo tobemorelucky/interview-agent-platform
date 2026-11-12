@@ -23,3 +23,10 @@ def test_demo_launcher_separates_database_broker_and_provider():
     assert 'database="13"' in text and 'database="14"' in text
     assert 'DEMO_OUTBOUND_HTTP_BLOCKED' in text
     assert 'settings_module.settings = settings' in text
+
+def test_launcher_reads_the_migration_head_from_the_scripts():
+    # A pinned head made every migration after 0024 unable to start the
+    # platform: the launcher refused a correctly migrated database.
+    text = (ROOT/'scripts/delivery.py').read_text()
+    assert '"0024"' not in text and "'0024'" not in text
+    assert 'get_heads()' in text and 'REVISION_MISMATCH' in text
