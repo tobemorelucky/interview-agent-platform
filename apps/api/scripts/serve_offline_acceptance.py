@@ -1,4 +1,4 @@
-"""Offline acceptance API for the browser E2E: real services, replay providers.
+"""Offline acceptance API/worker for the browser E2E: real services, replay models.
 
 Round 9 drove the browser against the real provider and spent 12 real model
 calls. Round 11 allows none, so this launcher substitutes the model boundary and
@@ -6,17 +6,28 @@ nothing else: the same FastAPI app, the same services, transactions, ownership
 checks and UI, with every agent backed by a deterministic replay provider and all
 outbound HTTP blocked.
 
-It refuses to run against anything but an `*_e2e_*` database (see
-`interview_api.core.db_targets`), so it can never seed or serve the production or
-an archived Live database.
+Round 16 incident and this round's fix
+--------------------------------------
+`--database` used to create a *disposable* engine that only `seed`/`history`
+used. `api` then started `uvicorn.run("interview_api.main:app")`, whose
+module-level engine is built from `settings.database_url` — i.e. `.env`. So the
+guard validated a name the server never used, and the API served production.
 
-    python apps/api/scripts/serve_offline_acceptance.py seed  --database interview_agent_wb_r11_e2e_20261112
-    python apps/api/scripts/serve_offline_acceptance.py api   --database interview_agent_wb_r11_e2e_20261112
-    python apps/api/scripts/serve_offline_acceptance.py history --database ... --email ... --target 3
+Every action now goes through `interview_api.core.runtime_target`:
+
+    python apps/api/scripts/serve_offline_acceptance.py verify --database interview_agent_wb_r17_e2e_20261113
+    python apps/api/scripts/serve_offline_acceptance.py api    --database interview_agent_wb_r17_e2e_20261113
+    python apps/api/scripts/serve_offline_acceptance.py worker --database interview_agent_wb_r17_e2e_20261113
+
+The target must be named explicitly, is validated with the project-wide
+`db_targets` classification, is written into settings *before* any engine or
+Redis client is imported, and is re-verified against the built engine before the
+server starts. Nothing here falls back to `.env`, and no password is printed.
 """
 
 import argparse
 import asyncio
+import dataclasses
 import json
 import sys
 from pathlib import Path
@@ -24,13 +35,14 @@ from unittest.mock import patch
 from uuid import uuid4
 
 API = Path(__file__).resolve().parents[1]
+ROOT = API.parents[1]
 sys.path[:0] = [str(API / "src"), str(API / "tests")]
 
 from sqlalchemy.engine import make_url  # noqa: E402
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine  # noqa: E402
 
+from interview_api.core import runtime_target  # noqa: E402
 from interview_api.core.config import settings  # noqa: E402
-from interview_api.core.db_targets import classify, e2e_problem, E2E  # noqa: E402
 
 PASSWORD = "r11-acceptance-only"
 EMAILS = {"owner": "r11.owner@example.com", "intruder": "r11.intruder@example.com"}
@@ -38,21 +50,22 @@ GOOD = "Kafka 事务和唯一键，提交后 ACK，失败恢复"
 WEAK = "Kafka ACK，失败重试"
 
 
-def guard(name):
-    if not name.replace("_", "").isalnum() or classify(name) != E2E:
-        raise SystemExit("only an *_e2e_* database may be served or seeded")
-    problem = e2e_problem(name)
-    if problem:
-        raise SystemExit(problem)
-
-
-def database(name):
-    engine = create_async_engine(make_url(settings.database_url).set(database=name))
+def database(target):
+    engine = create_async_engine(make_url(target.url))
     return engine, async_sessionmaker(engine, expire_on_commit=False)
 
 
+def announce(target):
+    """One line per process: the whole isolated group, never a password."""
+    group = target.describe()
+    for notice in target.notices:
+        print(f"NOTICE: {notice}")
+    print("ACCEPTANCE_TARGET " + json.dumps(group, ensure_ascii=False))
+
+
 # ── replay providers: the only substitution in this harness ──────────────────
-from interview_api.infrastructure.models.provider import ModelProvider, ModelResponse  # noqa: E402
+from interview_api.infrastructure.models.provider import (  # noqa: E402
+    ModelProvider, ModelResponse)
 
 
 class ReplayExtract(ModelProvider):
@@ -87,6 +100,108 @@ class ReplayCoach(ModelProvider):
             recommended_actions=["复盘消费端失败恢复与重复投递。"],
             practice_plan=["按原理、实现、边界三段式练习。"], memory_proposals=[])
         return ModelResponse(json.dumps(value, ensure_ascii=False), dict(total_tokens=0))
+
+
+SECTION_TITLES = {
+    "projects": ("项目经历", "项目经验", "项目"),
+    "work": ("工作经历", "工作经验"),
+    "internship": ("实习经历", "实习经验"),
+    "education": ("教育经历", "教育背景", "教育"),
+    "skills": ("专业技能", "技术技能", "技能"),
+}
+
+
+def _resume_text(prompt):
+    """The launcher echoes the *uploaded* text; it never invents resume content."""
+    marker, end = "## 简历文本", "## 输出 JSON 格式"
+    if marker in prompt:
+        text = prompt.split(marker, 1)[1]
+        return (text.split(end, 1)[0] if end in text else text).strip()
+    return ""
+
+
+def _sections(text):
+    found, current = {}, "general"
+    for raw in text.splitlines():
+        line = raw.strip(" -•\t")
+        if not line:
+            continue
+        heading = next((name for name, titles in SECTION_TITLES.items()
+                        if line in titles or line.rstrip("：:") in titles), None)
+        if heading:
+            current = heading
+            continue
+        found.setdefault(current, []).append(line)
+    return found
+
+
+class ReplayResumeExtract:
+    """Deterministic stand-in for `resume_parse_v1`; extracts only what is written.
+
+    Replaces `OpenAICompatibleLLMProvider` inside the worker, so it must accept
+    the same constructor arguments and expose `chat`, not `generate`.
+    """
+
+    provider_name, model_name, thinking_type = "replay", "R17_RESUME_EXTRACT", "disabled"
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    async def chat(self, messages, **kwargs):
+        text = _resume_text(messages[-1]["content"])
+        sections = _sections(text)
+        first = (sections.get("general") or [""])[0]
+        skills = [token.strip() for line in sections.get("skills", [])
+                  for token in line.replace("，", "、").replace(",", "、").split("、")]
+        value = dict(
+            basic_info=dict(name=first, email=None, phone=None, location=None),
+            skills={"languages": [s for s in skills if s], "tools": []},
+            projects=[dict(name=line, tech_stack=[], key_contributions=[])
+                      for line in sections.get("projects", [])],
+            education=[dict(school=line) for line in sections.get("education", [])],
+            work_experience=[dict(company=line) for line in sections.get("work", [])],
+            internships=[dict(company=line) for line in sections.get("internship", [])],
+            risk_points=[], synthetic_fixture=True,
+        )
+        return json.dumps(value, ensure_ascii=False)
+
+
+class ReplayProfile(ModelProvider):
+    """Selects facts from the *call-local evidence catalogue* the app builds.
+
+    Every label is a substring of a real evidence excerpt and every citation is
+    an alias the server minted for this call, so the normal validator still runs;
+    nothing is written behind the service's back.
+    """
+
+    provider_name, model_name, thinking_type = "replay", "R17_RESUME_PROFILE", "disabled"
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    CATEGORY = {"projects": "projects", "education": "education", "work": "work_experience",
+                "internship": "internship_experience", "skills": "skills"}
+
+    async def generate(self, messages, *, schema):
+        payload = json.loads(messages[-1]["content"])["input"]
+        body = {category: [] for category in self.CATEGORY.values()}
+        body["unknowns"] = []
+        for item in payload.get("resume_evidence", []):
+            category, excerpt, alias = self.CATEGORY.get(item.get("section")), item.get("excerpt", ""), item["evidence_id"]
+            if not category or not excerpt.strip():
+                continue
+            if category == "skills":
+                token = next((part.strip() for part in
+                              excerpt.replace("，", "、").replace(",", "、").split("、")
+                              if len(part.strip()) >= 2), excerpt[:40])
+                body["skills"].append(dict(label=token, evidence_ids=[alias],
+                                           proposed_evidence_state="MENTIONED"))
+            else:
+                body[category].append(dict(label=excerpt[:40].strip(), evidence_ids=[alias]))
+        # Deterministic and bounded: one fact per evidence row, ordered by alias.
+        for category in self.CATEGORY.values():
+            body[category] = sorted(body[category], key=lambda row: row["evidence_ids"][0])[:20]
+        return ModelResponse(json.dumps(body, ensure_ascii=False), dict(total_tokens=0))
 
 
 def build_core(factory):
@@ -140,8 +255,31 @@ async def history(factory, email, target_id, answers):
     print(json.dumps(states, ensure_ascii=False))
 
 
+async def state(factory, email, target_id):
+    from sqlalchemy import select
+    from interview_api.modules.users.models import User
+    from interview_api.modules.interview.schemas import CreateSessionRequest
+    from interview_api.modules.interview.training import TrainingService
+    async with factory() as db:
+        user_id = await db.scalar(select(User.id).where(User.email == email))
+    board = await TrainingService(factory).workbench(user_id, CreateSessionRequest(
+        job_target_id=target_id, interviewer_skill_id="java_backend",
+        adaptive_interview=True, question_count=8))
+    print(json.dumps([(t["knowledge_id"], t["state"], t["available_modes"])
+                      for t in board["targets"]], ensure_ascii=False))
+
+
 # ── the API process ─────────────────────────────────────────────────────────
-def serve():
+def verify_stack(target):
+    """Re-read what was actually built. `engine.url` needs no connection."""
+    from interview_api.infrastructure.db.engine import engine
+
+    runtime_target.verify_settings(target)
+    runtime_target.verify_engine(engine, target)
+    runtime_target.verify_optional_clients(target)
+
+
+def serve(target):
     import httpx
     import uvicorn
     from interview_api.infrastructure.db.session import async_session_factory
@@ -151,6 +289,7 @@ def serve():
     from interview_api.modules.interview_report.service import InterviewReportService
     from interview_api.modules.job_target import service as job_target_service
 
+    verify_stack(target)
     interview_router.build_core = lambda: build_core(async_session_factory)
     report_router.build_core = lambda: InterviewReportService(
         async_session_factory, ModelRouter({INTERVIEW_COACH_ROUTE: ReplayCoach()}))
@@ -158,47 +297,92 @@ def serve():
     job_target_service.build_model_router = lambda: ModelRouter({job_target_service.EXTRACT_ROUTE: ReplayExtract()})
 
     blocker = patch("httpx.AsyncClient.request",
-                    side_effect=AssertionError("R11 acceptance: outbound HTTP is prohibited"))
+                    side_effect=AssertionError("acceptance: outbound HTTP is prohibited"))
     blocker.start()
-    print("R11 acceptance API on 127.0.0.1:8000 (replay providers, outbound HTTP blocked)")
-    uvicorn.run("interview_api.main:app", host="127.0.0.1", port=8000)
+    print(f"acceptance API on 127.0.0.1:{target.api_port} database={target.database} "
+          "(replay providers, outbound HTTP blocked)")
+    uvicorn.run("interview_api.main:app", host="127.0.0.1", port=target.api_port, log_level="info")
 
 
-if __name__ == "__main__":
+# ── the worker process ──────────────────────────────────────────────────────
+def work(target):
+    """Same real Celery worker; only the model boundary is replayed."""
+    worker_src = ROOT / "apps" / "worker" / "src"
+    if str(worker_src) not in sys.path:
+        sys.path.insert(0, str(worker_src))
+    from interview_api.infrastructure.models.router import ModelRouter, RESUME_PROFILE_ROUTE
+    from interview_worker.celery_app import app
+
+    verify_stack(target)
+    replay_router = lambda: ModelRouter({RESUME_PROFILE_ROUTE: ReplayProfile()})
+    hostname = "iap-acceptance@localhost"
+    with patch("interview_api.infrastructure.llm.provider.OpenAICompatibleLLMProvider", ReplayResumeExtract), \
+         patch("interview_api.modules.candidate_profile.agent.build_resume_profile_router", replay_router), \
+         patch("httpx.AsyncClient.request",
+               side_effect=AssertionError("acceptance: outbound HTTP is prohibited")):
+        print(f"acceptance worker {hostname} database={target.database} "
+              f"broker={target.describe()['redis_databases'][1]} (replay models)")
+        app.worker_main(["worker", "--pool=solo", "--loglevel=INFO",
+                         "--hostname", hostname])
+
+
+def main(argv=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("action", choices=["seed", "history", "api", "state"])
-    parser.add_argument("--database", required=True)
+    parser.add_argument("action", choices=["seed", "history", "api", "worker", "state", "verify"])
+    # Deliberately not `required=True`: the refusal has to be ours, explicit, and
+    # identical whether the flag is missing or names the wrong database.
+    parser.add_argument("--database", default=None)
     parser.add_argument("--email", default=EMAILS["owner"])
     parser.add_argument("--target", type=int)
     parser.add_argument("--answers", default="GOOD,GOOD,WEAK,GOOD,WEAK,WEAK")
-    args = parser.parse_args()
+    parser.add_argument("--api-port", type=int, default=8000)
+    args = parser.parse_args(argv)
 
-    guard(args.database)
-    engine, factory = database(args.database)
+    try:
+        target = runtime_target.resolve(args.database, base_url=settings.database_url)
+    except runtime_target.RuntimeTargetError as refused:
+        print(str(refused), file=sys.stderr)
+        return 3
+    target = dataclasses.replace(target, api_port=args.api_port)
+    runtime_target.apply(target)
+    announce(target)
+
+    if args.action == "verify":
+        # Proves the resolution/apply path without importing an engine at all.
+        return 0
     if args.action == "api":
-        asyncio.run(engine.dispose())
-        serve()
-    else:
-        async def main():
-            try:
-                if args.action == "seed":
-                    await seed(factory)
-                elif args.action == "history":
-                    mapping = {"GOOD": GOOD, "WEAK": WEAK}
-                    await history(factory, args.email, args.target,
-                                  [mapping[name] for name in args.answers.split(",")])
-                elif args.action == "state":
-                    from interview_api.modules.interview.training import TrainingService
-                    from sqlalchemy import select
-                    from interview_api.modules.users.models import User
-                    async with factory() as db:
-                        user_id = await db.scalar(select(User.id).where(User.email == args.email))
-                    from interview_api.modules.interview.schemas import CreateSessionRequest
-                    board = await TrainingService(factory).workbench(user_id, CreateSessionRequest(
-                        job_target_id=args.target, interviewer_skill_id="java_backend",
-                        adaptive_interview=True, question_count=8))
-                    print(json.dumps([(t["knowledge_id"], t["state"], t["available_modes"])
-                                      for t in board["targets"]], ensure_ascii=False))
-            finally:
-                await engine.dispose()
-        asyncio.run(main())
+        try:
+            serve(target)
+        except runtime_target.RuntimeTargetError as refused:
+            print(str(refused), file=sys.stderr)
+            return 3
+        return 0
+    if args.action == "worker":
+        try:
+            work(target)
+        except runtime_target.RuntimeTargetError as refused:
+            print(str(refused), file=sys.stderr)
+            return 3
+        return 0
+
+    engine, factory = database(target)
+
+    async def run():
+        try:
+            if args.action == "seed":
+                await seed(factory)
+            elif args.action == "history":
+                mapping = {"GOOD": GOOD, "WEAK": WEAK}
+                await history(factory, args.email, args.target,
+                              [mapping[name] for name in args.answers.split(",")])
+            else:
+                await state(factory, args.email, args.target)
+        finally:
+            await engine.dispose()
+
+    asyncio.run(run())
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
