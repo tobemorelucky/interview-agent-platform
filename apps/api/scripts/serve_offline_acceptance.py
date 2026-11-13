@@ -27,8 +27,10 @@ server starts. Nothing here falls back to `.env`, and no password is printed.
 
 import argparse
 import asyncio
+import atexit
 import dataclasses
 import json
+import os
 import sys
 from pathlib import Path
 from unittest.mock import patch
@@ -229,6 +231,36 @@ def build_core(factory):
         {route: provider for route in (INTERVIEW_MAIN_ROUTE, ANSWER_EVALUATION_ROUTE)}))
 
 
+# ── round 18: the one live route pair, inside a hard ceiling ─────────────────
+CAPTURE_DIR = Path(os.getenv("LIVE_CAPTURE_DIR", str(ROOT / ".runtime" / "r18" / "capture")))
+LIVE_HOSTS = {"api-inference.modelscope.cn"}
+
+
+def live_gate(name):
+    """Build the gate and register its summary so it survives a Ctrl-C stop."""
+    from live_model_gate import LiveGate
+
+    gate = LiveGate(CAPTURE_DIR / name)
+    atexit.register(lambda: print("LIVE_GATE " + json.dumps(gate.summary(), ensure_ascii=False)))
+    return gate
+
+
+def only_configured_hosts():
+    """Transport-level allowlist: covers httpx *and* the OpenAI SDK underneath."""
+    import httpx
+
+    original = httpx.AsyncHTTPTransport.handle_async_request
+
+    async def guarded(self, request):
+        if request.url.host not in LIVE_HOSTS:
+            raise AssertionError(
+                f"acceptance: outbound HTTP to {request.url.host} is prohibited (live mode "
+                f"allows only {sorted(LIVE_HOSTS)})")
+        return await original(self, request)
+
+    return patch.object(httpx.AsyncHTTPTransport, "handle_async_request", guarded)
+
+
 # ── fixtures ────────────────────────────────────────────────────────────────
 async def seed(factory):
     from interview_api.core.security import hash_password
@@ -293,7 +325,7 @@ def verify_stack(target):
     runtime_target.verify_optional_clients(target)
 
 
-def serve(target):
+def serve(target, *, live=False):
     import httpx
     import uvicorn
     from interview_api.infrastructure.db.session import async_session_factory
@@ -307,35 +339,81 @@ def serve(target):
     interview_router.build_core = lambda: build_core(async_session_factory)
     report_router.build_core = lambda: InterviewReportService(
         async_session_factory, ModelRouter({INTERVIEW_COACH_ROUTE: ReplayCoach()}))
-    # JD extraction normally builds a router from settings; point it at replay.
-    job_target_service.build_model_router = lambda: ModelRouter({job_target_service.EXTRACT_ROUTE: ReplayExtract()})
 
-    blocker = patch("httpx.AsyncClient.request",
-                    side_effect=AssertionError("acceptance: outbound HTTP is prohibited"))
-    blocker.start()
+    if live:
+        # Only the JD extraction route is real; interview/coach stay replayed so
+        # nothing can spend budget on a path this round does not exercise.
+        from interview_api.infrastructure.models.router import EXTRACT_ROUTE as _EXTRACT, build_model_router as _build
+        from live_model_gate import GatedProvider
+
+        gate = live_gate("api")
+
+        def live_jd_router():
+            router = _build()
+            router.routes[_EXTRACT] = GatedProvider(router.routes[_EXTRACT], gate, _EXTRACT)
+            return router
+
+        job_target_service.build_model_router = live_jd_router
+        guard = only_configured_hosts()
+    else:
+        # JD extraction normally builds a router from settings; point it at replay.
+        job_target_service.build_model_router = lambda: ModelRouter(
+            {job_target_service.EXTRACT_ROUTE: ReplayExtract()})
+        guard = patch("httpx.AsyncClient.request",
+                      side_effect=AssertionError("acceptance: outbound HTTP is prohibited"))
+
+    guard.start()
     print(f"acceptance API on 127.0.0.1:{target.api_port} database={target.database} "
-          "(replay providers, outbound HTTP blocked)")
+          f"({'LIVE jd extraction, gated' if live else 'replay providers, outbound HTTP blocked'})")
     uvicorn.run("interview_api.main:app", host="127.0.0.1", port=target.api_port, log_level="info")
 
 
 # ── the worker process ──────────────────────────────────────────────────────
-def work(target):
-    """Same real Celery worker; only the model boundary is replayed."""
+def work(target, *, live=False):
+    """Same real Celery worker; only the model boundary is replayed — unless live."""
     worker_src = ROOT / "apps" / "worker" / "src"
     if str(worker_src) not in sys.path:
         sys.path.insert(0, str(worker_src))
+    from interview_api.infrastructure.llm.provider import OpenAICompatibleLLMProvider
     from interview_api.infrastructure.models.router import ModelRouter, RESUME_PROFILE_ROUTE
     from interview_worker.celery_app import app
 
     verify_stack(target)
-    replay_router = lambda: ModelRouter({RESUME_PROFILE_ROUTE: ReplayProfile()})
     hostname = "iap-acceptance@localhost"
-    with patch("interview_api.infrastructure.llm.provider.OpenAICompatibleLLMProvider", ReplayResumeExtract), \
-         patch("interview_api.modules.candidate_profile.agent.build_resume_profile_router", replay_router), \
-         patch("httpx.AsyncClient.request",
-               side_effect=AssertionError("acceptance: outbound HTTP is prohibited")):
+
+    if live:
+        from interview_api.infrastructure.models.router import build_resume_profile_router
+        from live_model_gate import GatedProvider, gated_chat_provider
+
+        gate = live_gate("worker")
+
+        def live_profile_router():
+            router = build_resume_profile_router()
+            router.routes[RESUME_PROFILE_ROUTE] = GatedProvider(
+                router.routes[RESUME_PROFILE_ROUTE], gate, RESUME_PROFILE_ROUTE)
+            return router
+
+        patches = [
+            patch("interview_api.infrastructure.llm.provider.OpenAICompatibleLLMProvider",
+                  gated_chat_provider(OpenAICompatibleLLMProvider, gate)),
+            patch("interview_api.modules.candidate_profile.agent.build_resume_profile_router",
+                  live_profile_router),
+            only_configured_hosts(),
+        ]
+        mode = "LIVE resume extraction + profile selection, gated"
+    else:
+        replay_router = lambda: ModelRouter({RESUME_PROFILE_ROUTE: ReplayProfile()})
+        patches = [
+            patch("interview_api.infrastructure.llm.provider.OpenAICompatibleLLMProvider", ReplayResumeExtract),
+            patch("interview_api.modules.candidate_profile.agent.build_resume_profile_router", replay_router),
+            patch("httpx.AsyncClient.request",
+                  side_effect=AssertionError("acceptance: outbound HTTP is prohibited")),
+        ]
+        mode = "replay models"
+
+    with patches[0], patches[1], patches[2]:
         print(f"acceptance worker {hostname} database={target.database} "
-              f"broker={target.describe()['redis_databases'][1]} (replay models)")
+              f"broker={target.describe()['redis_databases'][1]} ({mode})")
         app.worker_main(["worker", "--pool=solo", "--loglevel=INFO",
                          "--hostname", hostname])
 
@@ -350,10 +428,16 @@ def main(argv=None):
     parser.add_argument("--target", type=int)
     parser.add_argument("--answers", default="GOOD,GOOD,WEAK,GOOD,WEAK,WEAK")
     parser.add_argument("--api-port", type=int, default=8000)
+    # Round 18: real models stay opt-in, and only for the four input-quality
+    # calls. Default is unchanged replay behaviour.
+    parser.add_argument("--live", action="store_true",
+                        help="real model calls for JD extraction / resume profile, gated by live_model_gate")
+    parser.add_argument("--bucket", default=None, help="MinIO bucket for this round's isolation")
     args = parser.parse_args(argv)
 
     try:
-        target = runtime_target.resolve(args.database, base_url=settings.database_url)
+        target = runtime_target.resolve(args.database, base_url=settings.database_url,
+                                        minio_bucket=args.bucket)
     except runtime_target.RuntimeTargetError as refused:
         print(str(refused), file=sys.stderr)
         return 3
@@ -366,14 +450,14 @@ def main(argv=None):
         return 0
     if args.action == "api":
         try:
-            serve(target)
+            serve(target, live=args.live)
         except runtime_target.RuntimeTargetError as refused:
             print(str(refused), file=sys.stderr)
             return 3
         return 0
     if args.action == "worker":
         try:
-            work(target)
+            work(target, live=args.live)
         except runtime_target.RuntimeTargetError as refused:
             print(str(refused), file=sys.stderr)
             return 3
