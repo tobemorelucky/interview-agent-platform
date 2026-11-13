@@ -6,7 +6,7 @@ import { applySkillRecommendation, chooseSkill, type SkillChoice } from '../type
 import ReferenceAnswerView from '../components/ReferenceAnswer.vue'
 import DesignTraceView from '../components/DesignTrace.vue'
 import type { DesignPlan, DesignTrace } from '../types/interview'
-import type { ReferenceAnswer, InterviewerOptions, InterviewerSelection } from '../types/interview'
+import type { ReferenceAnswer, InterviewerOptions, InterviewerSelection, SkillRecommendation } from '../types/interview'
 import { displayLabel, publicName, dimensionLabels, userError } from "../i18n/zh-CN"
 import { useRoute, useRouter } from "vue-router"
 import {
@@ -26,8 +26,8 @@ import {
   type InterviewTarget,
 } from "../api/interview"
 import { uploadResume, getResume as apiGetResume } from "../api/resume"
-import { listTargets } from "../api/job-target"
-import type { JobTarget } from "../types/job-target"
+import { listTargets, skillRecommendations } from "../api/job-target"
+import type { JobTarget, TargetSkillRecommendation } from "../types/job-target"
 import { ApiError } from "../api/client"
 import type { InterviewSession, InterviewMessage, InterviewQuestionSummary } from "../types/interview"
 import { sourceLabel, sourceColor } from "../types/interview"
@@ -35,6 +35,11 @@ import { statusLabel, stageLabel } from "../types/resume"
 
 const route = useRoute(), router = useRouter()
 const entryRoute = route, entryRouter = router
+// Snapshot the one-click hand-off before the router.replace() clears the query.
+const entrySkillId = String(entryRoute.query.recommended_skill_id || '')
+const entrySkillSource = String(entryRoute.query.recommendation_source || '')
+const entryRecommendationKey = String(entryRoute.query.recommendation_key || '')
+const entryTargetId = Number(entryRoute.query.job_target_id || 0)
 
 // ── State ──
 const sessions = ref<InterviewSession[]>([])
@@ -60,10 +65,50 @@ const interviewerSelection = computed<InterviewerSelection>(() => ({ ...roundAnd
   design_interview: designInterview.value,
   adaptive_interview: adaptiveInterview.value,
   interviewer_selection_source: skillChoice.value.source || 'USER_SELECTED' }))
-const skillRecommendation = computed(() => selectedTargetId.value ? undefined
-  : targets.value.find(t => t.job_id === selectedJobId.value)?.interviewer_skill_recommendation)
+const privateSkillRec = ref<TargetSkillRecommendation | null>(null)
+let privateSkillSequence = 0
+const recommendationStale = computed(() => {
+  const rec = privateSkillRec.value
+  if (!rec) return false
+  // The server compares against the confirmed inputs; the local check is a
+  // fallback if the advisory read raced with an edit.
+  return !!rec.stale || (!!entryRecommendationKey && entryRecommendationKey !== rec.input_fingerprint)
+})
+// A private JD now uses the same recommendation shape as a published job, so
+// the existing pure reducer keeps protecting an explicit manual choice.
+const skillRecommendation = computed<SkillRecommendation | undefined>(() => {
+  if (selectedTargetId.value) {
+    const rec = privateSkillRec.value
+    if (!rec) return undefined
+    return {
+      policy_version: rec.policy_version, status: rec.status,
+      auto_select: rec.auto_select, recommended_skill_id: rec.recommended_skill_id,
+      recommended_version: rec.recommended_version, reason: rec.message,
+      ranking: rec.candidates.map(c => ({
+        skill_id: c.skill_id, version: c.version, label: c.label, rank: c.rank,
+        excluded: c.excluded,
+        reason: c.matched_reason + (c.uncertain ? '（证据不确定，请人工确认）' : ''),
+        evidence: c.evidence.map(e => ({
+          field: e.field, requirement_id: e.requirement_id ?? null,
+          term: e.matched_term || '',
+          excerpt: e.verbatim_jd_evidence || e.requirement_statement || e.excerpt || '',
+        })),
+      })),
+    }
+  }
+  return targets.value.find(t => t.job_id === selectedJobId.value)?.interviewer_skill_recommendation
+})
 watch(selectedJobId, value => { if (value != null) selectedTargetId.value = null })
-watch(selectedTargetId, value => { if (value != null) selectedJobId.value = null })
+watch(selectedTargetId, async value => {
+  if (value != null) selectedJobId.value = null
+  privateSkillRec.value = null
+  const sequence = ++privateSkillSequence
+  if (!value) return
+  try {
+    const rec = await skillRecommendations(value, entryRecommendationKey || undefined)
+    if (sequence === privateSkillSequence && selectedTargetId.value === value) privateSkillRec.value = rec
+  } catch { /* The manual Skill dropdown stays usable without the advisory read. */ }
+})
 const manualSkillMismatch = computed(() => skillChoice.value.source === 'USER_SELECTED' && !!selectedJobId.value &&
   (!skillRecommendation.value?.auto_select || skillRecommendation.value.recommended_skill_id !== skillChoice.value.skill_id))
 watch([skillRecommendation, interviewerOptions], () => {
@@ -786,12 +831,17 @@ getInterviewTargets().then(async data => {
   selectedJobId.value = jobId
   // Select the current target, then let the user choose interviewer configuration.
 }).then(() => {
-  const targetId = Number(entryRoute.query.job_target_id)
+  const targetId = entryTargetId
   if (!targetId) return
   entryRouter.replace({ path: '/interview' })
   const picked = jobTargets.value.find(t => t.id === targetId && t.parse_status === 'CONFIRMED')
   if (!picked) { alert('该目标岗位不存在、未确认或不属于当前账号，请重新选择。'); return }
   selectedTargetId.value = targetId
+  // One-click hand-off only preselects. A non-primary direction is recorded as
+  // an explicit user choice, so the async recommendation cannot overwrite it.
+  if (entrySkillId) skillChoice.value = entrySkillSource === 'AUTO_RECOMMENDED'
+    ? { skill_id: entrySkillId, source: 'AUTO_RECOMMENDED' }
+    : chooseSkill(entrySkillId)
 }).catch(e => { pageError.value = e instanceof Error ? e.message : "岗位读取失败，请重试" }).finally(() => { targetsLoading.value = false })
 </script>
 
@@ -822,7 +872,7 @@ getInterviewTargets().then(async data => {
           <small v-if="!jobTargets.some(t => t.parse_status === 'CONFIRMED')">
             还没有已确认的目标岗位，可在「我的目标岗位」粘贴 JD 并确认。
           </small>
-          <small v-else>私人岗位不自动推荐 Skill，请手动选择；来源为用户提供，未经企业核实。</small>
+          <small v-else>私人岗位现在会按你已确认的 JD 要求给出规则推荐，仍可手动更换；来源为用户提供，未经企业核实。</small>
         </label>
         <label>面试轮数（含追问）<input v-model.number="createBudget" type="number" min="1" max="40" style="width:60px"></label>
         <label><input type="checkbox" v-model="designInterview" aria-label="系统设计验证面试"> 系统设计验证面试（限量预约场景）</label>
@@ -834,11 +884,13 @@ getInterviewTargets().then(async data => {
             <option v-for="option in interviewerOptions.skills" :key="option.id" :value="option.id">{{ option.label }}</option>
           </select></label>
           <p v-if="skillRecommendation" role="status">{{ skillRecommendation.reason }}</p>
-          <small>{{ skillChoice.source === 'USER_SELECTED' ? '用户手动选择' : skillChoice.source === 'AUTO_RECOMMENDED' ? '根据岗位自动推荐' : '推荐依据不足，请手动选择' }}</small>
+          <small>{{ skillChoice.source === 'USER_SELECTED' ? '用户手动选择' : skillChoice.source === 'AUTO_RECOMMENDED' ? '根据岗位规则自动推荐' : '推荐依据不足，请手动选择' }}</small>
+          <small v-if="skillRecommendation">推荐来源：确定性规则匹配（0 次模型调用），不是模型置信度或百分比。</small>
+          <p v-if="recommendationStale" role="alert">这份 JD 的推荐输入已更新，此前的推荐方向可能已过期；请回到「我的目标岗位」重新查看后再使用。</p>
           <p v-if="manualSkillMismatch">已保留你的手动选择；与当前岗位推荐方向可能不同，请确认。</p>
           <details v-if="skillRecommendation"><summary>查看推荐依据与其他方向</summary>
             <div v-for="item in skillRecommendation.ranking" :key="item.skill_id"><p>{{ item.label }}：{{ item.excluded ? '不适用' : item.reason }}</p>
-              <small v-for="e in item.evidence.slice(0, 3)" :key="`${e.field}-${e.term}`">岗位字段依据：{{ e.excerpt }}<br></small>
+              <small v-for="e in item.evidence.slice(0, 3)" :key="`${e.field}-${e.term}`">对应 JD 依据：{{ e.excerpt }}<br></small>
             </div>
           </details>
           <label>面试轮次<select v-model="roundAndStyle.interview_round" aria-label="面试轮次" style="width:100%">

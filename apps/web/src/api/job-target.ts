@@ -1,5 +1,5 @@
 import client from './client'
-import type { Importance, JobTarget, JobTargetMatch } from '../types/job-target'
+import type { Importance, JobTarget, JobTargetMatch, TargetSkillRecommendation } from '../types/job-target'
 
 export interface TargetRequirementInput {
   statement: string
@@ -41,4 +41,12 @@ export async function deleteTarget(id: number): Promise<void> {
 
 export async function matchTarget(id: number): Promise<JobTargetMatch> {
   return await client.get(`/job-targets/${id}/match`) as unknown as JobTargetMatch
+}
+
+export async function skillRecommendations(id: number, recommendationKey?: string): Promise<TargetSkillRecommendation> {
+  // Read-only and owner-scoped. An unconfirmed JD returns an explicit empty
+  // projection instead of a draft recommendation. A prior key lets the server
+  // flag a stale hand-off after the JD was edited/reconfirmed.
+  const query = recommendationKey ? `?recommendation_key=${encodeURIComponent(recommendationKey)}` : ''
+  return await client.get(`/job-targets/${id}/skill-recommendations${query}`) as unknown as TargetSkillRecommendation
 }

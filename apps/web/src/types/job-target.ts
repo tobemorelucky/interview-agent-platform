@@ -63,3 +63,77 @@ export const evidenceLabels: Record<string, string> = {
 export const importanceLabels: Record<Importance, string> = {
   REQUIRED: '硬性要求', PREFERRED: '加分项', UNKNOWN: '原文未标明',
 }
+
+/** Round 16: deterministic Skill suggestions for one confirmed private JD. */
+export interface SkillEvidenceHit {
+  field: string
+  requirement_id?: number | null
+  matched_term?: string | null
+  excerpt?: string | null
+  requirement_statement?: string | null
+  verbatim_jd_evidence?: string | null
+  evidence_status: string
+}
+
+export interface SkillRecommendationCandidate {
+  skill_id: string
+  version: string
+  label: string
+  rank: number
+  ranking_points: number
+  excluded: boolean
+  contextual: boolean
+  eligible: boolean
+  uncertain: boolean
+  matched_reason: string
+  reason_note: string
+  evidence: SkillEvidenceHit[]
+}
+
+export interface TargetSkillRecommendation {
+  projection: string
+  target_id: number
+  target_version: number
+  parse_status: TargetStatus
+  confirmed_at?: string | null
+  content_fingerprint: string
+  input_fingerprint: string
+  source: string
+  model_calls: number
+  skill_registry_read_only: boolean
+  ranking_semantics: string
+  disclaimer: string
+  policy_version: string
+  status: string
+  auto_select: boolean
+  recommended_skill_id: string | null
+  recommended_version: string | null
+  message: string
+  reason?: string | null
+  needs_manual_confirmation: boolean
+  candidates: SkillRecommendationCandidate[]
+  empty_reason?: string | null
+  confidence_note: string
+  /** Set when this response was checked against an earlier hand-off key. */
+  stale?: boolean
+  stale_reason?: string | null
+}
+
+export const evidenceStatusLabels: Record<string, string> = {
+  VERBATIM_FROM_JD: 'JD 原文逐字证据',
+  USER_ADDED_NO_VERBATIM_QUOTE: '你手动补充的要求，无逐字原文片段',
+  STRUCTURED_DUTY_NOT_VERBATIM_CHECKED: '解析出的职责描述，未做逐字校验',
+  USER_SUPPLIED_TITLE_NOT_A_JD_QUOTE: '岗位标题命中，不是 JD 原文引用',
+  REQUIREMENT_NOT_FOUND_IN_CONFIRMED_VERSION: '该要求不在当前已确认版本中',
+  FIELD_NOT_VERBATIM_VERIFIABLE: '该字段没有可核对的逐字原文',
+}
+export const recommendationStatusLabels: Record<string, string> = {
+  RECOMMENDED: '有明确领先方向', AMBIGUOUS: '多个方向接近，请手动选择',
+  NO_APPLICABLE_SKILL: '没有充分适用的专业规则', INSUFFICIENT_DATA: '已确认要求不足',
+  NOT_CONFIRMED: 'JD 尚未确认',
+}
+export const recommendationEmptyLabels: Record<string, string> = {
+  JD_NOT_CONFIRMED: '该 JD 尚未确认；只有已确认版本才提供正式推荐。',
+  NO_REGISTERED_SKILL: '当前没有合法注册的可用 Skill，不能给出推荐方向。',
+  NO_ELIGIBLE_CANDIDATE: '已注册 Skill 与这份 JD 没有充分命中的证据，不编造相关性；请手动选择。',
+}

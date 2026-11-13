@@ -3,18 +3,29 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ApiError } from '../api/client'
 import {
-  confirmTarget, createTarget, deleteTarget, getTarget, listTargets, matchTarget, parseTarget, updateRequirements,
+  confirmTarget, createTarget, deleteTarget, getTarget, listTargets, matchTarget, parseTarget,
+  skillRecommendations, updateRequirements,
 } from '../api/job-target'
-import type { JobTarget, JobTargetMatch, JobTargetRequirement } from '../types/job-target'
-import { evidenceLabels, importanceLabels, statusLabels } from '../types/job-target'
+import type {
+  JobTarget, JobTargetMatch, JobTargetRequirement, SkillEvidenceHit,
+  SkillRecommendationCandidate, TargetSkillRecommendation,
+} from '../types/job-target'
+import {
+  evidenceLabels, evidenceStatusLabels, importanceLabels,
+  recommendationEmptyLabels, recommendationStatusLabels, statusLabels,
+} from '../types/job-target'
 
 const router = useRouter()
 const targets = ref<JobTarget[]>([])
 const current = ref<JobTarget | null>(null)
 const match = ref<JobTargetMatch | null>(null)
+const skillRec = ref<TargetSkillRecommendation | null>(null)
+const skillRecError = ref('')
 const busy = ref(false)
 const error = ref('')
 const notice = ref('')
+// A late recommendation response must never replace a newer JD view.
+let skillRecSequence = 0
 
 const rawText = ref('')
 const companyName = ref('')
@@ -31,12 +42,26 @@ async function load() {
   try { targets.value = await listTargets() } catch (e) { error.value = message(e) } finally { busy.value = false }
 }
 
+async function loadSkillRecommendation(id: number) {
+  const sequence = ++skillRecSequence
+  skillRecError.value = ''
+  try {
+    const rec = await skillRecommendations(id)
+    if (sequence === skillRecSequence) skillRec.value = rec
+  } catch (e) {
+    // The manual Skill dropdown stays usable if the advisory read fails.
+    if (sequence === skillRecSequence) { skillRec.value = null; skillRecError.value = message(e) }
+  }
+}
+
 async function open(id: number) {
   busy.value = true; error.value = ''; notice.value = ''; match.value = null
+  skillRec.value = null; skillRecError.value = ''; skillRecSequence++
   try {
     const target = await getTarget(id)
     current.value = target
     draft.value = (target.requirements || []).map(row => ({ statement: row.statement, importance: row.importance }))
+    if (target.parse_status === 'CONFIRMED') void loadSkillRecommendation(id)
   } catch (e) { error.value = message(e) } finally { busy.value = false }
 }
 
@@ -66,6 +91,8 @@ async function parse() {
     const parsed = await parseTarget(current.value.id)
     current.value = parsed
     draft.value = (parsed.requirements || []).map(row => ({ statement: row.statement, importance: row.importance }))
+    // Re-parsing returns to a draft; an older recommendation must not linger.
+    skillRec.value = null; skillRecError.value = ''; skillRecSequence++
     notice.value = parsed.parse_mode === 'RULE'
       ? '当前为规则解析（未使用模型），结果只按原文分行归类，请逐条核对。'
       : parsed.parse_status === 'FAILED' ? (parsed.parse_error || '未识别到要求，请手动添加。') : '解析完成，请核对后确认。'
@@ -83,6 +110,8 @@ async function save() {
   try {
     current.value = await updateRequirements(current.value.id, rows)
     draft.value = (current.value.requirements || []).map(row => ({ statement: row.statement, importance: row.importance }))
+    // Editing requirements invalidates the previous recommendation input key.
+    skillRec.value = null; skillRecError.value = ''; skillRecSequence++
     notice.value = `要求已保存在第 ${current.value.version} 版草稿中；再次确认会生成第 ${current.value.version + 1} 版，已开始的面试仍使用原冻结版本。`
     await load()
   } catch (e) { error.value = message(e) } finally { busy.value = false }
@@ -95,6 +124,7 @@ async function confirm() {
     current.value = await confirmTarget(current.value.id)
     notice.value = `已确认第 ${current.value.version} 版；可用于创建面试，后续修改不会影响已开始的面试。`
     await load()
+    await loadSkillRecommendation(current.value.id)
   } catch (e) { error.value = message(e) } finally { busy.value = false }
 }
 
@@ -105,6 +135,7 @@ async function remove() {
   try {
     await deleteTarget(current.value.id)
     current.value = null; draft.value = []; match.value = null
+    skillRec.value = null; skillRecError.value = ''; skillRecSequence++
     notice.value = '已删除。'
     await load()
   } catch (e) { error.value = message(e) } finally { busy.value = false }
@@ -122,6 +153,39 @@ function useInInterview() { if (current.value) router.push({ path: '/interview',
 function useInTraining() { if (current.value) router.push({ path: '/training', query: { job_target_id: String(current.value.id) } }) }
 // Same destination as the detail button, reachable without opening the target.
 function startTraining(id: number) { router.push({ path: '/training', query: { job_target_id: String(id) } }) }
+
+function uniqueEvidence(rows: SkillEvidenceHit[]) {
+  const seen = new Set<string>()
+  return rows.filter(row => {
+    // One confirmed requirement / duty is shown once, even if several rule
+    // terms matched it; the quoted text, not the matched term, is the evidence.
+    const key = row.verbatim_jd_evidence
+      ? `verbatim|${row.verbatim_jd_evidence}`
+      : `${row.field}|${row.requirement_id}|${row.requirement_statement || row.excerpt}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  }).slice(0, 6)
+}
+
+/** One click only *preselects* a direction; neither page creates a session on arrival. */
+function useRecommendedSkill(candidate: SkillRecommendationCandidate, destination: 'interview' | 'training') {
+  if (!current.value || !skillRec.value) return
+  const isPrimary = skillRec.value.auto_select && candidate.skill_id === skillRec.value.recommended_skill_id
+  router.push({
+    path: destination === 'interview' ? '/interview' : '/training',
+    query: {
+      job_target_id: String(current.value.id),
+      recommended_skill_id: candidate.skill_id,
+      recommended_skill_version: candidate.version,
+      recommendation_key: skillRec.value.input_fingerprint,
+      recommendation_target_version: String(current.value.version),
+      // Only the rule's clear winner is marked auto; any other direction is an
+      // explicit user choice and must never be silently re-ranked later.
+      recommendation_source: isPrimary ? 'AUTO_RECOMMENDED' : 'USER_SELECTED',
+    },
+  })
+}
 
 load()
 </script>
@@ -184,6 +248,46 @@ load()
         <button :disabled="busy" @click="remove">删除</button>
       </div>
 
+      <section v-if="confirmed" class="skill-rec" aria-label="私有 JD 的推荐专业方向">
+        <h4>推荐的专业方向（规则匹配 · 0 次模型调用）</h4>
+        <p v-if="skillRecError" role="alert">推荐读取失败：{{ skillRecError }}。你仍可在面试或训练页手动选择专业 Skill。</p>
+        <template v-if="skillRec">
+          <p>{{ recommendationStatusLabels[skillRec.status] || skillRec.status }} · {{ skillRec.message }}</p>
+          <p><small>{{ skillRec.ranking_semantics }}</small></p>
+          <p><small>{{ skillRec.confidence_note }}</small></p>
+          <p v-if="!skillRec.candidates.filter(c => c.eligible).length">
+            {{ recommendationEmptyLabels[skillRec.empty_reason || ''] || '当前没有可用的推荐方向，请手动选择专业 Skill。' }}
+          </p>
+          <ul class="skill-list">
+            <li v-for="c in skillRec.candidates.filter(c => c.eligible)" :key="c.skill_id">
+              <div><strong>{{ c.label }}</strong>
+                <span> {{ c.skill_id }} · v{{ c.version }} · 第 {{ c.rank }} 位 · 命中权重 {{ c.ranking_points }}</span>
+                <span v-if="c.skill_id === skillRec.recommended_skill_id && skillRec.auto_select"> 系统首推</span>
+                <span v-if="c.uncertain"> 证据不确定</span>
+              </div>
+              <p>{{ c.reason_note }}</p>
+              <p><small>规则理由：{{ c.matched_reason }}</small></p>
+              <ul v-if="c.evidence.length" class="evidence-list">
+                <li v-for="(e, i) in uniqueEvidence(c.evidence)" :key="i">
+                  <small>{{ evidenceStatusLabels[e.evidence_status] || e.evidence_status }}：{{ e.verbatim_jd_evidence || e.requirement_statement || e.excerpt }}</small>
+                </li>
+              </ul>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button :disabled="busy" :aria-label="`用 ${c.label} 开始面试`" @click="useRecommendedSkill(c, 'interview')">用这个方向开始面试</button>
+                <button :disabled="busy" :aria-label="`用 ${c.label} 开始训练`" @click="useRecommendedSkill(c, 'training')">用这个方向开始训练</button>
+              </div>
+            </li>
+          </ul>
+          <p><small>{{ skillRec.disclaimer }}</small></p>
+          <p><small>手动更换：跳转后在「专业方向」下拉自行选择；你手动选中的方向不会被异步推荐结果覆盖。当前为 JD 第 {{ skillRec.target_version }} 版，推荐输入指纹 {{ skillRec.input_fingerprint.slice(0, 12) }}…；JD 更新后请重新查看推荐。</small></p>
+        </template>
+        <p v-else role="status">正在读取推荐方向…</p>
+      </section>
+      <section v-else class="skill-rec">
+        <h4>推荐的专业方向</h4>
+        <p>确认 JD 之后才提供正式推荐；未确认版本不提供推荐，也不会编造相关性。当前状态：{{ statusLabels[current.parse_status] }}。</p>
+      </section>
+
       <h4>岗位要求（可修改、删除、补充）</h4>
       <table v-if="draft.length" style="width:100%">
         <thead><tr><th>要求</th><th>性质</th><th></th></tr></thead>
@@ -227,3 +331,14 @@ load()
     </section>
   </div>
 </template>
+
+<style scoped>
+.skill-rec{border:1px solid #e5e7eb;border-radius:8px;padding:14px;margin:18px 0;background:#fafcff}
+.skill-list,.evidence-list{list-style:none;padding:0}
+.skill-list>li{padding:12px 0;border-bottom:1px solid #eef2f6}
+.skill-list>li:last-child{border-bottom:0}
+.skill-list strong{font-size:16px}
+.skill-list span{color:#667085;font-size:13px}
+.evidence-list li{padding:2px 0 2px 12px;border-left:2px solid #d6e4e1}
+.skill-rec small{color:#667085}
+</style>
