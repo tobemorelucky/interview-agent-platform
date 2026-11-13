@@ -196,3 +196,73 @@ class TrainingService:
             finally:
                 # Reuse exact creation rules without publishing read-preview projections.
                 await db.rollback()
+
+    async def candidates(self, user_id, request, *, session_id=None):
+        """Round 16: a read-time, rule-only projection of executable training options.
+
+        No report is generated or rewritten, no Coach/Harness contract changes,
+        nothing is written to CapabilityMemory (the same rollback-only preview
+        `workbench` uses). With `session_id`, the source and Skill come from that
+        user's frozen session snapshot, never from a mutable JD.
+        """
+        from datetime import datetime, timezone
+        from interview_api.core.exceptions import AppError
+        from interview_api.modules.interview.models import InterviewContextSnapshot, InterviewSession
+        from interview_api.modules.interview.training_candidates import (
+            PROJECTION_VERSION, SEMANTICS, build_training_candidates)
+
+        computed_at = datetime.now(timezone.utc).isoformat()
+        target_unavailable = ("JOB_TARGET_NOT_CONFIRMED", "JOB_TARGET_NOT_FOUND",
+                              "JOB_SOURCE_CONFLICT", "JOB_SOURCE_REQUIRED",
+                              "PROFILE_REQUIRED", "PUBLISHED_JD_REQUIRED",
+                              "REQUIREMENTS_REQUIRED", "INVALID_COMPANY_JOB",
+                              "INTERVIEWER_SKILL_REQUIRED", "SESSION_NOT_FOUND")
+        async with self.factory() as db:
+            try:
+                if session_id:
+                    session = await db.scalar(select(InterviewSession).where(
+                        InterviewSession.id == session_id, InterviewSession.user_id == user_id))
+                    if session is None:
+                        raise AppError("SESSION_NOT_FOUND", "面试会话不存在", 404)
+                    snapshot = await db.get(InterviewContextSnapshot, session.context_snapshot_id)
+                    frozen = (snapshot.context_json if snapshot else {}) or {}
+                    target = frozen.get('job_target') or {}
+                    skill = (frozen.get('interviewer_config') or {}).get('skill') or {}
+                    identity = dict(job_target_id=target.get('id'), job_id=frozen.get('job_id'),
+                                    company_id=frozen.get('company_id'),
+                                    target_version=target.get('version'), skill_id=skill.get('id'))
+                    request = request.model_copy(update=dict(
+                        job_target_id=target.get('id') or None,
+                        company_id=frozen.get('company_id'), job_id=frozen.get('job_id'),
+                        interviewer_skill_id=skill.get('id')))
+                else:
+                    identity = dict(job_target_id=request.job_target_id, job_id=request.job_id,
+                                    company_id=request.company_id, target_version=None,
+                                    skill_id=request.interviewer_skill_id)
+                request = request.model_copy(update=dict(adaptive_interview=True, question_count=8,
+                    training_mode=None, training_knowledge_id=None, training_request_key=None,
+                    design_interview=False, main_harness=False))
+                context, _, _ = await build_context(db, user_id, request)
+                states = await CapabilityMemoryService(db).list(user_id)
+                views = target_views(context, states)
+                blueprint = context.get('adaptive_blueprint') or {}
+                priorities = {t['knowledge_id']: t.get('priority', 0) for t in blueprint.get('targets', [])}
+                result = build_training_candidates(views, states,
+                    skill_id=request.interviewer_skill_id, computed_at=computed_at,
+                    job_target_id=identity['job_target_id'], job_id=identity['job_id'],
+                    target_version=identity['target_version'], target_priorities=priorities)
+                result['modes_source'] = 'interview.training.modes() (same function freeze_training uses)'
+                return result
+            except AppError as exc:
+                if exc.code not in target_unavailable:
+                    raise
+                # An edited/unconfirmed/foreign target must not leave an old
+                # suggestion looking like something executable right now.
+                return dict(projection=PROJECTION_VERSION, source="DETERMINISTIC_RULE",
+                    model_calls=0, computed_at=computed_at, status="TARGET_UNAVAILABLE",
+                    empty_reason="TARGET_EXPIRED_OR_UNAVAILABLE", error_code=exc.code,
+                    candidates=[], general_only=[], fallback=None, semantics=SEMANTICS,
+                    message="当前目标版本已变化、未确认或不可用；旧建议不能继续当作当前可直接执行的训练。",
+                    disclaimer="规则候选与模型 Coach 建议来源不同，两者不等价。")
+            finally:
+                await db.rollback()

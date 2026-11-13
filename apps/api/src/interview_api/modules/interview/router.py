@@ -33,6 +33,15 @@ async def training_workbench(body: CreateSessionRequest, current_user=Depends(ge
     return success(data=await TrainingService(build_core().factory).workbench(current_user.id,body))
 
 
+@router.post('/training/candidates')
+async def training_candidates(body: CreateSessionRequest, session_id: int | None = None,
+                              current_user=Depends(get_current_user)):
+    """Read-time, rule-only training candidates. Creates nothing, writes nothing."""
+    from interview_api.modules.interview.training import TrainingService
+    return success(data=await TrainingService(build_core().factory).candidates(
+        current_user.id, body, session_id=session_id))
+
+
 @router.get('/training/sessions/{session_id}')
 async def training_feedback(session_id: int, current_user=Depends(get_current_user)):
     from interview_api.modules.interview.training import TrainingService
