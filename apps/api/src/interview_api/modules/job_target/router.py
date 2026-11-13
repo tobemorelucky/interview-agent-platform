@@ -58,6 +58,20 @@ async def confirm(target_id: int, user=Depends(get_current_user)):
     return success(data=data)
 
 
+@router.get("/{target_id}/skill-recommendations")
+async def skill_recommendations(target_id: int, recommendation_key: str | None = None,
+                                user=Depends(get_current_user)):
+    """Read-only, owner-scoped Skill suggestions for a confirmed private JD.
+
+    `recommendation_key` is an optional fingerprint from an earlier hand-off;
+    the response says whether that recommendation is now stale.
+    """
+    async with async_session_factory() as db:
+        data = await JobTargetService(db).skill_recommendations(
+            user.id, target_id, expected_key=recommendation_key)
+    return success(data=data)
+
+
 @router.get("/{target_id}/match")
 async def match(target_id: int, user=Depends(get_current_user)):
     async with async_session_factory() as db:

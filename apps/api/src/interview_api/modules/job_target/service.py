@@ -242,6 +242,28 @@ class JobTargetService:
         await self.db.refresh(target)
         return self.serialize(target)
 
+    # ── skill recommendation (round 16) ──
+    async def skill_recommendations(self, user_id: int, target_id: int, *, root=None,
+                                    expected_key: str | None = None) -> dict:
+        """Deterministic Skill suggestions for one *confirmed* private JD.
+
+        Reuses the existing `recommend_for_target` rules unchanged. `read()` is
+        owner-scoped, so another user's id is indistinguishable from a missing
+        one (404). An unconfirmed JD gets no formal recommendation at all: we
+        deliberately do not even run the matcher, so no stale draft result can
+        be presented as a confirmed one.
+        """
+        from interview_api.modules.interview.skill_recommendation import (
+            project_target_recommendation, recommend_for_target)
+        from interview_api.modules.interview.skill_registry import ROOT
+        target = await self.read(user_id, target_id)
+        if target.parse_status != CONFIRMED:
+            return project_target_recommendation(target, expected_key=expected_key)
+        # full_evidence=True only enriches this read-only response; the frozen
+        # session snapshot still uses the historical hits[:3] envelope.
+        recommendation = recommend_for_target(target, root=root or ROOT, full_evidence=True)
+        return project_target_recommendation(target, recommendation, expected_key=expected_key)
+
     async def delete(self, user_id: int, target_id: int) -> dict:
         target = await self.owned(user_id, target_id)
         used = await self.db.scalar(select(func.count(InterviewContextSnapshot.id)).where(
