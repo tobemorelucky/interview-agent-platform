@@ -10,28 +10,91 @@ from sqlalchemy import select
 from interview_api.modules.interview.skill_registry import ROOT, discover
 from interview_api.modules.public_career.models import Job, JobDescriptionVersion, JobRequirement, JobTag
 
-POLICY_VERSION = "1.1.0"
+POLICY_VERSION = "1.2.0"
 WEIGHTS = dict(category=10, title=8, responsibility=6, capability_group=3)
 MIN_SCORE, MIN_MARGIN = 9, 3
+# A job title is context, not evidence. A candidate whose only support is the
+# title (or the title plus one generic term) is never auto-selected.
+MIN_CONTENT = 6
 
 
 def normalized(value):
     return re.sub(r"\s+", " ", unicodedata.normalize("NFKC", str(value)).casefold()).strip()
 
 
-def contains(text, term):
+def occurrences(text, term):
+    """Character spans of `term` in `text`; ASCII terms keep word boundaries."""
     text, term = normalized(text), normalized(term)
-    # Java != JavaScript; repeated keyword stuffing never increases the score.
+    if not term:
+        return []
     pattern = re.escape(term)
-    if term and term[0].isascii() and term[0].isalnum():
+    if term[0].isascii() and term[0].isalnum():
         pattern = r"(?<![a-z0-9])" + pattern
-    if term and term[-1].isascii() and term[-1].isalnum():
+    if term[-1].isascii() and term[-1].isalnum():
         pattern += r"(?![a-z0-9])"
-    return bool(term and re.search(pattern, text))
+    return [(match.start(), match.end()) for match in re.finditer(pattern, text)]
+
+
+def contains(text, term):
+    # Java != JavaScript; repeated keyword stuffing never increases the score.
+    return bool(occurrences(text, term))
+
+
+def term_inventory(entries):
+    """Every registered term and the Skills that own it."""
+    inventory = {}
+    for identity, entry in entries.items():
+        rules = entry["manifest"]["matching"]
+        terms = list(rules["categories"]) + list(rules["title_aliases"]) + list(rules["responsibility_terms"])
+        for group in rules["capability_groups"]:
+            terms.extend(group)
+        for term in terms:
+            value = normalized(term)
+            if value:
+                inventory.setdefault(value, set()).add(identity)
+    return inventory
+
+
+def _longer_terms(inventory):
+    """term -> registered terms that contain it (candidate covering spans)."""
+    result = {}
+    for term in inventory:
+        result[term] = tuple(other for other in inventory if len(other) > len(term) and term in other)
+    return result
 
 
 def recommend(job, *, root=ROOT, full_evidence=False):
     entries, _ = discover(root)
+    inventory = term_inventory(entries)
+    longer = _longer_terms(inventory)
+    spans = {}
+
+    def hits_at(text, term):
+        key = (text, term)
+        if key not in spans:
+            spans[key] = occurrences(text, term)
+        return spans[key]
+
+    def matches(text, term, skill_id):
+        """A short term does not count inside a longer term another Skill owns.
+
+        "向量数据库" belongs to the AI/Agent rules; crediting the bank rules for
+        "数据库" there is a substring coincidence, not a shared capability.
+        A longer term owned by the *same* Skill is a hypernym, not a conflict.
+        """
+        found = hits_at(text, term)
+        if not found:
+            return False
+        covering = []
+        for other in longer.get(normalized(term), ()):
+            if skill_id in inventory.get(other, ()):
+                continue
+            covering.extend(hits_at(text, other))
+        if not covering:
+            return True
+        return any(not any(start <= span[0] and span[1] <= end for start, end in covering)
+                   for span in found)
+
     # Company name is deliberately absent. Only whitelisted public job fields.
     fields = [("title", job.get("title", job.get("job_title", "")), None),
               ("job_family", job.get("job_family") or "", None)]
@@ -50,7 +113,8 @@ def recommend(job, *, root=ROOT, full_evidence=False):
             ("responsibility", ("responsibilities", "requirements"), rules["responsibility_terms"]),
         ):
             hits = [dict(field=field, requirement_id=ref, term=term, excerpt=text[:200])
-                for field, text, ref in fields if field in field_names for term in terms if contains(text, term)]
+                for field, text, ref in fields if field in field_names
+                for term in terms if matches(text, term, identity)]
             if hits:
                 score += WEIGHTS[signal]
                 # `full_evidence` is only for the private-JD response projection.
@@ -61,31 +125,68 @@ def recommend(job, *, root=ROOT, full_evidence=False):
         for aliases in rules["capability_groups"]:
             hit = next((dict(field=field, requirement_id=ref, term=term, excerpt=text[:200])
                 for field, text, ref in fields if field in ("requirements", "responsibilities", "tags")
-                for term in aliases if contains(text, term)), None)
+                for term in aliases if matches(text, term, identity)), None)
             if hit:
                 score += WEIGHTS["capability_group"]
                 evidence.append(hit)
+        title_points = WEIGHTS["title"] if "title" in groups else 0
         ranked.append(dict(skill_id=identity, version=m["version"], label=m["label"],
-            ranking_points=score, excluded=excluded, contextual=bool(groups), evidence=evidence,
+            ranking_points=score, content_points=score - title_points, title_points=title_points,
+            signals=sorted(groups), excluded=excluded, contextual=bool(groups), evidence=evidence,
             reason="岗位的" + "、".join(dict.fromkeys(e["term"] for e in evidence[:3])) + "与该专业规则相符。" if evidence else "当前岗位字段缺少该专业的明确依据。"))
     ranked.sort(key=lambda r: (r["excluded"], -r["ranking_points"], r["skill_id"]))
     for index, item in enumerate(ranked, 1):
         item["rank"] = index
-    eligible = [r for r in ranked if not r["excluded"]]
+    eligible = [r for r in ranked if not r["excluded"] and r["contextual"]
+                and r["ranking_points"] >= MIN_SCORE and r["content_points"] >= MIN_CONTENT]
     first = eligible[0] if eligible else None
+    leader = next((r for r in ranked if not r["excluded"]), None)
     margin = first["ranking_points"] - eligible[1]["ranking_points"] if len(eligible) > 1 else 999
     content = bool(job.get("requirements") or job.get("responsibilities"))
-    status = ("INSUFFICIENT_DATA" if not content else "NO_APPLICABLE_SKILL" if not first or not first["contextual"] or first["ranking_points"] < MIN_SCORE else
-              "AMBIGUOUS" if margin < MIN_MARGIN else "RECOMMENDED")
+    # A title-led leader whose *content* evidence is weaker than another
+    # eligible Skill is a genuine conflict: do not pick either side.
+    rival = None
+    if first is not None:
+        stronger = [r for r in eligible if r["skill_id"] != first["skill_id"]
+                    and r["content_points"] > first["content_points"]]
+        rival = max(stronger, key=lambda r: (r["content_points"], r["ranking_points"])) if stronger else None
+    title_only_leader = bool(leader is not None and (first is None or leader["skill_id"] != first["skill_id"])
+                             and leader["title_points"] and leader["content_points"] < MIN_CONTENT)
+    if not content:
+        status = "INSUFFICIENT_DATA"
+    elif first is None or not first["contextual"] or first["ranking_points"] < MIN_SCORE:
+        status = "NO_APPLICABLE_SKILL"
+    elif rival is not None:
+        status = "AMBIGUOUS"
+    elif margin < MIN_MARGIN:
+        status = "AMBIGUOUS"
+    else:
+        status = "RECOMMENDED"
     automatic = status == "RECOMMENDED"
+    ambiguity = ("TITLE_CONFLICTS_WITH_REQUIREMENTS" if rival is not None and first["title_points"]
+                 else "TITLE_ONLY_LEADER" if title_only_leader
+                 else "CLOSE_CANDIDATES" if status == "AMBIGUOUS" else None)
     messages = dict(INSUFFICIENT_DATA="岗位职责或要求不足，请手动选择专业 Skill。",
         NO_APPLICABLE_SKILL="当前目录没有充分适用的专业规则，请手动选择或使用通用策略。",
         AMBIGUOUS="多个专业方向接近，请结合本次面试目标手动选择。")
+    if automatic:
+        reason = first["reason"]
+    elif ambiguity == "TITLE_CONFLICTS_WITH_REQUIREMENTS":
+        reason = (f"岗位名称指向「{first['label']}」，但已写明的岗位要求与职责更多指向「{rival['label']}」；"
+                  "标题不能代替要求文本，系统不替你决定，请手动选择。")
+    elif ambiguity == "TITLE_ONLY_LEADER":
+        reason = f"只有岗位名称对得上「{leader['label']}」，要求与职责中没有对应依据，不按标题自动选择。"
+    else:
+        reason = messages[status]
     return dict(policy_version=POLICY_VERSION, job_id=job.get("job_id"), jd_id=job.get("jd_id"),
         jd_fingerprint=job.get("jd_fingerprint"), status=status, auto_select=automatic,
         recommended_skill_id=first["skill_id"] if automatic else None,
         recommended_version=first["version"] if automatic else None,
-        reason=first["reason"] if automatic else messages[status], ranking=ranked)
+        reason=reason, ranking=ranked,
+        decision=dict(min_score=MIN_SCORE, min_content=MIN_CONTENT, min_margin=MIN_MARGIN,
+                      leader_by_points=leader["skill_id"] if leader else None,
+                      leader_by_content=rival["skill_id"] if rival else None,
+                      ambiguity_reason=ambiguity))
 
 
 def recommend_for_target(target, *, root=ROOT, full_evidence=False):
@@ -153,10 +254,13 @@ def attach_to_match(candidate):
 # covers edited requirements, and honest uncertainty labels for the response.
 
 TARGET_SKILL_PROJECTION = "PRIVATE_TARGET_SKILL_V1"
+REASON_KIND = "RULE_MATCH_EXPLANATION"
 RANKING_SEMANTICS = (
     "ranking_points 是公开匹配规则的整数权重之和"
     "（category / title / responsibility / capability_group），不是概率、百分比或模型置信度；"
-    "同分按 skill_id 固定打破，排序可复核。"
+    "content_points 是其中来自要求、职责与能力词的部分，title_points 只来自岗位名称。"
+    f"标题单独不足以构成推荐（content_points 需 ≥ {MIN_CONTENT}），"
+    "标题与要求指向不同方向时不自动选择；同分按 skill_id 固定打破，排序可复核。"
 )
 TARGET_SKILL_DISCLAIMER = (
     "推荐只依据你已确认的私有 JD 要求与本地合法注册的 Skill 清单做确定性文本匹配。"
@@ -239,6 +343,7 @@ def project_target_recommendation(target, recommendation=None, *, expected_key=N
         return dict(**base, policy_version=POLICY_VERSION, status="NOT_CONFIRMED",
             auto_select=False, recommended_skill_id=None, recommended_version=None,
             message=STATUS_NOTES["NOT_CONFIRMED"], reason=None,
+            ambiguity_reason=None, content_threshold=MIN_CONTENT,
             needs_manual_confirmation=True, candidates=[], empty_reason="JD_NOT_CONFIRMED",
             confidence_note="无置信度百分比；未确认 JD 不提供任何正式推荐。")
     rows = {row.get("id"): row for row in (target.requirements_json or []) if isinstance(row, dict)}
@@ -257,25 +362,38 @@ def project_target_recommendation(target, recommendation=None, *, expected_key=N
             if len(evidence) >= 12:
                 break
         has_verbatim = any(e["evidence_status"] == "VERBATIM_FROM_JD" for e in evidence)
-        eligible = bool(not item["excluded"] and item["contextual"] and item["ranking_points"] >= MIN_SCORE)
+        eligible = bool(not item["excluded"] and item["contextual"]
+                        and item["ranking_points"] >= MIN_SCORE
+                        and item["content_points"] >= MIN_CONTENT)
         candidates.append(dict(
             skill_id=item["skill_id"], version=item["version"], label=item["label"],
             rank=item["rank"], ranking_points=item["ranking_points"],
+            content_points=item["content_points"], title_points=item["title_points"],
+            signals=list(item.get("signals") or []),
             excluded=item["excluded"], contextual=item["contextual"],
             eligible=eligible, uncertain=bool(item["excluded"] or not item["contextual"] or not has_verbatim),
-            matched_reason=item["reason"], evidence=evidence,
+            matched_reason=item["reason"], reason_kind=REASON_KIND, evidence=evidence,
             reason_note=("依据：命中你已确认的 JD 要求与本地注册规则；逐条原文证据见 evidence。"
                          if has_verbatim else
                          "依据不足：命中字段没有可核对的 JD 逐字原文，仅作方向参考，请手动确认。")))
     status = recommendation["status"]
+    decision = recommendation.get("decision") or {}
+    ambiguity = decision.get("ambiguity_reason")
     empty_reason = ("NO_REGISTERED_SKILL" if not candidates else
                     "NO_ELIGIBLE_CANDIDATE" if not any(c["eligible"] for c in candidates) else None)
+    message = STATUS_NOTES.get(status, recommendation["reason"])
+    if ambiguity == "TITLE_CONFLICTS_WITH_REQUIREMENTS":
+        message = "岗位名称与岗位要求指向不同方向：不自动选择，请手动确认。"
+    elif ambiguity == "TITLE_ONLY_LEADER":
+        message = "只有岗位名称有对应线索，要求与职责缺少依据：不自动选择。"
     return dict(**base, policy_version=recommendation["policy_version"], status=status,
         auto_select=bool(recommendation["auto_select"]),
         recommended_skill_id=recommendation["recommended_skill_id"],
         recommended_version=recommendation["recommended_version"],
-        message=STATUS_NOTES.get(status, recommendation["reason"]),
+        message=message,
         reason=recommendation["reason"],
+        ambiguity_reason=ambiguity,
+        content_threshold=MIN_CONTENT,
         needs_manual_confirmation=status in ("AMBIGUOUS", "INSUFFICIENT_DATA", "NO_APPLICABLE_SKILL"),
         candidates=candidates, empty_reason=empty_reason,
         confidence_note="不提供百分比或置信度分数；每个候选的 uncertain 与 evidence_status 标明证据是否可核对。")

@@ -103,7 +103,7 @@ def test_a_new_requirement_is_projected_as_user_added_and_changes_the_input_key(
             await JobTargetService(db).update_requirements(user_id, target_id, [
                 RequirementInput(statement="熟悉 Kafka 与 Redis 的使用与问题排查"),
                 RequirementInput(statement="熟悉 Python 开发与 RAG 检索增强，能独立完成接口设计与实现"),
-                RequirementInput(statement="有向量数据库使用经验者优先"),
+                RequirementInput(statement="有 RAG 检索增强项目经验者优先"),
             ])
         async with factory() as db, db.begin():
             await JobTargetService(db).confirm(user_id, target_id)
@@ -116,7 +116,9 @@ def test_a_new_requirement_is_projected_as_user_added_and_changes_the_input_key(
                     for candidate in after["candidates"] for e in candidate["evidence"]
                     if e.get("field") == "requirements"}
         # The untouched rows still quote the JD; the added one says it cannot.
-        assert statuses.get("有向量数据库使用经验者优先") == "USER_ADDED_NO_VERBATIM_QUOTE"
+        assert statuses.get("有 RAG 检索增强项目经验者优先") == "USER_ADDED_NO_VERBATIM_QUOTE"
+        # Round 19: "向量数据库" no longer counts as the bank rules' "数据库",
+        # so a substring-only row is not projected as a reason for any Skill.
         assert any(status == "VERBATIM_FROM_JD" for status in statuses.values())
 
     body(database_url, scenario)
