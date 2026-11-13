@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import client from '../api/client'
 import { getInterviewTargets, getInterviewerOptions, getSession, startInterview, type InterviewTarget } from '../api/interview'
-import { trainingBoard, type TrainingBoard, type TrainingMode } from '../api/training'
+import { trainingBoard, trainingCandidates, type TrainingBoard, type TrainingMode } from '../api/training'
+import { candidateEmptyLabels, candidateModeLabels, type TrainingCandidate, type TrainingCandidateSet } from '../types/training-candidates'
 import { listTargets } from '../api/job-target'
 import type { JobTarget } from '../types/job-target'
 import type { InterviewerOptions } from '../types/interview'
@@ -14,10 +15,13 @@ const jobs=ref<InterviewTarget[]>([]), options=ref<InterviewerOptions|null>(null
 const privateTargets=ref<JobTarget[]>([]), privateTargetId=ref('')
 const jobId=ref(''), skill=ref(''), round=ref('technical_screen'), style=ref('standard'), count=ref(4)
 const mode=ref<TrainingMode>('FULL'), goal=ref(''), board=ref<TrainingBoard|null>(null)
+const candidates=ref<TrainingCandidateSet|null>(null), candidateError=ref(''), notice=ref('')
 const loading=ref(false), stage=ref(''), error=ref(''), saved=ref<number|null>(null)
 const needsProfile=ref(false)
 const manualSkill=ref(false)
-let sequence=0
+// Only the rule's clear winner from the JD page may be re-validated as AUTO.
+const autoRecommended=ref(route.query.recommendation_source==='AUTO_RECOMMENDED')
+let sequence=0, candidateSequence=0
 const job=computed(()=>jobs.value.find(j=>String(j.job_id)===jobId.value))
 const privateTarget=computed(()=>privateTargets.value.find(t=>String(t.id)===privateTargetId.value))
 const hasSource=computed(()=>!!(privateTargetId.value||jobId.value))
@@ -30,10 +34,12 @@ function request(){
     ? {job_target_id:Number(privateTargetId.value)}
     : {company_id:job.value?.company_id,job_id:job.value?.job_id}
   return {...source,interviewer_skill_id:skill.value,
-    adaptive_interview:true,interview_round:round.value,interviewer_style:style.value,question_count:count.value}
+    adaptive_interview:true,interview_round:round.value,interviewer_style:style.value,question_count:count.value,
+    interviewer_selection_source:autoRecommended.value?'AUTO_RECOMMENDED':'USER_SELECTED'}
 }
 async function load(){
-  const current=++sequence; board.value=null; error.value=''; needsProfile.value=false
+  const current=++sequence; board.value=null; candidates.value=null
+  error.value=''; candidateError.value=''; notice.value=''; needsProfile.value=false
   if(!hasSource.value||!skill.value){loading.value=false;return}
   loading.value=true
   try { const result=await trainingBoard(request()); if(current===sequence)board.value=result }
@@ -44,6 +50,30 @@ async function load(){
     needsProfile.value=(e as {code?:string}).code==='PROFILE_REQUIRED'
   }}
   finally{if(current===sequence)loading.value=false}
+  void loadCandidates(current)
+}
+async function loadCandidates(current:number){
+  const seq=++candidateSequence
+  try{
+    const result=await trainingCandidates(request())
+    if(seq===candidateSequence&&current===sequence)candidates.value=result
+  }catch(e){if(seq===candidateSequence&&current===sequence){
+    candidates.value=null
+    candidateError.value=e instanceof Error?e.message:'训练候选读取失败'
+  }}
+}
+function onSkillChange(){manualSkill.value=true; autoRecommended.value=false}
+async function selectCandidate(c:TrainingCandidate){
+  // Preselect only. The creation button still re-runs every server-side check.
+  if(c.skill_id)skill.value=c.skill_id
+  if(!hasSource.value){
+    if(c.launch.query.job_target_id)privateTargetId.value=c.launch.query.job_target_id
+    else if(c.launch.query.job_id)jobId.value=c.launch.query.job_id
+  }
+  mode.value=c.mode as TrainingMode
+  await nextTick() // let the mode watcher clear a stale goal first
+  goal.value=c.knowledge_id
+  notice.value=`已预选「${c.label}」· ${candidateModeLabels[c.mode]}；请确认岗位、专业方向与知识点后，再点击「开始本次训练」。本次跳转没有创建任何训练会话。`
 }
 function chooseJob(){
   if(jobId.value)privateTargetId.value=''
@@ -117,7 +147,7 @@ onMounted(async()=>{
     <section class="setup" aria-label="训练配置">
       <label>目标岗位<select v-model="jobId"><option value="">请选择已发布岗位</option><option v-for="j in jobs" :key="j.job_id" :value="String(j.job_id)">{{ publicName(j.company_name) }} · {{ publicName(j.job_title) }}</option></select></label>
       <label v-if="privateTargets.length">我的岗位（自己提供的 JD）<select v-model="privateTargetId"><option value="">不使用私人岗位</option><option v-for="t in privateTargets" :key="t.id" :value="String(t.id)">{{ t.company_name }} · {{ t.job_title }} （第 {{ t.version }} 版）</option></select></label>
-      <label>专业方向<select v-model="skill" @change="manualSkill=true"><option value="">请选择专业 Skill</option><option v-for="s in options?.skills" :key="s.id" :value="s.id">{{ s.label }}</option></select></label>
+      <label>专业方向<select v-model="skill" @change="onSkillChange"><option value="">请选择专业 Skill</option><option v-for="s in options?.skills" :key="s.id" :value="s.id">{{ s.label }}</option></select></label>
       <label>面试轮次<select v-model="round"><option v-for="r in options?.rounds" :key="r.id" :value="r.id">{{ r.label }}</option></select></label>
       <label>面试官风格<select v-model="style"><option v-for="s in options?.styles" :key="s.id" :value="s.id">{{ s.label }}</option></select></label>
     </section>
@@ -134,6 +164,26 @@ onMounted(async()=>{
         <details v-if="t.observations.length"><summary>为什么推荐 / 查看历史依据</summary><p v-for="o in t.observations" :key="o.session_id+o.observed_at">{{ o.assisted?'提示或追问后作答':'独立作答' }} <router-link :to="`/interview?session_id=${o.session_id}`">查看来源面试</router-link></p><router-link to="/memory">更正或撤销有争议的推断</router-link></details>
       </li></ul>
     </section>
+    <section v-if="candidates" class="candidate-panel" aria-label="下一步训练候选">
+      <h2>下一步训练候选 <small>（规则生成 · 读取时按当前能力状态计算 · 0 次模型调用）</small></h2>
+      <p><small>{{ candidates.semantics }}</small></p>
+      <p><small>{{ candidates.disclaimer }}</small></p>
+      <p v-if="candidateError" role="alert">候选读取失败：{{ candidateError }}</p>
+      <p v-if="candidates.status==='TARGET_UNAVAILABLE'" role="alert">{{ candidates.message || candidateEmptyLabels[candidates.empty_reason||''] }}</p>
+      <p v-else-if="!candidates.candidates.length" role="status">{{ candidateEmptyLabels[candidates.empty_reason||''] || '当前没有可训练候选。' }}</p>
+      <ul><li v-for="c in candidates.candidates" :key="`${c.knowledge_id}-${c.mode}`">
+        <div><strong>{{ c.label }}</strong><span> {{ candidateModeLabels[c.mode] }} · {{ capabilityLabels[c.state]||c.state }} · 规则优先级 {{ c.priority }}</span></div>
+        <p>{{ c.reason }}</p>
+        <p><small>正式依据：{{ c.evidence.evaluation_refs.length ? c.evidence.evaluation_refs.join('、') : '暂无正式评价引用' }} · 能力修订 {{ c.evidence.memory_revision===null?'—':c.evidence.memory_revision }} · 独立会话 {{ c.evidence.independent_sessions }}</small></p>
+        <p><small>{{ c.scope_note }}</small></p>
+        <p><small>{{ c.revalidation_note }}</small></p>
+        <button :aria-label="`选用 ${c.label} 候选`" @click="selectCandidate(c)">选用此候选（仅预选，不创建训练）</button>
+      </li></ul>
+      <p v-if="candidates.fallback"><small>{{ candidates.fallback.reason }}（FULL 始终合法，不针对任何编造的弱项）</small></p>
+      <p v-if="candidates.general_only.length"><small>跨岗位通用历史（不作为当前岗位候选）：{{ candidates.general_only.map(g=>`${g.label}/${capabilityLabels[g.state]||g.state}`).join('、') }}。{{ candidates.verified_note }}</small></p>
+      <p><small>来源：{{ candidates.source }} · {{ candidates.modes_source || 'interview.training.modes()' }} · 计算于 {{ candidates.computed_at }}</small></p>
+    </section>
+    <p v-if="notice" role="status" class="candidate-notice">{{ notice }}</p>
     <section v-if="board" class="launch"><h2>选择本次练习方式</h2>
       <label>训练模式<select v-model="mode"><option value="FULL">完整模拟面试</option><option value="WEAKNESS">薄弱项专项训练</option><option value="RECHECK">冲突 / 遗忘独立复测</option></select></label>
       <label v-if="mode!=='FULL'">训练知识点<select v-model="goal"><option value="">请选择本次目标</option><option v-for="t in available" :key="t.knowledge_id" :value="t.knowledge_id">{{t.label}} · {{capabilityLabels[t.state]}}</option></select></label>
@@ -151,4 +201,5 @@ onMounted(async()=>{
 
 <style scoped>
 .training-page{max-width:1000px;margin:0 auto;padding:24px;color:#20242a}h1{font-size:28px;margin-bottom:8px}h2{font-size:20px}p{max-width:76ch;color:#667085;line-height:1.7}section{margin:24px 0;padding:22px;background:white;border:1px solid #e5e7eb;border-radius:8px}.setup{display:grid;grid-template-columns:1fr 1fr;gap:16px}label{display:block;margin-bottom:12px}select,input{display:block;box-sizing:border-box;width:100%;padding:10px;margin-top:6px;border:1px solid #d0d5dd;border-radius:6px;background:white}.targets ul{padding:0;list-style:none}.targets li{padding:16px 0;border-bottom:1px solid #eef2f6}.targets li div{display:flex;justify-content:space-between;gap:12px}.targets span{color:#667085}summary{cursor:pointer;color:#245f55}button{padding:10px 18px;border:1px solid #d0d5dd;border-radius:6px;cursor:pointer}.primary{background:#245f55;color:white}button:disabled{opacity:.55;cursor:default}[role=alert]{color:#b42318}.launch{border-left:4px solid #245f55}a{color:#245f55}:focus-visible{outline:2px solid #245f55;outline-offset:3px}@media(max-width:640px){.setup{grid-template-columns:1fr}.training-page{padding:16px}}
+.candidate-panel{border-left:4px solid #6b7f9e}.candidate-panel h2 small{font-size:12px;font-weight:400;color:#667085}.candidate-panel ul{padding:0;list-style:none}.candidate-panel li{padding:14px 0;border-bottom:1px solid #eef2f6}.candidate-panel li:last-child{border-bottom:0}.candidate-panel li div{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}.candidate-notice{background:#f0f7f4;padding:10px 14px;border-radius:6px;color:#245f55}
 </style>

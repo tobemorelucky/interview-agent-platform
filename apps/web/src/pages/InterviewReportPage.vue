@@ -10,6 +10,8 @@ import {
   approveMemoryProposal, correctMemoryProposal, generateInterviewReport, getInterviewReport,
   getSessionReport, listInterviewReports, listMemoryProposals, rejectMemoryProposal,
 } from "../api/interview-report"
+import { trainingCandidates } from "../api/training"
+import { candidateEmptyLabels, candidateModeLabels, type TrainingCandidateSet } from "../types/training-candidates"
 import {
   REPORT_DIMENSION_LABELS, confidenceLabel, proposalCanDecide, reportGenerationStatus, reportModeLabel,
   type CoachFinding, type FinalInterviewReport, type InterviewReportDetail, type InterviewReportListItem,
@@ -24,6 +26,10 @@ const loading = ref(false), generating = ref(false), deciding = ref<number | nul
 const error = ref(""), notice = ref("")
 const correction = ref<{ id: number; content: string; reason: string } | null>(null)
 const decision = ref<{ proposal: MemoryProposal; action: "approve" | "reject" } | null>(null)
+// Round 16: a separate read-time rule projection, never written into the report.
+const ruleCandidates = ref<TrainingCandidateSet | null>(null)
+const ruleCandidateError = ref("")
+let ruleCandidateSequence = 0
 // A lost response must retry the same explicit regeneration request, not mint another generation.
 const regenerateRequest = ref<{ sessionId: number; key: string } | null>(null)
 let loadSequence = 0
@@ -94,6 +100,8 @@ async function load() {
   proposals.value = []
   correction.value = null
   decision.value = null
+  ruleCandidates.value = null
+  ruleCandidateError.value = ""
   try {
     const listing = await listInterviewReports()
     const result = selectedId ? await getInterviewReport(selectedId) : selectedSession ? await getSessionReport(selectedSession) : null
@@ -104,9 +112,24 @@ async function load() {
     detail.value = result
     proposals.value = items || []
     correction.value = null
+    const candidateSessionId = selectedSession || Number((result?.session as { id?: number } | undefined)?.id || 0)
+    void loadRuleCandidates(candidateSessionId, sequence)
   } catch (err) {
     if (sequence === loadSequence) { error.value = message(err); detail.value = null; proposals.value = [] }
   } finally { if (sequence === loadSequence) loading.value = false }
+}
+async function loadRuleCandidates(id: number, sequence: number) {
+  const current = ++ruleCandidateSequence
+  if (!id) { ruleCandidates.value = null; return }
+  try {
+    const data = await trainingCandidates({}, id)
+    if (current === ruleCandidateSequence && sequence === loadSequence) ruleCandidates.value = data
+  } catch (err) {
+    if (current === ruleCandidateSequence && sequence === loadSequence) {
+      ruleCandidates.value = null
+      ruleCandidateError.value = message(err)
+    }
+  }
 }
 async function generate(regenerate: boolean) {
   const id = detail.value?.session.id || sessionId.value
@@ -249,14 +272,37 @@ watch(() => route.fullPath, () => { notice.value = ""; load() }, { immediate: tr
             <h3>练习计划</h3><ol><li v-for="(item, index) in [...new Set(analysis.practice_plan)]" :key="index">{{ text(item) }}</li></ol>
             <!-- Advisory only: the training centre re-validates the target before use. -->
             <template v-if="analysis.suggested_training">
-              <h3>下一场可以练什么</h3>
+              <h3>下一场可以练什么 <small>（模型 Coach · 报告生成时的历史结论）</small></h3>
               <p>{{ trainingModeLabel(analysis.suggested_training.mode) }} · {{ analysis.suggested_training.knowledge_id.split(':').pop() }}：{{ text(analysis.suggested_training.reason) }}</p>
-              <p><small>这是根据本场评价与历史能力状态给出的建议，不是已排好的训练。训练中心会按当时的岗位与能力状态重新校验，条件不满足时不会出现该目标。</small></p>
+              <p><small>来源：模型在生成本报告时给出的建议，是按当时的输入得出的历史结论，不是已排好的训练，也不是此刻重新计算的可执行状态。下方「当前可训练候选」由规则在读取时生成，来源不同、二者不等价。</small></p>
               <router-link :to="trainingLink">去训练中心查看</router-link>
             </template>
           </article>
           <article v-else-if="generating" class="card" role="status">正在生成 Coach 分析。本场评分与完成状态已经保存；请勿重复点击「生成面试报告」，生成完成后点「刷新」查看结果。</article>
           <article v-else class="card">暂无成功的 Coach 分析。可以生成 / 安全重试；本场评分与完成状态已经保存。</article>
+          <article class="card candidate-card">
+            <h2>当前可训练候选 <small>（规则生成 · 读取时计算 · 0 次模型调用）</small></h2>
+            <p><small>按当前正式能力状态与 training.modes() 重新计算，不改写本报告、不写入能力记忆；与上方模型在报告生成时给出的建议来源不同，二者不等价。</small></p>
+            <p v-if="ruleCandidateError" role="alert">候选读取失败：{{ ruleCandidateError }}</p>
+            <p v-if="!ruleCandidates && !ruleCandidateError" role="status">正在读取当前可训练候选…</p>
+            <template v-if="ruleCandidates">
+              <p><small>{{ ruleCandidates.semantics }}</small></p>
+              <p v-if="ruleCandidates.status==='TARGET_UNAVAILABLE'" role="alert">{{ ruleCandidates.message || candidateEmptyLabels[ruleCandidates.empty_reason||''] }}</p>
+              <p v-else-if="!ruleCandidates.candidates.length" role="status">{{ candidateEmptyLabels[ruleCandidates.empty_reason||''] || '当前没有可训练候选。' }}</p>
+              <ul class="candidate-list">
+                <li v-for="c in ruleCandidates.candidates" :key="`${c.knowledge_id}-${c.mode}`">
+                  <strong>{{ c.label }}</strong> · {{ candidateModeLabels[c.mode] }} · 规则优先级 {{ c.priority }}
+                  <p>{{ c.reason }}</p>
+                  <p><small>正式依据：{{ c.evidence.evaluation_refs.length ? c.evidence.evaluation_refs.join('、') : '暂无正式评价引用' }} · 能力修订 {{ c.evidence.memory_revision===null?'—':c.evidence.memory_revision }}</small></p>
+                  <p><small>{{ c.scope_note }}</small></p>
+                  <router-link :to="c.launch">去训练中心查看（仅预选，不会自动创建训练）</router-link>
+                </li>
+              </ul>
+              <p v-if="ruleCandidates.fallback"><small>{{ ruleCandidates.fallback.reason }}</small></p>
+              <p v-if="ruleCandidates.general_only.length"><small>跨岗位通用历史（不作为当前岗位候选）：{{ ruleCandidates.general_only.map(g=>`${g.label}/${g.state}`).join('、') }}。{{ ruleCandidates.verified_note }}</small></p>
+              <p><small>计算于 {{ ruleCandidates.computed_at }} · {{ ruleCandidates.modes_source || 'interview.training.modes()' }}</small></p>
+            </template>
+          </article>
           <article class="card proposals"><h2>本场建议记住</h2><p>长期记忆建议：尚未批准不会影响下一场，也不会修改候选人画像。批准后可在成长记录查看，下次新建面试时固定使用。表现观察只描述来源场次。</p>
             <p v-if="!proposals.length">该报告暂无记忆提案。</p>
             <article v-for="proposal in proposals" :key="proposal.id" class="proposal">

@@ -1,4 +1,5 @@
 import client from './client'
+import type { TrainingCandidateSet } from '../types/training-candidates'
 export type TrainingMode = 'FULL' | 'WEAKNESS' | 'RECHECK'
 export interface TrainingTarget {
   knowledge_id: string; label: string; state: string; revision: number | null; revoked: boolean;
@@ -23,3 +24,6 @@ export interface TrainingFeedback {
 }
 export const trainingBoard = async (body: object) => await client.post('/interview/training/workbench', body) as unknown as TrainingBoard
 export const trainingFeedback = async (id: number) => await client.get(`/interview/training/sessions/${id}`) as unknown as TrainingFeedback
+/** Read-only projection; nothing is created and no Coach report is regenerated. */
+export const trainingCandidates = async (body: object, sessionId?: number) =>
+  await client.post(`/interview/training/candidates${sessionId ? `?session_id=${sessionId}` : ''}`, body) as unknown as TrainingCandidateSet
