@@ -928,3 +928,53 @@ Coach 方案**只审查不实施**。
 2. 规则对"只改要求文本"敏感性有限，用输入指纹标记过期而非制造变化；更强匹配属 Matching 改造。
 3. Celery 未做 worker 崩溃重投的故障注入；Redis 限流键未做"不落生产 db 0"的断言。
 4. 能力记忆仍无岗位维度；`suggested_training` 真实样本仍缺；`0028` 未实施。维持 `INTERVIEW_COACH_HARNESS=false`。
+
+### 2026-11-13 · 第十八轮（真实模型输入质量：简历画像 / JD 解析 / Skill 推荐，6 次真实 HTTP）
+
+**调用与闸门**：新增 `apps/api/scripts/live_model_gate.py`（`LIMITS = 8 次 / 150k token / 25 分钟`），
+在 provider 边界计数，拒绝时 `request_sent=False`；启动器加 `--live`（仅 JD 抽取、简历抽取、画像选择走真实模型，
+面试/Coach 仍 replay）与 `--bucket`。网络改为 transport 级白名单（只允许 modelscope），连 SDK 底层也覆盖。
+实测 **6 次 / 11,470 token / 25.8s**，6 条 `model_admissions` 全 `SETTLED`，无 repair、无 UNKNOWN、无配额错误。
+
+**样本**：A（合成 AI Agent 简历）、B（合成易误判简历）、C（真实归档华为 JD 的 579 字逐字切片，
+`career.huawei.com/...advertisementId=36390`，17/17 行逐字可核）、D（合成 Java 对照版本）。
+标注先于模型调用写定（`.runtime/r18/annotation.json`），锚点 100% 为原文子串。
+
+**质量结论（样本 2 份简历 / 2 份 JD）**
+- A：17 技能 / 3 项目 / 19 条证据全被引用，7/7 应有事实被支持，7/7 限定信息保留。
+- B：6 技能 / 3 项目 / 1 工作，4/4 支持，5/6 限定信息保留。
+- 结构防线有效：3 条技能状态被服务端下调（RAG DEMONSTRATED→MENTIONED；Java/Redis STRONG→DEMONSTRATED），
+  Kafka/K8s/Flink/Vue 均停在 MENTIONED，`Go（没有使用过）` 没进技能而是进 unknowns。
+- **真实缺陷 1**：第一阶段抽取把 A 的全职工作放进 `internships`、`work_experience` 为空，画像页显示成"实习经历"；
+  本轮只记录根因与最小方案，未改抽取行为。
+- **真实缺陷 2（已修）**：`update_requirements` 整表重建导致"编辑任意一条要求会清空所有要求的逐字证据"。
+  改为按语句匹配保留未改动行的 `evidence/topic/source`，新增行仍无引用；`tests/test_requirement_edit_evidence.py` 3 条回归。
+- JD：C 4 条 / D 5 条，全部逐字，`job_title` 正确，`company_name` 为 null 不编造；`REQUIRED` 恒为 0——
+  这是 system prompt 的"必须/至少/要求"关键词策略所致，RULE 解析同样如此，属策略缺口而非模型错误。
+- RULE vs LLM：LLM 的真正价值是分段去噪（RULE 把"工作地点/城市列表"当要求，2 份 JD 各多 2 条噪声），
+  两者在强制/优先判断上一致。
+- 推荐：C→`ai_agent_application`(20)，D→`ai_agent_application`(20) 而非 `java_backend`(15)。
+  离线只改标题即可翻转（`title='Java 后端工程师'` → java 15 / ai 12），证明**标题 8 分压过要求文本**；
+  D 的标题沿用原岗位，属部分样本人为因素，已如实标注。另记 `bank_it` 因"向量数据库"命中"数据库"的 1 处子串误判。
+- C 的 v2：`input_fingerprint` 变化、`content_fingerprint` 不变；未改动条目仍 `VERBATIM_FROM_JD`，新增条目为
+  `USER_ADDED_NO_VERBATIM_QUOTE`；推荐首位不变。
+
+**浏览器（Chrome 157 / 9222）**：A 注册→上传→画像（DeepSeek 实时模型）→粘贴真实 JD→解析 4 条→确认→推荐
+（第 1 位/权重 20/0 次模型调用/非百分比）→编辑要求→v2；B 上传易误判简历；A 从目标岗位进入面试页，
+技能预选 `ai_agent_application`，手动改 `java_backend` 3.5s 未被覆盖，会话 0→0。截图 `r18_01/04/05/06/07/08`。
+跨账号：B 读 A 的 `resumes/1`、`candidate-profile/versions/1`、`job-targets/2`、`/skill-recommendations`、`/match`
+全部 404 且无内容泄露，B 的目标列表 0 条。
+
+**测试**：闸门 7、要求编辑 3、输入指令边界 3、前端入口竞态 7（`node --experimental-strip-types --test`，新 `test:unit`）；
+全量业务 `interview_agent_wb_r18_full_test_20261113` **879 passed / 0 failed / 1 skipped**；
+迁移 `interview_agent_v21_wb_r18_mig_20261113` **10 passed**；`vue-tsc && vite build` 通过。
+E2E 库 `interview_agent_wb_r18_e2e_20261113`（0027），MinIO `interview-agent-r18-e2e`，Redis 9/10/11；
+公开表 0 行；生产库仍 `0025 / 19 sessions / 2026-10-07`，未写入。
+
+**未解决 / 下一阶段**
+1. 工作经历→实习的归类错误（第一阶段抽取），需按小节标题做一致性核对，单独立项。
+2. `REQUIRED` 关键词策略导致真实 JD 全为"原文未标明"，需同时改 prompt 与 rule_extract。
+3. 推荐"方向对、依据弱"：逐字要求只占少数证据，标题权重过大；改排序语义需单独立项。
+4. 否定式提及仍以"仅提及"技能呈现；画像页空状态文案错误；"向量数据库→数据库"子串误判。
+5. 真实模型的失败重试 / repair 本轮 0 次触发，无采集样本。
+6. 维持 `INTERVIEW_COACH_HARNESS=false`；未做 0028；未新增 Agent。
