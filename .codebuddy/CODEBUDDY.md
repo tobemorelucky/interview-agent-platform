@@ -82,7 +82,10 @@
 - ~~`training_mode` 单独出现（无 `training_request_key`）绕过幂等~~ **已修（第十二轮，`4a25891`）**：路由条件只看 `training_mode`，缺键在开库前 `422 TRAINING_REQUEST_KEY_REQUIRED`；并发/重启/换内容三类语义有 10 条专项测试。**保证来自 `pg_advisory_xact_lock`，不是数据库约束**——新增创建路径绕过 `TrainingService.create` 会复发。
 - ~~私人岗位入口只能先进详情才能找到~~ **已修（第十二轮，`80149e9`）**：已确认目标的行内直接给「开始训练」，未确认行给原因而不是按钮。
 - ~~Coach 的记忆输入是 `str(dict)` 截断到 600 字符~~ **已修（第十三轮，`790913e`）**：`COACH_EVIDENCE_V2` 把两个记忆层改为结构化投影（semantics / epistemic_status / items / shown / total / clipped），并把 `memory_guided_plan` 投影成 `capability_context`、`training` 投影成 `training_context`，每条评价补 `fingerprint`。跨岗位语义由 `scope_note` 明写。真实 18 轮夹具体积 85,047 → 86,830 字节（+2.1%）。
-- **Coach Harness 已实施、默认 OFF**（第十三轮，`4e726f9`）：`interview_coach_harness` 打开后模型可用一次只读工具（`read_evaluation_detail` 带指纹校验 / `read_capability_history` 读尝试开始时的一次性快照），最多 2 次模型调用；`suggested_training` 由 `resolve_coach_artifact` 用 `training.modes()` 重新校验，非法即降级并记录。OFF 路径的提示词、schema、生成键与上一轮逐字节一致（有用例断言）。
+- **Coach Harness 已实施、默认 OFF**（第十三轮 `4e726f9`）：`interview_coach_harness` 打开后模型可用一次只读工具（`read_evaluation_detail` 带指纹校验 / `read_capability_history` 读尝试开始时的一次性快照），最多 2 次模型调用；`suggested_training` 由 `resolve_coach_artifact` 用 `training.modes()` 重新校验，非法即降级并记录。OFF 路径的提示词、schema、生成键与上一轮逐字节一致（有用例断言）。
+- **Harness Live 短程结果（第十四轮，`docs/93`）**：同一真实会话（18 评价）跑 OFF ×1 + ON ×2，共 **3 次 HTTP / 77,110 token**。ON 两次都 `SINGLE_CALL_MODEL_CHOSE_FINAL`——**两个工具可用但 0 次调用**，正文也从未引用跨场次状态。ON 唯一结构性增益是 `suggested_training`（两次都合法：PRACTICING→WEAKNESS，引用真实评价），成本 +3.5% token。**结论：维持默认 OFF；工具价值仍无 Live 证据。**
+- **生成键缺口已修（第十四轮，`b7a9403`）**：ON 的键现在含 `tools.policy_signature()` 与报告期能力捕获指纹；OFF 公式逐字节不变（证据：本轮 OFF 命中 11-11 那条 FAILED 行的旧键并在该行完成重试）。
+- ~~报告页建议链接丢失岗位~~ **已修（第十四轮，`98c9e35`）**：报告 session 载荷补 `job_id`/`company_id`，链接现在能预选岗位+模式+知识点；跳转不创建训练（会话数 3→3）。
 - 前端不暴露 Harness 开关、不展示提前结束原因、未暴露 `confirm_unknown_retry`。
 - docs/71 规划的 `apps/api/scripts/evals/` 尚未实现。
 
@@ -121,10 +124,11 @@
 
 ### 交接区（每轮结束更新）
 
-- 当前 HEAD：`git log -1`（第十三轮文档 `022dcdd` 之后只有本文件的记录更新）
+- 当前 HEAD：`git log -1`（第十四轮文档 `40ada98` 之后只有本文件的记录更新）
 - 工作区：干净（仅 `.workbuddy/` 未跟踪，按第五轮约定不提交）
-- 下一轮入口：见「轮次记录」最后一轮（第十三轮真实模型 HTTP = 0；Coach Harness **已实施但默认 OFF**，等真实 Live 短程验收授权）
+- 下一轮入口：见「轮次记录」最后一轮（第十四轮真实模型 HTTP = 3 / 77,110 token；Coach Harness **仍默认 OFF**，工具路径在真实模型下 0 次调用、无收益证据）
 - 环境提示：本轮开始时 postgres/redis/minio 容器处于 `Exited (255)`，用 `docker start` 拉起后数据完好（151 个库）。**不要**用 `docker compose down -v` 之类的操作。
+- 本轮新建的副本库 `interview_agent_wb_r14_real_20261113` 里有 3 份真实模型报告（gen 1/2/3），**保留**用于后续对照；原件 `interview_agent_wb_full_live_20261111` 未变（1 份 FAILED / 18 评价 / 49 准入）。
 
 ## 轮次记录
 
@@ -725,3 +729,59 @@ Coach 方案**只审查不实施**。
 2. 私人岗位 Skill 推荐接口（后端 `recommend_for_target` 已存在，未暴露）。
 3. 简历上传链路（Worker + 额度）。
 4. `generation_key` 是否纳入能力指纹：需要一次显式设计（会改变"已生成报告被复用/顶替"的语义）。
+
+### 2026-11-13 · 第十四轮（Coach Harness V1 真实 Live 短程对照，3 次 HTTP / 77,110 token）
+
+开工 `ee8d3b3`，工作区干净。未新增 Agent、未改 Controller / CapabilityMemory / 训练状态机；生产库与历史 Live 库均未写入。
+
+**提交**
+
+| Hash | 内容 |
+|---|---|
+| `b7a9403` | `fix(workbuddy)`: 生成键覆盖 Harness 自身的输入（工具策略 + 能力捕获） |
+| `98c9e35` | `fix(workbuddy)`: 报告 → 训练链接不再丢失岗位 |
+| `40ada98` | `docs(workbuddy)`: `docs/93` 十节记录 |
+
+**场景（事实）**
+
+- 来源 `interview_agent_wb_full_live_20261111` 会话 2：18 条真实评价、`completion_reason=TOKEN_LIMIT`（预算 20 / 已答 18）、综合 4.0667/5；3 条能力记忆全部 PRACTICING、0 冲突；唯一历史报告是 11-11 的 FAILED（`MODEL_USER_QUOTA`）。
+- 副本 `interview_agent_wb_r14_real_20261113`（TEMPLATE 复制 + 0026→0027 显式授权迁移）；原件复核未变。
+- 场景 A（证据充分 → 直接 Final）**真实覆盖 2 次**；场景 B（裁剪→查评价）与 C（冲突→查历史）**未由真实模型触发**（只裁剪 1 个字段；归档无 CONFLICTED）。不伪造状态补齐。
+
+**真实调用（全部 SETTLED，无 UNKNOWN）**
+
+| 运行 | HTTP | in/out | 合计 | 延迟 | 结果 |
+|---|---|---|---|---|---|
+| OFF（gen 1, 1.0.3） | 1 | 23,115 / 1,987 | 25,102 | 12,822 ms | COMPLETED，无建议 |
+| ON #1（gen 2, 1.1.0） | 1 | 24,272 / 1,756 | 26,028 | 11,227 ms | `SINGLE_CALL_MODEL_CHOSE_FINAL`，建议 WEAKNESS/agent |
+| ON #2（gen 3，新请求键） | 1 | 24,272 / 1,708 | 25,980 | 11,120 ms | 同上路径，建议 WEAKNESS/rag_retrieval |
+| OFF 复跑 | **0** | — | 0 | — | 命中旧键，`reused=true` |
+
+- 预算：3/6 次 HTTP，77,110/180,000 token，`structured_retry=0`。预热阶段两次脚本级失败**未发出请求**（当日准入计数为 0，无新报告/无新 run）。
+- 质量：引用全部真实存在（14/17/15 个去重评价），无跨岗位掌握度断言，无无依据数字；建议两条都经 `training.modes()` 复核并带 `state`/`available_modes`。
+- **未证明**：工具在真实模型下的价值（0 次调用）；Phase 0 结构化记忆被用上（三份正文都没引用跨场次状态，"历史"仅指"历史分位数"）；建议稳定性（两次指向不同知识点，都合法）。
+
+**浏览器（真实 Chrome headless + CDP）**
+
+报告页出现"下一场可以练什么"与"不是已排好的训练"说明；链接为 `/training?mode=WEAKNESS&knowledge_id=…&job_id=1`；训练页岗位/方向/模式/知识点全部预选，跳转前后会话数 3→3（未自动创建）；点历史"第 1 版"（OFF 报告）无建议块。截图 `r14_01`–`r14_04`。
+
+**测试（真实计数）**
+
+- 业务段 @ `interview_agent_wb_r14_test_20261113`：**818 passed / 0 failed / 1 skipped**（246.80 s；上轮 808，+10 = 生成键 8 + 报告身份 2）。
+- 迁移段 @ 空库 `interview_agent_v21_wb_r14_20261113`：**10 passed / 0 failed**（56.29 s）。
+- 前端 `vue-tsc && vite build` 通过，0 类型错误。
+
+**未解决风险**
+
+1. 工具路径在真实模型下零覆盖；要取证需"证据确实不足"的会话或真实 CONFLICTED 记忆。
+2. 能力记忆无岗位维度，`capability_context` 是跨岗位按 topic 聚合。
+3. 建议在多个同等弱项间不稳定（两次运行给不同目标）。
+4. ON 的键现在含能力指纹 → 记忆一变就新代次（GET 不触发生成，故不会误生）。
+5. 单会话单归档、样本量 1，不能推广为"ON 更好"。
+6. 私有 JD 会话本轮未做 Live 对照。
+
+**下一轮入口**
+
+1. 找一个投影裁剪严重的真实会话（或合法构造高裁剪输入的离线夹具），验证"模型会不会查、查了是否改变结论"。
+2. 或先补一条真实 `CONFLICTED` 历史（需真实重测），再验证"查历史是否改变建议"。
+3. 在上述任一证据出现前，不要把 Harness 设为默认开启。
