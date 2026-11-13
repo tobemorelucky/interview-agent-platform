@@ -69,7 +69,7 @@ def test_duplicated_material_is_dropped_not_copied(live):
         assert "answer_framework" not in entry
         assert "issues" not in entry
         assert "provider" not in entry and "model" not in entry
-    assert payload["evidence_projection"]["version"] == "COACH_EVIDENCE_V1"
+    assert payload["evidence_projection"]["version"] == "COACH_EVIDENCE_V2"
 
 
 def test_twenty_rounds_stay_bounded(live):
