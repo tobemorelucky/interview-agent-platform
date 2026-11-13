@@ -26,7 +26,7 @@ import {
   type InterviewTarget,
 } from "../api/interview"
 import { uploadResume, getResume as apiGetResume } from "../api/resume"
-import { listTargets, skillRecommendations } from "../api/job-target"
+import { getTarget, listTargets, skillRecommendations } from "../api/job-target"
 import type { JobTarget, TargetSkillRecommendation } from "../types/job-target"
 import { ApiError } from "../api/client"
 import type { InterviewSession, InterviewMessage, InterviewQuestionSummary } from "../types/interview"
@@ -818,7 +818,7 @@ onUnmounted(() => {
 getInterviewerOptions().then(data => { interviewerOptions.value = data })
   .catch(() => { interviewerOptionsError.value = '面试官配置读取失败，请刷新后重试。' })
 loadSessions().then(() => { const id = Number(route.query.session_id); if (sessions.value.some(s => s.id === id)) selectSession(id); })
-listTargets().then(data => { jobTargets.value = data }).catch(() => { jobTargets.value = [] })
+const privateTargets = listTargets().then(data => { jobTargets.value = data }).catch(() => { jobTargets.value = [] })
 getInterviewTargets().then(async data => {
   targets.value = data
   const jobId = Number(entryRoute.query.job_id), companyId = Number(entryRoute.query.company_id)
@@ -830,12 +830,25 @@ getInterviewTargets().then(async data => {
   if (!target) { alert('该岗位当前已关闭或不可用，无法创建新的模拟面试；历史推荐保留。'); return }
   selectedJobId.value = jobId
   // Select the current target, then let the user choose interviewer configuration.
-}).then(() => {
+}).then(async () => {
   const targetId = entryTargetId
   if (!targetId) return
   entryRouter.replace({ path: '/interview' })
-  const picked = jobTargets.value.find(t => t.id === targetId && t.parse_status === 'CONFIRMED')
-  if (!picked) { alert('该目标岗位不存在、未确认或不属于当前账号，请重新选择。'); return }
+  // The target list loads in parallel; reading it before it resolves made this
+  // hand-off report "not found" and drop the preselection. Await it, and fall
+  // back to a direct owner-scoped read so the result never depends on ordering.
+  await privateTargets
+  let picked = jobTargets.value.find(t => t.id === targetId && t.parse_status === 'CONFIRMED')
+  if (!picked) {
+    const fetched = await getTarget(targetId).catch(() => undefined)
+    if (fetched && fetched.parse_status === 'CONFIRMED') {
+      picked = fetched
+      jobTargets.value = [fetched, ...jobTargets.value.filter(t => t.id !== fetched.id)]
+    }
+  }
+  if (!picked || picked.parse_status !== 'CONFIRMED') {
+    alert('该目标岗位不存在、未确认或不属于当前账号，请重新选择。'); return
+  }
   selectedTargetId.value = targetId
   // One-click hand-off only preselects. A non-primary direction is recorded as
   // an explicit user choice, so the async recommendation cannot overwrite it.
