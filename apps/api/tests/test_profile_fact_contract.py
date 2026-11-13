@@ -118,9 +118,11 @@ def test_actual_provider_request_reasoning_parameter(policy):
 def test_extraction_prompt_and_legacy_registry():
     registry = CandidatePromptRegistry()
     prompt = registry.get("resume_profile")
-    assert prompt.version == "1.0.4" and "Select and classify existing evidence" in prompt.system
+    assert prompt.version == "1.0.5" and "Select and classify existing evidence" in prompt.system
+    # Round 19: the kind of an experience is not the model's decision.
+    assert "employment kinds" in prompt.system and "omit it instead of choosing a kind" in prompt.system
     assert "candidate_summary=null and strengths=[]" in registry.get("resume_profile", "1.0.3").system
-    for version in ("1.0.0", "1.0.1", "1.0.2", "1.0.3"):
+    for version in ("1.0.0", "1.0.1", "1.0.2", "1.0.3", "1.0.4"):
         assert registry.get("resume_profile", version).version == version
 
 

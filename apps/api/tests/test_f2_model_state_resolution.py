@@ -120,8 +120,9 @@ def test_unsupported_strength_still_rejected_after_skill_resolution():
 
 def test_profile_prompt_history_is_available():
     registry=CandidatePromptRegistry()
-    assert registry.get('resume_profile').version=='1.0.4'
+    assert registry.get('resume_profile').version=='1.0.5'
     assert registry.get('resume_profile','1.0.2').version=='1.0.2'
+    assert registry.get('resume_profile','1.0.4').version=='1.0.4'
     assert registry.get('resume_profile','1.0.1').version=='1.0.1'
     assert registry.get('resume_profile','1.0.0').version=='1.0.0'
     assert 'proposed_evidence_state' not in registry.get('resume_profile','1.0.0').system

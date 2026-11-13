@@ -130,6 +130,8 @@ class InterviewPromptBuilder:
         skills = structured.get("skills", {})
         projects = structured.get("projects", [])
         internships = structured.get("internships", [])
+        work_experience = structured.get("work_experience", [])
+        unclassified = structured.get("unclassified_experience", [])
         highlights = structured.get("highlights", [])
         risk_points = structured.get("risk_points", [])
 
@@ -167,11 +169,13 @@ class InterviewPromptBuilder:
                     tech_str = ", ".join(p_tech) if isinstance(p_tech, list) else ""
                     lines.append(f"  - {p_name}: {p_desc[:100]} [{tech_str}]")
 
-        if isinstance(internships, list) and internships:
-            lines.append(f"实习/工作经历 ({len(internships)}个):")
-            for i in internships[:3]:
-                if isinstance(i, dict):
-                    lines.append(f"  - {i.get('company', '')} | {i.get('role', '')}")
+        for label, entries in (("工作经历", work_experience), ("实习经历", internships),
+                               ("经历（雇佣类型未标明）", unclassified)):
+            if isinstance(entries, list) and entries:
+                lines.append(f"{label} ({len(entries)}个):")
+                for item in entries[:3]:
+                    if isinstance(item, dict):
+                        lines.append(f"  - {item.get('company', '')} | {item.get('role', '')}")
 
         if isinstance(highlights, list) and highlights:
             lines.append(f"亮点: {'; '.join(highlights[:5])}")

@@ -10,7 +10,7 @@ from interview_api.infrastructure.models.router import RESUME_PROFILE_ROUTE, bui
 from interview_api.modules.experience.models import ExperienceAgentRun
 from interview_api.modules.public_career.research.audit import ResearchModelCalls, finish_research_run
 from interview_api.modules.resume.models import Resume, ResumeReport
-from interview_api.modules.candidate_profile.evidence import digest, evidence_rows, ensure_resume_evidence, resolve_and_validate, normalize_skill_evidence_states
+from interview_api.modules.candidate_profile.evidence import digest, evidence_rows, ensure_resume_evidence, normalize_employment_categories, resolve_and_validate, normalize_skill_evidence_states
 from interview_api.modules.candidate_profile.models import ProfileGeneration, CandidateProfileVersion, ProfileCorrection
 from interview_api.modules.candidate_profile.prompts import CandidatePromptRegistry, PROFILE_PROMPT
 from interview_api.modules.candidate_profile.schemas import CandidateEvidenceSelection
@@ -27,6 +27,7 @@ class ResumeProfileAgent:
         generation_id = run_id = None
         prepared = False
         state_diagnostics = []
+        employment = None
         context_audit = None
         try:
             async with self.factory() as db:
@@ -70,6 +71,8 @@ class ResumeProfileAgent:
             delta = context.resolve_selection(selection)
             state_diagnostics = normalize_skill_evidence_states(delta, catalog,
                 evidence_aliases={key: alias for alias, key in context.alias_to_key.items()})
+            # The model proposes a category; the cited sections decide it.
+            employment = normalize_employment_categories(delta, catalog)
             resolve_and_validate(delta, catalog, stable_only=True,
                 evidence_aliases={key: alias for alias, key in context.alias_to_key.items()})
             snapshot = delta.model_dump()
@@ -109,7 +112,8 @@ class ResumeProfileAgent:
                 run.status, run.output_json = "SUCCEEDED", {"version_id": version.id, "schema": "CandidateEvidenceSelection",
                     "snapshot_schema": "CandidateProfileDelta", "statement_policy": "LONGEST_CITED_EXCERPT_V1",
                     "thinking": getattr(provider, "thinking_type", None),
-                    "skill_state_resolution": state_diagnostics, "profile_context": context_audit}
+                    "skill_state_resolution": state_diagnostics,
+                    "employment_kind_resolution": employment, "profile_context": context_audit}
                 run.finished_at = datetime.now(timezone.utc)
                 await db.commit()
                 version_id = version.id
@@ -129,6 +133,7 @@ class ResumeProfileAgent:
                 diagnostics = getattr(exc, "diagnostics", None)
                 await finish_research_run(self.factory, run_id, status="FAILED", error=code[:500],
                     output={"skill_state_resolution": state_diagnostics, "validation_failure": diagnostics,
+                            "employment_kind_resolution": employment,
                             "profile_context": context_audit,
                             "thinking": getattr(self.router.resolve(RESUME_PROFILE_ROUTE), "thinking_type", None)})
             return dict(status="FAILED", error=code[:500], generation_id=generation_id)

@@ -8,15 +8,9 @@ from sqlalchemy.dialects.postgresql import insert
 
 from interview_api.modules.public_career.fingerprints import normalize_text
 from interview_api.modules.candidate_profile.models import ResumeEvidence
-
-
-HEADINGS = {
-    "projects": ("项目经历", "项目经验", "项目", "projects", "project experience"),
-    "work": ("工作经历", "工作经验", "work experience", "employment"),
-    "internship": ("实习经历", "实习经验", "internships", "internship experience"),
-    "education": ("教育经历", "教育背景", "教育", "education"),
-    "skills": ("专业技能", "技术技能", "技能", "skills", "technical skills"),
-}
+# The heading table lives with the resume section walker so that evidence rows
+# and the employment-kind resolver cannot drift apart.
+from interview_api.modules.resume.sections import HEADINGS, section_lines
 
 
 def digest(value) -> str:
@@ -25,14 +19,8 @@ def digest(value) -> str:
 
 def evidence_rows(resume_id: int, raw_text: str) -> list[dict]:
     rows = []
-    section = "general"
-    for match in re.finditer(r"[^\r\n]+", raw_text):
+    for match, section in section_lines(raw_text):
         line = match.group()
-        heading = normalize_text(line).strip(" #:：-•")
-        for name, aliases in HEADINGS.items():
-            if heading in aliases:
-                section = name
-                break
         # Fixed-size exact slices, not LLM segmentation or inferred page locations.
         for offset in range(0, len(line), 1200):
             excerpt = line[offset:offset + 1200]
@@ -146,3 +134,68 @@ def resolve_and_validate(delta, evidence: dict[str, dict], *, stable_only=False,
     for topic in delta.unknowns:
         if len(topic) > 100 or re.search(r"不会|不具备|缺乏能力|不能|does not|cannot|can't", topic, re.I):
             raise ValueError("UNKNOWN_IS_NOT_A_CAPABILITY_JUDGMENT")
+
+
+EMPLOYMENT_CATEGORIES = {"work_experience": "work", "internship_experience": "internship"}
+EMPLOYMENT_POLICY = "EMPLOYMENT_KIND_FROM_CITED_SECTIONS_V1"
+_EMPLOYMENT_SECTIONS = ("work", "internship")
+
+
+def normalize_employment_categories(delta, evidence: dict[str, dict]) -> dict:
+    """The server decides 工作/实习 from the cited excerpts' own sections.
+
+    A fact is credited as full-time work or as an internship only when *every*
+    employment-section excerpt it cites agrees. Conflicting sections, project
+    only support, or support that never sits under an employment heading is not
+    credited to either bucket: the fact is dropped with a diagnostic instead of
+    inventing a kind. When the resume has no employment heading at all there is
+    nothing to check against, so the proposal is kept and marked unverified.
+
+    Only categories are touched. Text, labels, evidence links and skill states
+    are never rewritten.
+    """
+    has_heading = any(item["section"] in _EMPLOYMENT_SECTIONS for item in evidence.values())
+    decisions, dropped, unverified, topics = [], [], [], []
+    for category, expected in EMPLOYMENT_CATEGORIES.items():
+        kept = []
+        for index, fact in enumerate(list(getattr(delta, category))):
+            sections = {evidence[key]["section"] for key in fact.evidence_ids if key in evidence}
+            employment = sections & set(_EMPLOYMENT_SECTIONS)
+            record = dict(category=category, field_path=f"{category}.{index}", sections=sorted(sections))
+            if employment == {expected}:
+                kept.append(fact)
+                decisions.append({**record, "resolution": "CONFIRMED"})
+            elif len(employment) == 1:
+                target = "work_experience" if "work" in employment else "internship_experience"
+                existing = {item.label for item in getattr(delta, target)}
+                if fact.label not in existing:
+                    getattr(delta, target).append(fact)
+                decisions.append({**record, "resolution": "MOVED", "moved_to": target})
+            elif employment:
+                dropped.append({**record, "resolution": "DROPPED_CONFLICTING_SECTIONS"})
+                topics.append(_employment_topic(fact, "雇佣类型（原文指向两个不同小节）"))
+            elif "projects" in sections:
+                dropped.append({**record, "resolution": "DROPPED_PROJECT_EVIDENCE_ONLY"})
+                topics.append(_employment_topic(fact, "是否属于工作或实习（只来自项目小节）"))
+            elif has_heading or sections - {"general"}:
+                # The resume does have section headings, so an entry that sits
+                # under none of them is not evidence of either employment kind.
+                dropped.append({**record, "resolution": "DROPPED_NO_EMPLOYMENT_SECTION"})
+                topics.append(_employment_topic(fact, "雇佣类型（工作/实习）"))
+            else:
+                kept.append(fact)
+                unverified.append({**record, "resolution": "UNVERIFIED_NO_EMPLOYMENT_HEADING"})
+        setattr(delta, category, kept)
+    for topic in topics[:3]:
+        if topic not in delta.unknowns:
+            delta.unknowns.append(topic)
+    return dict(policy=EMPLOYMENT_POLICY, decisions=decisions + unverified,
+                dropped=dropped, unverified=unverified, topics=topics[:3])
+
+
+def _employment_topic(fact, reason: str) -> str:
+    """A short 'please confirm' topic built from the fact's own verbatim label."""
+    label = " ".join(str(getattr(fact, "label", "") or "").split())[:40]
+    return (f"{label} {reason}" if label else reason)[:100]
+
+

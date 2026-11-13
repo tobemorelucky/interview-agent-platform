@@ -63,6 +63,24 @@
       "tech_stack": []
     }}
   ],
+  "work_experience": [
+    {{
+      "company": "",
+      "role": "",
+      "duration": "",
+      "responsibilities": [],
+      "tech_stack": []
+    }}
+  ],
+  "unclassified_experience": [
+    {{
+      "company": "",
+      "role": "",
+      "duration": "",
+      "responsibilities": [],
+      "tech_stack": []
+    }}
+  ],
   "publications": [],
   "highlights": [],
   "risk_points": [
@@ -75,8 +93,17 @@
 }}
 ```
 
-## 风险点识别说明
+## 工作经历与实习经历的归类
 
+- 只能依据简历原文的小节归类：位于「工作经历 / 工作经验 / work experience」小节的条目写入 `work_experience`；
+  位于「实习经历 / 实习经验 / internship」小节的条目写入 `internships`。
+- 不要因为公司名称、在职时长、职位名称，或"参与项目""负责某模块"这类措辞推断雇佣类型。
+- 条目所在小节既不是工作也不是实习（例如「其他经历」「实践经历」「校园经历」），或原文没有小节标题时，
+  写入 `unclassified_experience`，不要猜测。
+- 同一个条目只能出现一次，不要把一个条目拆成多份，也不要同时写进两个数组。
+- 引用不到原文小节的经历宁可不收录，也不要改写成全职或实习。
+
+## 风险点识别说明
 - severity 取值为 HIGH、MEDIUM、LOW。
 - HIGH：简历中存在明显的面试风险，如技能描述过于笼统、关键技术未体现深度、项目经验与目标岗位不匹配等。
 - MEDIUM：存在潜在改进空间，如缺少量化结果、部分技术栈仅列举但未说明应用场景等。

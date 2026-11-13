@@ -14,6 +14,7 @@ import time
 from pathlib import Path
 
 from interview_api.core.config import settings
+from interview_api.modules.resume.employment import reconcile_employment
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +118,14 @@ async def _run_pipeline(resume_id: int) -> None:
     structured_raw = await llm.chat([{"role": "user", "content": parse_prompt}])
     logger.info("[resume %s] LLM response: %s chars", resume_id, len(structured_raw))
     structured_json = _parse_json_logged(structured_raw, resume_id)
+    # The model does not decide employment kind: the resume's own sections do.
+    structured_json, employment = reconcile_employment(structured_json, raw_text)
+    logger.info(
+        "[resume %s] Employment kind resolved counts=%s skipped=%s",
+        resume_id,
+        employment.get("counts"),
+        employment.get("skipped"),
+    )
     logger.info("[resume %s] Structured extraction done", resume_id)
 
     # Phase 3.5: skip retrieval queries + KB retrieval + question generation.

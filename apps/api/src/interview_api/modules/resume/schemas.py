@@ -90,6 +90,9 @@ class ResumeSummary(BaseModel):
     skills: Skills = Field(default_factory=Skills)
     projects: list[Project] = []
     internships: list[Internship] = []
+    # Round 19: employment kind comes from the resume's own section headings.
+    work_experience: list[Internship] = []
+    unclassified_experience: list[Internship] = []
     publications: list[dict] = []
     highlights: list[str] = []
     risk_points: list[RiskPoint] = []
