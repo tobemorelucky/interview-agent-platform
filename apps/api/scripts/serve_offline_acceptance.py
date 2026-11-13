@@ -69,17 +69,31 @@ from interview_api.infrastructure.models.provider import (  # noqa: E402
 
 
 class ReplayExtract(ModelProvider):
-    """Echoes the pasted JD as requirements; every evidence is verbatim."""
+    """Echoes the pasted JD as requirements; every evidence is verbatim.
+
+    Company/title are copied from a labelled line when the pasted text has one,
+    so the UI shows what the user wrote instead of an invented value.
+    """
 
     provider_name, model_name = "replay", "R11_EXTRACT"
+    ROLES = ("工程师", "开发", "专员", "经理", "专家", "架构师")
 
     async def generate(self, messages, *, schema):
         raw = json.loads(messages[-1]["content"])["input"]["input"]["raw_text"]
         lines = [line.strip(" -•\t") for line in raw.splitlines() if len(line.strip()) > 4]
+
+        def labelled(prefixes):
+            for line in lines:
+                if any(line.startswith(prefix) for prefix in prefixes):
+                    return line.split("：", 1)[-1].strip()[:40] or None
+            return None
+
         requirements = [dict(statement=line[:40], importance="REQUIRED", evidence=line,
                              topic="Kafka" if "Kafka" in line else "Python" if "Python" in line else None)
                         for line in lines if line.endswith(("。", "；", ";", ".")) or "熟悉" in line or "掌握" in line]
-        value = dict(company_name=None, job_title=None,
+        value = dict(company_name=labelled(("公司名称：", "公司：")),
+                     job_title=labelled(("岗位名称：", "职位：")) or next(
+                         (line[:40] for line in lines if line.endswith(self.ROLES)), None),
                      responsibilities=[line for line in lines if line.endswith("。")][:3],
                      requirements=requirements[:5])
         return ModelResponse(json.dumps(value, ensure_ascii=False), dict(total_tokens=0))
