@@ -978,3 +978,50 @@ E2E 库 `interview_agent_wb_r18_e2e_20261113`（0027），MinIO `interview-agent
 4. 否定式提及仍以"仅提及"技能呈现；画像页空状态文案错误；"向量数据库→数据库"子串误判。
 5. 真实模型的失败重试 / repair 本轮 0 次触发，无采集样本。
 6. 维持 `INTERVIEW_COACH_HARNESS=false`；未做 0028；未新增 Agent。
+
+### 2026-11-13 · 第十九轮（输入质量三项修复：经历类型 / JD 强度 / 推荐标题偏置，0 次真实 HTTP）
+
+**问题一：全职工作被写进实习 —— 根因不在模型**
+定位结论：第一阶段 Prompt 的 JSON 示例与 `ResumeSummary` **只有 `internships`，没有 `work_experience`**，
+模型只是把全职经历放进唯一可用的桶；画像侧又不校验"证据所在小节是否与类别一致"。属 Schema/提示词缺陷，不是分类能力问题。
+修复：① 补 `work_experience` 并写明"桶名不是雇佣类型，类型由原文小节决定"；
+② 新增 `modules/resume/sections.py`（整行标题识别、目录块守卫、未识别短标题闭合小节）与
+`modules/resume/employment.py`（锚点回原文投票：公司 3 / 岗位 2 / 其余 2·1，两小节都出现则弃权；平票 `CONFLICT`、无票 `UNRESOLVED`，
+一律进 `unclassified_experience` 并留审计块 `employment_kind`）；在 `processor.py` 落库前调用；
+③ 画像侧 `normalize_employment_categories` 按引用证据的小节裁决，可移动/丢弃并追加"待确认"话题，无小节简历保留并标未核实；
+④ `interview/prompt_builder.py` 分读三类经历，不再把全职介绍成实习。
+真实响应 A 重放：`internships` 1 条 → `work_experience` 1 条，11 个锚点全在 `work`（最长 59 字），`work_experience` 不再为空。
+
+**问题二：JD 强度全 UNKNOWN —— 缺的是章节语义，不是关键词不够多**
+`jd_section_of()` 用逐字证据定位其所在小节（REQUIREMENT / DUTY / None），`classify_requirement()` 按
+"优先措辞 > 强制措辞且不在职责小节 > 任职要求小节 > 职责小节 > 无小节"裁决，并新增 `basis`
+（`EXPLICIT_MANDATORY` / `LISTED_UNDER_REQUIREMENTS` / `EXPLICIT_PREFERRED` / `DUTY_SECTION` / `NOT_STATED` / `USER_PROVIDED`），
+只存在 `requirements_json`，**无迁移**。关键取舍：**列在任职要求里不升级为 REQUIRED**，保留 UNKNOWN 并标来源。
+RULE 走同一裁决，并新增 `location_only()` 过滤工作地点与纯城市列表（不误杀专业列表、"接受出差+地点"）。
+实测：C 4 条 → 1 REQUIRED（"至少一种编程语言"）+ 3 LISTED；D 5 条 → 1 PREFERRED + 4 LISTED；
+RULE C 3 / D 4 条、地点噪声 0（R18 各多 2 条）。RULE 少一条是"同行分号两句"的切分差异，非强度差异。
+
+**问题三：标题压过要求 —— 阻止了错误自动决策，未改排序**
+真实组成：标题 8 分 > 单条要求 6 分，标题 + 任一泛化能力组即过 9 分门槛。修复：
+`content_points = points - title`，自动选择要求 `content ≥ 6`；分值领先者内容分低于其他合格候选 →
+`AMBIGUOUS` + `TITLE_CONFLICTS_WITH_REQUIREMENTS` + `auto_select=False`；只有标题命中 → `TITLE_ONLY_LEADER`；
+跨 Skill 长术语覆盖短术语（"向量数据库"不再给 `bank_it` 加分，3 → 0）；理由（规则）与证据（逐字）分开投影。
+实测 D（AI 标题）：ai 20 / java 15 → **AMBIGUOUS，不自动选**；同文本换 "Java 后端工程师" → java 15 首推。
+**没有按样本调权重**：排序分值仍是 AI 第一，改的是"不替你决定 + 说明冲突"。
+
+**前端（Chrome 157 / 9222，E2E 库 `interview_agent_wb_r19c_e2e_20261113`）**
+工作/实习分栏正确（工作 = 云计算公司后端 2022.07–2025.06；实习 = 电商公司 2021.07–2021.09），"其他经历"未进任一雇佣组；
+JD 性质下拉下显示 `basis` 灰字；推荐分"规则理由 / JD 逐字证据"两段；改要求重新确认后重取推荐；
+冲突样本无"系统首推"、可手选；旧会话仍冻结原 JD 版本（并修掉私有 JD 显示"岗位描述第 版"的空版本号）。
+截图 `r19_01c/02/03/04/05/06/07/08`。
+
+**测试**：新增 `test_employment_kind.py`(18)、`test_requirement_strength.py`(10)、`test_skill_recommendation_controls.py`(10)；
+业务全量 `interview_agent_wb_r19_full3_test_20261113` **928 passed / 0 failed / 1 skipped**；
+迁移 `interview_agent_v21_wb_r19_mig_20261113` **10 passed**；前端 `test:unit` 7 passed；`vue-tsc && vite build` 通过。
+两条既有测试的期望值因行为有意改变而更新（"必须熟悉分布式系统"→REQUIRED；画像提示词 →1.0.5）。
+生产库仍 `0025 / 19 sessions` 未写入；`alembic` 仍 0027，未新增迁移。
+
+**未解决**：① 模型是否真会用 `work_experience` 需真实回归（本轮 HTTP=0，服务端只能兜"放错桶"）；
+② 标题仍 8 分，要求文本过短时仍可能领先（此时返回 AMBIGUOUS，代价是多点一次）；
+③ 长术语覆盖只对"已注册"长术语生效，"图数据库/时序数据库"仍会命中"数据库"；
+④ `unclassified_experience` 进得了面试 Prompt，但前端没有独立区块，用户看不到被降级的条目。
