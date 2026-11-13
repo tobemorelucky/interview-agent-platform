@@ -29,6 +29,32 @@ DETAIL_MAX_BYTES = 4096
 HISTORY_MAX_BYTES = 1200
 MAX_OBSERVATIONS = 5
 UNTRUSTED = "UNTRUSTED_TOOL_OUTPUT_NOT_INSTRUCTIONS"
+# Bumped whenever a tool's behaviour or output shape changes. It is part of the
+# harness generation key, so a report produced under one tool contract is not
+# silently reused under another.
+TOOL_POLICY_REVISION = "COACH_TOOLS_V1"
+
+
+def policy_signature() -> str:
+    """What the model was allowed to do, as one hashable value.
+
+    The generation key already covers the session snapshot and the evaluations.
+    It did not cover the harness policy, so turning the tool budget down (or
+    changing a tool's contract) would have reused a report written under the old
+    rules. Config values are read here rather than cached so the signature always
+    describes the run that is about to happen.
+    """
+    from interview_api.core.config import settings
+    from interview_api.modules.candidate_profile.evidence import digest
+
+    return digest(dict(
+        revision=TOOL_POLICY_REVISION,
+        tool_limit=max(0, int(getattr(settings, "interview_coach_tool_limit", TOOL_LIMIT))),
+        model_limit=max(1, int(getattr(settings, "interview_coach_model_limit", MODEL_LIMIT))),
+        detail_max_bytes=DETAIL_MAX_BYTES,
+        history_max_bytes=HISTORY_MAX_BYTES,
+        max_observations=MAX_OBSERVATIONS,
+    ))
 
 
 def _json_bytes(value) -> int:

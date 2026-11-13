@@ -24,6 +24,26 @@ def report_conflict(message="报告生成状态已变化，请刷新后重试"):
     return AppError("REPORT_GENERATION_CONFLICT", message, 409)
 
 
+def coach_generation_key(*, session_id, content_fingerprint, evaluation_fp, prompt_version,
+                         prompt_hash, request_key=None, harness=False, policy=None,
+                         capability_fingerprint=None):
+    """The one place a Coach report's identity is computed.
+
+    OFF reproduces the historical formula exactly: the same session, snapshot,
+    evaluations and prompt must resolve to the report that already exists, or a
+    page load would mint a new generation and displace it.
+
+    ON adds the two inputs the old formula could not see — the harness tool
+    policy and the capability capture taken at report time — so a report written
+    against one memory state is never reused as if it described another.
+    """
+    parts = ["interview_coach", session_id, content_fingerprint, evaluation_fp,
+             prompt_version, prompt_hash, request_key]
+    if harness:
+        parts += [policy, capability_fingerprint]
+    return digest(parts)
+
+
 def _iso(value):
     return value.isoformat() if value else None
 
@@ -137,9 +157,25 @@ class InterviewReportService:
             # OFF must keep producing exactly the key it produced before, or an
             # existing completed report would stop matching itself and a reload
             # would mint a new generation.
-            prompt_version, prompt_hash = coach_prompt_signature(harness_enabled())
-            key = digest(["interview_coach", session_id, snapshot.content_fingerprint, fingerprint,
-                          prompt_version, prompt_hash, request_key if regenerate else None])
+            harness = harness_enabled()
+            prompt_version, prompt_hash = coach_prompt_signature(harness)
+            policy = capability_fingerprint = None
+            if harness:
+                # The harness has two inputs the old key could not see: the tool
+                # policy that shapes what the model may do, and the capacity
+                # capture taken at report time. Without them, memory changing
+                # after a report was written would silently reuse a report whose
+                # suggestion was validated against different capability states.
+                # Captured before the key so the key and the payload describe the
+                # same frozen input.
+                from interview_api.modules.interview_report import tools
+                capability_history = await self._capability_history(db, user_id, snapshot)
+                policy = tools.policy_signature()
+                capability_fingerprint = (capability_history or {}).get("fingerprint")
+            key = coach_generation_key(session_id=session_id, content_fingerprint=snapshot.content_fingerprint,
+                evaluation_fp=fingerprint, prompt_version=prompt_version, prompt_hash=prompt_hash,
+                request_key=request_key if regenerate else None, harness=harness, policy=policy,
+                capability_fingerprint=capability_fingerprint)
             report = await db.scalar(select(FinalInterviewReport).where(FinalInterviewReport.generation_key == key).with_for_update())
             current = await self._current(db, session_id)
             if report and report.generation_status == "COMPLETED":
@@ -191,7 +227,10 @@ class InterviewReportService:
             # Captured once, at the start of this attempt, and then held still:
             # a tool call two seconds later must see the same numbers, and the
             # capture's content hash is recorded so a reviewer can prove it.
-            capability_history = await self._capability_history(db, user_id, snapshot)
+            # The harness captures it before the key (it is part of the frozen
+            # input); the OFF path keeps its original query order.
+            if not harness:
+                capability_history = await self._capability_history(db, user_id, snapshot)
             training_scope = self._training_scope(snapshot, capability_history)
             logger.info("coach evidence projection %s bytes=%s sections=%s", projection["version"],
                         projection["bytes"], projection["section_bytes"])
