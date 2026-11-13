@@ -27,6 +27,7 @@ import {
 } from "../api/interview"
 import { uploadResume, getResume as apiGetResume } from "../api/resume"
 import { getTarget, listTargets, skillRecommendations } from "../api/job-target"
+import { resolvePrivateEntryTarget } from "./interviewEntry"
 import type { JobTarget, TargetSkillRecommendation } from "../types/job-target"
 import { ApiError } from "../api/client"
 import type { InterviewSession, InterviewMessage, InterviewQuestionSummary } from "../types/interview"
@@ -834,20 +835,18 @@ getInterviewTargets().then(async data => {
   const targetId = entryTargetId
   if (!targetId) return
   entryRouter.replace({ path: '/interview' })
-  // The target list loads in parallel; reading it before it resolves made this
-  // hand-off report "not found" and drop the preselection. Await it, and fall
-  // back to a direct owner-scoped read so the result never depends on ordering.
-  await privateTargets
-  let picked = jobTargets.value.find(t => t.id === targetId && t.parse_status === 'CONFIRMED')
-  if (!picked) {
-    const fetched = await getTarget(targetId).catch(() => undefined)
-    if (fetched && fetched.parse_status === 'CONFIRMED') {
-      picked = fetched
-      jobTargets.value = [fetched, ...jobTargets.value.filter(t => t.id !== fetched.id)]
-    }
-  }
-  if (!picked || picked.parse_status !== 'CONFIRMED') {
+  // The target list loads in parallel; awaiting it (and falling back to an
+  // owner-scoped read) keeps the result independent of which request resolves
+  // first. Logic and its regression test live in ./interviewEntry.ts.
+  const resolution = await resolvePrivateEntryTarget(targetId, {
+    list: async () => { await privateTargets; return jobTargets.value },
+    detail: id => getTarget(id),
+  })
+  if (resolution.status !== 'SELECTED') {
     alert('该目标岗位不存在、未确认或不属于当前账号，请重新选择。'); return
+  }
+  if (resolution.source === 'DETAIL') {
+    jobTargets.value = [resolution.target, ...jobTargets.value.filter(t => t.id !== resolution.target.id)]
   }
   selectedTargetId.value = targetId
   // One-click hand-off only preselects. A non-primary direction is recorded as
