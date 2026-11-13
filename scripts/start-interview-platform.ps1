@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([switch]$Demo, [switch]$WithSearch, [switch]$SkipInfrastructure)
+param([switch]$Demo, [switch]$WithSearch, [switch]$SkipInfrastructure, [string]$AuthorizeDatabase = '')
 . "$PSScriptRoot/platform-common.ps1"
 $operationLock = Enter-PlatformLock ([bool]$Demo)
 Push-Location $script:PlatformRoot
@@ -20,7 +20,9 @@ try {
     Wait-Ready { Test-Http $config.minio_health_url } 'MinIO'
     if ($config.vector_required -and !$Demo -and !$SkipInfrastructure) { Wait-Ready { Test-Http 'http://127.0.0.1:9091/healthz' } 'Milvus' }
     # Migration failures happen before starting any new business processes.
-    Invoke-Delivery 'migrate' ([bool]$Demo) | Write-Host
+    # The delivery helper refuses a non-test database unless the operator named
+    # it: start-dev.bat -AuthorizeDatabase <name>.
+    Invoke-Delivery 'migrate' ([bool]$Demo) $AuthorizeDatabase | Write-Host
     if ($Demo) { Invoke-Delivery 'seed' $true | Write-Host }
     $modeArgs = if ($Demo) { @('--demo') } else { @() }
     Start-OwnedService 'api' ([bool]$Demo) $script:ApiPython (@('-X','utf8',$script:DeliveryHelper,'api')+$modeArgs) (Join-Path $script:PlatformRoot 'apps/api') $config.api_port

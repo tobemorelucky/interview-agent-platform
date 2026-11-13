@@ -21,9 +21,25 @@ from interview_api.infrastructure.models.provider import CompatibleModelProvider
 from v22_support import kafka_seed,MemoryReplayProvider
 
 
+def guard(name):
+    """Fixture writes need their own database, decided by the shared classifier.
+
+    Never the UI acceptance database: round 9 lost a demo UI because regression
+    fixtures were written into it. `*_browser_*` is the fixture database; the
+    `*_e2e_*` database is driven through the API only.
+    """
+    from interview_api.core.db_targets import E2E, classify, e2e_problem
+    if not name.replace('_','').isalnum() or classify(name) != E2E:
+        raise ValueError('Dedicated isolated browser fixture DB required')
+    problem = e2e_problem(name)
+    if problem:
+        raise ValueError(problem)
+    if '_browser' not in name:
+        raise ValueError('fixture DB must be the *_browser_* database, never the UI acceptance database')
+
+
 async def prepare(name):
-    if not name.startswith('interview_agent_v21_v23_browser_') or not name.replace('_','').isalnum():
-        raise ValueError('Dedicated isolated browser DB required')
+    guard(name)
     engine=create_async_engine(make_url(settings.database_url).set(database=name))
     factory=async_sessionmaker(engine,expire_on_commit=False)
     try:

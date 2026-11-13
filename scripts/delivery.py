@@ -14,6 +14,10 @@ sys.path[:0] = [str(ROOT / "apps/api/src"), str(ROOT / "apps/worker/src")]
 DEMO_DB = "interview_agent_m6_f3_ux_demo"
 
 
+class Refused(RuntimeError):
+    """A guard said no. Reported separately from a real migration failure."""
+
+
 def configuration(demo=False):
     from interview_api.core import config as settings_module
     Settings = settings_module.Settings
@@ -43,14 +47,23 @@ async def revision(settings):
         await engine.dispose()
 
 
-def migrate(settings, demo):
+def migrate(settings, demo, authorize=None):
     from alembic import command
     from alembic.config import Config
     from alembic.script import ScriptDirectory
+    from sqlalchemy.engine import make_url
+    from interview_api.core.db_targets import operational_migrate_problem
+    # An operational migration is the only legitimate writer here, so it may
+    # touch a non-test database — but only when the operator names that exact
+    # database on the command line. Reading `.env` is never authorisation.
+    name = make_url(settings.database_url).database or ""
+    problem = operational_migrate_problem(name, authorized=authorize,
+                                         demo_database=DEMO_DB if demo else None)
+    if problem:
+        raise Refused(problem)
     if demo:
         # CREATE DATABASE cannot be transactional; only this exact DEMO name is allowed.
         import asyncpg
-        from sqlalchemy.engine import make_url
         async def ensure_demo():
             url = make_url(settings.database_url).set(database="postgres", drivername="postgresql")
             conn = await asyncpg.connect(url.render_as_string(hide_password=False), timeout=5)
@@ -94,6 +107,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("action", choices=["config", "revision", "redis-ping", "migrate", "seed", "api", "worker", "worker-ping"])
     parser.add_argument("--demo", action="store_true")
+    # Explicit, name-matching authorisation for a non-test database. Required
+    # whenever DATABASE_URL does not point at a local test/migration/demo
+    # database, so an automated script cannot migrate production by accident.
+    parser.add_argument("--authorize-database", default=None)
     args = parser.parse_args()
     try:
         s = configuration(args.demo)
@@ -126,7 +143,10 @@ def main():
             return 1
     elif args.action == "migrate":
         try:
-            migrate(s, args.demo)
+            migrate(s, args.demo, args.authorize_database)
+        except Refused as exc:
+            print(f"MIGRATION_REFUSED: {exc}", file=sys.stderr)
+            return 3
         except Exception as exc:
             # Do not leak a DSN/password from driver exception text.
             print(f"MIGRATION_FAILED ({type(exc).__name__}); no workaround performed", file=sys.stderr)

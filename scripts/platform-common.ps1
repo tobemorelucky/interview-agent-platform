@@ -16,9 +16,12 @@ function Enter-PlatformLock([bool]$DemoMode) {
     return $mutex
 }
 
-function Invoke-Delivery([string]$Action, [bool]$DemoMode) {
+function Invoke-Delivery([string]$Action, [bool]$DemoMode, [string]$AuthorizeDatabase = '') {
     $argsList = @('-X', 'utf8', $script:DeliveryHelper, $Action)
     if ($DemoMode) { $argsList += '--demo' }
+    # Forwarded only when the operator typed it; .env alone never authorises a
+    # migration of the production, E2E or any other non-test database.
+    if ($AuthorizeDatabase) { $argsList += @('--authorize-database', $AuthorizeDatabase) }
     $output = & $script:ApiPython @argsList
     if ($LASTEXITCODE -ne 0) { throw "Delivery check failed: $Action (exit $LASTEXITCODE). Credentials are not printed." }
     return $output
