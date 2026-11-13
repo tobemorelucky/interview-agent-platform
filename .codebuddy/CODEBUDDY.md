@@ -83,7 +83,8 @@
 - ~~私人岗位入口只能先进详情才能找到~~ **已修（第十二轮，`80149e9`）**：已确认目标的行内直接给「开始训练」，未确认行给原因而不是按钮。
 - ~~Coach 的记忆输入是 `str(dict)` 截断到 600 字符~~ **已修（第十三轮，`790913e`）**：`COACH_EVIDENCE_V2` 把两个记忆层改为结构化投影（semantics / epistemic_status / items / shown / total / clipped），并把 `memory_guided_plan` 投影成 `capability_context`、`training` 投影成 `training_context`，每条评价补 `fingerprint`。跨岗位语义由 `scope_note` 明写。真实 18 轮夹具体积 85,047 → 86,830 字节（+2.1%）。
 - **Coach Harness 已实施、默认 OFF**（第十三轮 `4e726f9`）：`interview_coach_harness` 打开后模型可用一次只读工具（`read_evaluation_detail` 带指纹校验 / `read_capability_history` 读尝试开始时的一次性快照），最多 2 次模型调用；`suggested_training` 由 `resolve_coach_artifact` 用 `training.modes()` 重新校验，非法即降级并记录。OFF 路径的提示词、schema、生成键与上一轮逐字节一致（有用例断言）。
-- **Harness Live 短程结果（第十四轮，`docs/93`）**：同一真实会话（18 评价）跑 OFF ×1 + ON ×2，共 **3 次 HTTP / 77,110 token**。ON 两次都 `SINGLE_CALL_MODEL_CHOSE_FINAL`——**两个工具可用但 0 次调用**，正文也从未引用跨场次状态。ON 唯一结构性增益是 `suggested_training`（两次都合法：PRACTICING→WEAKNESS，引用真实评价），成本 +3.5% token。**结论：维持默认 OFF；工具价值仍无 Live 证据。**
+- **Harness Live 短程结果（第十四轮，`docs/93`）**：同一真实会话（18 评价）跑 OFF ×1 + ON ×2，共 **3 次 HTTP / 77,110 token**。ON 两次都 `SINGLE_CALL_MODEL_CHOSE_FINAL`——**两个工具可用但 0 次调用**，正文也从未引用跨场次状态。ON 唯一结构性增益是 `suggested_training`（两次都合法：PRACTICING→WEAKNESS，引用真实评价），成本 +3.5% token。
+- **工具价值审查（第十五轮，`docs/94`，结论：暂时搁置 Harness）**：零成本审计发现 `read_evaluation_detail` 修复前在真实数据上返回的答案比 V2 更短（401 < 601 字）且重复 V2 已有字段；第 18 条评价整个结果 4,199 字节、净增量几乎为零。修复后两个工具只返回增量（真实第 18 条 1,411 字节），历史工具的 1,214 > 1,200 越界也修掉。合成场景 B（正式 Service 造出裁剪评价）证明工具**能**返回隐藏事实，但真实 Live 中模型**仍 0 次调用**（累计 0/4），且 ON 的 WEAKNESS 建议因 CONFLICTED 被 resolver 拒绝，确定性规则基线却给出合法 RECHECK。**结构化建议有价值，但这价值不来自工具调用；零模型调用的规则基线已能满足主要需求。** 保持 `INTERVIEW_COACH_HARNESS=false`，不再为诱导调用改 Prompt / 加工具 / 加轮次。
 - **生成键缺口已修（第十四轮，`b7a9403`）**：ON 的键现在含 `tools.policy_signature()` 与报告期能力捕获指纹；OFF 公式逐字节不变（证据：本轮 OFF 命中 11-11 那条 FAILED 行的旧键并在该行完成重试）。
 - ~~报告页建议链接丢失岗位~~ **已修（第十四轮，`98c9e35`）**：报告 session 载荷补 `job_id`/`company_id`，链接现在能预选岗位+模式+知识点；跳转不创建训练（会话数 3→3）。
 - 前端不暴露 Harness 开关、不展示提前结束原因、未暴露 `confirm_unknown_retry`。
@@ -124,11 +125,11 @@
 
 ### 交接区（每轮结束更新）
 
-- 当前 HEAD：`git log -1`（第十四轮文档 `40ada98` 之后只有本文件的记录更新）
+- 当前 HEAD：`git log -1`（第十五轮文档 `7631d38` 之后只有本文件的记录更新）
 - 工作区：干净（仅 `.workbuddy/` 未跟踪，按第五轮约定不提交）
-- 下一轮入口：见「轮次记录」最后一轮（第十四轮真实模型 HTTP = 3 / 77,110 token；Coach Harness **仍默认 OFF**，工具路径在真实模型下 0 次调用、无收益证据）
+- 下一轮入口：见「轮次记录」最后一轮（第十五轮真实模型 HTTP = 2 / 10,505 token；**Coach Harness 建议暂时搁置、保持 OFF**，下一阶段转向普通用户闭环，不是 Research/Matching）
 - 环境提示：本轮开始时 postgres/redis/minio 容器处于 `Exited (255)`，用 `docker start` 拉起后数据完好（151 个库）。**不要**用 `docker compose down -v` 之类的操作。
-- 本轮新建的副本库 `interview_agent_wb_r14_real_20261113` 里有 3 份真实模型报告（gen 1/2/3），**保留**用于后续对照；原件 `interview_agent_wb_full_live_20261111` 未变（1 份 FAILED / 18 评价 / 49 准入）。
+- 副本库 `interview_agent_wb_r14_real_20261113` 有 3 份真实模型报告（gen 1/2/3），**保留**；原件 `interview_agent_wb_full_live_20261111` 未变。`interview_agent_wb_r15_real_20261113` 是本轮合成场景 B 的 OFF/ON 两份报告，保留作证据。
 
 ## 轮次记录
 
@@ -785,3 +786,58 @@ Coach 方案**只审查不实施**。
 1. 找一个投影裁剪严重的真实会话（或合法构造高裁剪输入的离线夹具），验证"模型会不会查、查了是否改变结论"。
 2. 或先补一条真实 `CONFLICTED` 历史（需真实重测），再验证"查历史是否改变建议"。
 3. 在上述任一证据出现前，不要把 Harness 设为默认开启。
+
+### 2026-11-13 · 第十五轮（Coach 工具查询必要性审查，2 次 HTTP / 10,505 token）
+
+开工 `7e5e2d7`，工作区干净。未改 OFF 的 Prompt/Schema/生成键，未新增工具或轮次，未改 Controller / CapabilityMemory，正式库与归档 Live 库未写入。
+
+**提交**
+
+| Hash | 内容 |
+|---|---|
+| `6d65a33` | `fix(workbuddy)`: 两个工具改为只返回增量 + 修字节上限 + 4 条专项测试 |
+| `7631d38` | `docs(workbuddy)`: `docs/94` 十节记录 |
+
+**零成本审查（真实 18 条评价归档）**
+
+- V2 已给出题目全文、五维分数、答案前 600 字、评价前 800 字、四类要点前 4/4/3/3 条。真实会话里**只隐藏 34 字符自由文本 + 32 条列表项**。
+- 修复前 `read_evaluation_detail`：第 18 条答案 401 字 < V2 的 601 字、focus 1 条 < 3 条、整个结果 4,199 字节——4KB 大半重复 `question/scores/question_kind/session_question_id`。**"详情"工具比投影给得还少。**
+- 修复：只返回 `answer_hidden`/`evaluation_hidden` 尾部、`extra_*` 列表项，带 `hidden_counts`/`shown_by_projection`/`no_additional_evidence`；整个封装 ≤4KB，裁剪不低于 V2。同一条评价结果 4,199 → **1,411 字节**。历史工具的 1,214 > 1,200 越界（只量 data、循环后追加 `truncated`）也修掉。
+- 第十四轮真实会话的 `capability_context` **0 条 items**（冻结计划为空），但 `training_scope` 已有状态和合法模式 → 历史工具新增的是引用明细，不是新决策依据。
+
+**离线场景（0 次真实调用）**
+
+- **B 合成**：`LongEvaluationProvider` 经正式 Service 造出 940 字评价，决定性事实放在 800 字裁剪点后与第 6 条 missing_points。V2 确实遗漏；工具返回该事实；指纹一致；改指纹 → `EVALUATION_CHANGED`；越界 → `EVALUATION_OUT_OF_SCOPE`；无 `reference_answer`/其他用户数据。
+- **C 合成压力测试**：`GOOD,GOOD,WEAK,GOOD,WEAK` 五场正式 replay 会话 → 合法 `CONFLICTED`。V2 计划已给 state/needs_recheck，`modes()` 已决定 FULL+RECHECK；历史工具只加观察引用。resolver 接受 RECHECK、拒绝 WEAKNESS。**不称为真实用户历史，且未做 Live。**
+- **确定性基线**：`deterministic_suggestions(training_scope, evaluations)` 零模型调用，产出合法候选项；第十四轮真实会话给 3 个 WEAKNESS（含真实 ON 两次选中的 agent / rag_retrieval），CONFLICTED 场景给 RECHECK。
+
+**小规模真实 Live（仅 B）**
+
+| 运行 | HTTP | Token | 延迟 | 首轮 | 工具 |
+|---|---|---|---|---|---|
+| OFF 1.0.3 | 1 | 4,600 | 5,173 ms | — | — |
+| ON 1.1.0 | 1 | 5,905 | 6,700 ms | `SINGLE_CALL_MODEL_CHOSE_FINAL` | **0** |
+| 合计 | **2/4** | **10,505/150,000** | | | **0/2** |
+
+- 两个工具都可用、决定性证据被刻意藏起来，模型**仍直接终稿**；连同第十四轮累计 **0/4** 次工具调用。
+- 两份产物引用 `[1]`、无无依据数字、无跨岗位断言；隐藏事实未被使用，但**也没编造"已完全掌握"**（ON 从 V2 可见的 missing_points 推断出方向相近的缺口）。
+- **ON 的 WEAKNESS 建议被 resolver 拒绝**（CONFLICTED 只允许 FULL/RECHECK），确定性基线却给出合法 RECHECK → 本场景 Harness 建议质量**低于**零成本基线。
+- ON 固定开销 +1,305 token（小 payload 下 **+28%**；第十四轮大 payload +3.5%）。
+- 准入：2 条 `SETTLED`、actual=charged、无 UNKNOWN/RESERVED、无 QUOTA、`structured_retry=0`；正式库当日准入 0。
+
+**测试**
+
+- 专项 **4 passed**；Coach/训练/报告/幂等子集 **105 passed**。
+- 全量业务段 @ `interview_agent_wb_r15_test_20261113`：**822 passed / 0 failed / 1 skipped**（272.68 s）；迁移段 @ `interview_agent_v21_wb_r15_20261113`：**10 passed / 0 failed**（63.59 s）。用例 818 → 822。
+- 前端 `vue-tsc && vite build` 通过（本轮无前端改动、无浏览器 UI 验收）。
+
+**结论（写进 `docs/94` §9）**
+
+1. 工具各自能给的增量：评价工具能返回 V2 裁剪外的文本尾部与额外要点；历史工具只给引用明细，合法模式早已由状态与 `modes()` 决定。
+2. 真实模型**没有**自主选择调用（0/4）。
+3. 调用未改善建议（没有调用；ON 的建议还被拒绝）。
+4. **确定性规则基线已能满足主要需求**——结构化建议有价值，但不来自工具调用。
+5. **暂时搁置 Harness，保持 `INTERVIEW_COACH_HARNESS=false`**；不再改 Prompt 诱导调用、不加工具、不加轮次。若要把建议做成产品特性，走规则生成 + 现有 resolver 校验，单独审批。
+6. 下一阶段**不转 Research / Matching**（都会扩 Agent 架构且无用户侧证据），转向普通用户闭环：① 简历上传→画像真实链路 ② 私人 JD 的 Skill 推荐接口（后端已有 `recommend_for_target`） ③ 能力记忆岗位维度 ④ 请求记录↔业务审计 join。
+
+**未解决**：结论样本量小（1 个真实归档会话 + 1 个合成场景 + 2 次调用）；工具新形状只在 ON 路径；确定性基线仍是测试内实现、未接入产品；记忆无岗位维度；本轮无浏览器验证。
