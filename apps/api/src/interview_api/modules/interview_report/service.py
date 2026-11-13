@@ -362,9 +362,13 @@ class InterviewReportService:
         # A private JD has no company/job row; the report header must be able to
         # say so instead of presenting the pasted company name as an employer.
         target = context.get("job_target") or {}
+        # `job_id`/`company_id` are needed by the report page's "go to training"
+        # link: without them the link can pre-select the skill and the mode but
+        # loses the job, so the user lands on a page asking which job they meant.
         return dict(session=dict(id=session.id, title=session.title, status=session.status,
             company_name=context["company_name"], job_title=context["job_title"], context_snapshot_id=snapshot.id,
-            job_target_id=target.get("id"), job_target_version=target.get("version")),
+            job_target_id=target.get("id"), job_target_version=target.get("version"),
+            job_id=context.get("job_id"), company_id=context.get("company_id")),
             statistics=report["statistics"] if report else deterministic_statistics(questions, evaluations),
             current_report=current, report=report, history=history, evaluations=evaluations,
             design_trace=deepcopy(session.planner_trace_json or {}) if context.get("system_design") else None,
