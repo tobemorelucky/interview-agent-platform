@@ -13,19 +13,10 @@ SRC_ROOT = API_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-# Round 10: the full regression suite and a browser E2E run used to share one
-# database, so regression fixtures (DEMO companies/jobs/JDs) appeared in the UI.
-# A test run may only write to a database that is explicitly named as a test or
-# migration target. Production, E2E/UI and archived Live databases are refused.
-PROTECTED_DATABASES = frozenset({
-    "interview_agent", "postgres", "template0", "template1",
-    "interview_agent_m6_f3_ux_demo",
-})
-PROTECTED_MARKERS = (
-    "_e2e", "_ui_", "_live_", "_accept", "_browser", "_release", "_demo",
-    "_coach_live", "_budget_live", "_full_live",
-)
-TEST_DATABASE_MARKERS = ("_test", "_regression", "_mig")
+# The classification lives in `interview_api.core.db_targets` so the pytest
+# guard, the test runner and the delivery scripts cannot disagree about what
+# "a test database" is. This module only reads the environment and asks it.
+from interview_api.core.db_targets import test_run_problems
 
 
 def _database_name(url: str) -> str:
@@ -40,21 +31,7 @@ def _isolation_problems() -> list[str]:
     test_url = os.getenv("M1_TEST_DATABASE_URL")
     if not test_url:
         return []
-    test_db = _database_name(test_url)
-    app_db = _database_name(os.getenv("DATABASE_URL") or "")
-    problems: list[str] = []
-    if not test_db.startswith("interview_agent_"):
-        problems.append(f"M1_TEST_DATABASE_URL 不是隔离测试库（当前：{test_db or '未设置'}）")
-    if test_db in PROTECTED_DATABASES or any(m in test_db for m in PROTECTED_MARKERS):
-        problems.append(f"M1_TEST_DATABASE_URL 指向受保护的 E2E / 正式 / 历史归档库：{test_db}")
-    # test_09_v22_migration.py already demands this exact prefix for an empty DB.
-    migration_only = test_db.startswith("interview_agent_v21_")
-    if not migration_only and not any(m in test_db for m in TEST_DATABASE_MARKERS):
-        problems.append("测试库名必须含 _test / _regression / _mig 标记")
-    if app_db != test_db:
-        problems.append(
-            f"DATABASE_URL 必须与 M1_TEST_DATABASE_URL 指向同一测试库（{app_db or '未设置'} != {test_db}）")
-    return problems
+    return test_run_problems(_database_name(test_url), _database_name(os.getenv("DATABASE_URL") or ""))
 
 
 @pytest.fixture(scope="session", autouse=True)

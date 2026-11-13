@@ -1,28 +1,36 @@
-"""Run the backend suite against a WorkBuddy-owned isolated database.
+"""Run the backend suite in two properly separated passes.
 
-Round 9 showed how easy it is to point a regression run at the wrong database:
-the E2E database received 219 ACTIVE companies and 347 PUBLISHED job rows from
-test fixtures. `apps/api/tests/conftest.py` now refuses to write into a database
-whose name is not clearly a test database, but that guard only helps once you
-are already inside pytest. This wrapper closes the earlier half of the hole: it
-refuses to *aim* a run at the production database, the E2E database or an
-archived Live database in the first place, creates a fresh database when asked,
-migrates that one database only, and then runs the suite.
+Round 10 left a confusing result: `757 passed / 10 failed`, where all ten
+failures were the migration cases that need an *empty* database and were being
+pointed at the data-bearing regression database. Deleting or skipping them
+would hide real coverage, so this runner groups them instead:
+
+    pass 1  business regression   -> a dedicated test database, migrated to head
+    pass 2  migration cases       -> a dedicated *empty* database, never migrated here
+
+Both targets are checked by `interview_api.core.db_targets` before a connection
+is opened, and the migration database is additionally checked against the
+server: if it already has tables, the run refuses instead of clearing, dropping
+or rebuilding anything.
 
 Examples:
-    python scripts/run-workbuddy-tests.py --database interview_agent_wb_r10_test_20261112
-    python scripts/run-workbuddy-tests.py --database interview_agent_v21_wb_r10_20261112 --migration
-    python scripts/run-workbuddy-tests.py --database interview_agent_wb_r10_test_20261112 --reuse -- tests/test_private_training.py
+    python scripts/run-workbuddy-tests.py \\
+        --database interview_agent_wb_r11_test_20261112 \\
+        --migration-database interview_agent_v21_wb_r11_20261112
 
-The database name is the whole safety mechanism, so it is checked twice: here
-before anything runs, and again by the pytest session guard.
+    # only one file, no migration pass
+    python scripts/run-workbuddy-tests.py --database interview_agent_wb_r11_test_20261112 \\
+        --reuse --skip-migration -- tests/test_private_training.py
 """
 
 import argparse
 import asyncio
+import json
 import os
 import subprocess
 import sys
+import tempfile
+import xml.etree.ElementTree as ElementTree
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -32,73 +40,11 @@ if not PYTHON.exists():  # non-Windows checkout
     PYTHON = API / ".venv" / "bin" / "python"
 sys.path.insert(0, str(API / "src"))
 
-# A pytest database must announce itself. `_e2e` is deliberately absent: the
-# browser acceptance database is driven through the API, never through fixtures.
-PYTEST_MARKERS = ("_test", "_regression", "_mig")
-MIGRATION_PREFIX = "interview_agent_v21_"
-GENERAL_PREFIX = "interview_agent_wb_"
-# Anything else is a production / archived-Live / Demo database: read-only.
-NEVER = ("e2e", "live", "accept", "demo", "browser", "prod")
-
-parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument("--database", required=True, help="isolated database name")
-parser.add_argument("--reuse", action="store_true", help="use the existing database instead of creating it")
-parser.add_argument("--migration", action="store_true", help="run the empty-database migration suite")
-parser.add_argument("--create-only", action="store_true", help="create and migrate, then stop")
-parser.add_argument("tests", nargs="*", help="pytest arguments after --")
-args = parser.parse_args()
-
-name = args.database
-if not name.replace("_", "").isalnum() or name.lower() != name:
-    raise SystemExit("database names are lowercase word characters only")
-if not (name.startswith(GENERAL_PREFIX) or name.startswith(MIGRATION_PREFIX)):
-    raise SystemExit(f"only {GENERAL_PREFIX}* or {MIGRATION_PREFIX}* databases may be used")
-if not any(marker in name for marker in PYTEST_MARKERS):
-    raise SystemExit(f"the name must contain one of {PYTEST_MARKERS} so the pytest guard accepts it")
-if any(word in name for word in NEVER):
-    raise SystemExit(f"'{name}' looks like an acceptance, Demo or archived Live database; refusing")
-
+from interview_api.core import db_targets  # noqa: E402
+from interview_api.core.config import settings  # noqa: E402
 from sqlalchemy.engine import make_url  # noqa: E402
 
-from interview_api.core.config import settings  # noqa: E402
-
-base = make_url(settings.database_url)
-url = base.set(database=name).render_as_string(hide_password=False)
-
-
-async def prepare():
-    import asyncpg
-
-    admin = base.set(drivername="postgresql", database="postgres").render_as_string(hide_password=False)
-    connection = await asyncpg.connect(admin)
-    try:
-        exists = await connection.fetchval("SELECT 1 FROM pg_database WHERE datname=$1", name)
-        if exists and not args.reuse:
-            raise SystemExit(f"'{name}' already exists; pass --reuse or pick a new name "
-                             "(this command never drops or clears a database)")
-        if not exists:
-            await connection.execute(f'CREATE DATABASE "{name}"')
-            print(f"created {name}")
-    finally:
-        await connection.close()
-
-
-asyncio.run(prepare())
-
-env = os.environ.copy()
-env["DATABASE_URL"] = url
-env["M1_TEST_DATABASE_URL"] = url
-subprocess.run([str(PYTHON), "-m", "alembic", "upgrade", "head"], cwd=API, env=env, check=True)
-print(f"migrated {name} to head")
-if args.create_only:
-    raise SystemExit(0)
-
-# The same URL in both variables is what the pytest guard requires; a mismatch
-# means the fixtures would write somewhere other than the database just prepared.
-#
-# The migration cases upgrade an empty database from nothing and then downgrade
-# it, so they cannot share a database with data-bearing tests. Two passes:
-# `--migration` runs only those, the default run ignores them.
+# The cases that upgrade an empty database from nothing and then downgrade it.
 MIGRATION_TESTS = [
     "tests/test_00_migration.py", "tests/test_01_m2a_migration.py",
     "tests/test_02_m2b_migration.py", "tests/test_03_m2b_migration_data.py",
@@ -106,8 +52,120 @@ MIGRATION_TESTS = [
     "tests/test_06_m5_migration.py", "tests/test_07_m6_migration.py",
     "tests/test_08_v13_migration.py", "tests/test_09_v22_migration.py",
 ]
-command = [str(PYTHON), "-m", "pytest", "-q", "-p", "no:cacheprovider"]
-command += args.tests or (MIGRATION_TESTS if args.migration
-                          else ["--ignore=" + path for path in MIGRATION_TESTS])
-print("running:", " ".join(command))
-raise SystemExit(subprocess.run(command, cwd=API, env=env).returncode)
+
+parser = argparse.ArgumentParser(description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+parser.add_argument("--database", required=True, help="data-bearing regression database")
+parser.add_argument("--migration-database",
+                    help="separate EMPTY database for the upgrade/downgrade cases")
+parser.add_argument("--reuse", action="store_true", help="reuse existing databases instead of creating them")
+parser.add_argument("--skip-migration", action="store_true", help="run only the business pass")
+parser.add_argument("--create-only", action="store_true", help="prepare databases, then stop")
+parser.add_argument("tests", nargs="*", help="explicit pytest arguments (disables the migration pass)")
+args = parser.parse_args()
+
+base_url = make_url(settings.database_url)
+
+
+def url_for(name):
+    return base_url.set(database=name).render_as_string(hide_password=False)
+
+
+def refuse(message):
+    raise SystemExit(f"REFUSED: {message}")
+
+
+async def ensure_database(name):
+    """Create the database when missing; never clear an existing one."""
+    import asyncpg
+
+    admin = base_url.set(drivername="postgresql", database="postgres").render_as_string(hide_password=False)
+    connection = await asyncpg.connect(admin, timeout=5)
+    try:
+        exists = await connection.fetchval("SELECT 1 FROM pg_database WHERE datname=$1", name)
+        if not exists:
+            await connection.execute(f'CREATE DATABASE "{name}"')
+            print(f"created {name}")
+        elif not args.reuse:
+            refuse(f"{name} 已存在；不覆盖、不清空。换一个新名字，或加 --reuse 复用。")
+    finally:
+        await connection.close()
+
+
+def migrate(name):
+    env = {**os.environ, "DATABASE_URL": url_for(name)}
+    subprocess.run([str(PYTHON), "-m", "alembic", "upgrade", "head"],
+                   cwd=API, env=env, check=True)
+    print(f"migrated {name} to head")
+
+
+def count(report: Path):
+    totals = dict(passed=0, failed=0, skipped=0, error=0)
+    if not report.exists():
+        return totals
+    for case in ElementTree.parse(report).getroot().iter("testcase"):
+        if case.find("failure") is not None:
+            totals["failed"] += 1
+        elif case.find("error") is not None:
+            totals["error"] += 1
+        elif case.find("skipped") is not None:
+            totals["skipped"] += 1
+        else:
+            totals["passed"] += 1
+    return totals
+
+
+def run_pytest(paths, name):
+    """One pytest pass; counts come from the JUnit XML, not from stdout text."""
+    env = {**os.environ, "DATABASE_URL": url_for(name), "M1_TEST_DATABASE_URL": url_for(name)}
+    with tempfile.TemporaryDirectory() as directory:
+        report = Path(directory) / "report.xml"
+        command = [str(PYTHON), "-m", "pytest", "-q", "-p", "no:cacheprovider",
+                   f"--junitxml={report}", *paths]
+        print("running:", " ".join(command))
+        code = subprocess.run(command, cwd=API, env=env).returncode
+        return count(report), code
+
+
+# ── the business pass ────────────────────────────────────────────────────────
+problems = db_targets.test_run_problems(args.database, args.database)
+if problems:
+    refuse("；".join(problems))
+if args.migration_database and args.database == args.migration_database:
+    refuse("业务回归库与迁移空库必须是两个不同的数据库")
+
+asyncio.run(ensure_database(args.database))
+migrate(args.database)
+if args.create_only:
+    raise SystemExit(0)
+
+results = {}
+business_paths = args.tests or ["--ignore=" + path for path in MIGRATION_TESTS]
+results["business"], business_code = run_pytest(business_paths, args.database)
+
+# ── the migration pass ───────────────────────────────────────────────────────
+migration_code = 0
+if args.tests:
+    print("explicit test paths given: migration pass skipped")
+elif args.skip_migration:
+    print("--skip-migration: migration pass skipped")
+else:
+    if not args.migration_database:
+        refuse("缺少 --migration-database：迁移用例必须跑在独立的空库上（或加 --skip-migration）")
+    problem = db_targets.migration_problem(args.migration_database)
+    if problem:
+        refuse(problem)
+    asyncio.run(ensure_database(args.migration_database))
+    empty_problem = asyncio.run(db_targets.emptiness_problem(
+        base_url.render_as_string(hide_password=False), args.migration_database))
+    if empty_problem:
+        refuse(empty_problem)
+    results["migration"], migration_code = run_pytest(MIGRATION_TESTS, args.migration_database)
+
+totals = {key: sum(pass_totals[key] for pass_totals in results.values()) for key in
+          ("passed", "failed", "skipped", "error")}
+print(json.dumps(dict(passes=results, combined=totals,
+                      databases=dict(business=args.database,
+                                     migration=args.migration_database if "migration" in results else None)),
+                 ensure_ascii=False, indent=2))
+raise SystemExit(business_code or migration_code)
