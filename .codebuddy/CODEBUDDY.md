@@ -898,3 +898,33 @@ Coach 方案**只审查不实施**。
 2. 推荐仍只看 title/职责/要求文本，编辑 requirements 不必然改变结果——用输入指纹识别过期，而不是假装结果会变。
 3. 能力记忆无岗位维度，候选只标注跨岗位聚合，不声称岗位胜任度。
 4. 维持 `INTERVIEW_COACH_HARNESS=false`；不转 Research/Matching；本轮完成后停止。
+
+### 2026-11-13 · 第十七轮（验收库安全收口 + 简历到私有 JD 主流程回归，0 次真实 HTTP）
+
+**误连生产库的真实根因**：`serve_offline_acceptance.py` 的 `--database` 只建了一个给 `seed/history` 用的一次性 engine；`api` 分支用 `uvicorn.run("interview_api.main:app")` 导入应用，而 `infrastructure/db/engine.py` 在**导入时**就用 `settings.database_url`（`.env` → `interview_agent`）建了全局 engine。守卫校验的字符串与服务实际使用的对象之间没有任何代码路径相连。
+
+**修复**：新增 `interview_api/core/runtime_target.py`（复用 `db_targets.classify`，无第二套命名规则）
+- `resolve()` 纯函数：`--database` 必填、必须是 `*_e2e_*`；缺失即拒绝，不回退 `.env`；库名只来自 CLI，host/账号来自 `.env`。
+- `apply()` 在建 engine/Redis/Celery 之前写入 `settings` + `os.environ`；环境变量 `DATABASE_URL` 与 CLI 冲突时被覆盖并打印 `NOTICE`。
+- `verify_settings/verify_engine/verify_optional_clients` 只读 `engine.url`，不建连接；失败时报告预期/实际/原因，密码用 `hide_password=True`。
+- 隔离组：PG E2E 库 + Redis 9/10/11 + MinIO `interview-agent-r17-e2e`；API 与 Worker 由同一命令解析。
+- 生产入口未动：`delivery.py config/revision` 正常（`interview_agent` / `0025`）。
+
+**零连接证明**：① `create_async_engine` 与 `asyncpg.connect` 全部换成抛异常后仍能走完 resolve→apply→verify；② 子进程跑真实 CLI（无 `--database`、`interview_agent`、归档库、`postgres`）退出码 3 且 stdout 无 `ACCEPTANCE_TARGET`/`uvicorn`；③ 运行期 `pg_stat_activity` 无生产库连接。
+
+**HTTP 跨账号恢复**：根因是进程级 engine 的池属于上一个事件循环（asyncpg 写入即 `NoneType.send`）。`conftest.py` 新增 `app_engine` fixture，在当前循环内 `dispose()`；测试用真实 `/auth/login` 拿 JWT，B 读 A 的推荐 → `404 JOB_TARGET_NOT_FOUND` 且不含公司/岗位/JD 原文，A → 200，匿名 → 401；未 override `get_db`/`get_current_user`。
+
+**简历链路**：验收栈里是真实上传 → 真实 MinIO → broker(Redis 10) → 真实 Celery worker → Replay 模型 → `CandidateProfileService.persist`；pytest 版走同一上传路由与任务体（broker 一跳替换，文档已标注）。断言画像每条事实都挂 `resume_evidence` 且 excerpt 逐字来自上传文本；重投/旧 task 不产生第二版；失败后重试恰 1 版；B 看不到 A 的简历/画像。
+
+**浏览器（Chrome 157 headless / CDP 9222；E2E 库 `interview_agent_wb_r17b_e2e_20261113`）**：注册→上传→画像（第 1 版 · Replay 回放）→粘贴 JD→解析 4 条→确认第 1 版→推荐 `Java 后端开发 v1.0.0`（第 1 位/权重 12/0 次模型调用/非百分比/逐字证据）→一键预选（会话 0→0）→`+ 新建` 得到 `READY`（skill v1.0.0、job_target v1、AUTO_RECOMMENDED）→B 全空 404→第二个 JD 给出 `AI / Agent 应用开发`→手动选 `bank_it` 等待 5 秒未被覆盖。截图 7 张 `r17_01`–`r17_07`。
+
+**发现并修复的产品缺陷**：`InterviewChatPage` 入口处理器直接读并行的 `listTargets()` 结果，列表先返回空时走"目标不存在"分支导致一键预选丢失。改为 `await privateTargets` + `getTarget()` 兜底（另修一处 TS 收窄）。
+
+**测试**：专项 20 + 4 + 2；全量 @ `interview_agent_wb_r17_full2_test_20261113` **866 passed / 0 failed / 1 skipped**；迁移 @ `interview_agent_v21_wb_r17b_mig_20261113` **10 passed**；前端 `vue-tsc && vite build` 通过。生产库 `revision=0025`、`sessions=19`、最新 2026-10-07、无 `user_job_targets`，本轮未写入。
+
+**未解决 / 下一阶段**
+
+1. 真实模型仍未参与抽取与画像选择；本轮证明链路与权限，不证明质量。
+2. 规则对"只改要求文本"敏感性有限，用输入指纹标记过期而非制造变化；更强匹配属 Matching 改造。
+3. Celery 未做 worker 崩溃重投的故障注入；Redis 限流键未做"不落生产 db 0"的断言。
+4. 能力记忆仍无岗位维度；`suggested_training` 真实样本仍缺；`0028` 未实施。维持 `INTERVIEW_COACH_HARNESS=false`。
