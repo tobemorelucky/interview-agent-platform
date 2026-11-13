@@ -205,7 +205,7 @@ export interface InterviewSession {
   legacy?: boolean
   active_question_id?: number | null
   state_version?: number
-  context_snapshot?: { adaptive_policy?: { version: string }; adaptive_blueprint?: { targets: { label: string }[] }; company_name: string; job_title: string; profile_version_number: number; jd_version_number: number; coverage_insufficient: boolean; profile?: unknown; interviewer_config?: InterviewerConfig; interviewer_selection?: { source: 'AUTO_RECOMMENDED' | 'USER_SELECTED'; skill_id: string }; approved_memory_context?: { items: { id: number; content: string }[]; omitted_count?: number }; recent_performance_observations?: { items: { id: number; content: string }[] } }
+  context_snapshot?: { adaptive_policy?: { version: string }; adaptive_blueprint?: { targets: { label: string }[] }; company_name: string; job_title: string; profile_version_number: number; jd_version_number: number; job_target?: { id: number; version: number }; coverage_insufficient: boolean; profile?: unknown; interviewer_config?: InterviewerConfig; interviewer_selection?: { source: 'AUTO_RECOMMENDED' | 'USER_SELECTED'; skill_id: string }; approved_memory_context?: { items: { id: number; content: string }[]; omitted_count?: number }; recent_performance_observations?: { items: { id: number; content: string }[] } }
   completion_json?: { overall_average: number | null; dimension_averages: Record<string, number | null>; answered_count: number; evaluated_count: number; mode: string }
   id: number
   user_id: number

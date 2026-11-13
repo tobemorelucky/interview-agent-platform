@@ -121,6 +121,13 @@ const activeQuestionId = ref<number | null>(null)
 const retryAnswer = ref<{ question_id: number; idempotency_key: string; content: string; design_plan?: DesignPlan } | null>(null)
 const answerPersisted = ref(false)
 const profileContext = ref<InterviewSession["context_snapshot"]>()
+// A private JD has no public JD version; showing "第 版" told the user nothing.
+const jdVersionLabel = computed(() => {
+  const snapshot = profileContext.value as { jd_version_number?: number | null; job_target?: { version?: number } } | undefined
+  if (snapshot?.jd_version_number) return `岗位描述第 ${snapshot.jd_version_number} 版`
+  if (snapshot?.job_target?.version) return `私有 JD 第 ${snapshot.job_target.version} 版`
+  return "岗位描述版本未记录"
+})
 const memoryGuidance = computed(() => (profileContext.value as { memory_guided_plan?: { items: { label: string; history_summary: string }[] } } | undefined)?.memory_guided_plan?.items || [])
 const trainingLabel = computed(() => ({FULL:'完整模拟面试',WEAKNESS:'薄弱项专项训练',RECHECK:'冲突 / 遗忘独立复测'} as Record<string,string>)[(profileContext.value as {training?:{mode:string}}|undefined)?.training?.mode||''])
 const completion = ref<InterviewSession["completion_json"]>()
@@ -977,7 +984,7 @@ getInterviewTargets().then(async data => {
             <span class="round-progress">第 {{ Math.min(questionList.find(q => q.id === activeQuestionId)?.question_index != null ? questionList.find(q => q.id === activeQuestionId)!.question_index + 1 : questionList.length || 1, questionBudget) }} / {{ questionBudget }} 轮</span>
             <span v-if="activeQuestionId">当前题型：{{ displayLabel(questionList.find(q => q.id === activeQuestionId)?.dimension, '技术 / 项目') }} · 难度：{{ displayLabel(questionList.find(q => q.id === activeQuestionId)?.difficulty) }}</span>
             <span v-if="questionList.find(q => q.id === activeQuestionId)?.assessment_topic">考察主题：{{ questionList.find(q => q.id === activeQuestionId)?.assessment_topic }}</span>
-            <details class="session-context-detail"><summary>本场资料详情</summary><p>画像第 {{ profileContext?.profile_version_number }} 版 / 岗位描述第 {{ profileContext?.jd_version_number }} 版（本场固定）</p><p v-if="profileContext?.coverage_insufficient">题库覆盖有限，本场会结合真实项目和岗位要求出题。</p></details>
+            <details class="session-context-detail"><summary>本场资料详情</summary><p>画像第 {{ profileContext?.profile_version_number }} 版 / {{ jdVersionLabel }}（本场固定）</p><p v-if="profileContext?.coverage_insufficient">题库覆盖有限，本场会结合真实项目和岗位要求出题。</p></details>
             <span v-if="isReplay || completion?.mode === 'replay'">DEMO · Replay 回放模式（不是 Live 模型验收）</span>
             <button v-if="activeSession()?.status === 'READY'" :disabled="generationStage !== 'idle'" @click="handleStart">开始 / 重试首题</button>
           </template>
