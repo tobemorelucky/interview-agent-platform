@@ -39,6 +39,7 @@ EXTRACTION = {
     "requirements": [
         {"statement": "熟练掌握 Python", "importance": "REQUIRED", "evidence": "熟练掌握 Python", "topic": "Python"},
         {"statement": "熟悉 Kafka 与 Redis", "importance": "UNKNOWN", "evidence": "熟悉 Kafka 与 Redis", "topic": "Kafka"},
+        {"statement": "必须熟悉分布式系统", "importance": "REQUIRED", "evidence": "必须熟悉分布式系统", "topic": "分布式系统"},
         # Not present in the pasted text: must be dropped, never stored.
         {"statement": "五年以上 Go 语言经验", "importance": "REQUIRED", "evidence": "五年以上 Go 语言经验", "topic": "Go"},
     ],
@@ -154,9 +155,14 @@ def test_extraction_drops_anything_the_pasted_text_does_not_support(database_url
             target = await db.get(UserJobTarget, target_id)
             rows = target.requirements_json
         statements = [row["statement"] for row in rows]
-        assert statements == ["熟练掌握 Python", "熟悉 Kafka 与 Redis"]
+        assert statements == ["熟练掌握 Python", "熟悉 Kafka 与 Redis", "必须熟悉分布式系统"]
         assert all(row["evidence"] for row in rows)
-        assert rows[0]["importance"] == "REQUIRED" and rows[1]["importance"] == "UNKNOWN"
+        # The model proposed REQUIRED for a line that only lists the skill under
+        # 任职要求; the server keeps UNKNOWN and records why. A line that states
+        # the obligation itself carries REQUIRED.
+        assert rows[0]["importance"] == "UNKNOWN" and rows[0]["basis"] == "LISTED_UNDER_REQUIREMENTS"
+        assert rows[1]["importance"] == "UNKNOWN" and rows[1]["basis"] == "LISTED_UNDER_REQUIREMENTS"
+        assert rows[2]["importance"] == "REQUIRED" and rows[2]["basis"] == "EXPLICIT_MANDATORY"
         assert target.parse_mode == "LLM" and target.parse_status == PARSED
         assert "Go" not in json.dumps(rows)
     run(database_url, scenario)
@@ -231,7 +237,8 @@ def test_session_snapshot_freezes_the_target_and_outlives_edits(database_url):
         assert context["job_description_version_id"] is None
         assert context["job_target"]["id"] == target_id and context["job_target"]["version"] == 1
         assert context["company_name"] == "某互联网公司"
-        assert [row["statement"] for row in context["requirements"]] == ["熟练掌握 Python", "熟悉 Kafka 与 Redis"]
+        assert [row["statement"] for row in context["requirements"]] == [
+            "熟练掌握 Python", "熟悉 Kafka 与 Redis", "必须熟悉分布式系统"]
         background = context["interviewer_config"]["company_background"]
         assert background["mode"] == "USER_PROVIDED_JD_CONTEXT"
         assert background["source"]["source_type"] == "USER_SUPPLIED"
@@ -250,11 +257,13 @@ def test_session_snapshot_freezes_the_target_and_outlives_edits(database_url):
             target = await db.get(UserJobTarget, target_id)
             assert target.parse_status == PARSED and target.confirmed_at is None
             assert target.version == 1
-        assert [row["statement"] for row in context["requirements"]] == ["熟练掌握 Python", "熟悉 Kafka 与 Redis"]
+        assert [row["statement"] for row in context["requirements"]] == [
+            "熟练掌握 Python", "熟悉 Kafka 与 Redis", "必须熟悉分布式系统"]
         assert context["job_target"]["version"] == 1
         reread = (await core.detail(created["id"], user_id))["context_snapshot"]
         assert reread == frozen
-        assert [row["statement"] for row in reread["requirements"]] == ["熟练掌握 Python", "熟悉 Kafka 与 Redis"]
+        assert [row["statement"] for row in reread["requirements"]] == [
+            "熟练掌握 Python", "熟悉 Kafka 与 Redis", "必须熟悉分布式系统"]
     run(database_url, scenario)
 
 
@@ -329,7 +338,7 @@ def test_match_preview_cites_evidence_and_never_scores(database_url):
         assert view["target_id"] == target_id
         assert "score" not in json.dumps(view).lower()
         assert view["counts"]["NOT_APPLICABLE"] == 0
-        assert len(view["rows"]) == 2
+        assert len(view["rows"]) == 3
         for row in view["rows"]:
             assert row["status"] in ("SUPPORTED", "PARTIAL", "NO_EVIDENCE")
             if row["status"] == "NO_EVIDENCE":
