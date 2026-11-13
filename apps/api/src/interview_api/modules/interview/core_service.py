@@ -50,7 +50,12 @@ class MockInterviewService:
         return AnswerEvaluationAgent(self.factory, self.router)
 
     async def create(self, user_id, request):
-        if request.training_mode and request.training_request_key:
+        # Every training creation goes through TrainingService, whichever fields
+        # the client sent. It used to route on `training_mode and key`, so a
+        # request without a key silently became a *plain* session that still
+        # carried a frozen `training` block: no lock, no reuse, and a retried
+        # request produced a second training session that looked legitimate.
+        if request.training_mode:
             from interview_api.modules.interview.training import TrainingService
             return await TrainingService(self.factory).create(user_id, request)
         async with self.factory() as db:

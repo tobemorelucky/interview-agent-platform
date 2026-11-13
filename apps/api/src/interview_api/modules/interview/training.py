@@ -105,12 +105,28 @@ class TrainingService:
         from interview_api.modules.interview.models import InterviewContextSnapshot
         from interview_api.modules.interview.controller import SessionController
         from interview_api.modules.interview.core_service import MockInterviewService
+        # Starting a training session is a retryable one-click action, so the
+        # client must carry a key it can reuse. Minting one here would *look*
+        # idempotent while every retry still inserted a row, so a caller that
+        # omits the key is told to send one instead of being silently upgraded.
+        if not request.training_request_key:
+            raise AppError('TRAINING_REQUEST_KEY_REQUIRED',
+                '创建训练需要客户端提供 training_request_key；同一次操作重试请复用同一个键，'
+                '用户重新开始一场训练请换一个新键', 422)
+        expected = digest(request.model_dump())
         async with self.factory() as db:
+            # Serialise one user's creations for the whole transaction: two
+            # concurrent attempts with the same key cannot both insert. The lock
+            # is transactional and database-wide, so it also holds across
+            # processes, and commit/rollback releases it.
             await db.execute(text('SELECT pg_advisory_xact_lock(2300, :uid)'),dict(uid=user_id))
             old=await db.scalar(select(InterviewContextSnapshot).where(InterviewContextSnapshot.user_id==user_id,
                 InterviewContextSnapshot.context_json['training']['request_key'].as_string()==request.training_request_key))
             if old:
-                if old.context_json['training']['request_fingerprint']!=digest(request.model_dump()):
+                # The key names one operation. Reusing it for different content
+                # is a client bug, not a retry, so it is refused instead of
+                # silently returning the old session.
+                if old.context_json['training']['request_fingerprint']!=expected:
                     raise AppError('TRAINING_REQUEST_CONFLICT','相同创建请求不能更换训练内容',409)
                 sid=old.interview_session_id
             else:

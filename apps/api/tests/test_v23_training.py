@@ -10,6 +10,7 @@ def test_training_requires_the_legal_adaptive_scope(database_url):
     async def run():
         from interview_api.modules.interview.core_service import MockInterviewService
         from interview_api.core.exceptions import AppError
+        from uuid import uuid4
         engine = create_async_engine(database_url)
         factory = async_sessionmaker(engine, expire_on_commit=False)
         try:
@@ -17,7 +18,8 @@ def test_training_requires_the_legal_adaptive_scope(database_url):
             with pytest.raises(AppError) as denied:
                 await MockInterviewService(factory).create(uid, CreateSessionRequest(
                     company_id=ctx['company_id'], job_id=ctx['job_id'],
-                    interviewer_skill_id='java_backend', adaptive_interview=False, training_mode='FULL'))
+                    interviewer_skill_id='java_backend', adaptive_interview=False, training_mode='FULL',
+                    training_request_key=uuid4().hex))
             assert denied.value.code == 'TRAINING_REQUIRES_ADAPTIVE'
         finally:
             await engine.dispose()
@@ -134,8 +136,13 @@ def test_user_can_train_a_weak_goal_and_read_frozen_feedback(database_url):
             with pytest.raises(AppError) as denied:
                 await TrainingService(factory).feedback(uid+999999,detail['id'])
             assert denied.value.status_code==404
-            with pytest.raises(AppError):
-                await core.create(uid,CreateSessionRequest(**params,training_mode='WEAKNESS',training_knowledge_id='ai_agent_application:agent'))
+            with pytest.raises(AppError) as illegal:
+                await core.create(uid,CreateSessionRequest(**params,training_mode='WEAKNESS',
+                    training_knowledge_id='ai_agent_application:agent',training_request_key=uuid4().hex))
+            # A key was provided, so this must fail on the target, not on the
+            # request contract: the assertion names the reason rather than
+            # accepting any AppError.
+            assert illegal.value.code=='TRAINING_TARGET_INVALID'
         finally:
             await engine.dispose()
     asyncio.run(run())
@@ -176,7 +183,7 @@ def test_training_safely_retries_rejected_selection_and_keeps_user_controls(data
             service=TrainingService(factory)
             assert not (await service.feedback(uid,old['id']))['available']
             p=IgnoreThenReject();core=MockInterviewService(factory,ModelRouter({r:p for r in (INTERVIEW_MAIN_ROUTE,ANSWER_EVALUATION_ROUTE,INTERVIEW_COACH_ROUTE)}))
-            session=await core.create(uid,CreateSessionRequest(**params,question_count=2,training_mode='FULL'))
+            session=await core.create(uid,CreateSessionRequest(**params,question_count=2,training_mode='FULL',training_request_key=uuid4().hex))
             pinned=session['context_snapshot'];q=await core.start(session['id'],uid)
             usage=(await service.feedback(uid,session['id']))['memory_usage']
             assert usage[0]['selection']=='OTHER_TARGET_SELECTED' and usage[0]['candidate_memory']
@@ -204,7 +211,7 @@ def test_training_safely_retries_rejected_selection_and_keeps_user_controls(data
             target=next(t for t in board['targets'] if t['knowledge_id'].endswith(':kafka_reliability'))
             assert target['revoked'] and target['available_modes']==['FULL']
             assert (await core.detail(session['id'],uid))['context_snapshot']==pinned
-            empty=await base.create(uid,CreateSessionRequest(**params,question_count=1,training_mode='FULL'))
+            empty=await base.create(uid,CreateSessionRequest(**params,question_count=1,training_mode='FULL',training_request_key=uuid4().hex))
             q=await base.start(empty['id'],uid);await base.skip(empty['id'],uid,q['question_id'])
             result=await service.feedback(uid,empty['id'])
             assert result['targets'][0]['result']=='NO_NEW_OBSERVATIONS'
