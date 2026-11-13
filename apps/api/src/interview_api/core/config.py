@@ -188,6 +188,11 @@ class Settings(BaseSettings):
     interview_coach_max_output_tokens: int = 6000
     interview_coach_provider_concurrency: int = 2
     interview_coach_max_input_bytes: int = 200000
+    # Phase 1 harness. OFF keeps the single structured Coach call exactly as it
+    # was; ON allows one read-only tool round (two model calls at most).
+    interview_coach_harness: bool = False
+    interview_coach_tool_limit: int = 1
+    interview_coach_model_limit: int = 2
     interview_approved_memory_limit: int = 8
     interview_approved_memory_token_budget: int = 4000
     interview_observation_limit: int = 5

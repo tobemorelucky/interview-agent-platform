@@ -41,6 +41,21 @@ const privateTarget = computed(() => {
     : null
 })
 const analysis = computed(() => selectedReport.value?.coach_analysis)
+const TRAINING_MODE_LABEL: Record<string, string> = {
+  FULL: '完整模拟面试', WEAKNESS: '薄弱项专项训练', RECHECK: '冲突 / 遗忘独立复测',
+}
+function trainingModeLabel(mode: string) { return TRAINING_MODE_LABEL[mode] || mode }
+// The link only preselects; TrainingPage still asks the server whether the
+// target and mode are legal right now.
+const trainingLink = computed(() => {
+  const suggested = analysis.value?.suggested_training
+  if (!suggested) return { path: '/training' }
+  const query: Record<string, string> = { mode: suggested.mode, knowledge_id: suggested.knowledge_id }
+  const session = detail.value?.session
+  if (session?.job_target_id) query.job_target_id = String(session.job_target_id)
+  else if (session?.job_id) query.job_id = String(session.job_id)
+  return { path: '/training', query }
+})
 
 
 const uniqueFindings = (items: CoachFinding[]) => items.filter((item, index, all) => all.findIndex(other => other.statement.trim() === item.statement.trim()) === index)
@@ -232,6 +247,13 @@ watch(() => route.fullPath, () => { notice.value = ""; load() }, { immediate: tr
             </section>
             <h3>下一场建议 · 按优先级准备</h3><ol><li v-for="(item, index) in [...new Set(analysis.recommended_actions)]" :key="index">{{ text(item) }}</li></ol>
             <h3>练习计划</h3><ol><li v-for="(item, index) in [...new Set(analysis.practice_plan)]" :key="index">{{ text(item) }}</li></ol>
+            <!-- Advisory only: the training centre re-validates the target before use. -->
+            <template v-if="analysis.suggested_training">
+              <h3>下一场可以练什么</h3>
+              <p>{{ trainingModeLabel(analysis.suggested_training.mode) }} · {{ analysis.suggested_training.knowledge_id.split(':').pop() }}：{{ text(analysis.suggested_training.reason) }}</p>
+              <p><small>这是根据本场评价与历史能力状态给出的建议，不是已排好的训练。训练中心会按当时的岗位与能力状态重新校验，条件不满足时不会出现该目标。</small></p>
+              <router-link :to="trainingLink">去训练中心查看</router-link>
+            </template>
           </article>
           <article v-else-if="generating" class="card" role="status">正在生成 Coach 分析。本场评分与完成状态已经保存；请勿重复点击「生成面试报告」，生成完成后点「刷新」查看结果。</article>
           <article v-else class="card">暂无成功的 Coach 分析。可以生成 / 安全重试；本场评分与完成状态已经保存。</article>

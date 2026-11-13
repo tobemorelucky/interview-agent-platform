@@ -9,9 +9,9 @@ from interview_api.core.exceptions import AppError
 from interview_api.infrastructure.models.router import INTERVIEW_COACH_ROUTE, build_interview_coach_router
 from interview_api.modules.candidate_profile.evidence import digest
 from interview_api.modules.interview.models import InterviewContextSnapshot, InterviewSession
-from interview_api.modules.interview_report.agent import SummaryCoachAgent
+from interview_api.modules.interview_report.agent import SummaryCoachAgent, harness_enabled
 from interview_api.modules.interview_report.models import FinalInterviewReport, InterviewReportAttempt, InterviewPerformanceObservation, PerformanceObservationEvaluation
-from interview_api.modules.interview_report.prompts import COACH_PROMPT
+from interview_api.modules.interview_report.prompts import coach_prompt_signature
 from interview_api.modules.interview_report.statistics import interview_records, deterministic_statistics, evaluation_fingerprint
 from interview_api.modules.memory.proposal_service import create_report_proposals, MemoryProposalService
 from interview_api.modules.public_career.research.audit import finish_research_run
@@ -55,6 +55,75 @@ class InterviewReportService:
         return await db.scalar(select(FinalInterviewReport).where(
             FinalInterviewReport.session_id == session_id, FinalInterviewReport.is_current.is_(True)))
 
+    async def _capability_history(self, db, user_id, snapshot):
+        """One user's stored capability rows for this session's skill, captured once.
+
+        Scoped three ways: the user comes from the session owner, the topics come
+        from the frozen blueprint, and only reference-level observation data is
+        kept (no answer text). Returns None when the session has no blueprint,
+        which also means the history tool is never offered.
+        """
+        context = snapshot.context_json or {}
+        blueprint = (context.get("adaptive_blueprint") or {}).get("targets") or []
+        knowledge_ids = [item["knowledge_id"] for item in blueprint if item.get("knowledge_id")]
+        if not knowledge_ids:
+            return None
+        from interview_api.modules.memory.capability_service import CapabilityMemoryService
+        rows = await CapabilityMemoryService(db).list(user_id)
+        index = {row["topic"]: row for row in rows}
+        topics = {}
+        for knowledge_id in knowledge_ids:
+            topic = knowledge_id.rsplit(":", 1)[-1]
+            row = index.get(topic)
+            if not row:
+                continue
+            topics[topic] = dict(
+                label=row.get("label"), state=row.get("state"), revision=row.get("revision"),
+                revoked=bool(row.get("revoked")), independent_sessions=row.get("independent_sessions"),
+                last_observed_at=row.get("last_observed_at"),
+                reason_tags=list(row.get("reason_tags") or [])[:4],
+                conflicts=[{key: item.get(key) for key in ("status", "reason", "scope")}
+                           for item in (row.get("conflicts") or [])[:2]],
+                observations=[dict(session_id=item.get("session_id"), evaluation_id=item.get("evaluation_id"),
+                                   state=item.get("state"), observed_at=item.get("observed_at"),
+                                   assisted=bool(item.get("assisted")), scope=item.get("scope"))
+                              for item in (row.get("observations") or [])[-5:]])
+        if not topics:
+            return None
+        return dict(
+            semantics=("CAPTURED_AT_REPORT_GENERATION_NOT_THE_SESSION_SNAPSHOT: the session's "
+                       "capability_context was frozen when the interview started; this capture "
+                       "is what the report was written against"),
+            captured_at=datetime.now(timezone.utc).isoformat(),
+            # Content-only, so the same memory state always hashes the same way.
+            fingerprint=digest(topics),
+            topics=topics)
+
+    def _training_scope(self, snapshot, capability_history):
+        """Legal next-training targets, from the frozen blueprint and the same rule.
+
+        `modes()` is the function Training uses; reusing it is what stops a model
+        from recommending RECHECK for a topic that is not CONFLICTED/RECHECK_DUE.
+        """
+        from interview_api.modules.interview.training import modes
+        context = snapshot.context_json or {}
+        blueprint = (context.get("adaptive_blueprint") or {}).get("targets") or []
+        captured = (capability_history or {}).get("topics") or {}
+        targets = {}
+        for item in blueprint:
+            knowledge_id = item.get("knowledge_id")
+            if not knowledge_id:
+                continue
+            row = captured.get(knowledge_id.rsplit(":", 1)[-1]) or {}
+            state = row.get("state") or "UNKNOWN"
+            revoked = bool(row.get("revoked"))
+            targets[knowledge_id] = dict(label=item.get("label"), state=state, revoked=revoked,
+                available_modes=modes(state, revoked), memory_revision=row.get("revision"))
+        skill = ((context.get("interviewer_config") or {}).get("skill") or {})
+        return dict(skill_id=skill.get("skill_id") or skill.get("id"),
+            scope_label="USER_PROVIDED_JD" if context.get("job_target") else "PUBLIC_JOB",
+            source="REPORT_TIME_CAPABILITY_WITH_SESSION_BLUEPRINT", targets=targets)
+
     async def generate(self, session_id, user_id, regenerate=False, request_key=None):
         if regenerate and not request_key:
             raise AppError("REPORT_REGENERATION_KEY_REQUIRED", "主动重新生成需要稳定 request_key", 422)
@@ -65,8 +134,12 @@ class InterviewReportService:
             questions, evaluations = await interview_records(db, session_id)
             statistics = deterministic_statistics(questions, evaluations)
             fingerprint = evaluation_fingerprint(evaluations)
+            # OFF must keep producing exactly the key it produced before, or an
+            # existing completed report would stop matching itself and a reload
+            # would mint a new generation.
+            prompt_version, prompt_hash = coach_prompt_signature(harness_enabled())
             key = digest(["interview_coach", session_id, snapshot.content_fingerprint, fingerprint,
-                          COACH_PROMPT.version, COACH_PROMPT.content_hash, request_key if regenerate else None])
+                          prompt_version, prompt_hash, request_key if regenerate else None])
             report = await db.scalar(select(FinalInterviewReport).where(FinalInterviewReport.generation_key == key).with_for_update())
             current = await self._current(db, session_id)
             if report and report.generation_status == "COMPLETED":
@@ -79,7 +152,7 @@ class InterviewReportService:
                 report = FinalInterviewReport(user_id=user_id, session_id=session_id, context_snapshot_id=snapshot.id,
                     generation_number=number, generation_key=key, evaluation_fingerprint=fingerprint,
                     base_current_report_id=current.id if current else None, generation_status="RUNNING", is_current=False,
-                    statistics_json=statistics, producer="PENDING", prompt_version=COACH_PROMPT.version, attempt_version=0)
+                    statistics_json=statistics, producer="PENDING", prompt_version=prompt_version, attempt_version=0)
                 db.add(report)
                 await db.flush()
             elif report.base_current_report_id != (current.id if current else None):
@@ -115,14 +188,23 @@ class InterviewReportService:
                     question_kind=q.question_kind, status=q.status, candidate_refs=q.candidate_refs_json,
                     job_requirement_id=q.job_requirement_id) for q in questions],
                 evaluations=evaluations, completion=completion_fact, review=review, fingerprint=fingerprint)
+            # Captured once, at the start of this attempt, and then held still:
+            # a tool call two seconds later must see the same numbers, and the
+            # capture's content hash is recorded so a reviewer can prove it.
+            capability_history = await self._capability_history(db, user_id, snapshot)
+            training_scope = self._training_scope(snapshot, capability_history)
             logger.info("coach evidence projection %s bytes=%s sections=%s", projection["version"],
                         projection["bytes"], projection["section_bytes"])
             await db.commit()
         result, published = None, False
         try:
             if evaluations:
-                result = await self.agent.call(report_id, attempt_id, payload)
+                result = await self.agent.call(report_id, attempt_id, payload, session_id=session_id,
+                    capability_history=capability_history, training_scope=training_scope)
                 analysis = result.resolved
+                if result.audit:
+                    # Auditable, additive, and absent on the OFF path.
+                    analysis = {**analysis, "audit": result.audit}
             else:
                 analysis = dict(overall_summary="本场没有有效回答评价，当前材料未提供可分析的表现证据。",
                     strengths=[], weaknesses=[], recurring_issues=[], job_alignment=[], recommended_actions=[],

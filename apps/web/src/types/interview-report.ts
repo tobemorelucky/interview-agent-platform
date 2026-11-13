@@ -45,6 +45,8 @@ export interface CoachAnalysis {
   job_alignment: CoachFinding[]
   recommended_actions: string[]
   practice_plan: string[]
+  // Only the harness produces this; it is advice, re-validated by the server.
+  suggested_training?: SuggestedTraining | null
 }
 
 export interface FinalInterviewReport {
@@ -74,6 +76,20 @@ export interface ReportSessionInfo {
   company_name?: string
   job_title?: string
   created_at?: string
+  // Present when the session used a private JD (no public company/job row).
+  job_target_id?: number | null
+  job_target_version?: number | null
+  job_id?: number | null
+  company_id?: number | null
+}
+
+export interface SuggestedTraining {
+  mode: 'FULL' | 'WEAKNESS' | 'RECHECK'
+  knowledge_id: string
+  reason: string
+  supporting_evaluation_ids: number[]
+  scope?: 'CURRENT_JOB_TARGET' | 'GENERAL_SKILL'
+  state?: string
 }
 
 export interface InterviewReportDetail {

@@ -144,7 +144,7 @@ def resolve_evaluations(refs, catalog):
     return ids
 
 
-def resolve_coach_artifact(artifact, evaluations, statistics=None):
+def resolve_coach_artifact(artifact, evaluations, statistics=None, *, training_scope=None):
     catalog = {e["id"]: e for e in evaluations}
     numbers = supported_statistics(statistics, evaluations)
     result = dict(
@@ -172,4 +172,51 @@ def resolve_coach_artifact(artifact, evaluations, statistics=None):
         result["memory_proposals"].append(dict(proposal_type=item.proposal_type,
             content=_qualitative(item.content, f"memory_proposals.{index}.content", numbers),
             supporting_evaluation_ids=ids))
+    # Only the harness artifact declares this field; the OFF path stays byte-identical.
+    if hasattr(artifact, "suggested_training"):
+        suggestion, rejected = _resolve_suggestion(
+            artifact.suggested_training, catalog, numbers, training_scope)
+        result["suggested_training"] = suggestion
+        if rejected:
+            result["suggested_training_rejected"] = rejected
     return result
+
+
+def _resolve_suggestion(suggestion, catalog, numbers, training_scope):
+    """Validate an advisory training idea against the same rules Training uses.
+
+    A rejected suggestion never fails the report: the findings, the statistics
+    and the memory proposals are already legal, and losing them because an
+    optional piece of advice was wrong would be a worse outcome than dropping
+    the advice. What is never allowed is storing it as if it were legal.
+    """
+    if suggestion is None:
+        return None, None
+
+    def reject(code, detail, stage):
+        return None, dict(code=code, detail=detail, stage=stage)
+
+    try:
+        ids = resolve_evaluations(suggestion.supporting_evaluation_ids, catalog)
+    except AppError as exc:
+        return reject(exc.code, exc.message, "EVIDENCE")
+    scope = training_scope or {}
+    target = (scope.get("targets") or {}).get(suggestion.knowledge_id)
+    if target is None:
+        # Without a frozen blueprint there is no way to prove this is a legal
+        # point for this job, so it cannot be presented as one.
+        return reject("KNOWLEDGE_NOT_IN_FROZEN_TARGETS",
+                      f"{suggestion.knowledge_id} 不属于本场冻结的岗位考察目标", "SCOPE")
+    available = list(target.get("available_modes") or [])
+    if suggestion.mode not in available:
+        return reject("MODE_NOT_ALLOWED_FOR_STATE",
+                      f"状态 {target.get('state')} 只允许 {available}，不能建议 {suggestion.mode}", "MODE")
+    try:
+        reason = _qualitative(suggestion.reason, "suggested_training.reason", numbers)
+    except AppError as exc:
+        return reject(exc.code, exc.message, "REASON")
+    return dict(mode=suggestion.mode, knowledge_id=suggestion.knowledge_id,
+                reason=reason, supporting_evaluation_ids=ids, scope=suggestion.scope,
+                skill_id=scope.get("skill_id"), state=target.get("state"),
+                available_modes=available, memory_revision=target.get("memory_revision"),
+                validation="LEGAL_AT_REPORT_TIME_ADVISORY_ONLY"), None
