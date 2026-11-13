@@ -76,8 +76,9 @@
 - `docs/README.md` 索引停在 70。
 - ~~5 个陈旧断言~~ **已修（`71c8405`，第八轮）**：改为断言「线上 thinking == 角色配置」与「显式选择非 ModelScope 分支」；第九轮全量回归 0 failed。
 - `test_08/test_09` 迁移用例只能在空库跑；在有数据的库上返回非零（不损坏库）。本轮确认：10 个迁移用例在专用空库 `interview_agent_v21_wb_r10_20261112` **10/10 通过**；在承载数据的回归库里必然失败（第十轮）。
-- ~~测试隔离只靠人工 `M1_TEST_DATABASE_URL`，`conftest.py` 无库名白名单~~ **已修（`9eb66a8` / `3b99f6c`，第十轮）**：`conftest.py` 加 session 级 autouse 闸（前缀 + 测试后缀 + 黑名单 + 两个环境变量必须一致，否则 `pytest.exit(2)`），`scripts/run-workbuddy-tests.py` 在运行前拒绝生产/E2E/历史 Live 库。**未覆盖**：`delivery.py migrate`、启动脚本、`prepare_v23_demo.py` 仍按 `.env` 行事。
-- 私人 JD 训练的 RECHECK 未验证（需要真正 `CONFLICTED` 的观察）；能力记忆按 `(user, topic)` 聚合，没有岗位维度（第十轮）。
+- ~~测试隔离只靠人工 `M1_TEST_DATABASE_URL`，`conftest.py` 无库名白名单~~ **已修（`9eb66a8` / `3b99f6c`，第十轮）**：`conftest.py` 加 session 级 autouse 闸（前缀 + 测试后缀 + 黑名单 + 两个环境变量必须一致，否则 `pytest.exit(2)`），`scripts/run-workbuddy-tests.py` 在运行前拒绝生产/E2E/历史 Live 库。
+- ~~库名闸只覆盖 pytest~~ **已修（第十一轮，`be1407e` / `275343e`）**：判定收敛到 `interview_api.core.db_targets`（纯字符串，九类）；`delivery.py migrate` 需 `--authorize-database <名字>` 才能动生产/E2E/未知库，系统库与历史 Live 库**无覆盖**；启动脚本只在操作员传 `-AuthorizeDatabase` 时转发；`prepare_v23_demo.py` 只接受 `*_browser_*` 夹具库。
+- ~~私人 JD 训练的 RECHECK 未验证~~ **已验证（第十一轮，`1e24814`）**：`CONFLICTED`（同 scope 先好后坏）与 `RECHECK_DUE`（VERIFIED + 30/60/90 天，靠服务 `clock` 前移读取）都能合法进入 RECHECK；能力记忆仍按 `(user, topic)` 聚合，没有岗位维度。
 - 前端不暴露 Harness 开关、不展示提前结束原因、未暴露 `confirm_unknown_retry`。
 - docs/71 规划的 `apps/api/scripts/evals/` 尚未实现。
 
@@ -116,9 +117,10 @@
 
 ### 交接区（每轮结束更新）
 
-- 当前 HEAD：`git log -1`（第十轮文档 `1789cca` 之后只有本文件的记录更新）；业务见 `7715ccc`（私人 JD 训练）、`b7d4cb9`（界面如实）、`8354b2a`（归属顺序）、`9eb66a8`（测试库闸）、`3b99f6c`（运行器）
+- 当前 HEAD：`git log -1`（第十一轮文档 `6d2e155` 之后只有本文件的记录更新）
 - 工作区：干净（仅 `.workbuddy/` 未跟踪，按第五轮约定不提交）
-- 下一轮入口：见「轮次记录」最后一轮（第十轮真实模型 HTTP = 0，额度未消耗）
+- 下一轮入口：见「轮次记录」最后一轮（第十一轮真实模型 HTTP = 0，额度未消耗）
+- 环境提示：本轮开始时 postgres/redis/minio 容器处于 `Exited (255)`，用 `docker start` 拉起后数据完好（151 个库）。**不要**用 `docker compose down -v` 之类的操作。
 
 ## 轮次记录
 
@@ -552,3 +554,51 @@ Chrome 真实 UI 操作、12 次真实模型 HTTP。正式库与历史 Live 库�
 2. 把库名闸前移到 `delivery.py migrate`。
 3. 请求记录 ↔ 业务审计三向 join 的最小方案（`docs/89` §10.1）：`agent_runs.call_key` + `provider_request_id`、`ModelResponse.request_id`、capture 行写 `call_key`。历史批次不得标成"可精确回放"。
 4. 私人 `RECHECK`：用离线 provider 造两条相反评价，把它从"未验证"变成"有证据"。
+
+### 2026-11-12/13 · 第十一轮（测试分库 + 私人 JD 真实 UI 验收 + RECHECK）
+
+开工 `1ba948b`，工作区干净。真实模型 HTTP = **0**；未迁移生产库；未新增 Agent、未重构 Controller / Memory。
+
+**提交**
+
+| Hash | 内容 |
+|---|---|
+| `be1407e` | `test(workbuddy)`: 数据库目标分类收敛到一处 + 两段式运行器 |
+| `275343e` | `fix(workbuddy)`: 运维迁移必须显式写出库名 |
+| `1e24814` | `test(workbuddy)`: 私人 RECHECK 的真实准入证据（5 条） |
+| `ccd7ff8` | `fix(workbuddy)`: 报告页不再把用户自填公司名当雇主展示 |
+| `b0620de` | `test(workbuddy)`: 离线验收启动器 |
+| `6d2e155` | `docs(workbuddy)`: `docs/90` 十节记录 |
+
+**已完成（事实）**
+
+- **两类测试分库**：`db_targets` 九类判定（PRODUCTION / ARCHIVED_LIVE / E2E / UI / DEMO / MIGRATION / TEST / SYSTEM / OTHER），pytest、运行器、delivery、夹具脚本共用。运行器两段：业务段 `interview_agent_wb_r11_test_20261112`（自动迁移），迁移段独立空库；空库校验查 `information_schema.tables`，非空即拒，**从不 drop/清空**。
+- **环境性失败清零**：`782 passed / 0 failed / 1 skipped`（业务 772+1skip，迁移 10），用例总数 768 → 783，没有删除或跳过任何既有用例。
+- **运维保护**：`delivery.py migrate` 对生产/E2E/未知库要求 `--authorize-database <同名>`（exit 3），系统库与历史 Live 库无覆盖；启动脚本传 `-AuthorizeDatabase` 才转发；`prepare_v23_demo.py` 只接受 `*_browser_*`。`interview_agent_thinking_long_20261110` 因名字无 live/accept 曾被旧规则漏判，现归入 `ARCHIVED_LIVE`。
+- **RECHECK 准入（事实）**：`CONFLICTED`（同一 scope 先独立好、后不达标且未被 ≥2 次独立复测解决）或 `RECHECK_DUE`（VERIFIED 且距上次独立验证超过 30/60/90 天）；两者都只给 FULL+RECHECK，`gentle` 风格 422。测试用 `GOOD,GOOD,WEAK,GOOD,WEAK` 造出冲突；过期用服务 `clock` 前移 120 天验证（观察仍是真实评价）。
+- **真实浏览器（Chrome 157 / CDP / headless）**：10 步全走通，14 张截图在 `.runtime/ui/shots/`；API 用 `serve_offline_acceptance.py`（同一应用 + replay provider + 阻断外呼）。RECHECK 页显示「缓存工程 · 表现存在分歧」与"第一题先独立作答"；改 JD 到 v2 后会话快照仍是 v1、`company_id/job_id` 仍 null；第二用户 404/0 条。
+- **UI 缺陷（仅靠操作页面才发现）**：报告页标题把用户自填的"示例科技"当雇主展示，无来源说明。修法：报告详情补 `job_target_id`/`job_target_version`，页头写明版本与"未经企业核实"。
+
+**未验证 / 遗留（事实）**
+
+- 简历上传 → 解析 → 画像未走真实链路（需 Worker + 模型）；画像是验收启动器用 replay 预置的真实版本。
+- 私人入口只在"打开目标"后出现，列表行没有直达入口（未改，属可发现性而非误导）。
+- 记忆仍无岗位维度；`training_mode` 缺 `training_request_key` 时绕过幂等（契约风险未改）。
+- CDP 脚本与截图在 `.runtime/`（gitignored），仓库内只有可复用的 `serve_offline_acceptance.py`。
+
+**数据库（本轮）**
+
+| 库 | 用途 | 状态 |
+|---|---|---|
+| `interview_agent_wb_r11_test_20261112` | 业务回归 | 0027 / 67 表 |
+| `interview_agent_v21_wb_r11_20261112` | 迁移第一遍 | 跑完 0027，已非空不可复用 |
+| `interview_agent_v21_wb_r11b_20261112` | 迁移第二遍 | 同上 |
+| `interview_agent_wb_r11_e2e_20261112` | 浏览器验收 | 0027，2 用户 / 1 私人目标 / 14 会话 |
+| `interview_agent` | 生产 | 未连接、未迁移 |
+
+**下一轮入口**
+
+1. `delivery.py migrate` 的授权用法要写进 README/团队说明——现在不传参数会拒绝启动生产库。
+2. 私人岗位的 Skill 推荐接口（后端已有 `recommend_for_target`，未暴露）。
+3. 简历上传链路（需 Worker + 额度）与私人入口可发现性。
+4. 请求记录 ↔ 业务审计三向 join（`docs/89` §10.1）等批准。
