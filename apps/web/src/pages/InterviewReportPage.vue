@@ -30,6 +30,16 @@ let loadSequence = 0
 const sessionId = computed(() => positiveId(route.query.session_id))
 const reportId = computed(() => positiveId(route.params.id))
 const selectedReport = computed(() => detail.value?.report || detail.value?.current_report || null)
+// A private JD never becomes a company record. The frozen snapshot is the only
+// place that says so, and the page must not present the pasted company name as
+// an employer the candidate actually interviewed with.
+const privateTarget = computed(() => {
+  const session = detail.value?.session as
+    { job_target_id?: number | null; job_target_version?: number | null } | undefined
+  return session?.job_target_id
+    ? { id: session.job_target_id, version: session.job_target_version ?? null }
+    : null
+})
 const analysis = computed(() => selectedReport.value?.coach_analysis)
 
 
@@ -169,6 +179,7 @@ watch(() => route.fullPath, () => { notice.value = ""; load() }, { immediate: tr
         <template v-if="detail">
           <TrainingFeedbackView :session-id="detail.session.id" />
           <article class="card"><h2>{{ publicName(detail.session.company_name) }} · {{ publicName(detail.session.job_title) }}</h2>
+            <p v-if="privateTarget" class="provenance" role="note">本场岗位来自你自己提供的 JD（第 {{ privateTarget.version }} 版）：用户提供、未经企业核实。公司名与岗位名按你粘贴的原文记录，不代表真实雇主或已发布的岗位。</p>
             <p>{{ displayLabel(detail.session.status) }} · {{ detail.session.title ? publicName(detail.session.title) : '模拟面试' }}</p>
             <p v-if="reportModeLabel(selectedReport, detail.statistics)" class="mode">{{ reportModeLabel(selectedReport, detail.statistics) }}</p>
             <p v-if="reportId && selectedReport?.id !== detail.current_report?.id">历史版本 只读；生成新报告会保留历史与审计。</p>

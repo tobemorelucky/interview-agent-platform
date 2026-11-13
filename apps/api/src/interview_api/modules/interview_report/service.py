@@ -238,8 +238,12 @@ class InterviewReportService:
         if context.get("adaptive_policy"):
             from interview_api.modules.interview.adaptive import review_projection
             adaptive_review = review_projection(context, session.interview_plan_json)
+        # A private JD has no company/job row; the report header must be able to
+        # say so instead of presenting the pasted company name as an employer.
+        target = context.get("job_target") or {}
         return dict(session=dict(id=session.id, title=session.title, status=session.status,
-            company_name=context["company_name"], job_title=context["job_title"], context_snapshot_id=snapshot.id),
+            company_name=context["company_name"], job_title=context["job_title"], context_snapshot_id=snapshot.id,
+            job_target_id=target.get("id"), job_target_version=target.get("version")),
             statistics=report["statistics"] if report else deterministic_statistics(questions, evaluations),
             current_report=current, report=report, history=history, evaluations=evaluations,
             design_trace=deepcopy(session.planner_trace_json or {}) if context.get("system_design") else None,
