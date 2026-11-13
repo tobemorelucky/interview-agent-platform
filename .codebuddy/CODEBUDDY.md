@@ -841,3 +841,60 @@ Coach 方案**只审查不实施**。
 6. 下一阶段**不转 Research / Matching**（都会扩 Agent 架构且无用户侧证据），转向普通用户闭环：① 简历上传→画像真实链路 ② 私人 JD 的 Skill 推荐接口（后端已有 `recommend_for_target`） ③ 能力记忆岗位维度 ④ 请求记录↔业务审计 join。
 
 **未解决**：结论样本量小（1 个真实归档会话 + 1 个合成场景 + 2 次调用）；工具新形状只在 ON 路径；确定性基线仍是测试内实现、未接入产品；记忆无岗位维度；本轮无浏览器验证。
+
+### 2026-11-13 · 第十六轮（私有 JD Skill 推荐 + 确定性训练候选 V1，0 次真实 HTTP）
+
+开工 `6cf082f`（工作区仅 `.workbuddy/` 未跟踪）。未改 Harness OFF 的 Prompt/Schema/生成键，未改旧报告、Memory 核心聚合或报告 Schema；**零迁移**。
+
+**提交**
+
+| Hash | 内容 |
+|---|---|
+| `f611117` | `feat`: 私有 JD 的只读 Skill 推荐投影（逐字证据 + 输入指纹 + 不确定性） |
+| `e86e4e2` | `feat`: 确定性训练候选（正式状态 + `training.modes()` + 可复核排序，不写库） |
+| `7cd1275` | `test`: 18 条专项 |
+| `ed03f56` | `feat`: JD/面试页展示推荐与一键预选；手动选择不被覆盖 |
+| `70b73ab` | `feat`: 训练中心/报告页候选与来源标注 |
+| `1904edc` | `docs/95` 十节 |
+
+**复用与缺口（事实）**
+
+- 已有 `recommend_for_target` 是纯确定性（权重 category 10 / title 8 / responsibility 6 / capability 3，`MIN_SCORE=9`，同分按 `skill_id`）；`discover()` 只收合法注册版本。本轮不改排序，只补：只读接口、确认校验、逐字证据投影、输入指纹。
+- **缺口**：① 无查询接口 ② `evidence` 只有 `statement[:200]`，requirements 命中会被 `hits[:3]` 截掉 ③ `content_fingerprint` 只算 `raw_text`，编辑要求不变 ④ 前端私有路径写死"手动选择"。
+- 最小修复：`recommend(..., full_evidence=False)` 仅供私有投影取全量命中（默认信封不变）；`target_skill_input_fingerprint` 覆盖 `version + title + requirements + responsibilities`；未确认 JD 不运行匹配。
+
+**训练候选**
+
+- `build_training_candidates(views, states)` 纯函数：`available_modes` 直接来自 `training.modes()`；排序 `STATE_PRIORITY*10 + min(target_priority,4)`，同分 `(knowledge_id, mode)`；反向输入顺序不变。
+- 正式引用 `evaluation:<id>`、`memory_revision`、`observations`、`conflicts`；跨岗位标 `CROSS_JOB_TOPIC_AGGREGATE` + `general_only`；空原因区分 `NO_HISTORY_EVALUATIONS` / `NO_ACTIONABLE_WEAKNESS_OR_RECHECK` / `TARGET_EXPIRED_OR_UNAVAILABLE`。
+- `TrainingService.candidates` 与 `workbench` 同样 `build_context` 预览 + `rollback()`；`session_id` 从冻结快照取来源与 Skill；点击候选只预选，创建仍走 `training_request_key` 幂等 + `freeze_training` 重校验。
+
+**浏览器（真实 Chrome 157 headless / CDP 9222；离线 API 8000；Vite 5173；E2E 库 `interview_agent_wb_r16_e2e_20261113`）**
+
+1. 粘贴 JD → 解析 → 确认 `Java后端工程师` v1；详情页显示 `Java 后端开发 v1.0.0`、第 1 位、权重 23、系统首推、规则理由、`JD 原文逐字证据`、无百分比声明。
+2. 一键「开始面试」→ Skill 预选 `java_backend`、来源"根据岗位规则自动推荐"；会话 0→0。
+3. 手动改 `ai_agent_application`：等待 2s 仍保留（`overwritten=false`）。
+4. 一键「开始训练」→ 私有岗位/方向/FULL 预选；候选空态说明；会话 0→0。
+5. 1 轮 FULL 作答 → 会话 1 `COMPLETED`；训练页候选 `Java 与并发 · WEAKNESS · 优先级 14 · evaluation:1`；点选后 mode/goal/skill 正确、URL 未变、会话 1→1。
+6. 报告页规则区块独立显示"规则生成 · 读取时计算"与"来源不同，二者不等价"；报告存在但 `suggested_training=null`，故模型块未渲染（无建议不显示）。
+7. 第二账号：推荐 `404 JOB_TARGET_NOT_FOUND`、目标列表 0。
+
+截图 9 张 `r16_01`–`r16_09`（`.runtime/ui/shots/`，gitignored）。
+
+**测试（真实计数）**
+
+- 专项 18 passed（0 failed）。
+- 全量第三轮 @ `interview_agent_wb_r16_full3_test_20261113`：**840 passed / 0 failed / 1 skipped**；迁移 @ `interview_agent_v21_wb_r16c_20261113`：**10 passed**。
+- 第二轮曾 839/1/1：唯一失败是 pytest 内 `httpx.ASGITransport` 复用全局 engine 在 Windows 多事件循环下 `NoneType.send`，非产品缺陷；已改为服务层 404 + 路由注册断言，HTTP 跨账号由浏览器覆盖。
+- 前端 `vue-tsc && vite build` 通过，0 类型错误；产物含全部来源标注。
+
+**真实模型 HTTP：0**（replay；离线 API 阻断出站）。
+
+**事故与纠正（如实）**：启动器 `api` 模式未采用 `--database`，首次启动连到 `interview_agent`；只有登录查询（401，无写入），立即停止并显式 `DATABASE_URL` 指向 E2E 库重启。
+
+**未解决 / 下一阶段**
+
+1. 真实模型抽取的 JD 与真实用户 `CONFLICTED`/`RECHECK_DUE` 未验证；报告 `suggested_training` 真实样本仍缺。
+2. 推荐仍只看 title/职责/要求文本，编辑 requirements 不必然改变结果——用输入指纹识别过期，而不是假装结果会变。
+3. 能力记忆无岗位维度，候选只标注跨岗位聚合，不声称岗位胜任度。
+4. 维持 `INTERVIEW_COACH_HARNESS=false`；不转 Research/Matching；本轮完成后停止。
