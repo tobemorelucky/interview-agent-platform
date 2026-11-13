@@ -1,11 +1,16 @@
 /** Private JD targets: user-supplied text, never a public company/job record. */
 export type TargetStatus = 'DRAFT' | 'PARSED' | 'CONFIRMED' | 'FAILED'
 export type Importance = 'REQUIRED' | 'PREFERRED' | 'UNKNOWN'
+/** Why the server gave a requirement its strength; the UI shows it verbatim. */
+export type RequirementBasis =
+  | 'EXPLICIT_MANDATORY' | 'LISTED_UNDER_REQUIREMENTS' | 'EXPLICIT_PREFERRED'
+  | 'DUTY_SECTION' | 'NOT_STATED' | 'USER_PROVIDED'
 
 export interface JobTargetRequirement {
   id: number
   statement: string
   importance: Importance
+  basis?: RequirementBasis
   evidence?: string | null
   topic?: string | null
   source?: string
@@ -63,6 +68,14 @@ export const evidenceLabels: Record<string, string> = {
 export const importanceLabels: Record<Importance, string> = {
   REQUIRED: '硬性要求', PREFERRED: '加分项', UNKNOWN: '原文未标明',
 }
+export const basisLabels: Record<RequirementBasis, string> = {
+  EXPLICIT_MANDATORY: '原文写明必须或最低门槛（必须 / 至少 / 及以上）',
+  LISTED_UNDER_REQUIREMENTS: '列在任职要求里，原文没有写必须',
+  EXPLICIT_PREFERRED: '原文写明优先或加分',
+  DUTY_SECTION: '出现在职责描述里，不是任职资格',
+  NOT_STATED: '原文没有可识别的小节，性质未标明',
+  USER_PROVIDED: '由你添加或修改',
+}
 
 /** Round 16: deterministic Skill suggestions for one confirmed private JD. */
 export interface SkillEvidenceHit {
@@ -81,11 +94,16 @@ export interface SkillRecommendationCandidate {
   label: string
   rank: number
   ranking_points: number
+  /** Points from requirements, duties and capability words (never the title). */
+  content_points: number
+  title_points: number
+  signals: string[]
   excluded: boolean
   contextual: boolean
   eligible: boolean
   uncertain: boolean
   matched_reason: string
+  reason_kind: string
   reason_note: string
   evidence: SkillEvidenceHit[]
 }
@@ -110,6 +128,10 @@ export interface TargetSkillRecommendation {
   recommended_version: string | null
   message: string
   reason?: string | null
+  /** Set when the title and the requirements point at different directions. */
+  ambiguity_reason?: 'TITLE_CONFLICTS_WITH_REQUIREMENTS' | 'TITLE_ONLY_LEADER' | 'CLOSE_CANDIDATES' | null
+  /** Minimum content points before any skill can be selected automatically. */
+  content_threshold: number
   needs_manual_confirmation: boolean
   candidates: SkillRecommendationCandidate[]
   empty_reason?: string | null

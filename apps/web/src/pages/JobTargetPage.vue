@@ -7,11 +7,11 @@ import {
   skillRecommendations, updateRequirements,
 } from '../api/job-target'
 import type {
-  JobTarget, JobTargetMatch, JobTargetRequirement, SkillEvidenceHit,
+  JobTarget, JobTargetMatch, JobTargetRequirement, RequirementBasis, SkillEvidenceHit,
   SkillRecommendationCandidate, TargetSkillRecommendation,
 } from '../types/job-target'
 import {
-  evidenceLabels, evidenceStatusLabels, importanceLabels,
+  basisLabels, evidenceLabels, evidenceStatusLabels, importanceLabels,
   recommendationEmptyLabels, recommendationStatusLabels, statusLabels,
 } from '../types/job-target'
 
@@ -31,7 +31,7 @@ const rawText = ref('')
 const companyName = ref('')
 const jobTitle = ref('')
 const sourceReference = ref('')
-const draft = ref<{ statement: string; importance: JobTargetRequirement['importance'] }[]>([])
+const draft = ref<{ statement: string; importance: JobTargetRequirement['importance']; basis?: RequirementBasis }[]>([])
 
 const message = (e: unknown) => e instanceof ApiError ? e.message : '请求失败，请稍后重试'
 const canCreate = computed(() => rawText.value.trim().length >= 80 && !busy.value)
@@ -60,7 +60,7 @@ async function open(id: number) {
   try {
     const target = await getTarget(id)
     current.value = target
-    draft.value = (target.requirements || []).map(row => ({ statement: row.statement, importance: row.importance }))
+    draft.value = (target.requirements || []).map(row => ({ statement: row.statement, importance: row.importance, basis: row.basis }))
     if (target.parse_status === 'CONFIRMED') void loadSkillRecommendation(id)
   } catch (e) { error.value = message(e) } finally { busy.value = false }
 }
@@ -90,7 +90,7 @@ async function parse() {
   try {
     const parsed = await parseTarget(current.value.id)
     current.value = parsed
-    draft.value = (parsed.requirements || []).map(row => ({ statement: row.statement, importance: row.importance }))
+    draft.value = (parsed.requirements || []).map(row => ({ statement: row.statement, importance: row.importance, basis: row.basis }))
     // Re-parsing returns to a draft; an older recommendation must not linger.
     skillRec.value = null; skillRecError.value = ''; skillRecSequence++
     notice.value = parsed.parse_mode === 'RULE'
@@ -109,7 +109,7 @@ async function save() {
   busy.value = true; error.value = ''; notice.value = ''
   try {
     current.value = await updateRequirements(current.value.id, rows)
-    draft.value = (current.value.requirements || []).map(row => ({ statement: row.statement, importance: row.importance }))
+    draft.value = (current.value.requirements || []).map(row => ({ statement: row.statement, importance: row.importance, basis: row.basis }))
     // Editing requirements invalidates the previous recommendation input key.
     skillRec.value = null; skillRecError.value = ''; skillRecSequence++
     notice.value = `要求已保存在第 ${current.value.version} 版草稿中；再次确认会生成第 ${current.value.version + 1} 版，已开始的面试仍使用原冻结版本。`
@@ -253,6 +253,12 @@ load()
         <p v-if="skillRecError" role="alert">推荐读取失败：{{ skillRecError }}。你仍可在面试或训练页手动选择专业 Skill。</p>
         <template v-if="skillRec">
           <p>{{ recommendationStatusLabels[skillRec.status] || skillRec.status }} · {{ skillRec.message }}</p>
+          <p v-if="skillRec.ambiguity_reason === 'TITLE_CONFLICTS_WITH_REQUIREMENTS'" role="status">
+            <small>岗位名称与要求指向不同方向：系统不替你决定，请核对下面的原文证据后手动选择。</small>
+          </p>
+          <p v-else-if="skillRec.ambiguity_reason === 'TITLE_ONLY_LEADER'" role="status">
+            <small>只有岗位名称对得上：岗位职责与要求里缺少该方向的依据，不按标题自动选择。</small>
+          </p>
           <p><small>{{ skillRec.ranking_semantics }}</small></p>
           <p><small>{{ skillRec.confidence_note }}</small></p>
           <p v-if="!skillRec.candidates.filter(c => c.eligible).length">
@@ -261,12 +267,12 @@ load()
           <ul class="skill-list">
             <li v-for="c in skillRec.candidates.filter(c => c.eligible)" :key="c.skill_id">
               <div><strong>{{ c.label }}</strong>
-                <span> {{ c.skill_id }} · v{{ c.version }} · 第 {{ c.rank }} 位 · 命中权重 {{ c.ranking_points }}</span>
+                <span> {{ c.skill_id }} · v{{ c.version }} · 第 {{ c.rank }} 位 · 命中权重 {{ c.ranking_points }}（要求与职责 {{ c.content_points }} + 岗位名称 {{ c.title_points }}）</span>
                 <span v-if="c.skill_id === skillRec.recommended_skill_id && skillRec.auto_select"> 系统首推</span>
                 <span v-if="c.uncertain"> 证据不确定</span>
               </div>
               <p>{{ c.reason_note }}</p>
-              <p><small>规则理由：{{ c.matched_reason }}</small></p>
+              <p><small>规则判定（算法按关键词加分，不是 JD 原文）：{{ c.matched_reason }}</small></p>
               <ul v-if="c.evidence.length" class="evidence-list">
                 <li v-for="(e, i) in uniqueEvidence(c.evidence)" :key="i">
                   <small>{{ evidenceStatusLabels[e.evidence_status] || e.evidence_status }}：{{ e.verbatim_jd_evidence || e.requirement_statement || e.excerpt }}</small>
@@ -289,6 +295,8 @@ load()
       </section>
 
       <h4>岗位要求（可修改、删除、补充）</h4>
+      <p><small>「性质」由服务端按 JD 原文判定：只有原文写了必须或最低门槛才是硬性要求；
+        列在任职要求里但没写必须的仍记为「原文未标明」，并在下一行说明依据。</small></p>
       <table v-if="draft.length" style="width:100%">
         <thead><tr><th>要求</th><th>性质</th><th></th></tr></thead>
         <tbody>
@@ -300,6 +308,7 @@ load()
                 <option value="PREFERRED">{{ importanceLabels.PREFERRED }}</option>
                 <option value="UNKNOWN">{{ importanceLabels.UNKNOWN }}</option>
               </select>
+              <div v-if="row.basis" class="basis-note"><small>{{ basisLabels[row.basis] || row.basis }}</small></div>
             </td>
             <td><button @click="dropRow(index)">删除</button></td>
           </tr>
@@ -341,4 +350,6 @@ load()
 .skill-list span{color:#667085;font-size:13px}
 .evidence-list li{padding:2px 0 2px 12px;border-left:2px solid #d6e4e1}
 .skill-rec small{color:#667085}
+.basis-note{margin-top:2px}
+.basis-note small{color:#667085}
 </style>
