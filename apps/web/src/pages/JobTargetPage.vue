@@ -120,6 +120,8 @@ function addRow() { draft.value.push({ statement: '', importance: 'UNKNOWN' }) }
 function dropRow(index: number) { draft.value.splice(index, 1) }
 function useInInterview() { if (current.value) router.push({ path: '/interview', query: { job_target_id: String(current.value.id) } }) }
 function useInTraining() { if (current.value) router.push({ path: '/training', query: { job_target_id: String(current.value.id) } }) }
+// Same destination as the detail button, reachable without opening the target.
+function startTraining(id: number) { router.push({ path: '/training', query: { job_target_id: String(id) } }) }
 
 load()
 </script>
@@ -153,6 +155,15 @@ load()
         <li v-for="item in targets" :key="item.id">
           <button @click="open(item.id)">{{ item.company_name }} · {{ item.job_title }}</button>
           <span> {{ item.source_label }} · {{ statusLabels[item.parse_status] }} · {{ item.requirement_count }} 条要求 · 第 {{ item.version }} 版</span>
+          <!-- A confirmed target can go straight to the training centre; an
+               unconfirmed one says why instead of offering a button that the
+               server would refuse. Own line, so the reason does not run into
+               the version text. -->
+          <div v-if="item.parse_status === 'CONFIRMED'">
+            <button :disabled="busy" :aria-label="`用 ${item.company_name} ${item.job_title} 开始训练`"
+              @click="startTraining(item.id)">开始训练</button>
+          </div>
+          <div v-else><small>确认 JD 后可开始训练（当前为{{ statusLabels[item.parse_status] }}）</small></div>
         </li>
       </ul>
     </section>
