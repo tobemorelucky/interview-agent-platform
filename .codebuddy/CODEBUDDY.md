@@ -79,6 +79,9 @@
 - ~~测试隔离只靠人工 `M1_TEST_DATABASE_URL`，`conftest.py` 无库名白名单~~ **已修（`9eb66a8` / `3b99f6c`，第十轮）**：`conftest.py` 加 session 级 autouse 闸（前缀 + 测试后缀 + 黑名单 + 两个环境变量必须一致，否则 `pytest.exit(2)`），`scripts/run-workbuddy-tests.py` 在运行前拒绝生产/E2E/历史 Live 库。
 - ~~库名闸只覆盖 pytest~~ **已修（第十一轮，`be1407e` / `275343e`）**：判定收敛到 `interview_api.core.db_targets`（纯字符串，九类）；`delivery.py migrate` 需 `--authorize-database <名字>` 才能动生产/E2E/未知库，系统库与历史 Live 库**无覆盖**；启动脚本只在操作员传 `-AuthorizeDatabase` 时转发；`prepare_v23_demo.py` 只接受 `*_browser_*` 夹具库。
 - ~~私人 JD 训练的 RECHECK 未验证~~ **已验证（第十一轮，`1e24814`）**：`CONFLICTED`（同 scope 先好后坏）与 `RECHECK_DUE`（VERIFIED + 30/60/90 天，靠服务 `clock` 前移读取）都能合法进入 RECHECK；能力记忆仍按 `(user, topic)` 聚合，没有岗位维度。
+- ~~`training_mode` 单独出现（无 `training_request_key`）绕过幂等~~ **已修（第十二轮，`4a25891`）**：路由条件只看 `training_mode`，缺键在开库前 `422 TRAINING_REQUEST_KEY_REQUIRED`；并发/重启/换内容三类语义有 10 条专项测试。**保证来自 `pg_advisory_xact_lock`，不是数据库约束**——新增创建路径绕过 `TrainingService.create` 会复发。
+- ~~私人岗位入口只能先进详情才能找到~~ **已修（第十二轮，`80149e9`）**：已确认目标的行内直接给「开始训练」，未确认行给原因而不是按钮。
+- **Coach 的记忆输入是 `str(dict)` 截断到 600 字符**（第十二轮发现，`docs/91` §7.2）：`evidence.py::project_snapshot` 对 `approved_memory_context`/`recent_performance_observations` 直接 `_clip`，且 `memory_guided_plan` 不在投影白名单里（被记进 `omitted`）。Phase 0 修法与两个只读工具方案已写进 `docs/91` §8，**未实施，等审批**。
 - 前端不暴露 Harness 开关、不展示提前结束原因、未暴露 `confirm_unknown_retry`。
 - docs/71 规划的 `apps/api/scripts/evals/` 尚未实现。
 
@@ -117,9 +120,9 @@
 
 ### 交接区（每轮结束更新）
 
-- 当前 HEAD：`git log -1`（第十一轮文档 `6d2e155` 之后只有本文件的记录更新）
+- 当前 HEAD：`git log -1`（第十二轮文档 `f1aa960` 之后只有本文件的记录更新）
 - 工作区：干净（仅 `.workbuddy/` 未跟踪，按第五轮约定不提交）
-- 下一轮入口：见「轮次记录」最后一轮（第十一轮真实模型 HTTP = 0，额度未消耗）
+- 下一轮入口：见「轮次记录」最后一轮（第十二轮真实模型 HTTP = 0，额度未消耗；Coach Harness 方案待审批，**不要直接实施**）
 - 环境提示：本轮开始时 postgres/redis/minio 容器处于 `Exited (255)`，用 `docker start` 拉起后数据完好（151 个库）。**不要**用 `docker compose down -v` 之类的操作。
 
 ## 轮次记录
@@ -602,3 +605,67 @@ Chrome 真实 UI 操作、12 次真实模型 HTTP。正式库与历史 Live 库�
 2. 私人岗位的 Skill 推荐接口（后端已有 `recommend_for_target`，未暴露）。
 3. 简历上传链路（需 Worker + 额度）与私人入口可发现性。
 4. 请求记录 ↔ 业务审计三向 join（`docs/89` §10.1）等批准。
+
+### 2026-11-13 · 第十二轮（训练创建幂等 + 列表入口 + Coach 设计审查，0 次真实 HTTP）
+
+开工 `68d21f0`，工作区干净。真实模型 HTTP = **0**；未迁移生产库；未连接历史 Live 库；
+Coach 方案**只审查不实施**。
+
+**提交**
+
+| Hash | 内容 |
+|---|---|
+| `221fb28` | `test(workbuddy)`: 子集运行不再因惰性 mapper 解析失败 |
+| `4a25891` | `fix(workbuddy)`: 一次训练点击只创建一个会话（有键无键都成立） |
+| `80149e9` | `feat(workbuddy)`: 已确认 JD 的列表行直接进入训练 |
+| `8f1c744` | `docs(workbuddy)`: 启动迁移授权写进 README |
+| `f1aa960` | `docs(workbuddy)`: `docs/91` 十节记录 |
+
+**已完成（事实）**
+
+- **幂等根因是路由条件**：`MockInterviewService.create` 原来只在 `training_mode and training_request_key` 时进 `TrainingService`；缺键时走普通路径，但 `build_context` 仍冻结 `training` 块，于是创建的会话"看起来是训练、实际无锁无去重"。改为只看 `training_mode`，缺键在开库前 `422 TRAINING_REQUEST_KEY_REQUIRED`（不生成服务端键，避免"看起来幂等"）。
+- **语义**：同键同内容 → 同 id；同键异内容 → 409；新键 → 新会话；不同用户同键 → 互不影响；并发同键 → 一条记录（`pg_advisory_xact_lock(2300, uid)`，事务级、跨进程）；进程重启 → 同 id（状态只在库里）。训练创建本身 0 次模型调用。
+- **已证伪**：把路由条件改回旧写法，只有"缺键"那条失败，其余 9 条通过——正是缺陷形状。
+- **无 Schema 迁移**：去重靠既有 JSON 列 + advisory lock；补唯一索引的条件已写进 `docs/91` §3。
+- **列表入口**：已确认行给「开始训练」，未确认行给原因（「确认 JD 后可开始训练（当前为待解析）」）而不是按钮；真实 Chrome 验证点一次即到 `/training?job_target_id=1`，未确认目标服务端返回 409 `JOB_TARGET_NOT_CONFIRMED`。
+- **README**：按库类型说明授权、给隔离开发库完整示例、明确 `.env` 不是授权、封存库无覆盖。实测 `start-dev.bat` 对 `*_e2e_*` 库输出 `MIGRATION_REFUSED` + `Delivery check failed: migrate (exit 3)`，未启动任何服务。
+- **Coach 审查（只读）**：它是单次结构化调用，无工具通道；评价 catalog 固定且有损（答案 600 字、评价 800 字、缺失点 4 条）；**记忆输入是 `str(dict)` 截断到 600 字符**（用 `project_snapshot` 直接验证），且 `memory_guided_plan` 不在投影白名单里（被记进 `omitted`）。`MemoryGuidedPlan` 是 `capability_rules.memory_plan()` 纯规则，模型零参与。
+- **方案（未实施）**：Phase 0 先修输入形状（结构化记忆 + `capability_snapshot` + `training_context`，零模型成本）；Phase 1 两个只读工具 `read_evaluation_detail`（本场、解裁剪）与 `read_capability_history`（同用户、只返回状态与引用、不返回原文）；工具 1 次、模型 2 次封顶；`suggested_training` 由 resolver 按 `project(states)` 再校验，存进 `coach_analysis_json`（无需迁移）。
+
+**测试（真实计数，分列）**
+
+- 后端全量业务段 @ `interview_agent_wb_r12_test_20261113`（0027/67 表）：**782 passed / 0 failed / 1 skipped**（245.75 s）。
+- 迁移段 @ 空库 `interview_agent_v21_wb_r12_20261113`：**10 passed / 0 failed**（54.83 s）。
+- 训练/岗位/记忆/隔离子集：**87 passed**；幂等专项 10 passed（旧条件下 1 failed）。
+- 前端 `npm run build`（`vue-tsc && vite build`）通过，0 类型错误。
+- 浏览器：真实 Chrome headless + CDP，10 步（`docs/91` §5），4 张截图。
+
+**顺带修掉的测试基础设施缺陷（事实）**
+
+`test_workbench_first_visit_...` 在整包运行通过、单独跑文件失败（`NoReferencedTableError: user_job_targets`）——SQLAlchemy 首次配置 mapper 时按表名解析外键，取决于哪个测试模块先被导入。conftest 里显式导入该模型模块后消失。生产不受影响（`main.py` 导入全部 router）。
+
+**未验证 / 遗留（事实）**
+
+- 并发 `start` 最坏浪费一次模型调用（业务状态只写一次，普通面试同样如此，本轮未改）。
+- 幂等保证来自锁而非数据库约束：新增加绕过 `TrainingService.create` 的创建路径会复发。
+- 从列表进入训练后仍需手动选一次专业方向（私人 JD 无自动推荐，第十轮决定）。
+- 记忆无岗位维度；Coach 记忆输入形状缺陷（Phase 0 待批准）。
+- 简历上传 → 画像链路本轮未走（replay 预置）。
+- 并发测试是单进程 3 协程，多进程争用只有锁语义保证，无实测。
+
+**数据库（本轮）**
+
+| 库 | 用途 | 状态 |
+|---|---|---|
+| `interview_agent` | 生产 | 未连接、未迁移（拒绝路径已实测） |
+| `interview_agent_wb_r12_test_20261113` | 业务回归 | 0027 / 67 表 |
+| `interview_agent_v21_wb_r12_20261113` | 迁移空库 | 跑完 0027，不可二次跑迁移用例 |
+| `interview_agent_wb_r12_e2e_20261113` | 浏览器验收 | 0027 / 2 用户 / 2 私人目标 |
+| 历史 Live 库 | 封存 | 只读，未连接 |
+
+**下一轮入口**
+
+1. **Coach Harness 方案等审批**（`docs/91` §8）：Phase 0 输入投影 → Phase 1 两个只读工具 → `suggested_training` 受控校验。不要直接开工。
+2. 私人岗位 Skill 推荐接口（后端 `recommend_for_target` 已存在，未暴露）。
+3. 简历上传链路（Worker + 额度）。
+4. 请求记录 ↔ 业务审计三向 join（`docs/89` §10.1）。
