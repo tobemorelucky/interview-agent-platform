@@ -81,7 +81,8 @@
 - ~~私人 JD 训练的 RECHECK 未验证~~ **已验证（第十一轮，`1e24814`）**：`CONFLICTED`（同 scope 先好后坏）与 `RECHECK_DUE`（VERIFIED + 30/60/90 天，靠服务 `clock` 前移读取）都能合法进入 RECHECK；能力记忆仍按 `(user, topic)` 聚合，没有岗位维度。
 - ~~`training_mode` 单独出现（无 `training_request_key`）绕过幂等~~ **已修（第十二轮，`4a25891`）**：路由条件只看 `training_mode`，缺键在开库前 `422 TRAINING_REQUEST_KEY_REQUIRED`；并发/重启/换内容三类语义有 10 条专项测试。**保证来自 `pg_advisory_xact_lock`，不是数据库约束**——新增创建路径绕过 `TrainingService.create` 会复发。
 - ~~私人岗位入口只能先进详情才能找到~~ **已修（第十二轮，`80149e9`）**：已确认目标的行内直接给「开始训练」，未确认行给原因而不是按钮。
-- **Coach 的记忆输入是 `str(dict)` 截断到 600 字符**（第十二轮发现，`docs/91` §7.2）：`evidence.py::project_snapshot` 对 `approved_memory_context`/`recent_performance_observations` 直接 `_clip`，且 `memory_guided_plan` 不在投影白名单里（被记进 `omitted`）。Phase 0 修法与两个只读工具方案已写进 `docs/91` §8，**未实施，等审批**。
+- ~~Coach 的记忆输入是 `str(dict)` 截断到 600 字符~~ **已修（第十三轮，`790913e`）**：`COACH_EVIDENCE_V2` 把两个记忆层改为结构化投影（semantics / epistemic_status / items / shown / total / clipped），并把 `memory_guided_plan` 投影成 `capability_context`、`training` 投影成 `training_context`，每条评价补 `fingerprint`。跨岗位语义由 `scope_note` 明写。真实 18 轮夹具体积 85,047 → 86,830 字节（+2.1%）。
+- **Coach Harness 已实施、默认 OFF**（第十三轮，`4e726f9`）：`interview_coach_harness` 打开后模型可用一次只读工具（`read_evaluation_detail` 带指纹校验 / `read_capability_history` 读尝试开始时的一次性快照），最多 2 次模型调用；`suggested_training` 由 `resolve_coach_artifact` 用 `training.modes()` 重新校验，非法即降级并记录。OFF 路径的提示词、schema、生成键与上一轮逐字节一致（有用例断言）。
 - 前端不暴露 Harness 开关、不展示提前结束原因、未暴露 `confirm_unknown_retry`。
 - docs/71 规划的 `apps/api/scripts/evals/` 尚未实现。
 
@@ -120,9 +121,9 @@
 
 ### 交接区（每轮结束更新）
 
-- 当前 HEAD：`git log -1`（第十二轮文档 `f1aa960` 之后只有本文件的记录更新）
+- 当前 HEAD：`git log -1`（第十三轮文档 `022dcdd` 之后只有本文件的记录更新）
 - 工作区：干净（仅 `.workbuddy/` 未跟踪，按第五轮约定不提交）
-- 下一轮入口：见「轮次记录」最后一轮（第十二轮真实模型 HTTP = 0，额度未消耗；Coach Harness 方案待审批，**不要直接实施**）
+- 下一轮入口：见「轮次记录」最后一轮（第十三轮真实模型 HTTP = 0；Coach Harness **已实施但默认 OFF**，等真实 Live 短程验收授权）
 - 环境提示：本轮开始时 postgres/redis/minio 容器处于 `Exited (255)`，用 `docker start` 拉起后数据完好（151 个库）。**不要**用 `docker compose down -v` 之类的操作。
 
 ## 轮次记录
@@ -669,3 +670,58 @@ Coach 方案**只审查不实施**。
 2. 私人岗位 Skill 推荐接口（后端 `recommend_for_target` 已存在，未暴露）。
 3. 简历上传链路（Worker + 额度）。
 4. 请求记录 ↔ 业务审计三向 join（`docs/89` §10.1）。
+
+### 2026-11-13 · 第十三轮（Coach Harness V1：Phase 0 结构化输入 + Phase 1 受限工具，0 次真实 HTTP）
+
+开工 `f14f755`，工作区干净。真实模型 HTTP = **0**；未迁移生产库；未连接历史 Live 库；**未新增 Agent、未改 Controller、未改 CapabilityMemory**。
+
+**提交**
+
+| Hash | 内容 |
+|---|---|
+| `790913e` | Phase 0：`COACH_EVIDENCE_V2` 结构化记忆投影 + 9 条测试 |
+| `4e726f9` | Phase 1：两个只读工具、`suggested_training` 校验、审计、前端兼容 + 17 条测试 |
+| `022dcdd` | `docs/92` 十节记录 |
+
+**已完成（事实）**
+
+- **Phase 0 根因**：`project_snapshot` 对 `approved_memory_context`/`recent_performance_observations` 用 `_clip()`（dict 先 `str()` 再截 600 字符），`memory_guided_plan` 直接不在白名单被丢弃。V2 改为结构化：两个记忆层带 `semantics`/`epistemic_status`/`is_stable_fact`/`items[≤8]`/计数；计划变 `capability_context`（state/priority/needs_recheck/memory_revision/refs≤3/history_summary，含 `scope_note` 明写"跨岗位聚合，不是本岗位掌握度"）；训练范围变 `training_context`；每条评价加裁剪前算的 `fingerprint`。
+- **体积代价（实测）**：真实 18 轮夹具 85,047 → 86,830 字节（+1,783，+2.1%）；40 条记忆只多 ~800 字节（8 条上限）。
+- **Phase 1 门控**：`interview_coach_harness` 默认 **False**。OFF 的提示词 1.0.3、`CoachArtifact` schema、生成键逐字节不变（有用例断言 `prompt_version == "1.0.3"` 且无 `audit` 键）。ON 用两条 1.1.0 提示词（plan/final），最多 1 次工具 + 2 次模型调用，第二次 schema 强制终稿。
+- **工具只有两个、都只读**：`read_evaluation_detail`（仅本场 catalog；重算 `fingerprint` 与冻结值比对，不符返回 `EVALUATION_CHANGED`；≤4KB；不返回 `reference_answer`）；`read_capability_history`（**不查库**，读尝试开始时的一次性快照；仅 blueprint 内的 knowledge_id；只返回状态/修订/冲突/引用，≤5 条观察、≤1.2KB、无答案原文；空历史返回 `EMPTY`）。
+- **只在确有缺失时提供工具**：`clipped_text_fields > 0` 才给评价工具，有记忆行才给历史工具；两者皆无 → 单次调用、schema 直接终稿。
+- **建议校验复用训练规则**：`resolve_coach_artifact` 用 `interview.training.modes()`（与 `TrainingService` 同一函数）判定模式合法性，非法建议**降级**为 `suggested_training_rejected`，不拖垮 findings/statistics。
+- **冻结两层且标注**：快照里的 `memory_guided_plan` = 会话起点冻结（`..._FROZEN_AT_SESSION_START`）；报告期快照 = 尝试开始时读一次（`CAPTURED_AT_REPORT_GENERATION_NOT_THE_SESSION_SNAPSHOT`，带内容 `fingerprint` 与逐条 `revision`）。工具步骤 `coach_tool` 记录参数/结果/耗时/能力指纹 → 可查"模型当时看到了什么"。
+- **测试发现的两个真实缺陷**：历史工具写成同步函数却 `await`（每次工具调用 TypeError）；工具白名单取自计划里"被优先"的点而非冻结 blueprint（合法知识点被误判越权）。都是先测出来再修。
+
+**测试（真实计数）**
+
+- 全量业务段 @ `interview_agent_wb_r13_test_20261113`：**808 passed / 0 failed / 1 skipped**（227.61 s；上一轮 782，+26 = Phase 0 九条 + Phase 1 十七条）。
+- 迁移段 @ 空库 `interview_agent_v21_wb_r13_20261113`：**10 passed / 0 failed**（53.75 s）。
+- Coach 相关子集：**92 passed**（51.47 s）。
+- 前端 `npm run build`（`vue-tsc && vite build`）：通过，0 类型错误。
+
+**未验证 / 遗留（事实）**
+
+- **没有成对真实模型输出**，所以不能声称 Phase 0 或 Harness 提升报告质量；只证明"模型第一次拿到了此前拿不到的数据"且无回归。
+- 真实 provider 下 `CoachTurn`（判别式联合）首轮 JSON 合法率未知，偏低会吃掉第二次调用额度。
+- 用工具的报告约为 `2 × payload` 输入成本（18 轮夹具 ≈ +87KB），真实 token 未计量。
+- `generation_key` 未包含能力快照指纹：记忆变化不会让已完成报告失效，只在审计里可见（是否要改是一个产品决策，已列为 `docs/92` §10.6）。
+- 建议合法性只做了 `modes()` 的单元覆盖，未在真实 `CONFLICTED`/`RECHECK_DUE` 用户上端到端跑。
+- 前端只加了报告页一句建议 + 预选链接，没有工具轨迹页。
+
+**数据库（本轮）**
+
+| 库 | 用途 | 状态 |
+|---|---|---|
+| `interview_agent` | 生产 | 未连接、未迁移 |
+| `interview_agent_wb_r13_test_20261113` | 业务回归 | 0027 / 67 表 |
+| `interview_agent_v21_wb_r13_20261113` | 迁移空库 | 跑完 0027，不可二次跑迁移用例 |
+| 历史 Live 库 | 封存 | 只读，未连接 |
+
+**下一轮入口**
+
+1. **真实 Live 短程验收（等授权）**：同一场会话跑 OFF / Phase 0 / Harness ON 三组，量工具使用率、首轮 JSON 合法率、token、延迟，并人工看建议是否指向真正的机制。
+2. 私人岗位 Skill 推荐接口（后端 `recommend_for_target` 已存在，未暴露）。
+3. 简历上传链路（Worker + 额度）。
+4. `generation_key` 是否纳入能力指纹：需要一次显式设计（会改变"已生成报告被复用/顶替"的语义）。
