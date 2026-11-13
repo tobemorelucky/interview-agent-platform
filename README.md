@@ -48,8 +48,44 @@ node scripts/v21_acceptance_web.mjs
 浏览器：<http://127.0.0.1:5177>；API：<http://127.0.0.1:8007/docs>。
 需要原 PostgreSQL/Redis 与已有演示库；命令不建库、不迁移、不重复 seed、不调用真实模型。完整步骤与 DEMO 账号见 [7 分钟演示指南](docs/54_repeatable_demo_guide.md)。
 
-通用本地启动、状态与停止入口为 `scripts/start-interview-platform.ps1`、`status-interview-platform.ps1`、`stop-interview-platform.ps1`。
-**通用启动包含 migration；现有正式库仍为 0025，升级 0026 需先按 [发布检查清单](docs/57_production_0026_release_checklist.md) 单独确认，不要将通用启动当作只读演示入口。** 默认停止不删除数据卷。
+通用本地启动、状态与停止入口为 `scripts/start-interview-platform.ps1`、`status-interview-platform.ps1`、`stop-interview-platform.ps1`。默认停止不删除数据卷。
+
+### 启动脚本与数据库授权
+
+通用启动会执行一次 `alembic upgrade head`，所以它必须先判断目标库是不是"可以自动迁移的库"。`scripts/delivery.py migrate` 会先按库名判定（规则集中在 `apps/api/src/interview_api/core/db_targets.py`，与 pytest 闸、测试运行器共用同一份实现）：
+
+| 库名判定 | 例子 | 不经授权能否迁移 |
+|---|---|---|
+| `TEST` / `MIGRATION` / `DEMO` | `..._test_...`、`..._mig_...`、`interview_agent_m6_f3_ux_demo` | 可以 |
+| `PRODUCTION` / `E2E` / `OTHER` | `interview_agent`（正式库）、`..._e2e_...` | 必须显式授权 |
+| `SYSTEM` / `ARCHIVED_LIVE` | `postgres`、`..._live_...`、`..._accept_...`、`..._thinking_long...` | 永不，没有覆盖选项 |
+
+`.env` 里的 `DATABASE_URL` **不构成授权**。如果它指向正式库，`start-dev.bat` 会在迁移这一步停下，报 `MIGRATION_REFUSED`（退出码 3），既不修改任何数据库，也不启动 API/Worker。此时有三个选择：
+
+1. **只想看演示**：`start-dev.bat -Demo`。固定使用 Replay 演示库，无需授权，不调用真实模型。
+2. **本地开发用隔离库（推荐）**：
+
+   ```powershell
+   # 建一个只给你自己用的库；不要复用 interview_agent
+   docker exec interview-agent-platform-postgres-1 psql -U interview_agent -d postgres -c 'CREATE DATABASE "interview_agent_dev_20261113";'
+
+   # 本次终端指向它，并只授权这一个名字
+   $env:DATABASE_URL='postgresql+asyncpg://interview_agent:interview_agent@localhost:5432/interview_agent_dev_20261113'
+   .\start-dev.bat -AuthorizeDatabase interview_agent_dev_20261113
+   ```
+
+   授权字符串必须与库名**完全一致**。写 `-AuthorizeDatabase interview_agent` 只授权正式库本身，不会顺带授权其他库；写成别的名字同样会被拒绝。
+3. **确实要升级正式库**：先按[0026 发布检查清单](docs/57_production_0026_release_checklist.md)确认版本与备份，再显式执行：
+
+   ```powershell
+   .\start-dev.bat -AuthorizeDatabase interview_agent
+   ```
+
+   这是运维动作，不是日常启动步骤。不要把 `-AuthorizeDatabase interview_agent` 写进脚本、快捷方式或 README 的复制粘贴默认值里——那等于把授权变成默认行为。
+
+历史封存库（`*_live_*`、`*_accept_*`、`*_thinking_long*` 等）是验收证据，没有任何授权入口可以迁移它们。任何情况下都不要用 `docker compose down -v` 清理数据卷；停止服务用 `stop-interview-platform.ps1`。
+
+后端测试请用 `scripts/run-workbuddy-tests.py`（自带库名闸与两段式分组），不要手工把 `DATABASE_URL` 指向 E2E 或正式库跑 pytest。
 
 ## 验收与边界
 
