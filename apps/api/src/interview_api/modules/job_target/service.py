@@ -219,7 +219,21 @@ class JobTargetService:
     # ── edit / confirm ──
     async def update_requirements(self, user_id: int, target_id: int, items: list[RequirementInput]) -> dict:
         target = await self.owned(user_id, target_id)
+        # The editor posts statement+importance only, so rebuilding the list used
+        # to drop every verbatim JD quote — one edit and the recommendation could
+        # no longer say which requirement came from the user's own text. Rows the
+        # user left untouched keep their evidence; changed or new rows stay
+        # quote-less, which the projection reports as USER_ADDED_NO_VERBATIM_QUOTE.
+        previous = {normalize(row["statement"]): row for row in (target.requirements_json or [])
+                    if isinstance(row, dict) and row.get("statement")}
         rows = _rows(items, "USER", target.raw_text, require_verbatim=False)
+        for row in rows:
+            old = previous.get(row["statement"])
+            if not old:
+                continue
+            row["evidence"] = old.get("evidence") or row["evidence"]
+            row["topic"] = row["topic"] or old.get("topic")
+            row["source"] = old.get("source") or row["source"]
         if not rows:
             raise AppError("JOB_TARGET_REQUIREMENTS_EMPTY", "至少保留一条岗位要求", 422)
         target.requirements_json = rows
