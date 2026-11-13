@@ -18,6 +18,14 @@ if str(SRC_ROOT) not in sys.path:
 # "a test database" is. This module only reads the environment and asks it.
 from interview_api.core.db_targets import test_run_problems
 
+# SQLAlchemy resolves a ForeignKey lazily, by table name, the first time a mapper
+# is configured. `interview_context_snapshots.job_target_id` points at
+# `user_job_targets`, so a subset run that imports the interview models but not
+# the private-JD models failed with NoReferencedTableError — a test-ordering
+# artefact, not a product defect. Importing the model module here makes every
+# subset run see the same registry the full run does.
+from interview_api.modules.job_target import models as _job_target_models  # noqa: F401,E402
+
 
 def _database_name(url: str) -> str:
     try:
