@@ -62,3 +62,33 @@ def database_url() -> str:
         pytest.skip("M1_TEST_DATABASE_URL is required for PostgreSQL integration tests")
     return value
 
+
+@pytest.fixture
+def app_engine():
+    """Give the process-wide app engine a pool that belongs to this event loop.
+
+    `interview_api.infrastructure.db.engine` is built once per process, while an
+    asyncpg connection belongs to the loop that opened it. Each test here runs
+    its own `asyncio.run`, so a pool left over from an earlier test fails with
+    `AttributeError: 'NoneType' object has no attribute 'send'` (round 16).
+
+    Disposing the pool at the start of the *new* loop is the isolation the
+    architecture actually supports: the app keeps its real engine, dependency
+    wiring and authentication, instead of tests replacing `get_db` with a fixture
+    factory. No production code is changed for this.
+    """
+    try:
+        from interview_api.infrastructure.db.engine import engine
+    except Exception:  # pragma: no cover - only when the app package is absent
+        pytest.skip("application engine is unavailable")
+
+    class Handle:
+        @staticmethod
+        async def reset() -> None:
+            await engine.dispose()
+
+    # No teardown disposal on purpose: closing a connection from a *new* loop
+    # makes asyncpg write to a closed proactor. Callers reset inside their own
+    # loop, which is where the pool was created.
+    yield Handle
+

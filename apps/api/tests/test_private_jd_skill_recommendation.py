@@ -11,6 +11,7 @@ import asyncio
 import hashlib
 from uuid import uuid4
 
+import httpx
 import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -49,6 +50,20 @@ AI_EXTRACTION = {
          "evidence": "熟悉向量数据库者优先", "topic": "向量数据库"},
     ],
 }
+
+
+HTTP_PASSWORD = "R17-http-only-pass"
+
+
+async def http_user(factory, email):
+    """A login-capable user; the real /auth/login route issues the token."""
+    from interview_api.core.security import hash_password
+    from interview_api.modules.users.models import User
+    async with factory() as db, db.begin():
+        user = User(email=email, password_hash=hash_password(HTTP_PASSWORD))
+        db.add(user)
+        await db.flush()
+        return dict(id=user.id, email=user.email)
 
 
 async def ai_target(factory, user_id, *, confirm=True):
@@ -154,22 +169,53 @@ def test_no_legal_registered_skill_is_reported_honestly(database_url, tmp_path):
     body(database_url, scenario)
 
 
-def test_another_user_gets_404_and_the_route_is_owner_scoped(database_url):
+def test_another_user_gets_404_over_real_http_and_nothing_leaks(database_url, app_engine):
+    """Bearer token → route → dependency → service → 404, with no overrides.
+
+    Round 16 replaced this with a service call plus a route-registration check
+    because the process-wide engine's pool belonged to an earlier event loop.
+    The `app_engine` fixture disposes that pool inside the current loop, so the
+    real app (real `get_db`, real `get_current_user`, real JWT) can be used again.
+    """
     async def scenario(factory):
-        from interview_api.main import app
-        user_id = await seed_user(factory)
-        target_id = await ai_target(factory, user_id)
-        # "Missing" and "someone else's" take the same path and the same 404.
+        owner = await http_user(factory, f"r17-owner-{uuid4().hex[:8]}@example.com")
+        intruder = await http_user(factory, f"r17-other-{uuid4().hex[:8]}@example.com")
+        target_id = await ai_target(factory, owner["id"])
+        # Missing and "belongs to someone else" take the same owner-scoped path.
         with pytest.raises(AppError) as denied:
-            await recommendation(factory, user_id + 999_999, target_id)
+            await recommendation(factory, intruder["id"], target_id)
         assert denied.value.status_code == 404
         assert denied.value.code == "JOB_TARGET_NOT_FOUND"
-        # The HTTP route is wired and delegates to this same owner-scoped read.
-        # The cross-account HTTP call itself is exercised by the real-browser
-        # acceptance (a second login), because booting the global ASGI app
-        # inside this per-test event loop rebinds its pooled engine on Windows.
-        paths = {getattr(route, "path", "") for route in app.routes}
-        assert "/api/v1/job-targets/{target_id}/skill-recommendations" in paths
+
+        await app_engine.reset()
+        from interview_api.main import app
+        try:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),
+                                         base_url="http://test") as client:
+                async def token(user):
+                    response = await client.post("/api/v1/auth/login", json=dict(
+                        email=user["email"], password=HTTP_PASSWORD))
+                    assert response.status_code == 200, response.text
+                    return {"Authorization": f"Bearer {response.json()['data']['access_token']}"}
+
+                path = f"/api/v1/job-targets/{target_id}/skill-recommendations"
+                other = await client.get(path, headers=await token(intruder))
+                assert other.status_code == 404, other.text
+                assert other.json()["error"]["code"] == "JOB_TARGET_NOT_FOUND"
+                # The refusal must not echo the owner's job, company or requirements.
+                for secret in ("某 AI 公司", "大模型应用工程师", AI_JD.splitlines()[1], "熟悉向量数据库者优先"):
+                    assert secret not in other.text
+                # ...and the same URL works for the owner, so 404 meant ownership.
+                mine = await client.get(path, headers=await token(owner))
+                assert mine.status_code == 200, mine.text
+                data = mine.json()["data"]
+                assert data["status"] == "RECOMMENDED"
+                assert data["recommended_skill_id"] == "ai_agent_application"
+                # An unauthenticated read is rejected before any ownership lookup.
+                assert (await client.get(path)).status_code == 401
+        finally:
+            # Close this loop's pool before the loop ends; see the fixture note.
+            await app_engine.reset()
     body(database_url, scenario)
 
 
