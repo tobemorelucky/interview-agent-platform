@@ -57,6 +57,13 @@ def dispatch_generate_candidate_profile(resume_id: int, regeneration_token: str 
     return _app.send_task("generate_candidate_profile", args=[resume_id, regeneration_token]).id
 
 
+def dispatch_purge(purge_request_id: int) -> str:
+    """Round 23 / L3. The task receives ONLY the request id: user_id,
+    resource_id and object_key are re-read from the database by the worker, so
+    a redelivered or forged task cannot clean another user's resource."""
+    return _app.send_task("purge_personal_data", args=[purge_request_id]).id
+
+
 def _mask_url(url: str) -> str:
     """Mask password in a Redis URL for safe logging."""
     if "@" in url:
