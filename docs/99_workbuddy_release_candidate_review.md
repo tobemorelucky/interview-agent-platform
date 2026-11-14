@@ -194,11 +194,11 @@ A 的响应里 `work_experience` 是模型自己给出的，不再是服务端�
 
 - 本地 HEAD：`3e19529` + 本轮 3 个代码提交（见 §10），分支 `master`，工作区仅 `.workbuddy/` 未跟踪。
 - 远端基线：`origin/master = 411c345`（"feat: checkpoint interview training and ModelScope support"），
-  本地领先 **96 个提交**（本轮开始 93 + 本轮 3）。
+  本地领先 **99 个提交**（本轮开始时 93；本轮新增 6 次提交：3 个代码 + docs/99 + `.codebuddy` 记忆 + 本处计数修正）。
 - 本轮检查远端时 GitHub 不可达：`schannel: server closed abruptly (missing close_notify)`，
   **未能确认远端当前实际 head**，只能读到上次 fetch 时的 `411c345`；`git ls-remote` 同样失败。
 - 未执行 push / merge / rebase / reset / clean；未修改历史。
-- 敏感信息只读扫描（`origin/master..HEAD` 的 169 个文件、全部新增行）：
+- 敏感信息只读扫描（检查时 `origin/master..HEAD` 的 169 个改动文件、全部新增行）：
   - 没有 `sk-`、`Bearer <token>`、`AKIA`、`-----BEGIN`、`api_key=` 命中；
   - 没有非 `example.com` 邮箱、没有手机号；
   - `.gitignore` 覆盖 `.env`、`.runtime/`、`dist/`、`.venv/`、`node_modules/`，仓库内只有 `.env.example`；
