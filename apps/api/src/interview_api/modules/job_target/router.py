@@ -38,7 +38,7 @@ async def parse(target_id: int, user=Depends(get_current_user), _limit=Depends(i
     async with async_session_factory() as db:
         target = await JobTargetService(db).read(user.id, target_id)
         raw, company, title = target.raw_text, target.company_name, target.job_title
-    extraction, mode, error = await JobTargetService(None).extract(raw, company, title)
+    extraction, mode, error = await JobTargetService(None).extract(raw, company, title, user_id=user.id)
     async with async_session_factory() as db, db.begin():
         data = await JobTargetService(db).apply_parse(user.id, target_id, extraction, mode, error)
     return success(data=data)
