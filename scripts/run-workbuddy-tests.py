@@ -52,6 +52,7 @@ MIGRATION_TESTS = [
     "tests/test_06_m5_migration.py", "tests/test_07_m6_migration.py",
     "tests/test_08_v13_migration.py", "tests/test_09_v22_migration.py",
     "tests/test_10_v28_archive_migration.py",
+    "tests/test_11_v29_purge_migration.py",
 ]
 
 parser = argparse.ArgumentParser(description=__doc__,
