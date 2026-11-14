@@ -1082,3 +1082,32 @@ parse 端点传 `user.id`；无 user 的系统调用保持旧行为。测试 `te
 全量 `interview_agent_wb_r21_full_test_20261114` **932 passed / 0 failed / 1 skipped**。
 
 **分级结论**：P0=生产 0025→0027 前置预检（`interview_context_snapshots` 三公共 FK 必须齐全，否则 0027 的 CHECK 建失败；downgrade 对私有快照主动拒绝）；P1=简历/JD 路径无 UNKNOWN 未决围栏（崩溃后重试会二次真实发送）+ Celery 抽取中途崩溃重复计费（COMPLETED 即跳过的防护已存在，`processor.py:55-67`）；P2=JD 状态 CHECK 限制归档值。0028 未实施、生产库未动、Coach Harness 仍 OFF。
+
+### 2026-11-14 · 第二十二轮（L1 简历归档 + L2 私有 JD 归档，0 次真实 HTTP，唯一迁移 0028）
+
+**批准范围**：重建 Bundle + L1 + L2；未批 L3/L4/push/生产迁移。远端本轮不可达（CONNECT 502，未关 TLS 验证）；
+新 Bundle `...rc-v1-20261114-1432-c134a99.bundle`（2.7MB）verify+clone 恢复演练通过，旧 Bundle 保留。
+**两 Bundle 与仓库同盘（E:），尚无异地容灾**。
+
+**数据模型**：`archived_at TIMESTAMPTZ NULL` 独立生命周期列（`resumes` / `user_job_targets`），**不是** status 新值——
+处理状态与归档正交，0027 的 CHECK 不动，NULL 即旧行为，迁移不改写数据。0028_upgrade 只加两列，downgrade 只删；
+迁移专项 11 passed（`test_10_v28_archive_migration`：升→降 0027→升，断言 0027 对象原样）；运行器 `MIGRATION_TESTS` 补登。
+
+**L1 简历**（`d73f2cb`）：`archive_resume` 行锁+归属 404+幂等（两次同时间戳）；`PROCESSING/UPLOADED` 409 `RESUME_PROCESSING`
+（Celery 拥有状态权）；重投递 ready 分支归档守卫（不再为归档简历生成画像）；画像生成端点 409 `RESUME_ARCHIVED`；
+`build_context` 检查画像版本 source_resume 的 archived_at → 新面试/训练 409（显式 version id 也拦）；默认列表不含归档行。
+
+**L2 JD**（`a004d23`）：咽喉点 `private_target()` 归档 → 409 `JOB_TARGET_ARCHIVED`（会话+训练共用，直传 id 不可绕）；
+`update_requirements/confirm/apply_parse/skill_recommendations/match_preview` 全部加闸；归档只写 archived_at——
+parse_status/confirm/version 原样，恢复=回到原确认态，推荐现算不复旧；冻结快照与报告来源（USER_SUPPLIED）不变；
+`restore` 对未归档行 409（与简历对称）。
+
+**前端（`3224c2f`）**：按钮叫 归档/恢复；确认与详情均含指定文案「归档后将无法用于新的面试或训练，但历史记录及相关数据不会因此被彻底删除」，
+无"永久删除/已清除"表述。浏览器真实发现并修复：归档详情仍渲染可编辑要求表 + 推荐区块对归档目标轮询（服务端 409）——
+已改为只读要求列表 + 推荐区块不渲染 + 恢复后立即重开详情。
+
+**测试**：业务全量 `interview_agent_wb_r22_final_test_20261114` **952 passed / 0 failed / 1 skipped**；
+迁移 `interview_agent_v21_wb_r22_mig3_20261114` **11 passed**；前端 7 passed；`vue-tsc && vite build` 通过。
+E2E 库 `interview_agent_wb_r22_e2e_20261114`@0028，Chrome 截图 `r22_01..r22_06`。
+生产库仍 0025 未动；归档 ≠ 清除：MinIO 文件、raw_text、requirements_json、画像、报告、账本全部原地保留（docs/101 §8）。
+L3 前置条件（purge_requests 表、清理顺序、audit_logs 脱敏、Celery 幂等清理）已写入 docs/101 §9，等待单独审批。
