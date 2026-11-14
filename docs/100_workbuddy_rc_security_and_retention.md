@@ -12,7 +12,7 @@
 
 | 项 | 值 |
 |---|---|
-| 分支 / HEAD | `master` / `473f6db`（本轮新增 1 个提交；轮初为 `8a795ee`） |
+| 分支 / HEAD | `master` / `159017b`（轮初 `8a795ee`；本轮提交：归因修复 + 本文档与记忆 + 本处引用修正；bundle 固定在轮初的 `8a795ee`） |
 | 远端 | `origin = https://github.com/tobemorelucky/interview-agent-platform.git` |
 | **远端最新状态（本轮已核实）** | `git ls-remote` 成功：`refs/heads/master = 411c345`。**与本地 `origin/master` 跟踪值一致**，即第二十轮的"schannel 无法确认"已消除：远端确实停在 `411c345`，本地领先 **99 个提交**（含本轮） |
 | 工作区 | 仅 `.workbuddy/` 未跟踪（按约定不处理） |
