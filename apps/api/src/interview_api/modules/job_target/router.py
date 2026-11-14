@@ -12,9 +12,10 @@ router = APIRouter(prefix="/api/v1/job-targets", tags=["job-targets"])
 
 
 @router.get("")
-async def history(user=Depends(get_current_user), limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0)):
+async def history(user=Depends(get_current_user), limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0),
+                  include_archived: bool = Query(False)):
     async with async_session_factory() as db:
-        data = await JobTargetService(db).history(user.id, limit, offset)
+        data = await JobTargetService(db).history(user.id, limit, offset, include_archived=include_archived)
     return success(data=data)
 
 
@@ -41,6 +42,27 @@ async def parse(target_id: int, user=Depends(get_current_user), _limit=Depends(i
     extraction, mode, error = await JobTargetService(None).extract(raw, company, title, user_id=user.id)
     async with async_session_factory() as db, db.begin():
         data = await JobTargetService(db).apply_parse(user.id, target_id, extraction, mode, error)
+    return success(data=data)
+
+
+@router.post("/{target_id}/archive", status_code=200)
+async def archive_target(target_id: int, user=Depends(get_current_user)):
+    """Archive a private target (own only); idempotent.
+
+    Archiving stops new interviews, training, matching and edits. Nothing is
+    deleted: raw text, requirements, versions and frozen session snapshots stay.
+    """
+    async with async_session_factory() as db, db.begin():
+        data = await JobTargetService(db).archive(user.id, target_id)
+    return success(data=data)
+
+
+@router.post("/{target_id}/restore", status_code=200)
+async def restore_target(target_id: int, user=Depends(get_current_user)):
+    """Undo an archive (own only). No stale recommendation is resurrected:
+    recommendations are always recomputed from the current requirements."""
+    async with async_session_factory() as db, db.begin():
+        data = await JobTargetService(db).restore(user.id, target_id)
     return success(data=data)
 
 

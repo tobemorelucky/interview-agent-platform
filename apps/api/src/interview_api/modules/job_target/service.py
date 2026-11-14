@@ -301,6 +301,7 @@ class JobTargetService:
     async def apply_parse(self, user_id: int, target_id: int, payload_extract: dict, mode: str,
                           error: str | None) -> dict:
         target = await self.owned(user_id, target_id)
+        self._ensure_not_archived(target)
         if target.parse_status == CONFIRMED:
             raise AppError("JOB_TARGET_CONFIRMED", "已确认的目标不能重新解析；如需修改请编辑要求", 409)
         diagnostics: dict = {}
@@ -328,6 +329,7 @@ class JobTargetService:
     # ── edit / confirm ──
     async def update_requirements(self, user_id: int, target_id: int, items: list[RequirementInput]) -> dict:
         target = await self.owned(user_id, target_id)
+        self._ensure_not_archived(target)
         # The editor posts statement+importance only, so rebuilding the list used
         # to drop every verbatim JD quote — one edit and the recommendation could
         # no longer say which requirement came from the user's own text. Rows the
@@ -361,6 +363,7 @@ class JobTargetService:
         target = await self.owned(user_id, target_id)
         if not target.requirements_json:
             raise AppError("JOB_TARGET_REQUIREMENTS_EMPTY", "请先解析或添加岗位要求", 409)
+        self._ensure_not_archived(target)
         if target.parse_status == CONFIRMED:
             return self.serialize(target)
         target.parse_status, target.confirmed_at = CONFIRMED, datetime.now(timezone.utc)
@@ -385,6 +388,7 @@ class JobTargetService:
             project_target_recommendation, recommend_for_target)
         from interview_api.modules.interview.skill_registry import ROOT
         target = await self.read(user_id, target_id)
+        self._ensure_not_archived(target)
         if target.parse_status != CONFIRMED:
             return project_target_recommendation(target, expected_key=expected_key)
         # full_evidence=True only enriches this read-only response; the frozen
@@ -404,14 +408,47 @@ class JobTargetService:
         return dict(id=target_id, deleted=True)
 
     # ── list / match ──
-    async def history(self, user_id: int, limit: int, offset: int) -> list[dict]:
-        rows = (await self.db.scalars(select(UserJobTarget).where(UserJobTarget.user_id == user_id)
+    @staticmethod
+    def _ensure_not_archived(target) -> None:
+        if target.archived_at is not None:
+            raise AppError("JOB_TARGET_ARCHIVED", "该目标岗位已归档，不能再用于新的面试、训练或匹配", 409)
+
+    async def archive(self, user_id: int, target_id: int) -> dict:
+        """Archive a private target (round 22, L2). Idempotent; owner-scoped.
+
+        Nothing is deleted: raw text, confirmed requirements, versions and the
+        frozen snapshots of past sessions all stay. The archive only stops the
+        target from entering *new* sessions, training, matching or edits.
+        """
+        from datetime import datetime, timezone
+        target = await self.owned(user_id, target_id)
+        if target.archived_at is None:
+            target.archived_at = datetime.now(timezone.utc)
+        return dict(id=target_id, archived_at=target.archived_at.isoformat())
+
+    async def restore(self, user_id: int, target_id: int) -> dict:
+        """Undo an archive. parse_status/confirm state were never touched, so
+        restoring re-enables the same confirmed requirements; recommendations
+        are always recomputed from the current rows, never resurrected."""
+        target = await self.owned(user_id, target_id)
+        if target.archived_at is None:
+            raise AppError("JOB_TARGET_NOT_ARCHIVED", "该目标岗位未处于归档状态", 409)
+        target.archived_at = None
+        return dict(id=target_id, archived_at=None, parse_status=target.parse_status)
+
+    async def history(self, user_id: int, limit: int, offset: int, *,
+                      include_archived: bool = False) -> list[dict]:
+        scope = UserJobTarget.user_id == user_id
+        if not include_archived:
+            scope = scope & UserJobTarget.archived_at.is_(None)
+        rows = (await self.db.scalars(select(UserJobTarget).where(scope)
             .order_by(UserJobTarget.id.desc()).limit(limit).offset(offset))).all()
         return [self.serialize(row, brief=True) for row in rows]
 
     async def match_preview(self, user_id: int, target_id: int) -> dict:
         """Deterministic evidence view; never a fabricated score or skill claim."""
         target = await self.read(user_id, target_id)
+        self._ensure_not_archived(target)
         if not target.requirements_json:
             raise AppError("JOB_TARGET_REQUIREMENTS_EMPTY", "请先解析岗位要求", 409)
         from interview_api.modules.job_matching.policy import evidence_matrix, ranking_components
@@ -443,6 +480,7 @@ class JobTargetService:
             parse_status=target.parse_status, parse_mode=target.parse_mode, parse_error=target.parse_error,
             version=target.version, requirement_count=len(target.requirements_json or []),
             confirmed_at=target.confirmed_at.isoformat() if target.confirmed_at else None,
+            archived_at=target.archived_at.isoformat() if target.archived_at else None,
             created_at=target.created_at.isoformat() if target.created_at else None,
             updated_at=target.updated_at.isoformat() if target.updated_at else None)
         if not brief:

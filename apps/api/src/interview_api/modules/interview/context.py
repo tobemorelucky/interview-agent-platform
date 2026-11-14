@@ -6,6 +6,7 @@ from interview_api.core.config import settings
 from interview_api.core.exceptions import AppError
 from interview_api.modules.candidate_profile.service import CandidateProfileService
 from interview_api.modules.candidate_profile.models import CandidateProfileVersion, CandidateFact
+from interview_api.modules.resume.models import Resume
 from interview_api.modules.public_career.models import Company, Job, JobDescriptionVersion, JobRequirement, Source, SourceSnapshot
 from interview_api.modules.public_career.fingerprints import compute_content_fingerprint, compute_question_fingerprint
 from interview_api.modules.candidate_profile.evidence import digest
@@ -32,6 +33,10 @@ async def private_target(db, user_id, request):
         UserJobTarget.user_id == user_id).with_for_update(read=True, key_share=True))
     if target is None:
         raise AppError("JOB_TARGET_NOT_FOUND", "目标岗位不存在", 404)
+    if target.archived_at is not None:
+        # Round 22 (L2): an archived target must not enter new sessions or
+        # training even by direct id; its frozen snapshots keep working.
+        raise AppError("JOB_TARGET_ARCHIVED", "该目标岗位已归档，不能再用于新的面试或训练", 409)
     if target.parse_status != CONFIRMED or not target.requirements_json:
         raise AppError("JOB_TARGET_NOT_CONFIRMED", "请先解析并确认岗位要求，再开始面试", 409)
     return target
@@ -61,6 +66,13 @@ async def build_context(db, user_id, request):
                if request.candidate_profile_version_id else await service.current(user_id))
     if not version:
         raise AppError("PROFILE_REQUIRED", "请先完成候选人画像", 409)
+    if version.source_resume_id is not None:
+        # Round 22 (L1): a session consumes the profile's source resume
+        # indirectly, so an archived resume blocks new sessions and training
+        # through the same gate — regardless of which version id was passed.
+        resume_archived = await db.scalar(select(Resume.archived_at).where(Resume.id == version.source_resume_id))
+        if resume_archived is not None:
+            raise AppError("RESUME_ARCHIVED", "画像来源简历已归档，不能再用于新的面试或训练", 409)
     profile = await service.serialize(user_id, version)
     if target is not None:
         # A user-supplied JD is its own source. No public company/job/JD row is
