@@ -234,13 +234,24 @@ def build_core(factory):
 # ── round 18: the one live route pair, inside a hard ceiling ─────────────────
 CAPTURE_DIR = Path(os.getenv("LIVE_CAPTURE_DIR", str(ROOT / ".runtime" / "r18" / "capture")))
 LIVE_HOSTS = {"api-inference.modelscope.cn"}
+# Round 20 tightens the ceiling per run; the numbers come from the CLI only.
+LIVE_LIMIT_OVERRIDES = {}
 
 
 def live_gate(name):
     """Build the gate and register its summary so it survives a Ctrl-C stop."""
-    from live_model_gate import LiveGate
+    from live_model_gate import LIMITS, LiveGate
 
-    gate = LiveGate(CAPTURE_DIR / name)
+    limits = dict(LIMITS)
+    limits.update({key: value for key, value in LIVE_LIMIT_OVERRIDES.items() if value})
+    # A later round may only tighten the ceiling, never raise it.
+    for key, cap in LIMITS.items():
+        if limits[key] > cap:
+            raise SystemExit(f"--live {key}={limits[key]} exceeds the hard ceiling {cap}")
+        if limits[key] <= 0:
+            raise SystemExit(f"--live {key} must be positive")
+    gate = LiveGate(CAPTURE_DIR / name, limits=limits)
+    print("LIVE_LIMITS " + json.dumps(limits))
     atexit.register(lambda: print("LIVE_GATE " + json.dumps(gate.summary(), ensure_ascii=False)))
     return gate
 
@@ -433,7 +444,21 @@ def main(argv=None):
     parser.add_argument("--live", action="store_true",
                         help="real model calls for JD extraction / resume profile, gated by live_model_gate")
     parser.add_argument("--bucket", default=None, help="MinIO bucket for this round's isolation")
+    # Round 20: this batch is capped at 6 calls / 60k tokens / 15 minutes. These
+    # flags can only tighten live_model_gate.LIMITS, never raise them.
+    parser.add_argument("--live-max-calls", type=int, default=None)
+    parser.add_argument("--live-max-tokens", type=int, default=None)
+    parser.add_argument("--live-max-minutes", type=int, default=None)
     args = parser.parse_args(argv)
+
+    global LIVE_LIMIT_OVERRIDES
+    LIVE_LIMIT_OVERRIDES = dict(
+        max_calls=args.live_max_calls,
+        max_tokens=args.live_max_tokens,
+        max_seconds=args.live_max_minutes * 60 if args.live_max_minutes else None)
+    if any(LIVE_LIMIT_OVERRIDES.values()) and not args.live:
+        print("refusing to accept live budget flags without --live", file=sys.stderr)
+        return 3
 
     try:
         target = runtime_target.resolve(args.database, base_url=settings.database_url,
