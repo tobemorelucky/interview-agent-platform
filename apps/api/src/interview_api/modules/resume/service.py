@@ -81,9 +81,11 @@ class ResumeService:
 
     # ── List / Get ──
 
-    async def list_resumes(self, user_id: int, page: int = 1, page_size: int = 20) -> dict:
+    async def list_resumes(self, user_id: int, page: int = 1, page_size: int = 20,
+                           *, include_archived: bool = False) -> dict:
         offset = (page - 1) * page_size
-        items, total = await self.resume_repo.list_by_user(user_id, offset=offset, limit=page_size)
+        items, total = await self.resume_repo.list_by_user(
+            user_id, offset=offset, limit=page_size, include_archived=include_archived)
         return {
             "items": [
                 {
@@ -93,6 +95,7 @@ class ResumeService:
                     "file_type": r.file_type,
                     "file_size": r.file_size,
                     "status": r.status,
+                    "archived_at": r.archived_at.isoformat() if r.archived_at else None,
                     "error_message": r.error_message,
                     "task_id": r.task_id,
                     "processing_stage": r.processing_stage,
@@ -118,6 +121,7 @@ class ResumeService:
         return {
             "id": resume.id,
             "user_id": resume.user_id,
+            "archived_at": resume.archived_at.isoformat() if resume.archived_at else None,
             "filename": resume.filename,
             "file_type": resume.file_type,
             "file_size": resume.file_size,
@@ -160,6 +164,57 @@ class ResumeService:
             "suggestions_json": report.suggestions_json,
             "created_at": report.created_at.isoformat() if report.created_at else None,
         }
+
+    # ── Archive (round 22, L1) ──
+
+    @staticmethod
+    def _serialize_archived(resume) -> dict:
+        return {
+            "id": resume.id,
+            "status": resume.status,
+            "archived_at": resume.archived_at.isoformat() if resume.archived_at else None,
+        }
+
+    async def archive_resume(self, resume_id: int, user_id: int) -> dict:
+        """Hide a finished resume from new business without deleting anything.
+
+        Idempotent: archiving twice returns the same state. A resume that is
+        still being processed cannot be archived — the Celery task owns its
+        status transitions, and racing it would leave the pipeline writing
+        behind an archive flag.
+        """
+        from datetime import datetime, timezone
+        from sqlalchemy import select
+        from interview_api.core.exceptions import AppError
+        from interview_api.modules.resume.models import Resume
+
+        resume = await self.db.scalar(select(Resume).where(
+            Resume.id == resume_id, Resume.user_id == user_id).with_for_update())
+        if resume is None:
+            from interview_api.core.exceptions import ResumeNotFoundError
+            raise ResumeNotFoundError()
+        if resume.archived_at is not None:
+            return self._serialize_archived(resume)
+        if resume.status in ("UPLOADED", "PROCESSING"):
+            raise AppError("RESUME_PROCESSING", "简历正在解析中，完成或失败后才能归档", 409)
+        resume.archived_at = datetime.now(timezone.utc)
+        return self._serialize_archived(resume)
+
+    async def restore_resume(self, resume_id: int, user_id: int) -> dict:
+        """Undo an archive. Ownership and current state are revalidated here."""
+        from sqlalchemy import select
+        from interview_api.core.exceptions import AppError
+        from interview_api.modules.resume.models import Resume
+
+        resume = await self.db.scalar(select(Resume).where(
+            Resume.id == resume_id, Resume.user_id == user_id).with_for_update())
+        if resume is None:
+            from interview_api.core.exceptions import ResumeNotFoundError
+            raise ResumeNotFoundError()
+        if resume.archived_at is None:
+            raise AppError("RESUME_NOT_ARCHIVED", "该简历未处于归档状态", 409)
+        resume.archived_at = None
+        return self._serialize_archived(resume)
 
     # ── Delete ──
 

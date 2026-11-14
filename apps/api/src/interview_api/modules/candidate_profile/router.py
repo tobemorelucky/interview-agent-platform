@@ -54,6 +54,8 @@ async def generate(request: GenerationRequest, db: AsyncSession = Depends(get_db
         raise AppError("RESUME_NOT_FOUND", "简历不存在", 404)
     if resume.status != "COMPLETED" or not await db.scalar(select(ResumeReport.id).where(ResumeReport.resume_id == resume.id)):
         raise AppError("RESUME_REPORT_NOT_READY", "简历报告尚未完成", 409)
+    if resume.archived_at is not None:
+        raise AppError("RESUME_ARCHIVED", "该简历已归档，不能生成新的画像", 409)
     token = uuid4().hex if request.regenerate else None
     from interview_api.infrastructure.tasks.celery_client import dispatch_generate_candidate_profile
     try:

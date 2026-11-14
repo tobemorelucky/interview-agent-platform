@@ -63,6 +63,11 @@ async def process_resume_async(resume_id: int, task_id: str | None = None) -> No
                 select(ResumeReport.id).where(ResumeReport.resume_id == resume_id)
             ) is not None
         if ready:
+            # A redelivered task must not resurrect a profile for an archived
+            # resume: archive wins over the queued work, idempotently.
+            if saved.archived_at is not None:
+                logger.info("[resume %s] Skip profile generation: resume is archived", resume_id)
+                return
             await generate_profile_best_effort(resume_id)
             return
 

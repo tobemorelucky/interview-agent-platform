@@ -84,12 +84,14 @@ async def upload_resume(
 async def list_resumes(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
+    include_archived: bool = Query(False),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """List current user's resumes, newest first."""
+    """List current user's resumes, newest first; archived ones only on request."""
     service = ResumeService(db)
-    data = await service.list_resumes(current_user.id, page=page, page_size=page_size)
+    data = await service.list_resumes(current_user.id, page=page, page_size=page_size,
+                                      include_archived=include_archived)
     return success(data=data)
 
 
@@ -114,6 +116,37 @@ async def get_resume_report(
     """Get the full report for a completed resume (own resume only)."""
     service = ResumeService(db)
     data = await service.get_report(resume_id, current_user.id)
+    return success(data=data)
+
+
+@router.post("/{resume_id}/archive", status_code=200)
+async def archive_resume(
+    resume_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Archive a finished resume (own resume only); idempotent.
+
+    Archiving hides the resume from new interviews, matching and profile
+    generation. Nothing is deleted: the MinIO file, the report and every
+    derived profile version stay exactly where they are.
+    """
+    service = ResumeService(db)
+    data = await service.archive_resume(resume_id, current_user.id)
+    await db.commit()
+    return success(data=data)
+
+
+@router.post("/{resume_id}/restore", status_code=200)
+async def restore_resume(
+    resume_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Undo an archive (own resume only)."""
+    service = ResumeService(db)
+    data = await service.restore_resume(resume_id, current_user.id)
+    await db.commit()
     return success(data=data)
 
 

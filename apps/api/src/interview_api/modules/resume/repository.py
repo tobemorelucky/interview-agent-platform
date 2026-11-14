@@ -105,19 +105,27 @@ class ResumeRepository:
         await self.db.flush()
 
     async def list_by_user(
-        self, user_id: int, offset: int = 0, limit: int = 20
+        self, user_id: int, offset: int = 0, limit: int = 20, *, include_archived: bool = False
     ) -> tuple[list[Resume], int]:
+        # Archived resumes stay in the table and keep their history; the default
+        # listing simply stops offering them, and the management view opts in.
+        scope = Resume.user_id == user_id
+        if not include_archived:
+            scope = scope & Resume.archived_at.is_(None)
         result = await self.db.execute(
             select(Resume)
-            .where(Resume.user_id == user_id)
+            .where(scope)
             .order_by(Resume.created_at.desc())
             .offset(offset)
             .limit(limit)
         )
         items = list(result.scalars().all())
 
+        count_scope = Resume.user_id == user_id
+        if not include_archived:
+            count_scope = count_scope & Resume.archived_at.is_(None)
         count_result = await self.db.execute(
-            select(sql_func.count()).select_from(Resume).where(Resume.user_id == user_id)
+            select(sql_func.count()).select_from(Resume).where(count_scope)
         )
         total = count_result.scalar() or 0
         return items, total
