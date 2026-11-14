@@ -1111,3 +1111,25 @@ parse_status/confirm/version 原样，恢复=回到原确认态，推荐现算�
 E2E 库 `interview_agent_wb_r22_e2e_20261114`@0028，Chrome 截图 `r22_01..r22_06`。
 生产库仍 0025 未动；归档 ≠ 清除：MinIO 文件、raw_text、requirements_json、画像、报告、账本全部原地保留（docs/101 §8）。
 L3 前置条件（purge_requests 表、清理顺序、audit_logs 脱敏、Celery 幂等清理）已写入 docs/101 §9，等待单独审批。
+
+---
+
+## 第二十三轮：L3 个人数据实际清除（隔离环境限定，见 docs/102）
+
+**批准范围**：仅隔离库 + 合成用户；不碰正式库/历史 Live，不开真实用户永久删除入口，L4 不做。真实模型 HTTP=0。
+
+**Bundle**：`.../backups/interview-agent-platform-rc-v1-20261114-1528-71e9d8f.bundle`（2.7MB，轮初 `71e9d8f`，163 commits/713 files，clone 恢复干净）；远端本轮可达= `411c345`（本地领先 109）；旧两个 Bundle 保留；同 E: 盘，**无异地容灾**。
+
+**决定性发现（必须记住）**：DB 有 7 类不可变触发器——`immutable_history`（candidate_facts/*_experiences/user_skills/fact_evidence/profile_versions/corrections/resume_evidence/user_confirmed_evidence）、`m4_snapshot_immutable`、`m5_report_guard`/`m5_observation_guard`/`m5_proposal_guard`、`job_match_*_guard`，`BEFORE UPDATE/DELETE` 无条件抛异常。且 `interview_context_snapshots.context_json` 是**完整个人数据副本**（profile/normalized/facts/带 excerpt 的 evidence/requirements/company/job_title/记忆层），被 sessions 与 reports RESTRICT 引用，删源行根本清不掉。
+→ 事务内 `ALTER TABLE DISABLE TRIGGER USER` 实测可行且可回滚，但等于关闭账本完整性保证；按"不要为了完成这一轮破坏已有系统"**不采用**。`preflight_blockers()` 在任何写入前只读检测，命中即 `BLOCKED`、零写入、可完全恢复。
+
+**实现**：迁移 0029 只建 `purge_requests` 表（不改任何现有表/外键/约束）。状态机 REQUESTED→FENCED→CLEANING→VERIFYING→COMPLETED + FAILED(可恢复)/BLOCKED；`completed_steps` 断点续做；`COMPLETED` 只由独立 verifier 写。围栏=请求行本身（任意状态都拦），咽喉点覆盖 build_context/private_target/画像生成/匹配/JD read&owned/归档恢复/旧删除路径；`candidate_profile_version_id` 反查 source_resume 验围栏；`resume_id`/`job_target_id` 直验。任务侧 `ResumeProfileAgent.run` 返回 SKIPPED、processor 各写回点复用同一 session 验围栏（**不要新开 session**，Windows 跨事件循环会报 asyncpg 错）。
+顺序：DB 内容擦除→MinIO 对象→Redis→独立验证；MinIO 失败标 FAILED 不宣称完成；任务只传 `purge_request_id`，user/resource/object_key 全从 DB 读，防跨用户。
+兼容 0025：围栏探针先 `to_regclass`，表不存在直接视为未围栏，正常链路不报错。
+执行三闸（默认全关）：`purge_execution_enabled=False` + `purge_test_user_ids` 白名单 + `db_targets` 必须隔离库；前端无执行接口。
+
+**全量回归抓到的真实缺陷（已修）**：① 清除 PRIVATE_JD 时 `resume_evidence` 作用域误用 `resume_id=:rid`，命中同一用户另一份简历的 11 行 evidence——改为 `resume_rid`/`target_rid` 分离 + audit_ids 加 `resource_type`；② processor 写回点新开 DB session 导致事件循环污染；③ 迁移测试假设库从 base 起，改为状态无关（upgrade head→downgrade 0027→逐步升）。
+
+**测试**：全量 `966 passed / 0 failed / 1 skipped`；迁移 `12 passed`；L3 专项 `13 passed`；前端 7 passed + `vue-tsc`/build 通过。故障注入：MinIO 失败重试、对象谎报成功被验证拦下、DB 步后崩溃断点恢复、旧任务重投不复活、canary 全库扫描 0 命中。真实 Chrome（合成用户 id=1）E2E：申请→worker 实际执行→`BLOCKED/UNSAFE_DEPENDENCY`、`completed_steps=[]`、诊断只列触发器名无原文；UI 五态与诚实文案核对通过，截图 `r23_01..03`。
+
+**上线条件=否**：清除被历史引用的资料需单独审批的"不可变历史窄例外迁移"；用户级聚合需资源级归属或 L4；外部备份/模型服务端/Capture 需独立保留期流程；生产 0025→0029 未迁移。COMPLETED 只代表"约定清除范围验证通过"，绝不代表账号级或外部副本已清除。
