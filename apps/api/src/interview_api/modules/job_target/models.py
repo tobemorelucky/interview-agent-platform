@@ -41,6 +41,9 @@ class UserJobTarget(TimestampMixin, Base):
     parse_error: Mapped[str | None] = mapped_column(String(500), nullable=True)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Round 22 (L2): archive is a lifecycle timestamp, not a parse_status value —
+    # the CHECK on parse_status stays four-valued, and NULL keeps old rows intact.
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     __table_args__ = (
         UniqueConstraint("user_id", "content_fingerprint", name="uq_user_job_targets_owner_content"),

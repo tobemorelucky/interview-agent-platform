@@ -30,6 +30,9 @@ class Resume(Base):
         String(20), nullable=False, default="UPLOADED", server_default="UPLOADED"
     )
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Round 22 (L1): a separate lifecycle timestamp, never a `status` value —
+    # archived is not a processing state, and NULL keeps every old row intact.
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     task_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     raw_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     processing_started_at: Mapped[datetime | None] = mapped_column(
