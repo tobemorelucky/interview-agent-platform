@@ -1061,3 +1061,24 @@ D3 JD 抽取用量记在 `legacy_llm`（`governed_call` 无 `model_scope` 的兜
 D4 Celery `acks_late` + 无 autoretry 的重投未演练；D5 简历/JD 无 UNKNOWN 围栏；D6 96 个提交未推送、远端不可达
 （`schannel` 失败，最后已知 `origin/master=411c345`）。
 未解决样本缺口：B 样本未跑、无小节/英文简历、超长 JD、`/match` 无真实材料对照。
+
+### 2026-11-14 · 第二十一轮（RC V1 数据安全与备份收口，0 次真实 HTTP）
+
+**Git 备份**：远端已核实 `411c345`（`git ls-remote` 成功，第二十轮的 schannel 问题消失），本地领先 99→100。
+Bundle `E:\work\code\python\backups\interview-agent-platform-rc-v1-20261114-1041-8a795ee.bundle`（2.7MB，`--all`），
+`bundle verify` 报 complete history，`clone --no-local` 恢复演练通过（HEAD/153 commits/706 files，fsck 仅 2 个 dangling codex tree）。
+敏感扫描：未推送 2.05MB patch 与全部 refs 7.49MB patch 均 0 密钥/真实邮箱/手机号命中；历史中唯一二进制是远端已有的合成 docx 样本。
+未 push。
+
+**数据删除依赖（只读，67 表全查）**：删除被引用材料的闸门是 `resume_evidence` / `candidate_profile_versions.source_resume_id` /
+`candidate_profile_generations`（409 RESUME_REFERENCED_BY_PROFILE）与 `interview_context_snapshots.job_target_id`（409 JOB_TARGET_IN_USE）；
+`interview_sessions.resume_id` 是 SET NULL（删简历不拦旧会话）。`model_admissions` 无个人内容、`model_budget_owners` 对 users RESTRICT（账本天然保留）。
+`audit_logs.before/after_json` 可能内嵌内容片段→需脱敏非删除。方案分四层：L1 简历归档（`resumes.status` 无 CHECK，零迁移）/
+L2 JD 归档（0027 的 CHECK 限制，需小迁移）/ L3 `purge_requests`+Celery 清理+脱敏（需迁移）/ L4 账号删除。**全部未实施，待批准。**
+
+**归因修复（`473f6db`，无迁移）**：`governed_call` 无 scope 时兜底 `legacy_llm`，JD 路径从未设置 scope——第二十轮 2 次调用记在
+`legacy_llm`。`JobTargetService.extract` 现以 `(factory,"user:{id}",id,EXTRACT_ROUTE)` 设置 `model_scope` 并在 finally 复位，
+parse 端点传 `user.id`；无 user 的系统调用保持旧行为。测试 `test_jd_extract_route_attribution.py`(2)；
+全量 `interview_agent_wb_r21_full_test_20261114` **932 passed / 0 failed / 1 skipped**。
+
+**分级结论**：P0=生产 0025→0027 前置预检（`interview_context_snapshots` 三公共 FK 必须齐全，否则 0027 的 CHECK 建失败；downgrade 对私有快照主动拒绝）；P1=简历/JD 路径无 UNKNOWN 未决围栏（崩溃后重试会二次真实发送）+ Celery 抽取中途崩溃重复计费（COMPLETED 即跳过的防护已存在，`processor.py:55-67`）；P2=JD 状态 CHECK 限制归档值。0028 未实施、生产库未动、Coach Harness 仍 OFF。
