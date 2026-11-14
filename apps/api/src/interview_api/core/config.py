@@ -188,6 +188,13 @@ class Settings(BaseSettings):
     interview_coach_max_output_tokens: int = 6000
     interview_coach_provider_concurrency: int = 2
     interview_coach_max_input_bytes: int = 200000
+    # Round 23 / L3: real personal-data purge execution. OFF by default.
+    # Enabling requires BOTH this flag and an explicit synthetic-user allowlist
+    # and an isolated test/E2E database (checked in purge.service). A UI button
+    # can never turn real deletion on.
+    purge_execution_enabled: bool = False
+    purge_test_user_ids: str = ""
+
     # Phase 1 harness. OFF keeps the single structured Coach call exactly as it
     # was; ON allows one read-only tool round (two model calls at most).
     interview_coach_harness: bool = False

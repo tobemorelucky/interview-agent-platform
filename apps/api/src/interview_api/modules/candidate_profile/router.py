@@ -56,6 +56,9 @@ async def generate(request: GenerationRequest, db: AsyncSession = Depends(get_db
         raise AppError("RESUME_REPORT_NOT_READY", "简历报告尚未完成", 409)
     if resume.archived_at is not None:
         raise AppError("RESUME_ARCHIVED", "该简历已归档，不能生成新的画像", 409)
+    # Round 23 (L3): a purge request outranks the archive flag.
+    from interview_api.modules.purge.fence import assert_resume_usable
+    await assert_resume_usable(db, resume.id)
     token = uuid4().hex if request.regenerate else None
     from interview_api.infrastructure.tasks.celery_client import dispatch_generate_candidate_profile
     try:

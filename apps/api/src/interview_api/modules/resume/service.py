@@ -188,6 +188,8 @@ class ResumeService:
         from interview_api.core.exceptions import AppError
         from interview_api.modules.resume.models import Resume
 
+        from interview_api.modules.purge.fence import assert_resume_usable
+        await assert_resume_usable(self.db, resume_id)
         resume = await self.db.scalar(select(Resume).where(
             Resume.id == resume_id, Resume.user_id == user_id).with_for_update())
         if resume is None:
@@ -206,6 +208,9 @@ class ResumeService:
         from interview_api.core.exceptions import AppError
         from interview_api.modules.resume.models import Resume
 
+        # Round 23 (L3): restore must not re-enable a resource under purge.
+        from interview_api.modules.purge.fence import assert_resume_usable
+        await assert_resume_usable(self.db, resume_id)
         resume = await self.db.scalar(select(Resume).where(
             Resume.id == resume_id, Resume.user_id == user_id).with_for_update())
         if resume is None:
@@ -220,6 +225,10 @@ class ResumeService:
 
     async def delete_resume(self, resume_id: int, user_id: int) -> None:
         from sqlalchemy import select
+        # Round 23 (L3): a fenced resource is owned by the purge state machine.
+        # The legacy hard-delete path must not race it.
+        from interview_api.modules.purge.fence import assert_resume_usable
+        await assert_resume_usable(self.db, resume_id)
         from interview_api.modules.resume.models import Resume
         from interview_api.modules.candidate_profile.models import ResumeEvidence, CandidateProfileVersion, ProfileGeneration
         from interview_api.core.exceptions import AppError

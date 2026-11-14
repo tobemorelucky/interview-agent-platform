@@ -24,6 +24,13 @@ class ResumeProfileAgent:
         self.router = router or build_resume_profile_router()
 
     async def run(self, resume_id: int, *, regeneration_token: str | None = None):
+        # Round 23 (L3): a redelivered/queued task must never resurrect a
+        # profile for a resource whose personal data has been purged.
+        from interview_api.modules.purge.fence import table_present, is_fenced
+        from interview_api.modules.purge.constants import RESUME
+        async with self.factory() as _db:
+            if await table_present(_db) and await is_fenced(_db, RESUME, resume_id):
+                return {"status": "SKIPPED", "reason": "RESOURCE_PURGED"}
         generation_id = run_id = None
         prepared = False
         state_diagnostics = []

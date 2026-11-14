@@ -226,6 +226,10 @@ class JobTargetService:
 
     # ── ownership ──
     async def owned(self, user_id: int, target_id: int) -> UserJobTarget:
+        # Round 23 (L3): the purge fence outranks every JD operation, including
+        # archive/restore. A request under purge can never be re-enabled.
+        from interview_api.modules.purge.fence import assert_target_usable
+        await assert_target_usable(self.db, target_id)
         target = await self.db.scalar(select(UserJobTarget).where(
             UserJobTarget.id == target_id, UserJobTarget.user_id == user_id).with_for_update())
         if target is None:
@@ -234,6 +238,8 @@ class JobTargetService:
         return target
 
     async def read(self, user_id: int, target_id: int) -> UserJobTarget:
+        from interview_api.modules.purge.fence import assert_target_usable
+        await assert_target_usable(self.db, target_id)
         target = await self.db.scalar(select(UserJobTarget).where(
             UserJobTarget.id == target_id, UserJobTarget.user_id == user_id)
             .with_for_update(read=True, key_share=True))
@@ -443,6 +449,15 @@ class JobTargetService:
             scope = scope & UserJobTarget.archived_at.is_(None)
         rows = (await self.db.scalars(select(UserJobTarget).where(scope)
             .order_by(UserJobTarget.id.desc()).limit(limit).offset(offset))).all()
+        # Round 23 (L3): drop resources with a purge fence from the usable list.
+        from interview_api.modules.purge.fence import table_present
+        from interview_api.modules.purge.models import PurgeRequest
+        from interview_api.modules.purge.constants import PRIVATE_JD
+        if rows and await table_present(self.db):
+            fenced = set((await self.db.scalars(select(PurgeRequest.resource_id).where(
+                PurgeRequest.resource_type == PRIVATE_JD,
+                PurgeRequest.resource_id.in_([r.id for r in rows])))).all())
+            rows = [r for r in rows if r.id not in fenced]
         return [self.serialize(row, brief=True) for row in rows]
 
     async def match_preview(self, user_id: int, target_id: int) -> dict:

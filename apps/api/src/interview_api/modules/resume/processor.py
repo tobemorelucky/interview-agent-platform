@@ -21,6 +21,21 @@ logger = logging.getLogger(__name__)
 _PROMPT_DIR = Path(__file__).resolve().parents[4] / "prompt_templates"
 
 
+async def _fenced(db, resume_id: int) -> bool:
+    """Fence check that REUSES the caller's session (no extra connection, so
+    no cross-event-loop asyncpg handles). Safe on pre-0029 databases."""
+    from interview_api.modules.purge.fence import table_present, is_fenced
+    from interview_api.modules.purge.constants import RESUME
+    return await table_present(db) and await is_fenced(db, RESUME, resume_id)
+
+
+async def _purge_fence_active(resume_id: int) -> bool:
+    """Standalone probe for callers without a session (task entry / tests)."""
+    from interview_api.infrastructure.db.session import async_session_factory
+    async with async_session_factory() as db:
+        return await _fenced(db, resume_id)
+
+
 @dataclass(frozen=True)
 class ResumeSnapshot:
     id: int
@@ -58,6 +73,11 @@ async def process_resume_async(resume_id: int, task_id: str | None = None) -> No
         from interview_api.modules.candidate_profile.agent import generate_profile_best_effort
         from sqlalchemy import select
         async with async_session_factory() as db:
+            # Round 23 (L3): a purge request is a persistent fence. Check it
+            # inside the SAME session the pipeline already opens.
+            if await _fenced(db, resume_id):
+                logger.info("[resume %s] Skip processing: resource is under purge", resume_id)
+                return
             saved = await db.get(Resume, resume_id)
             ready = saved is not None and saved.status == "COMPLETED" and await db.scalar(
                 select(ResumeReport.id).where(ResumeReport.resume_id == resume_id)
@@ -188,6 +208,9 @@ async def _mark_processing_started(resume_id: int) -> None:
     from interview_api.modules.resume.repository import ResumeRepository
 
     async with async_session_factory() as db:
+        if await _fenced(db, resume_id):
+            logger.info("[resume %s] Skip write-back: resource is under purge", resume_id)
+            return
         repo = ResumeRepository(db)
         await repo.mark_processing_started(resume_id)
         await db.commit()
@@ -198,6 +221,9 @@ async def _save_raw_text(resume_id: int, raw_text: str) -> None:
     from interview_api.modules.resume.repository import ResumeRepository
 
     async with async_session_factory() as db:
+        if await _fenced(db, resume_id):
+            logger.info("[resume %s] Skip write-back: resource is under purge", resume_id)
+            return
         await ResumeRepository(db).update_raw_text(resume_id, raw_text)
         await db.commit()
 
@@ -207,6 +233,9 @@ async def _update_stage(resume_id: int, stage: str, message: str = "") -> None:
     from interview_api.modules.resume.repository import ResumeRepository
 
     async with async_session_factory() as db:
+        if await _fenced(db, resume_id):
+            logger.info("[resume %s] Skip write-back: resource is under purge", resume_id)
+            return
         await ResumeRepository(db).update_processing_stage(resume_id, stage, message)
         await db.commit()
 
@@ -227,6 +256,9 @@ async def _save_report_and_complete(
     )
 
     async with async_session_factory() as db:
+        if await _fenced(db, resume.id):
+            logger.info("[resume %s] Skip report write-back: resource is under purge", resume.id)
+            return
         resume_repo = ResumeRepository(db)
         report_repo = ResumeReportRepository(db)
         await report_repo.delete_by_resume_id(resume.id)
@@ -254,6 +286,9 @@ async def _mark_failed_best_effort(resume_id: int, error_text: str) -> None:
 
     try:
         async with async_session_factory() as db:
+            if await _fenced(db, resume_id):
+                logger.info("[resume %s] Skip failure write-back: resource is under purge", resume_id)
+                return
             repo = ResumeRepository(db)
             await repo.mark_processing_finished(
                 resume_id, "FAILED", error_message=error_text

@@ -36,6 +36,10 @@ class JobMatchingService:
                     if old.input_snapshot_json["request"] != request.model_dump():
                         raise AppError("MATCH_REQUEST_CONFLICT", "请求标识已用于不同筛选条件", 409)
                     return await self.serialize(db, old)
+                # Round 23 (L3): a direct candidate_profile_version_id must not
+                # bypass the resume purge fence.
+                from interview_api.modules.purge.fence import assert_profile_version_usable
+                await assert_profile_version_usable(db, request.candidate_profile_version_id)
                 profile = await profile_snapshot(db, user_id, request.candidate_profile_version_id)
                 preferences = await approved_preferences(db, user_id)
                 selected, excluded, coverage = await retrieve(db, profile, request.filters.model_dump())
@@ -66,6 +70,8 @@ class JobMatchingService:
     async def generate(self, user_id, run_id):
         async with self.factory() as db:
             run = await self.owned(db, user_id, run_id, True)
+            from interview_api.modules.purge.fence import assert_profile_version_usable
+            await assert_profile_version_usable(db, run.candidate_profile_version_id)
             if run.status == "COMPLETED": return await self.serialize(db, run)
             if run.status == "RUNNING":
                 previous = await db.scalar(select(JobMatchAttempt).where(JobMatchAttempt.run_id == run.id,

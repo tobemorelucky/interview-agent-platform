@@ -25,6 +25,7 @@ from interview_api.modules.memory.proposal_router import router as memory_propos
 from interview_api.modules.job_matching.router import router as job_matching_router
 from interview_api.modules.job_target.router import router as job_target_router
 from interview_api.modules.public_career.router import router as public_career_router
+from interview_api.modules.purge.router import router as purge_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -147,6 +148,7 @@ app.include_router(public_career_router)
 from interview_api.modules.public_career.web_router import router as public_web_router
 app.include_router(public_web_router)
 app.include_router(audit_router)
+app.include_router(purge_router)
 
 
 @app.get("/")
