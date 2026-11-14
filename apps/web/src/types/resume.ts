@@ -80,6 +80,10 @@ export interface ResumeSummary {
   skills: Skills
   projects: Project[]
   internships: Internship[]
+  /** Full-time roles, kept apart from internships (server decides by section). */
+  work_experience?: Internship[]
+  /** Employment entries the resume's own sections could not place in either bucket. */
+  unclassified_experience?: Internship[]
   publications: Record<string, unknown>[]
   highlights: string[]
   risk_points: RiskPoint[]

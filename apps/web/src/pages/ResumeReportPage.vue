@@ -130,6 +130,26 @@ onUnmounted(() => {
             <p>{{ r.description }}</p>
           </div>
         </div>
+
+        <!-- Round 20: an entry the resume could not place is shown verbatim so the
+             candidate can still verify it; it is never counted as work or internship. -->
+        <div v-if="report.summary_json.unclassified_experience?.length" class="info-card">
+          <h4>待确认经历（{{ report.summary_json.unclassified_experience.length }}）</h4>
+          <p class="hint">
+            以下经历无法按简历原文的小节判定为「工作」或「实习」，因此不计入任何一类，也不会当作工作年限。
+            请对照原文核对；如需修正，可在「我的画像」里调整。
+          </p>
+          <div v-for="(item, i) in report.summary_json.unclassified_experience" :key="i">
+            <p>
+              <strong>{{ item.company || "（未写明公司）" }}</strong>
+              <span v-if="item.role"> · {{ item.role }}</span>
+              <span v-if="item.duration"> · {{ item.duration }}</span>
+            </p>
+            <ul v-if="item.responsibilities?.length">
+              <li v-for="(line, j) in item.responsibilities" :key="j">{{ line }}</li>
+            </ul>
+          </div>
+        </div>
       </section>
 
       <!-- 2. Retrieval Process -->
