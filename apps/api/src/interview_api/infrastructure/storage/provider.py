@@ -33,6 +33,10 @@ class MinioObjectStorageProvider:
     async def upload(
         self, bucket_name: str, object_key: str, data: bytes, content_type: str
     ) -> None:
+        # A fresh deployment (or a per-round acceptance bucket) has no bucket
+        # yet, and put_object answers NoSuchBucket as a 500. Creating it here is
+        # idempotent and is the only place resume uploads can rely on.
+        await self.ensure_bucket(bucket_name)
         await asyncio.to_thread(
             self._client.put_object,
             bucket_name,
