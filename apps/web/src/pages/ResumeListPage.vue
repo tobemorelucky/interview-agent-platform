@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
-import { listResumes, uploadResume, deleteResume } from "../api/resume";
+import { listResumes, uploadResume, deleteResume, archiveResume, restoreResume } from "../api/resume";
 import { ApiError } from "../api/client";
 import { userError } from "../i18n/zh-CN";
 import type { Resume } from "../types/resume";
@@ -21,7 +21,9 @@ async function fetchList() {
   loading.value = true;
   error.value = "";
   try {
-    const data = await listResumes(1, 50);
+    // The management view opts in, so an archived resume stays visible with a
+    // badge and can be restored; everywhere else it is simply absent.
+    const data = await listResumes(1, 50, true);
     resumes.value = data.items;
     total.value = data.total;
     managePolling();
@@ -62,6 +64,28 @@ async function handleUpload(file: File) {
     }
   } finally {
     uploading.value = false;
+  }
+}
+
+const ARCHIVE_NOTICE =
+  "归档后将无法用于新的面试或训练，但历史记录及相关数据不会因此被彻底删除。";
+
+async function handleArchive(id: number) {
+  if (!confirm(ARCHIVE_NOTICE + " 确定归档这份简历吗？")) return;
+  try {
+    await archiveResume(id);
+    await fetchList();
+  } catch (e) {
+    error.value = e instanceof ApiError ? e.message : "归档失败，请重试。";
+  }
+}
+
+async function handleRestore(id: number) {
+  try {
+    await restoreResume(id);
+    await fetchList();
+  } catch (e) {
+    error.value = e instanceof ApiError ? e.message : "恢复失败，请重试。";
   }
 }
 
@@ -148,6 +172,9 @@ onUnmounted(() => {
             <span v-if="r.error_message" class="error-tip" :title="userError(r.error_message)">
               ⚠
             </span>
+            <span v-if="r.archived_at" class="badge-archived" title="归档后不能用于新的面试或训练；历史记录不会被删除">
+              已归档
+            </span>
           </td>
           <td class="stage">
             <template v-if="r.processing_stage">
@@ -172,6 +199,9 @@ onUnmounted(() => {
             >
               查看详情
             </button>
+            <button v-if="!r.archived_at && (r.status === 'COMPLETED' || r.status === 'FAILED')"
+              class="btn-action btn-archive" @click="handleArchive(r.id)">归档</button>
+            <button v-if="r.archived_at" class="btn-action btn-view" @click="handleRestore(r.id)">恢复</button>
             <button class="btn-action btn-delete" @click="handleDelete(r.id)">删除</button>
           </td>
         </tr>
@@ -181,6 +211,20 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.badge-archived {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: #eef1f6;
+  color: #5b6472;
+  font-size: 12px;
+}
+.btn-archive {
+  background: #f0f4ff;
+  color: #2f54eb;
+}
+
 .resume-list-page {
   max-width: 960px;
   margin: 0 auto;

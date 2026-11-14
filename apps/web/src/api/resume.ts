@@ -10,9 +10,19 @@ export async function uploadResume(file: File): Promise<Resume> {
   return response as unknown as Resume;
 }
 
-export async function listResumes(page = 1, pageSize = 20): Promise<ResumeList> {
-  const response = await client.get("/resumes", { params: { page, page_size: pageSize } });
+export async function listResumes(page = 1, pageSize = 20, includeArchived = false): Promise<ResumeList> {
+  const response = await client.get("/resumes", {
+    params: { page, page_size: pageSize, include_archived: includeArchived },
+  });
   return response as unknown as ResumeList;
+}
+
+export async function archiveResume(id: number): Promise<void> {
+  await client.post(`/resumes/${id}/archive`, {});
+}
+
+export async function restoreResume(id: number): Promise<void> {
+  await client.post(`/resumes/${id}/restore`, {});
 }
 
 export async function getResume(id: number): Promise<ResumeDetail> {

@@ -6,6 +6,8 @@ export interface Resume {
   file_type: string
   file_size: number
   status: "UPLOADED" | "PROCESSING" | "COMPLETED" | "FAILED"
+  /** Round 22 (L1): lifecycle timestamp; archived resumes stay in the table. */
+  archived_at: string | null
   error_message: string | null
   task_id: string | null
   processing_stage: string | null

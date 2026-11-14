@@ -30,6 +30,8 @@ export interface JobTarget {
   version: number
   requirement_count: number
   confirmed_at?: string | null
+  /** Round 22 (L2): lifecycle timestamp; archived targets keep their history. */
+  archived_at?: string | null
   created_at?: string | null
   updated_at?: string | null
   raw_text?: string

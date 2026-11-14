@@ -8,8 +8,16 @@ export interface TargetRequirementInput {
   topic?: string | null
 }
 
-export async function listTargets(): Promise<JobTarget[]> {
-  return await client.get('/job-targets') as unknown as JobTarget[]
+export async function listTargets(includeArchived = false): Promise<JobTarget[]> {
+  return await client.get('/job-targets', { params: { include_archived: includeArchived } }) as unknown as JobTarget[]
+}
+
+export async function archiveTarget(id: number): Promise<void> {
+  await client.post(`/job-targets/${id}/archive`, {})
+}
+
+export async function restoreTarget(id: number): Promise<void> {
+  await client.post(`/job-targets/${id}/restore`, {})
 }
 
 export async function getTarget(id: number): Promise<JobTarget> {

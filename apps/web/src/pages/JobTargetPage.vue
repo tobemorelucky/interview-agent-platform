@@ -3,8 +3,8 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ApiError } from '../api/client'
 import {
-  confirmTarget, createTarget, deleteTarget, getTarget, listTargets, matchTarget, parseTarget,
-  skillRecommendations, updateRequirements,
+  archiveTarget, confirmTarget, createTarget, deleteTarget, getTarget, listTargets, matchTarget,
+  parseTarget, restoreTarget, skillRecommendations, updateRequirements,
 } from '../api/job-target'
 import type {
   JobTarget, JobTargetMatch, JobTargetRequirement, RequirementBasis, SkillEvidenceHit,
@@ -37,9 +37,32 @@ const message = (e: unknown) => e instanceof ApiError ? e.message : '请求失�
 const canCreate = computed(() => rawText.value.trim().length >= 80 && !busy.value)
 const confirmed = computed(() => current.value?.parse_status === 'CONFIRMED')
 
+const ARCHIVE_NOTICE =
+  '归档后将无法用于新的面试或训练，但历史记录及相关数据不会因此被彻底删除。'
+
 async function load() {
   busy.value = true; error.value = ''
-  try { targets.value = await listTargets() } catch (e) { error.value = message(e) } finally { busy.value = false }
+  // The management view includes archived rows (badge + restore); new business
+  // gates live on the server, so hiding them here would only be cosmetic.
+  try { targets.value = await listTargets(true) } catch (e) { error.value = message(e) } finally { busy.value = false }
+}
+
+async function handleArchive(id: number) {
+  if (!window.confirm(ARCHIVE_NOTICE + ' 确定归档这个目标岗位吗？')) return
+  try {
+    await archiveTarget(id)
+    if (current.value?.id === id) current.value = null
+    await load()
+  } catch (e) { error.value = message(e) }
+}
+
+async function handleRestore(id: number) {
+  try {
+    await restoreTarget(id)
+    await load()
+    // Re-open so the archived panel and the read-only state disappear at once.
+    await open(id)
+  } catch (e) { error.value = message(e) }
 }
 
 async function loadSkillRecommendation(id: number) {
@@ -61,7 +84,7 @@ async function open(id: number) {
     const target = await getTarget(id)
     current.value = target
     draft.value = (target.requirements || []).map(row => ({ statement: row.statement, importance: row.importance, basis: row.basis }))
-    if (target.parse_status === 'CONFIRMED') void loadSkillRecommendation(id)
+    if (target.parse_status === 'CONFIRMED' && !target.archived_at) void loadSkillRecommendation(id)
   } catch (e) { error.value = message(e) } finally { busy.value = false }
 }
 
@@ -223,11 +246,19 @@ load()
                unconfirmed one says why instead of offering a button that the
                server would refuse. Own line, so the reason does not run into
                the version text. -->
-          <div v-if="item.parse_status === 'CONFIRMED'">
+          <div v-if="item.archived_at">
+            <span class="badge-archived" title="归档后不能用于新的面试或训练；历史记录不会被删除">已归档</span>
+            <button :disabled="busy" @click="handleRestore(item.id)">恢复</button>
+          </div>
+          <div v-else-if="item.parse_status === 'CONFIRMED'">
             <button :disabled="busy" :aria-label="`用 ${item.company_name} ${item.job_title} 开始训练`"
               @click="startTraining(item.id)">开始训练</button>
+            <button :disabled="busy" @click="handleArchive(item.id)">归档</button>
           </div>
-          <div v-else><small>确认 JD 后可开始训练（当前为{{ statusLabels[item.parse_status] }}）</small></div>
+          <div v-else>
+            <small>确认 JD 后可开始训练（当前为{{ statusLabels[item.parse_status] }}）</small>
+            <button :disabled="busy" @click="handleArchive(item.id)">归档</button>
+          </div>
         </li>
       </ul>
     </section>
@@ -238,7 +269,13 @@ load()
         <template v-if="current.parse_mode"> · {{ current.parse_mode === 'RULE' ? '规则解析' : '模型解析' }}</template>
         <template v-if="current.parse_error"> · {{ current.parse_error }}</template>
       </p>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <div v-if="current.archived_at" class="archived-panel" role="status">
+        <span class="badge-archived">已归档</span>
+        <p>归档后将无法用于新的面试或训练，但历史记录及相关数据不会因此被彻底删除。
+          你仍可以查看原文与要求；历史会话继续使用它们当时冻结的版本。</p>
+        <button :disabled="busy" @click="handleRestore(current.id)">恢复使用</button>
+      </div>
+      <div v-else style="display:flex;gap:8px;flex-wrap:wrap">
         <button :disabled="busy || confirmed" @click="parse">解析岗位要求</button>
         <button :disabled="busy" @click="save">保存要求修改</button>
         <button :disabled="busy || confirmed || !draft.length" @click="confirm">确认用于面试</button>
@@ -246,9 +283,10 @@ load()
         <button :disabled="busy" @click="useInInterview">用这个岗位开始面试</button>
         <button :disabled="busy || !confirmed" @click="useInTraining">用这个岗位开始训练</button>
         <button :disabled="busy" @click="remove">删除</button>
+        <button :disabled="busy" class="btn-archive" @click="handleArchive(current.id)">归档</button>
       </div>
 
-      <section v-if="confirmed" class="skill-rec" aria-label="私有 JD 的推荐专业方向">
+      <section v-if="confirmed && !current.archived_at" class="skill-rec" aria-label="私有 JD 的推荐专业方向">
         <h4>推荐的专业方向（规则匹配 · 0 次模型调用）</h4>
         <p v-if="skillRecError" role="alert">推荐读取失败：{{ skillRecError }}。你仍可在面试或训练页手动选择专业 Skill。</p>
         <template v-if="skillRec">
@@ -294,10 +332,11 @@ load()
         <p>确认 JD 之后才提供正式推荐；未确认版本不提供推荐，也不会编造相关性。当前状态：{{ statusLabels[current.parse_status] }}。</p>
       </section>
 
-      <h4>岗位要求（可修改、删除、补充）</h4>
-      <p><small>「性质」由服务端按 JD 原文判定：只有原文写了必须或最低门槛才是硬性要求；
+      <h4 v-if="!current.archived_at">岗位要求（可修改、删除、补充）</h4>
+      <h4 v-else>岗位要求（只读 · 已归档）</h4>
+      <p v-if="!current.archived_at"><small>「性质」由服务端按 JD 原文判定：只有原文写了必须或最低门槛才是硬性要求；
         列在任职要求里但没写必须的仍记为「原文未标明」，并在下一行说明依据。</small></p>
-      <table v-if="draft.length" style="width:100%">
+      <table v-if="draft.length && !current.archived_at" style="width:100%">
         <thead><tr><th>要求</th><th>性质</th><th></th></tr></thead>
         <tbody>
           <tr v-for="(row, index) in draft" :key="index">
@@ -314,8 +353,14 @@ load()
           </tr>
         </tbody>
       </table>
-      <p v-else>尚未解析出要求；可以手动添加。</p>
-      <button @click="addRow">+ 添加一条要求</button>
+      <p v-else-if="!current.archived_at">尚未解析出要求；可以手动添加。</p>
+      <ul v-if="current.archived_at">
+        <li v-for="row in draft" :key="row.statement">
+          {{ row.statement }} — {{ importanceLabels[row.importance] }}<span
+            v-if="row.basis">（{{ basisLabels[row.basis] || row.basis }}）</span>
+        </li>
+      </ul>
+      <button v-if="!current.archived_at" @click="addRow">+ 添加一条要求</button>
 
       <details>
         <summary>查看 JD 原文</summary>
