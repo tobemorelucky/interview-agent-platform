@@ -1025,3 +1025,39 @@ JD 性质下拉下显示 `basis` 灰字；推荐分"规则理由 / JD 逐字证�
 ② 标题仍 8 分，要求文本过短时仍可能领先（此时返回 AMBIGUOUS，代价是多点一次）；
 ③ 长术语覆盖只对"已注册"长术语生效，"图数据库/时序数据库"仍会命中"数据库"；
 ④ `unclassified_experience` 进得了面试 Prompt，但前端没有独立区块，用户看不到被降级的条目。
+
+### 2026-11-14 · 第二十轮（Release Candidate V1 质量验收：6 次真实 HTTP，未跑面试/Coach）
+
+**闸门按轮收紧**：`serve_offline_acceptance.py` 新增 `--live-max-calls/-tokens/-minutes`，
+只能收紧不能放宽（超过 `live_model_gate.LIMITS` 直接退出，无 `--live` 时拒绝），启动即打印 `LIVE_LIMITS`。
+本轮 API 2 次/20k、Worker 4 次/40k，**合计等于 6 次/60k**（两个进程各建一个 gate，不分开就会变成 12 次）。
+
+**真实复核结果（A 复用 R18、E 新增、C 真实 JD、D 合成对照）**
+- A：模型自己报 `work_experience`（`reported_as=work_experience`），11 锚点全在 `work`，`internships=[]`。
+  **这是第十九轮 HTTP=0 无法证明的一点：模型侧也改对了，不再是服务端搬家。**
+- E：work 1（DEMO 云计算公司）/ intern 1（DEMO 电商公司）/ `unclassified_experience` 1（DEMO 开源社区，`UNRESOLVED`）。
+- 画像：v1(A) work 1 / intern 0；v2(E) work 1 / intern 1，开源社区落 `projects`（非雇佣）。33 条事实 **33/33** 逐字可追溯，
+  雇佣事实证据小节无交叉。
+- JD：C 3 LISTED + 1 `EXPLICIT_MANDATORY`（"至少一种"）；D 4 LISTED + 1 `EXPLICIT_PREFERRED`；9/9 行逐字；无地点噪声。
+- 推荐：C `RECOMMENDED` ai(20=12+8)；D `AMBIGUOUS` + `TITLE_CONFLICTS_WITH_REQUIREMENTS` 且 `auto_select=false`。
+  遗留噪声：C 上 `bank_it` 因通用词"编程"得 3 分（`eligible=false`，不影响选择）。
+- 用量：6 次 / 结算 **13,177** token（预占 74,425，闸门估算 52,212）/ 模型时间约 50 秒；6 行全 `SETTLED`。
+
+**本轮真实 500（已修 `2332e06`）**：换用按轮命名 bucket 后首次上传 `NoSuchBucket` —— `upload()` 从不调
+`ensure_bucket()`（只有知识库导入调），新环境首次上传必失败。已修 + 2 条测试。
+
+**前端最小增补（`ee08ec0`）**：`unclassified_experience` 原本没有任何可见区块，无法核对履历。
+简历报告页新增只读「待确认经历（N）」，声明"不计入任何一类，也不当作工作年限"，不改画像结构。
+
+**浏览器**：工作/实习分栏正确且依据标注小节；JD 性质下有 basis 灰字；推荐分「规则判定」与「JD 原文逐字证据」；
+D 无「系统首推」；手选 Skill 3.5s 未被覆盖；改 JD 到 v2 后旧会话仍是第 1 版。截图 `r20_01..r20_07`。
+
+**测试**：业务全量 `interview_agent_wb_r20_final_test_20261114` **930 passed / 0 failed / 1 skipped**；
+迁移 `interview_agent_v21_wb_r20_mig2_20261114` **10 passed**；前端 7 passed；`vue-tsc && vite build` 通过。
+
+**RC 结论（详见 docs/99）**：可冻结为**演示版**，不建议直接小范围真实用户试用。阻断项：
+D1 生产库 0025 vs 代码 0027（未对生产迁移）；D2 简历/JD 被引用后无法删除（无软删除/匿名化）；
+D3 JD 抽取用量记在 `legacy_llm`（`governed_call` 无 `model_scope` 的兜底名，预算对但无法按功能归因）；
+D4 Celery `acks_late` + 无 autoretry 的重投未演练；D5 简历/JD 无 UNKNOWN 围栏；D6 96 个提交未推送、远端不可达
+（`schannel` 失败，最后已知 `origin/master=411c345`）。
+未解决样本缺口：B 样本未跑、无小节/英文简历、超长 JD、`/match` 无真实材料对照。
