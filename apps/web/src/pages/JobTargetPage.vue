@@ -6,6 +6,9 @@ import {
   archiveTarget, confirmTarget, createTarget, deleteTarget, getTarget, listTargets, matchTarget,
   parseTarget, restoreTarget, skillRecommendations, updateRequirements,
 } from '../api/job-target'
+import { listPurgeRequests, purgeCapability, requestPurge, PURGE_NOTICE,
+  purgeStateLabel } from '../api/purge'
+import type { PurgeCapability, PurgeRequestView } from '../api/purge'
 import type {
   JobTarget, JobTargetMatch, JobTargetRequirement, RequirementBasis, SkillEvidenceHit,
   SkillRecommendationCandidate, TargetSkillRecommendation,
@@ -24,6 +27,31 @@ const skillRecError = ref('')
 const busy = ref(false)
 const error = ref('')
 const notice = ref('')
+const purges = ref<PurgeRequestView[]>([])
+const purgeCap = ref<PurgeCapability>({ execution_enabled: false, notice: '' })
+
+function purgeFor(id: number): PurgeRequestView | undefined {
+  return purges.value.find((p) => p.resource_type === 'PRIVATE_JD' && p.resource_id === id)
+}
+
+async function fetchPurges() {
+  try {
+    purgeCap.value = await purgeCapability()
+    purges.value = await listPurgeRequests()
+  } catch { /* informational only */ }
+}
+
+async function handleRequestPurge(id: number) {
+  if (!window.confirm(PURGE_NOTICE + '\n\n确定申请彻底清除这个目标岗位吗？')) return
+  try {
+    await requestPurge({ resource_type: 'PRIVATE_JD', resource_id: id,
+      idempotency_key: `jd-${id}-${Date.now()}` })
+    await fetchPurges()
+    if (current.value?.id === id) current.value = null
+    await load()
+  } catch (e) { error.value = message(e) }
+}
+
 // A late recommendation response must never replace a newer JD view.
 let skillRecSequence = 0
 
@@ -44,7 +72,10 @@ async function load() {
   busy.value = true; error.value = ''
   // The management view includes archived rows (badge + restore); new business
   // gates live on the server, so hiding them here would only be cosmetic.
-  try { targets.value = await listTargets(true) } catch (e) { error.value = message(e) } finally { busy.value = false }
+  try {
+    targets.value = await listTargets(true)
+    await fetchPurges()
+  } catch (e) { error.value = message(e) } finally { busy.value = false }
 }
 
 async function handleArchive(id: number) {
@@ -220,6 +251,13 @@ load()
     <p v-if="error" class="ux-empty" role="alert">{{ error }}</p>
     <p v-if="notice" role="status">{{ notice }}</p>
 
+    <div class="purge-notice" role="status">
+      <strong>资料生命周期</strong>
+      <p>归档仅停止用于新业务，资料仍保留；「申请彻底清除」才会移除约定范围内的个人内容。{{ PURGE_NOTICE }}</p>
+      <p v-if="!purgeCap.execution_enabled" class="purge-off">当前环境未启用清除执行：申请仍可提交并建立业务围栏，但不会实际清除数据。</p>
+      <p v-else class="purge-on">{{ purgeCap.notice }}（仅受控合成测试用户可用）</p>
+    </div>
+
     <section class="panel">
       <h3>粘贴新的岗位描述</h3>
       <label>JD 原文（至少 80 字，最多 20000 字）
@@ -242,6 +280,17 @@ load()
         <li v-for="item in targets" :key="item.id">
           <button @click="open(item.id)">{{ item.company_name }} · {{ item.job_title }}</button>
           <span> {{ item.source_label }} · {{ statusLabels[item.parse_status] }} · {{ item.requirement_count }} 条要求 · 第 {{ item.version }} 版</span>
+          <span v-if="purgeFor(item.id)" class="badge-purge"
+            :class="{ 'purge-done': purgeFor(item.id)?.ui_state === 'COMPLETED',
+                      'purge-bad': purgeFor(item.id)?.ui_state === 'FAILED_OR_BLOCKED' }"
+            :title="purgeFor(item.id)?.statement">
+            {{ purgeStateLabel(purgeFor(item.id)?.ui_state) }}
+          </span>
+          <button v-if="!purgeFor(item.id)" :disabled="busy" class="btn-purge"
+            @click="handleRequestPurge(item.id)">申请彻底清除</button>
+          <small v-else class="purge-detail" :title="purgeFor(item.id)?.error_diagnostic || ''">
+            {{ purgeFor(item.id)?.error_code || purgeStateLabel(purgeFor(item.id)?.ui_state) }}
+          </small>
           <!-- A confirmed target can go straight to the training centre; an
                unconfirmed one says why instead of offering a button that the
                server would refuse. Own line, so the reason does not run into
@@ -273,6 +322,7 @@ load()
         <span class="badge-archived">已归档</span>
         <p>归档后将无法用于新的面试或训练，但历史记录及相关数据不会因此被彻底删除。
           你仍可以查看原文与要求；历史会话继续使用它们当时冻结的版本。</p>
+        <p>归档不等于清除。如需移除个人内容，请在列表中使用「申请彻底清除」。</p>
         <button :disabled="busy" @click="handleRestore(current.id)">恢复使用</button>
       </div>
       <div v-else style="display:flex;gap:8px;flex-wrap:wrap">
@@ -387,6 +437,20 @@ load()
 </template>
 
 <style scoped>
+.purge-notice {
+  background: #fff8e6; border: 1px solid #f0d9a0; border-radius: 8px;
+  padding: 10px 14px; margin: 12px 0; font-size: 13px; color: #5c4a22; line-height: 1.6;
+}
+.purge-notice p { margin: 4px 0; }
+.purge-off { color: #8a5a12; }
+.purge-on { color: #1d6b3f; }
+.badge-purge { display: inline-block; margin-left: 6px; padding: 1px 8px;
+  border-radius: 10px; background: #e8eefc; color: #2f54eb; font-size: 12px; }
+.badge-purge.purge-done { background: #e4f4ea; color: #1d6b3f; }
+.badge-purge.purge-bad { background: #fdeaea; color: #a12b2b; }
+.btn-purge { background: #f0f0f4; color: #4a4a63; }
+.purge-detail { font-size: 12px; color: #666; margin-left: 6px; }
+
 .skill-rec{border:1px solid #e5e7eb;border-radius:8px;padding:14px;margin:18px 0;background:#fafcff}
 .skill-list,.evidence-list{list-style:none;padding:0}
 .skill-list>li{padding:12px 0;border-bottom:1px solid #eef2f6}

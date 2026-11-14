@@ -2,6 +2,9 @@
 import { ref, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { listResumes, uploadResume, deleteResume, archiveResume, restoreResume } from "../api/resume";
+import { listPurgeRequests, purgeCapability, requestPurge, PURGE_NOTICE,
+  purgeStateLabel } from "../api/purge";
+import type { PurgeCapability, PurgeRequestView } from "../api/purge";
 import { ApiError } from "../api/client";
 import { userError } from "../i18n/zh-CN";
 import type { Resume } from "../types/resume";
@@ -14,6 +17,33 @@ const loading = ref(false);
 const uploading = ref(false);
 const error = ref("");
 const uploadError = ref("");
+const purges = ref<PurgeRequestView[]>([]);
+const purgeCap = ref<PurgeCapability>({ execution_enabled: false, notice: "" });
+
+function purgeFor(id: number): PurgeRequestView | undefined {
+  return purges.value.find((p) => p.resource_type === "RESUME" && p.resource_id === id);
+}
+
+async function fetchPurges() {
+  try {
+    purgeCap.value = await purgeCapability();
+    purges.value = await listPurgeRequests();
+  } catch { /* capability/status is informational; never blocks the page */ }
+}
+
+async function handleRequestPurge(id: number) {
+  if (!window.confirm(PURGE_NOTICE + "\n\n确定申请彻底清除这份简历吗？")) return;
+  try {
+    // Explicit user action only. The server decides whether execution is even
+    // enabled; the front end can never turn real deletion on.
+    await requestPurge({ resource_type: "RESUME", resource_id: id,
+      idempotency_key: `resume-${id}-${Date.now()}` });
+    await fetchPurges();
+    await fetchList();
+  } catch (e) {
+    error.value = e instanceof ApiError ? e.message : "清除申请失败，请重试。";
+  }
+}
 
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -27,6 +57,7 @@ async function fetchList() {
     resumes.value = data.items;
     total.value = data.total;
     managePolling();
+    await fetchPurges();
   } catch (e) {
     if (e instanceof ApiError) {
       error.value = e.message;
@@ -123,6 +154,13 @@ onUnmounted(() => {
     <h2>我的简历</h2>
     <p class="subtitle">上传简历，系统会解析原始材料并生成可追溯的候选人画像。准备好画像后，可以选择岗位开始模拟面试。</p>
 
+    <div class="purge-notice" role="status">
+      <strong>资料生命周期</strong>
+      <p>归档仅停止用于新业务，资料仍保留；「申请彻底清除」才会移除约定范围内的个人内容。{{ PURGE_NOTICE }}</p>
+      <p v-if="!purgeCap.execution_enabled" class="purge-off">当前环境未启用清除执行：申请仍可提交并建立业务围栏，但不会实际清除数据。</p>
+      <p v-else class="purge-on">{{ purgeCap.notice }}（仅受控合成测试用户可用）</p>
+    </div>
+
     <!-- Upload -->
     <div class="upload-card">
       <label class="upload-zone" :class="{ disabled: uploading }">
@@ -175,6 +213,12 @@ onUnmounted(() => {
             <span v-if="r.archived_at" class="badge-archived" title="归档后不能用于新的面试或训练；历史记录不会被删除">
               已归档
             </span>
+            <span v-if="purgeFor(r.id)" class="badge-purge"
+              :class="{ 'purge-done': purgeFor(r.id)?.ui_state === 'COMPLETED',
+                        'purge-bad': purgeFor(r.id)?.ui_state === 'FAILED_OR_BLOCKED' }"
+              :title="purgeFor(r.id)?.statement">
+              {{ purgeStateLabel(purgeFor(r.id)?.ui_state) }}
+            </span>
           </td>
           <td class="stage">
             <template v-if="r.processing_stage">
@@ -202,6 +246,11 @@ onUnmounted(() => {
             <button v-if="!r.archived_at && (r.status === 'COMPLETED' || r.status === 'FAILED')"
               class="btn-action btn-archive" @click="handleArchive(r.id)">归档</button>
             <button v-if="r.archived_at" class="btn-action btn-view" @click="handleRestore(r.id)">恢复</button>
+            <button v-if="!purgeFor(r.id)" class="btn-action btn-purge"
+              @click="handleRequestPurge(r.id)">申请彻底清除</button>
+            <span v-else class="purge-detail" :title="purgeFor(r.id)?.error_diagnostic || ''">
+              {{ purgeFor(r.id)?.error_code || purgeStateLabel(purgeFor(r.id)?.ui_state) }}
+            </span>
             <button class="btn-action btn-delete" @click="handleDelete(r.id)">删除</button>
           </td>
         </tr>
@@ -211,6 +260,33 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.purge-notice {
+  background: #fff8e6;
+  border: 1px solid #f0d9a0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin: 12px 0;
+  font-size: 13px;
+  color: #5c4a22;
+  line-height: 1.6;
+}
+.purge-notice p { margin: 4px 0; }
+.purge-off { color: #8a5a12; }
+.purge-on { color: #1d6b3f; }
+.badge-purge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: #e8eefc;
+  color: #2f54eb;
+  font-size: 12px;
+}
+.badge-purge.purge-done { background: #e4f4ea; color: #1d6b3f; }
+.badge-purge.purge-bad { background: #fdeaea; color: #a12b2b; }
+.btn-purge { background: #f0f0f4; color: #4a4a63; }
+.purge-detail { font-size: 12px; color: #666; margin-left: 4px; }
+
 .badge-archived {
   display: inline-block;
   margin-left: 6px;
