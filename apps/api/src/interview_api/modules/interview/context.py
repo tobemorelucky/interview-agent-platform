@@ -47,9 +47,17 @@ async def private_target(db, user_id, request):
 
 
 def target_requirements(target) -> list[dict]:
-    return [dict(id=row["id"], statement=row["statement"], importance=row.get("importance") or "UNKNOWN",
-                 topic=row.get("topic"), source=row.get("source") or "USER")
+    rows = [dict(id=row["id"], statement=row["statement"], importance=row.get("importance") or "UNKNOWN",
+                 topic=row.get("topic"), source=row.get("source") or "USER",
+                 **({"external_ref": row["external_ref"]} if row.get("external_ref") else {}),
+                 **({"jd_fingerprint": row["jd_fingerprint"]} if row.get("jd_fingerprint") else {}))
             for row in (target.requirements_json or [])]
+    # The frozen snapshot must carry database identities. A label that was never
+    # mapped is refused here — before the first model call — instead of surfacing
+    # later as an artifact FK/type error after the call has already been paid for.
+    from interview_api.modules.job_target.requirement_refs import validate_requirement_refs
+    validate_requirement_refs(rows, jd_fingerprint=getattr(target, "content_fingerprint", None))
+    return rows
 
 
 async def build_context(db, user_id, request):
@@ -105,6 +113,10 @@ async def build_context(db, user_id, request):
             .with_for_update(read=True, key_share=True))).all()
         if not requirements:
             raise AppError("REQUIREMENTS_REQUIRED", "所选 JD 缺少岗位要求", 409)
+        # The query above already scopes by JD version; assert it, so a later
+        # widening cannot bind a question to another version's requirement row.
+        if any(row.job_description_version_id != jd.id for row in requirements):
+            raise AppError("REQUIREMENT_REF_OUT_OF_SCOPE", "岗位要求不属于当前 JD 版本，未猜测绑定", 422)
         # Exact public FKs only. A company-level record with unknown Job is permitted;
         # records assigned to another Job/company are never guessed into this pool.
         def scope(table):
