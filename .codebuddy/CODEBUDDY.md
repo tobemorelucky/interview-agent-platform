@@ -1245,3 +1245,32 @@ L3 前置条件（purge_requests 表、清理顺序、audit_logs 脱敏、Celery
 **样本量**：4 对 8 份、仅 **5 个**严格前后对照样本、单次调用无重复采样，**不宣称统计显著优势或整体质量提升**。
 
 **下一阶段建议（未执行）**：先做 12 对 / 24 份定点补测（正确但简短跨主题、单一附加错误细节、切题但机制全错的长答案），HTTP 26–28 / Token 120K / 25 min；确认问题稳定后再另行批准 2.3.5 最小澄清（POOR 出带、禁止改写式给分、side detail 判据）。本轮不改提示词、不扩到 30 份、不新增功能。
+
+---
+
+## 第二十八轮：2.3.4 冻结、真实缺陷复核、V3 困难样本集、全链路覆盖审计（真实模型 HTTP=0，见 docs/107）
+
+**基线** `5329036`。冻结 Prompt 2.3.4 + `FIVE_DIMENSION_BOUNDARIES_V1`（system 7,452 字符，指纹 `e7704357…`），不改五维字段/评分逻辑/Schema/迁移；2.3.3（r25 6 条）与 2.3.4（r27 8 条）真实评分逐字保留。**只有 5 个同题同答重叠样本**，两轮评价份数与配对都不同 → **不宣称统计显著改善**。
+
+**七项缺陷人工复核**（详见 docs/107 §2，证据 r25/r27_live_eval.json + frozen_pairs）：
+1. **高** RAG-A2：答案里的错误「RRF 完全不需要调参、k 固定 60」被模型改写成正确命题「不需要针对分数尺度调参」写入 `covered_points`，而 `issues` 恰好漏掉这条；2.3.3 同答案是中性描述 → 2.3.4 新出现的表现。根因只是**推测**（coverage 改成「rubric 覆盖比例」后诱发 rubric 反向匹配），未证实。污染 Coach 报告证据链，但不污染 CapabilityMemory（state=NEEDS_CLARIFICATION 且 issues 非空 → disputed）。
+2. **高** 确认 1/8 把候选人没说的正确知识当成已回答；其余 7 份可逐句对应。V3 每份显式列 `candidate_did_not_say`。
+3. **中** `tc=1 / 总分 12` **不是准入门槛 bug**：总分只进 `completion_json.overall_average` 与 Coach statistics；能力状态由 observation.state + 逐字引用 + issues 决定（`capability_service.py:64` 明说 score 不证明独立性）。属报告口径失真。
+4. **中** LG-B2/LG-C1 分数顺序两轮一致，但**标签语义自相矛盾**：V2 定义 PARTIAL=缺细节无错机制，LG-B2 却含 2 处机制错；docs/103 §4 人工复核说 checkpointer「可选」，V2 错误说明却说「必要机制」。2.3.4 模型把必要性限定在「本题问持久化」语境，反而更精确。**标签不能当金标**。
+5. **中** 同类单一错误 tc 不一致：LG-C1=2、RAG-C1=3、KF-C1=2（2.3.3 的 LG-C1=3）。2.3.4 严重度阶梯未定义 core/side 边界。
+6. **中** Prompt 3,748→7,452 字符、单次 +约 893 tokens（+23.6%）；2.3.3 两次 Repair 约 7,146 tokens。**推算（非实测）**：若 2.3.3 也做 8 份且维持 2 次 Repair，约 37,386 ≈ 2.3.4 实测 37,382 → 成本大致抵消；省的是 HTTP 与不确定性，不是 token。
+7. **中** 0 Repair 只是这 8 份的行为观测；`max_length=3` 与 `EVALUATION_QUOTE_SUBSET_V1` 完整保留。两轮样本不同，唯一同题同答 Repair 对照是 **KF-A2：1→0，n=1**，KF-A1 未复测 → 不能说「Repair 率已下降」。
+
+**顺带发现**：V2 的 POOR `expected_band=[1,8]` 含不可达下界（五维各 1..5 → 总分 5..25）。V2 不改写，只在 manifest 记录；V3 全部区间修到 5..25。
+
+**V3 独立困难样本集**（新文件 `10_V3_SYNTHETIC_题目与评分要点.jsonl`、`11_V3_SYNTHETIC_困难样本.jsonl`、`12_V3_manifest.json`）：5 题、**16 份全部人工合成**的回答（不是真实 JD/面经/候选人记录/真实 Evaluation）、6 类难度 × 5 主题（新增 FastAPI/python、Redis/redis）、8 组相对关系（2 组刻意 `UNCERTAIN`）、3 组可证伪的严重度一致性指标。每份含参考事实、`stated_points / correct_points / missing_points / errors+severity_reason`、相对关系、参考带 + 不确定性、可能的模型错误、`candidate_did_not_say`。**`blind_context` 只允许 question/rubric/answer**；`expected_band` 是人工方向性先验，不是真值、不用于调 Prompt。新主题 `official_chain_runnable=false`（当前蓝图 target 仅 agent/kafka_reliability/rag_retrieval；FastAPI 还依赖 Starlette 版本）。
+
+契约测试 `apps/api/tests/test_r28_v3_dataset_contract.py` **10 passed / 0 failed**（0 HTTP / 0 DB）；过程中抓到自己写的不可达区间与一条恒真断言并修正。连同既有边界/引用/归属/正式链路/V2 契约共 **37 passed**。产品代码零改动，未跑全量套件。
+
+**全链路覆盖（只读 SQL 坐实）**：真实 JD 原件 4 份 + 面经 5 份在 `data/manual_sources/2026-10-05/`（9/9 有 URL + sha256、`identity_reviewed_at=2026-10-05`），但 `live_search_used=false` 且 README 声明 READY 不等于已独立证实；Main/Evaluation 有正式 Live（18 轮原件库 27 条 main / 20 条 eval / 2 条 coach，310K/210K/68K tokens）；Coach 有真实调用但被误判规则拒绝、报告未完成；ResumeProfile 与 Skill 识别有真实模型但**输入全是合成简历**；**Job Matching 无真实模型 Live**（原件库 `job_match_runs=0`，docs/99「无真实用户材料对照」）；**Training 从未真实模型全链路验证**（无 training 表，docs/89 HTTP=0）；**JD Research 采集从未验证**（`collection_tasks=0`、`exp_source=0`）。快照库 1081 简历 / 1726 JD / 1761 eval 的 admissions 全是 `DEMO_V21_NOT_LIVE`/`offline` → **不能按行数当独立真实样本量**。
+
+**关键缺口**：完全没有真实简历（正式库 38 份多为「（测试简历）」，5 份 PROCESSING 且 raw_text 空）；`evaluation_calibration_v1.json` 仍 `DRAFT_UNREVIEWED`、`independent_gold_review_complete=false`。下一阶段最有价值的是补齐「真实 JD × 真实简历」，而不是再跑 30 份 Evaluation。
+
+**下一阶段方案 `R28-REAL-JD-MVP`（未执行，等待单独批准）**：1 条闭环（真实 JD → 解析/Requirement+Skill → 脱敏真实简历 → ResumeProfile → Main 3 题 → Evaluation 冻结 2.3.4 → Coach → CapabilityMemory → Training 读取）；**HTTP 上限 12 / Token 70,000 / 20 min**；不做 Live Search、Job Matching 模型排序、Coach Harness、L3/L4、任何删除清理；UNKNOWN/配额立即停；全部经 ModelGovernance。判据靠证据链逐跳可核对与「covered_points 必须有逐字依据」，不靠分数带。
+
+**资产**：库总数仍 **243（本轮未新建库、未写入受保护库）**；正式库 0025/19/41/5/0、18 轮原件 0026/3/18/1/49、快照库 0026/1621/1761/219/147、r25 6/6/0/8、r27 8/8/0/8、MinIO 48 对象、purge 与 Coach Harness 全 OFF。未改 `AGENTS.md`/`CLAUDE.md`/`.claude/`，未 push/reset/clean。
