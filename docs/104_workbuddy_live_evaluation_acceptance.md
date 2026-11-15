@@ -189,13 +189,22 @@ LG-B2（2/2/2/3/3）→ LG-C1（3/3/3/4/4）：五个维度全部 +1。这更像
 
 ### 7.2 一个产品侧可审计性问题（未改代码）
 
-`governed_call()` 在 `model_scope` 未设置时回退到 `user:{uid}` + route `legacy_llm`，并用 `db.session.async_session_factory` 作为账本库。全仓库 `model_scope.set(...)` 只出现在 `job_target/service.py`、`public_career/research/audit.py` 与简历侧 provider，**`modules/interview` 与 `api/` 都没有设置**。
+> **2026-11-15 第 26 轮勘误**：本节原结论"`modules/interview` 不设置 `model_scope`"**是错的**。
+> 正式评价链路走 `ResearchModelCalls`（`public_career/research/audit.py`），它在
+> `provider.governed` 为真时已经设置 scope（owner 由 `run_owner()` 从 session 反查，route 为
+> `answer_evaluation`）。本轮账本记为 `legacy_llm` 的真实原因是**我写的 `GuardedEvaluation`
+> 包装类没有暴露 `governed` 属性**，于是 audit 跳过了 scope 设置，网关才落到回退分支。
+>
+> 但回退分支本身确实是缺陷（第 26 轮已修）：它无提示地使用进程默认 `session_factory`，
+> 且没有"账本库必须是本进程声明的库"这一校验。修正见 `docs/105`。
+
+`governed_call()` 在 `model_scope` 未设置时回退到 `user:{uid}` + route `legacy_llm`，并用 `db.session.async_session_factory` 作为账本库。全仓库 `model_scope.set(...)` 只出现在 `job_target/service.py`、`public_career/research/audit.py` 与简历侧 provider。
 
 后果有两层：
-1. 线上真实评价的 admission 会被记成 `route=legacy_llm`，而不是 `answer_evaluation`。这不影响额度与结算，但"按 route 统计评价成本"会失真。
-2. 对任何外部夹具（比如本轮）来说，回退目标指向 `.env` 里的正式库；若不显式设置 scope，测试账本会写进正式库。本轮脚本显式设置了 scope，因此账本只落在 sandbox。
+1. 一旦某个调用方漏设 scope，admission 会被记成 `route=legacy_llm`，而不是真实 route；"按 route 统计成本"随之失真。
+2. 该回退指向 `.env` 里的 `DATABASE_URL`；任何外部夹具只要漏设 scope，账本就会写进正式库。本轮脚本显式设置了 scope，因此账本只落在 sandbox（但 owner 因包装类问题错位，见 §7.1）。
 
-本条按"只测试、不改产品代码"的要求，仅记录，未修改。
+本条按"只测试、不改产品代码"的要求，当时仅记录，未修改；第 26 轮作为 P0 修复。
 
 ---
 
