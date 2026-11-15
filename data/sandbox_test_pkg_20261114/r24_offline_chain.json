@@ -1,0 +1,606 @@
+{
+ "scores_source": "REPLAY_FIXTURE_NOT_MODEL_OUTPUT",
+ "database": "interview_agent_wb_r24_test_20261115",
+ "http_calls": 0,
+ "samples": 18,
+ "all_persisted": true,
+ "all_match": true,
+ "all_completed": true,
+ "distinct_users": 18,
+ "rows": [
+  {
+   "sample_id": "RAG-A1",
+   "pair_id": "RAG-PAIR-A",
+   "topic": "rag_retrieval",
+   "quality_label": "GOOD_FULL",
+   "expected_relation": "HIGHER",
+   "user_id": 151,
+   "session_id": 188,
+   "question_id": 179,
+   "answer_id": 112,
+   "evaluation_rows": 1,
+   "stored_dims": {
+    "technical_correctness": 5,
+    "coverage": 5,
+    "depth": 5,
+    "relevance": 5,
+    "communication": 5
+   },
+   "stored_total": 25,
+   "matches_agent_reply": true,
+   "provider": "replay",
+   "model": "R24_SCRIPTED_EVALUATION",
+   "prompt_version": "2.3.3",
+   "question_status": "COMPLETED",
+   "rubric_lines": 5,
+   "session_status": "COMPLETED",
+   "main_calls": [
+    "AdaptiveSelection"
+   ],
+   "evaluation_calls": [
+    "AdaptiveEvaluation"
+   ]
+  },
+  {
+   "sample_id": "RAG-A2",
+   "pair_id": "RAG-PAIR-A",
+   "topic": "rag_retrieval",
+   "quality_label": "POOR_LONG_WRONG",
+   "expected_relation": "LOWER",
+   "user_id": 152,
+   "session_id": 189,
+   "question_id": 180,
+   "answer_id": 113,
+   "evaluation_rows": 1,
+   "stored_dims": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "stored_total": 5,
+   "matches_agent_reply": true,
+   "provider": "replay",
+   "model": "R24_SCRIPTED_EVALUATION",
+   "prompt_version": "2.3.3",
+   "question_status": "COMPLETED",
+   "rubric_lines": 5,
+   "session_status": "COMPLETED",
+   "main_calls": [
+    "AdaptiveSelection"
+   ],
+   "evaluation_calls": [
+    "AdaptiveEvaluation"
+   ]
+  },
+  {
+   "sample_id": "RAG-B1",
+   "pair_id": "RAG-PAIR-B",
+   "topic": "rag_retrieval",
+   "quality_label": "GOOD_SHORT",
+   "expected_relation": "HIGHER",
+   "user_id": 153,
+   "session_id": 190,
+   "question_id": 181,
+   "answer_id": 114,
+   "evaluation_rows": 1,
+   "stored_dims": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "stored_total": 20,
+   "matches_agent_reply": true,
+   "provider": "replay",
+   "model": "R24_SCRIPTED_EVALUATION",
+   "prompt_version": "2.3.3",
+   "question_status": "COMPLETED",
+   "rubric_lines": 5,
+   "session_status": "COMPLETED",
+   "main_calls": [
+    "AdaptiveSelection"
+   ],
+   "evaluation_calls": [
+    "AdaptiveEvaluation"
+   ]
+  },
+  {
+   "sample_id": "RAG-B2",
+   "pair_id": "RAG-PAIR-B",
+   "topic": "rag_retrieval",
+   "quality_label": "PARTIAL",
+   "expected_relation": "LOWER",
+   "user_id": 154,
+   "session_id": 191,
+   "question_id": 182,
+   "answer_id": 115,
+   "evaluation_rows": 1,
+   "stored_dims": {
+    "technical_correctness": 3,
+    "coverage": 3,
+    "depth": 3,
+    "relevance": 3,
+    "communication": 3
+   },
+   "stored_total": 15,
+   "matches_agent_reply": true,
+   "provider": "replay",
+   "model": "R24_SCRIPTED_EVALUATION",
+   "prompt_version": "2.3.3",
+   "question_status": "COMPLETED",
+   "rubric_lines": 5,
+   "session_status": "COMPLETED",
+   "main_calls": [
+    "AdaptiveSelection"
+   ],
+   "evaluation_calls": [
+    "AdaptiveEvaluation"
+   ]
+  },
+  {
+   "sample_id": "RAG-C1",
+   "pair_id": "RAG-PAIR-C",
+   "topic": "rag_retrieval",
+   "quality_label": "NEAR_MISS",
+   "expected_relation": "HIGHER",
+   "user_id": 155,
+   "session_id": 192,
+   "question_id": 183,
+   "answer_id": 116,
+   "evaluation_rows": 1,
+   "stored_dims": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "stored_total": 20,
+   "matches_agent_reply": true,
+   "provider": "replay",
+   "model": "R24_SCRIPTED_EVALUATION",
+   "prompt_version": "2.3.3",
+   "question_status": "COMPLETED",
+   "rubric_lines": 5,
+   "session_status": "COMPLETED",
+   "main_calls": [
+    "AdaptiveSelection"
+   ],
+   "evaluation_calls": [
+    "AdaptiveEvaluation"
+   ]
+  },
+  {
+   "sample_id": "RAG-C2",
+   "pair_id": "RAG-PAIR-C",
+   "topic": "rag_retrieval",
+   "quality_label": "POOR_CONFUSED",
+   "expected_relation": "LOWER",
+   "user_id": 156,
+   "session_id": 193,
+   "question_id": 184,
+   "answer_id": 117,
+   "evaluation_rows": 1,
+   "stored_dims": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "stored_total": 5,
+   "matches_agent_reply": true,
+   "provider": "replay",
+   "model": "R24_SCRIPTED_EVALUATION",
+   "prompt_version": "2.3.3",
+   "question_status": "COMPLETED",
+   "rubric_lines": 5,
+   "session_status": "COMPLETED",
+   "main_calls": [
+    "AdaptiveSelection"
+   ],
+   "evaluation_calls": [
+    "AdaptiveEvaluation"
+   ]
+  },
+  {
+   "sample_id": "LG-A1",
+   "pair_id": "LG-PAIR-A",
+   "topic": "agent",
+   "quality_label": "GOOD_FULL",
+   "expected_relation": "HIGHER",
+   "user_id": 157,
+   "session_id": 194,
+   "question_id": 185,
+   "answer_id": 118,
+   "evaluation_rows": 1,
+   "stored_dims": {
+    "technical_correctness": 5,
+    "coverage": 5,
+    "depth": 5,
+    "relevance": 5,
+    "communication": 5
+   },
+   "stored_total": 25,
+   "matches_agent_reply": true,
+   "provider": "replay",
+   "model": "R24_SCRIPTED_EVALUATION",
+   "prompt_version": "2.3.3",
+   "question_status": "COMPLETED",
+   "rubric_lines": 5,
+   "session_status": "COMPLETED",
+   "main_calls": [
+    "AdaptiveSelection"
+   ],
+   "evaluation_calls": [
+    "AdaptiveEvaluation"
+   ]
+  },
+  {
+   "sample_id": "LG-A2",
+   "pair_id": "LG-PAIR-A",
+   "topic": "agent",
+   "quality_label": "POOR_LONG_WRONG",
+   "expected_relation": "LOWER",
+   "user_id": 158,
+   "session_id": 195,
+   "question_id": 186,
+   "answer_id": 119,
+   "evaluation_rows": 1,
+   "stored_dims": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "stored_total": 5,
+   "matches_agent_reply": true,
+   "provider": "replay",
+   "model": "R24_SCRIPTED_EVALUATION",
+   "prompt_version": "2.3.3",
+   "question_status": "COMPLETED",
+   "rubric_lines": 5,
+   "session_status": "COMPLETED",
+   "main_calls": [
+    "AdaptiveSelection"
+   ],
+   "evaluation_calls": [
+    "AdaptiveEvaluation"
+   ]
+  },
+  {
+   "sample_id": "LG-B1",
+   "pair_id": "LG-PAIR-B",
+   "topic": "agent",
+   "quality_label": "GOOD_SHORT",
+   "expected_relation": "HIGHER",
+   "user_id": 159,
+   "session_id": 196,
+   "question_id": 187,
+   "answer_id": 120,
+   "evaluation_rows": 1,
+   "stored_dims": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "stored_total": 20,
+   "matches_agent_reply": true,
+   "provider": "replay",
+   "model": "R24_SCRIPTED_EVALUATION",
+   "prompt_version": "2.3.3",
+   "question_status": "COMPLETED",
+   "rubric_lines": 5,
+   "session_status": "COMPLETED",
+   "main_calls": [
+    "AdaptiveSelection"
+   ],
+   "evaluation_calls": [
+    "AdaptiveEvaluation"
+   ]
+  },
+  {
+   "sample_id": "LG-B2",
+   "pair_id": "LG-PAIR-B",
+   "topic": "agent",
+   "quality_label": "PARTIAL",
+   "expected_relation": "LOWER",
+   "user_id": 160,
+   "session_id": 197,
+   "question_id": 188,
+   "answer_id": 121,
+   "evaluation_rows": 1,
+   "stored_dims": {
+    "technical_correctness": 2,
+    "coverage": 2,
+    "depth": 2,
+    "relevance": 2,
+    "communication": 2
+   },
+   "stored_total": 10,
+   "matches_agent_reply": true,
+   "provider": "replay",
+   "model": "R24_SCRIPTED_EVALUATION",
+   "prompt_version": "2.3.3",
+   "question_status": "COMPLETED",
+   "rubric_lines": 5,
+   "session_status": "COMPLETED",
+   "main_calls": [
+    "AdaptiveSelection"
+   ],
+   "evaluation_calls": [
+    "AdaptiveEvaluation"
+   ]
+  },
+  {
+   "sample_id": "LG-C1",
+   "pair_id": "LG-PAIR-C",
+   "topic": "agent",
+   "quality_label": "NEAR_MISS",
+   "expected_relation": "HIGHER",
+   "user_id": 161,
+   "session_id": 198,
+   "question_id": 189,
+   "answer_id": 122,
+   "evaluation_rows": 1,
+   "stored_dims": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "stored_total": 20,
+   "matches_agent_reply": true,
+   "provider": "replay",
+   "model": "R24_SCRIPTED_EVALUATION",
+   "prompt_version": "2.3.3",
+   "question_status": "COMPLETED",
+   "rubric_lines": 5,
+   "session_status": "COMPLETED",
+   "main_calls": [
+    "AdaptiveSelection"
+   ],
+   "evaluation_calls": [
+    "AdaptiveEvaluation"
+   ]
+  },
+  {
+   "sample_id": "LG-C2",
+   "pair_id": "LG-PAIR-C",
+   "topic": "agent",
+   "quality_label": "POOR_CONFUSED",
+   "expected_relation": "LOWER",
+   "user_id": 162,
+   "session_id": 199,
+   "question_id": 190,
+   "answer_id": 123,
+   "evaluation_rows": 1,
+   "stored_dims": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "stored_total": 5,
+   "matches_agent_reply": true,
+   "provider": "replay",
+   "model": "R24_SCRIPTED_EVALUATION",
+   "prompt_version": "2.3.3",
+   "question_status": "COMPLETED",
+   "rubric_lines": 5,
+   "session_status": "COMPLETED",
+   "main_calls": [
+    "AdaptiveSelection"
+   ],
+   "evaluation_calls": [
+    "AdaptiveEvaluation"
+   ]
+  },
+  {
+   "sample_id": "KF-A1",
+   "pair_id": "KF-PAIR-A",
+   "topic": "kafka_reliability",
+   "quality_label": "GOOD_FULL",
+   "expected_relation": "HIGHER",
+   "user_id": 163,
+   "session_id": 200,
+   "question_id": 191,
+   "answer_id": 124,
+   "evaluation_rows": 1,
+   "stored_dims": {
+    "technical_correctness": 5,
+    "coverage": 5,
+    "depth": 5,
+    "relevance": 5,
+    "communication": 5
+   },
+   "stored_total": 25,
+   "matches_agent_reply": true,
+   "provider": "replay",
+   "model": "R24_SCRIPTED_EVALUATION",
+   "prompt_version": "2.3.3",
+   "question_status": "COMPLETED",
+   "rubric_lines": 5,
+   "session_status": "COMPLETED",
+   "main_calls": [
+    "AdaptiveSelection"
+   ],
+   "evaluation_calls": [
+    "AdaptiveEvaluation"
+   ]
+  },
+  {
+   "sample_id": "KF-A2",
+   "pair_id": "KF-PAIR-A",
+   "topic": "kafka_reliability",
+   "quality_label": "POOR_LONG_WRONG",
+   "expected_relation": "LOWER",
+   "user_id": 164,
+   "session_id": 201,
+   "question_id": 192,
+   "answer_id": 125,
+   "evaluation_rows": 1,
+   "stored_dims": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "stored_total": 5,
+   "matches_agent_reply": true,
+   "provider": "replay",
+   "model": "R24_SCRIPTED_EVALUATION",
+   "prompt_version": "2.3.3",
+   "question_status": "COMPLETED",
+   "rubric_lines": 5,
+   "session_status": "COMPLETED",
+   "main_calls": [
+    "AdaptiveSelection"
+   ],
+   "evaluation_calls": [
+    "AdaptiveEvaluation"
+   ]
+  },
+  {
+   "sample_id": "KF-B1",
+   "pair_id": "KF-PAIR-B",
+   "topic": "kafka_reliability",
+   "quality_label": "GOOD_SHORT",
+   "expected_relation": "HIGHER",
+   "user_id": 165,
+   "session_id": 202,
+   "question_id": 193,
+   "answer_id": 126,
+   "evaluation_rows": 1,
+   "stored_dims": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "stored_total": 20,
+   "matches_agent_reply": true,
+   "provider": "replay",
+   "model": "R24_SCRIPTED_EVALUATION",
+   "prompt_version": "2.3.3",
+   "question_status": "COMPLETED",
+   "rubric_lines": 5,
+   "session_status": "COMPLETED",
+   "main_calls": [
+    "AdaptiveSelection"
+   ],
+   "evaluation_calls": [
+    "AdaptiveEvaluation"
+   ]
+  },
+  {
+   "sample_id": "KF-B2",
+   "pair_id": "KF-PAIR-B",
+   "topic": "kafka_reliability",
+   "quality_label": "PARTIAL",
+   "expected_relation": "LOWER",
+   "user_id": 166,
+   "session_id": 203,
+   "question_id": 194,
+   "answer_id": 127,
+   "evaluation_rows": 1,
+   "stored_dims": {
+    "technical_correctness": 3,
+    "coverage": 3,
+    "depth": 3,
+    "relevance": 3,
+    "communication": 3
+   },
+   "stored_total": 15,
+   "matches_agent_reply": true,
+   "provider": "replay",
+   "model": "R24_SCRIPTED_EVALUATION",
+   "prompt_version": "2.3.3",
+   "question_status": "COMPLETED",
+   "rubric_lines": 5,
+   "session_status": "COMPLETED",
+   "main_calls": [
+    "AdaptiveSelection"
+   ],
+   "evaluation_calls": [
+    "AdaptiveEvaluation"
+   ]
+  },
+  {
+   "sample_id": "KF-C1",
+   "pair_id": "KF-PAIR-C",
+   "topic": "kafka_reliability",
+   "quality_label": "NEAR_MISS",
+   "expected_relation": "HIGHER",
+   "user_id": 167,
+   "session_id": 204,
+   "question_id": 195,
+   "answer_id": 128,
+   "evaluation_rows": 1,
+   "stored_dims": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "stored_total": 20,
+   "matches_agent_reply": true,
+   "provider": "replay",
+   "model": "R24_SCRIPTED_EVALUATION",
+   "prompt_version": "2.3.3",
+   "question_status": "COMPLETED",
+   "rubric_lines": 5,
+   "session_status": "COMPLETED",
+   "main_calls": [
+    "AdaptiveSelection"
+   ],
+   "evaluation_calls": [
+    "AdaptiveEvaluation"
+   ]
+  },
+  {
+   "sample_id": "KF-C2",
+   "pair_id": "KF-PAIR-C",
+   "topic": "kafka_reliability",
+   "quality_label": "POOR_CONFUSED",
+   "expected_relation": "LOWER",
+   "user_id": 168,
+   "session_id": 205,
+   "question_id": 196,
+   "answer_id": 129,
+   "evaluation_rows": 1,
+   "stored_dims": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "stored_total": 5,
+   "matches_agent_reply": true,
+   "provider": "replay",
+   "model": "R24_SCRIPTED_EVALUATION",
+   "prompt_version": "2.3.3",
+   "question_status": "COMPLETED",
+   "rubric_lines": 5,
+   "session_status": "COMPLETED",
+   "main_calls": [
+    "AdaptiveSelection"
+   ],
+   "evaluation_calls": [
+    "AdaptiveEvaluation"
+   ]
+  }
+ ]
+}
