@@ -381,9 +381,14 @@ class MockInterviewService:
                 yield sse(event, data)
         except Exception as exc:
             logger.warning("M4 answer failed: %s", getattr(exc, "code", type(exc).__name__))
+            # A deterministic contract mismatch is never worth another model call:
+            # the request would fail identically after paying for it again.
+            from interview_api.modules.interview.context_projection import TERMINAL_CODES
+            terminal = isinstance(exc, AppError) and (
+                exc.status_code == 404 or exc.code in TERMINAL_CODES)
             yield sse("error", {"code": getattr(exc, "code", "INTERVIEW_MODEL_FAILED"),
                 "message": exc.message if isinstance(exc, AppError) else "模型处理失败，未评分或推进面试；请使用同一回答重试",
-                "retryable": not isinstance(exc, AppError) or exc.status_code != 404,
+                "retryable": not terminal,
                 "requires_confirmation": getattr(exc, "code", "") == "INTERVIEW_OUTCOME_UNKNOWN",
                 "idempotency_key": request.idempotency_key})
         finally:

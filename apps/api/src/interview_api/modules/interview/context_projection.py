@@ -7,9 +7,49 @@ from interview_api.core.exceptions import AppError
 VERSION = 'ROLE_CONTEXT_V1'
 SCORING_VERSION = 'FOLLOWUP_SCORING_V1'
 
+# Deterministic contract mismatches: the same request can never succeed, and a
+# retry must not spend another model call. Streaming clients must not offer a
+# "retry" affordance for these codes.
+TERMINAL_CODES = frozenset({
+    'CONTEXT_ACTIVE_TARGET_REQUIRED',
+    'CONTEXT_TARGET_NOT_FOUND',
+    'CONTEXT_TARGET_SOURCES_MISSING',
+    'CONTEXT_CANDIDATE_TARGET_NOT_FOUND',
+})
+
 
 def enabled(payload):
     return payload.get('snapshot', {}).get('adaptive_policy', {}).get('context_projection') == VERSION
+
+
+def frozen_target(blueprint, knowledge_id):
+    """Resolve exactly one frozen target by id, or fail with a business error.
+
+    A missing target means the persisted question and the session's frozen
+    blueprint disagree. Substituting *another* target would score the answer
+    against a different rubric while still looking like a legitimate record, so
+    this always fails instead of guessing. ``next(...)`` used to raise
+    ``StopIteration``, which PEP 479 turns into ``RuntimeError`` at the coroutine
+    boundary: an unclassified, "retryable" failure with no diagnostic.
+    """
+    targets = (blueprint or {}).get('targets') or []
+    if knowledge_id is None:
+        raise AppError('CONTEXT_ACTIVE_TARGET_REQUIRED',
+            '评分请求缺少当前考察目标，未猜测补齐', 409)
+    for target in targets:
+        if target.get('knowledge_id') == knowledge_id:
+            if 'sources' not in target:
+                raise AppError('CONTEXT_TARGET_SOURCES_MISSING',
+                    f'考察目标 {knowledge_id!r} 缺少来源集合，未猜测补齐', 409)
+            return target
+    raise AppError('CONTEXT_TARGET_NOT_FOUND',
+        f'本场冻结目标集合中不存在考察目标 {knowledge_id!r}（共 {len(targets)} 个），未替换为其他目标', 409)
+
+
+def frozen_by_id(blueprint):
+    """Index the frozen targets by id; an empty blueprint stays empty (no invention)."""
+    return {target['knowledge_id']: target for target in (blueprint or {}).get('targets') or []
+            if 'knowledge_id' in target}
 
 
 def pick(value, keys):
@@ -57,7 +97,7 @@ def model_payload(payload, route):
     blueprint = payload['snapshot']['adaptive_blueprint']
     if route == 'answer_evaluation':
         active_id = adaptive['active_knowledge_id']
-        target = next(t for t in blueprint['targets'] if t['knowledge_id'] == active_id)
+        target = frozen_target(blueprint, active_id)
         # All source scopes for THIS goal remain available. They are context,
         # not extra rubric requirements and not candidate-confirmed skill claims.
         refs = {s['ref'] for s in target['sources']}
@@ -81,11 +121,15 @@ def model_payload(payload, route):
         result.pop('preferred_source', None)
         result.pop('requested_action', None)
         targets, sources = {}, {}
-        by_id = {t['knowledge_id']: t for t in blueprint['targets']}
+        by_id = frozen_by_id(blueprint)
         candidates = []
         for candidate in adaptive['candidates']:
             kid, ref = candidate['target_knowledge_id'], candidate['source']['ref']
-            targets[kid] = pick(by_id[kid], ('knowledge_id', 'topic', 'label', 'purpose', 'scope', 'priority'))
+            frozen = by_id.get(kid)
+            if frozen is None:
+                raise AppError('CONTEXT_CANDIDATE_TARGET_NOT_FOUND',
+                    f'候选组合引用的考察目标 {kid!r} 不在本场冻结目标集合中，未替换为其他目标', 409)
+            targets[kid] = pick(frozen, ('knowledge_id', 'topic', 'label', 'purpose', 'scope', 'priority'))
             sources[ref] = {**pick(candidate['source'], ('ref', 'source_type', 'source_id', 'kind')),
                 'semantics': candidate['source_semantics']}
             candidates.append(pick(candidate, ('candidate_id', 'target_knowledge_id', 'strategies')) |
