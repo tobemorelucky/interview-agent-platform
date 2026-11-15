@@ -1133,3 +1133,34 @@ L3 前置条件（purge_requests 表、清理顺序、audit_logs 脱敏、Celery
 **测试**：全量 `966 passed / 0 failed / 1 skipped`；迁移 `12 passed`；L3 专项 `13 passed`；前端 7 passed + `vue-tsc`/build 通过。故障注入：MinIO 失败重试、对象谎报成功被验证拦下、DB 步后崩溃断点恢复、旧任务重投不复活、canary 全库扫描 0 命中。真实 Chrome（合成用户 id=1）E2E：申请→worker 实际执行→`BLOCKED/UNSAFE_DEPENDENCY`、`completed_steps=[]`、诊断只列触发器名无原文；UI 五态与诚实文案核对通过，截图 `r23_01..03`。
 
 **上线条件=否**：清除被历史引用的资料需单独审批的"不可变历史窄例外迁移"；用户级聚合需资源级归属或 L4；外部备份/模型服务端/Capture 需独立保留期流程；生产 0025→0029 未迁移。COMPLETED 只代表"约定清除范围验证通过"，绝不代表账号级或外部副本已清除。
+
+---
+
+## 第二十四轮：Evaluation 正式链路修复 + 评测集 V2（真实模型 HTTP=0，见 docs/103）
+
+**基线** `14689ea` → 提交 `49dec9d` / `d9f1e3f` / `02aa726` / `b021d35` / `25c8cfb` / `003ae95`。不 push/reset/clean，未改评分规则、未新增 Agent、未开 Coach Harness、未推进 L3/L4。
+
+**P1-1（崩溃型）**：`context_projection.py` 用 `next(...)` 无默认值解析评分目标，目标不在本场冻结蓝图时抛 `StopIteration`，PEP 479 在协程边界转成 `RuntimeError` → `code` 退化为 `"RuntimeError"`、`retryable=True`、消息里无 id。改为 `frozen_target()/frozen_by_id()`，四个业务码（`CONTEXT_ACTIVE_TARGET_REQUIRED`/`CONTEXT_TARGET_NOT_FOUND`/`CONTEXT_TARGET_SOURCES_MISSING`/`CONTEXT_CANDIDATE_TARGET_NOT_FOUND`）入 `TERMINAL_CODES`，`stream()` 不再对这些给重试提示；**绝不替换成无关 target**（否则用错 rubric 评分而记录仍像合法）。
+
+**P1-2（烧钱型）**：`requirements_json` 的字符串 id（`"R2"`）原样进快照 → 模型照抄 → `job_requirement_id: int` 在**模型返回后**才校验，4,945 tokens 白花。新增 `job_target/requirement_refs.py`：导入期 `normalize_external_requirements()` 一次性映射并把标签存 `external_ref`（**全数字字符串拒绝**，标签与身份不可区分；混合类型拒绝），运行期 `validate_requirement_refs()` 只校验不转换。接入 `target_requirements()` 与公共 JD 的 `job_description_version_id == jd.id` 断言，**建会话时**即拒绝。
+
+**正式评测链路（关键基础设施）**：`apps/api/tests/eval_pair_support.py`，只用 `create → start → prepare_answer → Evaluation Agent → commit_answer`，Replay 在模型缝，**不直接 INSERT** 题目/回答/评价。`question_count=1` 让一次回答只付 1 次评价（Controller 直接 COMPLETE）。
+**踩到的坑（务必记住）**：`build_context` 恒调 `CapabilityMemoryService.refresh()` 并冻结 `memory_guided_plan`，会话完成必然重投影该用户记忆；**同一用户**再开会把刚验证的 topic 降权，`question_count=1` 时蓝图 `limit=1` 会让该目标**整个消失**。→ 成对评测必须**两个一次性用户共享同一份 JD**，不能同一用户两场。
+
+**V2 数据集** `08_/09_`：18 份 / 9 对，覆盖 GOOD_FULL/GOOD_SHORT/PARTIAL/NEAR_MISS/POOR_LONG_WRONG/POOR_CONFUSED；**8/9 对受控长度、6 对严格反向**（差答案长 1.08–1.32×）。每份含人工要点、`errors[{claim,why_wrong}]`、`expected_band`，盲测载荷只有题干+回答。
+**自身缺陷自查**：长度断言原写成 `ratio >= 0.95 or ratio <= 1.20`（恒真，任何输入都过）→ 已改为「|r−1|≤0.20 或 r>1.05」且反向对 ≥4。**断言必须在坏输入上会失败。**
+
+**人工复核纠正第 24 轮结论（原「13/13 全部正确」过度绝对）**：
+- Kafka 自增主键那条 **结论对、推理错**——评语称「同一消息重投时主键相同会插入失败」，实际自增主键会生成新 id、插入成功；只有业务键做主键/唯一约束才冲突。
+- LangGraph checkpointer **判断对、措辞过度绝对**——checkpointer 在 LangGraph 是**可选**的，POOR 的真错误是「重跑当恢复」，不是「不需要 checkpoint」本身。
+- RRF 解释正确，无需改。
+- **exactly-once 对外部系统的边界上一轮根本没测**（无样本含该错误），V2 的 `KF-C1` 已补。
+- G3 GOOD `tc=4` 与评语「术语使用正确」自相矛盾 → **确认跨维度重复扣分**。
+- 三组 POOR 固定 1/1/1/2/2：代码无钳制（只有 `CHECK 1..5`，`evaluation_repair` 禁止改评分字段），技能 `evaluation_anchors` 是**定性描述、无数值阶梯** → 模型自我收敛到地板，属**锚点设计缺口**。
+- 纠正口径：11/13 推理完全正确 + 1/13 结论对推理错 + 1/13 方向对措辞过度。
+
+**离线验收**：18/18 正式链路各落 1 条评价、五维与返回 artifact 完全一致、18 个独立用户、provider=replay/prompt 2.3.3、HTTP=0（分数来自脚本化回放，**非模型输出**）。幂等重复提交 0 次调用；评价失败 0 条落库且同幂等键可重试；不自动生成 Coach；记忆行只属夹具用户。
+**回归**：主库 `988 passed / 12 failed / 1 skipped`，12 个失败全是迁移测试**命名守卫**（要求库名 `interview_agent_v21_*`）；迁移用例在 `interview_agent_v21_r24_20261115` **12 passed** → 等价 **1000 passed / 0 failed / 1 skipped**。
+**新建隔离库**：`interview_agent_wb_r24_test_20261115`（0029/68 表）、`interview_agent_v21_r24_20261115`（迁移专用），库总数 230→232，无删除。受保护库与 MinIO 48 对象未变。
+
+**预算**：Evaluation 单次 3.3–4.2K tokens（均值 ≈4.0K，含 `reference_answer`），Main 单题 4.9–6.0K；6/20/30 份 = 6/20/30 HTTP（含 ≤10% 修复重试 7/22/33），≈24K/81K/121K tokens；旧方案（Main 也真实出题）90 HTTP/≈360K。题面可 Replay（0 HTTP），同 answer 重复提交可复用（0 HTTP）。**≤8 次短程验收方案（3 对×2 + 2 修复预留，Token 上限 40K、10 分钟）已备未执行**。
