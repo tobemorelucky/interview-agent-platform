@@ -51,21 +51,26 @@ class ResearchModelCalls:
             await db.commit()
             step_id = step.id
         started = time.perf_counter()
-        from interview_api.infrastructure.models.governance import model_scope, run_owner
-        scope_token = None
+        from contextlib import nullcontext
+        from interview_api.infrastructure.models.governance import run_owner
+        from interview_api.infrastructure.models.scope import model_scope_for
+        # Only a governed provider writes admissions; an ungoverned one needs no scope.
+        if getattr(provider, "governed", False):
+            owner, uid = await run_owner(self.factory, self.run_id)
+            scope_cm = model_scope_for(self.factory, owner=owner, user_id=uid, route=route)
+        else:
+            scope_cm = nullcontext()
         try:
-            if getattr(provider, "governed", False):
-                owner, uid = await run_owner(self.factory, self.run_id)
-                scope_token = model_scope.set((self.factory, owner, uid, route))
-            result = await generate_structured(
-                self.router, route, system=prompt.system, payload=payload,
-                response_model=schema,
-                timeout_seconds=self.timeout_seconds,
-                repair_policy=repair_policy,
-                bounded_repair_only=checkpoint_action,
-                allow_fallback=not checkpoint_action,
-                max_repair_input_bytes=max_repair_input_bytes,
-            )
+            with scope_cm:
+                result = await generate_structured(
+                    self.router, route, system=prompt.system, payload=payload,
+                    response_model=schema,
+                    timeout_seconds=self.timeout_seconds,
+                    repair_policy=repair_policy,
+                    bounded_repair_only=checkpoint_action,
+                    allow_fallback=not checkpoint_action,
+                    max_repair_input_bytes=max_repair_input_bytes,
+                )
             async with self.factory() as db:
                 step = await db.get(ExperienceAgentStepRun, step_id)
                 actual = self.router.resolve(route)
@@ -128,9 +133,6 @@ class ResearchModelCalls:
                     if checkpoint_action:
                         exc.usage_audited = True
             raise
-        finally:
-            if scope_token is not None:
-                model_scope.reset(scope_token)
 
 
 async def create_research_run(factory: async_sessionmaker, refresh_task_id: int) -> int:

@@ -9,7 +9,8 @@ import pytest
 from sqlalchemy import select, func, update
 
 from interview_api.core.errors import AppError
-from interview_api.infrastructure.models.governance import ModelGovernance, model_scope, governed_call, provider_guard, run_owner
+from interview_api.infrastructure.models.governance import ModelGovernance, governed_call, provider_guard, run_owner
+from interview_api.infrastructure.models.scope import database_of, model_scope_for
 from interview_api.infrastructure.models.governance_models import ModelAdmission
 from interview_api.infrastructure.models.provider import CompatibleModelProvider
 from interview_api.modules.public_career.library import PublicCareerLibrary
@@ -146,11 +147,8 @@ def test_actual_http_calls_go_through_quota_without_network(database_url):
         async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
             p = CompatibleModelProvider(base_url="https://offline.invalid", api_key="TEST", model="offline",
                 timeout_seconds=2, max_output_tokens=10, client=client, governed=True)
-            token = model_scope.set((factory, owner, None, "test"))
-            try:
+            with model_scope_for(factory, owner=owner, route="test"):
                 await p.generate([dict(role="user", content="test")], schema={})
-            finally:
-                model_scope.reset(token)
         async with factory() as db:
             row = await db.scalar(select(ModelAdmission).where(ModelAdmission.owner_key == owner))
             assert row.status == "SETTLED" and row.actual_tokens == 10 and len(calls) == 1
@@ -196,23 +194,23 @@ def test_interrupted_http_budget_recovers_without_resending(database_url, phase)
                                      event_hooks={"response": [response_hook]}) as client:
             provider = CompatibleModelProvider(base_url="https://offline.invalid", api_key="TEST", model="offline",
                 timeout_seconds=5, max_output_tokens=10, client=client, governed=True)
-            scope = model_scope.set((available_factory, owner, None, "test"))
-            guard = provider_guard.set(BeforeSend() if phase == "before_send" else None)
-            try:
-                messages = [dict(role="user", content="test")]
-                if phase == "before_send":
-                    task = asyncio.create_task(provider.generate(messages, schema={}))
-                    await asyncio.wait_for(parsed.wait(), 5)
-                    task.cancel()
-                    with pytest.raises(asyncio.CancelledError):
-                        await task
-                else:
-                    with pytest.raises((ConnectionError, RuntimeError)) as failure:
-                        await provider.generate(messages, schema={})
-                    assert type(failure.value) is ConnectionError if phase == "settlement" else failure.value.request_sent
-            finally:
-                provider_guard.reset(guard)
-                model_scope.reset(scope)
+            with model_scope_for(available_factory, owner=owner, route="test",
+                                 ledger_database=database_of(factory)):
+                guard = provider_guard.set(BeforeSend() if phase == "before_send" else None)
+                try:
+                    messages = [dict(role="user", content="test")]
+                    if phase == "before_send":
+                        task = asyncio.create_task(provider.generate(messages, schema={}))
+                        await asyncio.wait_for(parsed.wait(), 5)
+                        task.cancel()
+                        with pytest.raises(asyncio.CancelledError):
+                            await task
+                    else:
+                        with pytest.raises((ConnectionError, RuntimeError)) as failure:
+                            await provider.generate(messages, schema={})
+                        assert type(failure.value) is ConnectionError if phase == "settlement" else failure.value.request_sent
+                finally:
+                    provider_guard.reset(guard)
 
         db_unavailable = False
         async with factory() as db:
@@ -307,11 +305,8 @@ def test_cancelled_model_reservation_is_unknown_not_refunded(database_url):
             started.set()
             await asyncio.sleep(2)
         async def invoke():
-            token = model_scope.set((factory, owner, None, "test"))
-            try:
+            with model_scope_for(factory, owner=owner, route="test"):
                 await governed_call(SimpleNamespace(model_name="offline", max_output_tokens=20, timeout=3), [], operation)
-            finally:
-                model_scope.reset(token)
         task = asyncio.create_task(invoke())
         await asyncio.wait_for(started.wait(), 2)
         task.cancel()
@@ -343,11 +338,8 @@ def test_user_admission_precedes_provider_queue_and_repair_is_charged(database_u
                 timeout_seconds=3, max_output_tokens=20, client=client, governed=True)
             router = ModelRouter({"test": provider}, concurrency=1)
             async def invoke():
-                token = model_scope.set((factory, owner, None, "test"))
-                try:
+                with model_scope_for(factory, owner=owner, route="test"):
                     return await generate_structured(router, "test", system="DEMO", payload={}, response_model=Output, timeout_seconds=3)
-                finally:
-                    model_scope.reset(token)
             with patch.object(settings, "model_user_concurrency", 1):
                 first = asyncio.create_task(invoke())
                 await asyncio.wait_for(started.wait(), 2)

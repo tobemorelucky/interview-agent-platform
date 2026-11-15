@@ -69,6 +69,16 @@ class MockInterviewService:
             return await SessionController(db).state(session_id, user_id)
 
     async def call_agent(self, agent, session_id, user_id, expected, payload, *, answer_id=None):
+        # One scope per call, on this service's own factory: the owner is the
+        # session owner, the route is the agent's route, and the ledger database is
+        # the database this session lives in. Setting it here means a provider
+        # wrapper that forgets to declare `governed` can never bill the caller
+        # under an ambient user or the process default database.
+        from interview_api.infrastructure.models.scope import model_scope_for
+        with model_scope_for(self.factory, user_id=user_id, route=agent.route):
+            return await self._call_agent(agent, session_id, user_id, expected, payload, answer_id=answer_id)
+
+    async def _call_agent(self, agent, session_id, user_id, expected, payload, *, answer_id=None):
         if agent.route == self.main.route and payload.get("snapshot", {}).get("adaptive_policy", {}).get("main_harness_version"):
             from interview_api.modules.interview.main_harness import MainHarness
             return await MainHarness(self, agent).call(session_id, user_id, expected, payload, answer_id)

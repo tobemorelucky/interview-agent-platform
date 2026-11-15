@@ -63,6 +63,27 @@ def database_url() -> str:
     return value
 
 
+@pytest.fixture(scope="session", autouse=True)
+def declared_ledger_target():
+    """The test process declares its own ledger database.
+
+    `governed_call` refuses to book an admission anywhere but the database the
+    process declares, so a test run must say "the test database" explicitly. Without
+    this, a run whose DATABASE_URL happened to point at production would silently
+    write admissions there instead of failing.
+    """
+    test_url = os.getenv("M1_TEST_DATABASE_URL")
+    if not test_url:
+        yield None
+        return
+    from interview_api.core.config import settings
+
+    previous = settings.model_ledger_database
+    settings.model_ledger_database = make_url(test_url).database or ""
+    yield settings.model_ledger_database
+    settings.model_ledger_database = previous
+
+
 @pytest.fixture
 def app_engine():
     """Give the process-wide app engine a pool that belongs to this event loop.

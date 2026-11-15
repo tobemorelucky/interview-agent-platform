@@ -1,5 +1,5 @@
 from collections.abc import AsyncIterator
-from interview_api.infrastructure.models.governance import governed_call, model_scope
+from interview_api.infrastructure.models.governance import governed_call
 from interview_api.infrastructure.models.provider import ModelResponse, modelscope_connection
 
 from openai import AsyncOpenAI
@@ -51,18 +51,24 @@ class OpenAICompatibleLLMProvider:
             usage = response.usage
             text = (choice.message.content if choice else None) or ""
             return ModelResponse(text, {"total_tokens": usage.total_tokens if usage else None})
-        token = None
+        from interview_api.infrastructure.models.scope import model_scope_for
+        from interview_api.infrastructure.db.session import async_session_factory
+        from interview_api.infrastructure.models.governance import request_user_id
+        uid = self.user_id if self.user_id is not None else request_user_id.get()
         if self.user_id is not None:
-            from interview_api.infrastructure.db.session import async_session_factory
-            token = model_scope.set((async_session_factory, f"user:{self.user_id}", self.user_id, "resume_report"))
+            # Resume extraction is a user-scoped feature; keep its own route.
+            scope = model_scope_for(async_session_factory, user_id=self.user_id, route="resume_report")
         elif self.public_system_task:
-            from interview_api.infrastructure.db.session import async_session_factory
-            token = model_scope.set((async_session_factory, "system:public-career", None, "legacy_public_extraction"))
-        try:
+            scope = model_scope_for(async_session_factory, owner="system:public-career",
+                                    route="legacy_public_extraction")
+        elif uid is not None:
+            # Legacy chat inside an authenticated request: the owner is explicit
+            # here, not inferred later by the gateway.
+            scope = model_scope_for(async_session_factory, user_id=uid, route="legacy_chat")
+        else:
+            raise AppError("MODEL_IDENTITY_REQUIRED", "模型调用缺少用户身份，未发送请求", 403)
+        with scope:
             return (await governed_call(self, messages, operation)).text
-        finally:
-            if token is not None:
-                model_scope.reset(token)
 
     async def chat_stream(self, messages: list[dict], **kwargs) -> AsyncIterator[str]:
         # Reserve before opening the stream; hold the reservation through disconnect.

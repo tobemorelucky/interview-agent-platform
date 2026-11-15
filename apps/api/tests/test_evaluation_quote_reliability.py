@@ -285,7 +285,8 @@ def test_governed_http_usage_survives_invalid_response(database_url, kind):
     from uuid import uuid4
     from sqlalchemy import select
     from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-    from interview_api.infrastructure.models.governance import model_scope, ModelGovernance
+    from interview_api.infrastructure.models.governance import ModelGovernance
+    from interview_api.infrastructure.models.scope import model_scope_for
     from interview_api.infrastructure.models.governance_models import ModelAdmission
     from interview_api.infrastructure.models.provider import CompatibleModelProvider, ModelProviderError
     async def execute():
@@ -300,12 +301,10 @@ def test_governed_http_usage_survives_invalid_response(database_url, kind):
             async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
                 provider = CompatibleModelProvider(base_url='https://offline.invalid',api_key='not-a-secret',model='offline',
                     timeout_seconds=2,max_output_tokens=20,client=client,governed=True)
-                scope = model_scope.set((factory,owner,None,'answer_evaluation'))
-                try:
+                with model_scope_for(factory, owner=owner, route='answer_evaluation'):
                     with pytest.raises(ModelProviderError) as caught:
                         await generate_structured(ModelRouter({'answer_evaluation':provider}), 'answer_evaluation',
                             system='offline HTTP boundary',payload={},response_model=AdaptiveEvaluation)
-                finally: model_scope.reset(scope)
             async with factory() as db:
                 rows = list((await db.scalars(select(ModelAdmission).where(ModelAdmission.owner_key == owner))).all())
                 if kind == 'http_failure':

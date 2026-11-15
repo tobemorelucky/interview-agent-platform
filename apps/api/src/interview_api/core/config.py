@@ -85,6 +85,11 @@ class Settings(BaseSettings):
     model_user_daily_calls: int = Field(100, ge=1)
     model_user_daily_tokens: int = Field(1000000, ge=1)
     model_user_concurrency: int = Field(2, ge=1)
+    # Which database a model admission may be booked in. Empty means "the database
+    # in DATABASE_URL". A sandbox harness or an isolated worker must set this to its
+    # own database; otherwise the gateway refuses before sending, instead of billing
+    # whatever the process happens to be configured with.
+    model_ledger_database: str = ""
     llm_request_timeout_seconds: float = 60.0
     llm_max_retries: int = 0
 

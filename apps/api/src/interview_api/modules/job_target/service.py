@@ -278,28 +278,23 @@ class JobTargetService:
     async def extract(self, raw_text: str, company: str | None, title: str | None,
                       *, user_id: int | None = None) -> tuple[dict, str, str | None]:
         router = self._router or build_model_router()
-        scope_token = None
-        if user_id is not None:
-            # Book this spend under the real route instead of governed_call's
-            # `legacy_llm` fallback, so the admission ledger can attribute it.
-            from interview_api.infrastructure.db.session import async_session_factory
-            from interview_api.infrastructure.models.governance import model_scope
-            scope_token = model_scope.set(
-                (async_session_factory, f"user:{user_id}", user_id, EXTRACT_ROUTE))
+        from interview_api.infrastructure.models.scope import ledger_factory, model_scope_for
+        # Every parse is booked under this feature's own route and owner. Without a
+        # user it is a system task, never the ambient request user and never the
+        # `legacy_llm` bucket.
+        owner = f"user:{user_id}" if user_id is not None else "system:job-target-extract"
         try:
-            result = await generate_structured(router, EXTRACT_ROUTE, system=SYSTEM,
-                payload={"input": {"raw_text": raw_text,
-                                   "declared_company": None if company in (None, "未提供") else company,
-                                   "declared_title": None if title in (None, "未提供") else title}},
-                response_model=ExtractedJobDescription, timeout_seconds=90,
-                allow_fallback=True, max_repair_input_bytes=60000)
+            with model_scope_for(ledger_factory(self.db), owner=owner, user_id=user_id, route=EXTRACT_ROUTE):
+                result = await generate_structured(router, EXTRACT_ROUTE, system=SYSTEM,
+                    payload={"input": {"raw_text": raw_text,
+                                       "declared_company": None if company in (None, "未提供") else company,
+                                       "declared_title": None if title in (None, "未提供") else title}},
+                    response_model=ExtractedJobDescription, timeout_seconds=90,
+                    allow_fallback=True, max_repair_input_bytes=60000)
         except (ModelProviderError, AppError) as exc:
             # Honest degradation: the result is labelled RULE, never "AI parsed".
             reason = getattr(exc, "code", type(exc).__name__)
             return rule_extract(raw_text, None, None), "RULE", f"model_unavailable:{reason}"[:500]
-        finally:
-            if scope_token is not None:
-                model_scope.reset(scope_token)
         parsed = result.parsed.model_dump()
         parsed["requirements"] = [dict(row) for row in parsed.get("requirements") or []]
         return parsed, "LLM", None

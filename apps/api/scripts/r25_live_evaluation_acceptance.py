@@ -36,7 +36,7 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from interview_api.core.config import settings
-from interview_api.infrastructure.models.governance import model_scope, request_user_id
+from interview_api.infrastructure.models.scope import current_scope, expected_ledger_database
 from interview_api.infrastructure.models.provider import (
     CompatibleModelProvider, ModelProviderError, ModelProvider, ModelScopeModelProvider,
     ModelResponse, modelscope_connection,
@@ -263,8 +263,8 @@ class GuardedEvaluation(ModelProvider):
 
 def _scope_owner() -> str | None:
     """The owner the ledger will book this call to, as the gateway sees it."""
-    scope = model_scope.get()
-    return scope[1] if scope else None
+    scope = current_scope()
+    return scope.owner if scope else None
 
 
 def _audit_payload(messages, schema) -> dict:
@@ -422,6 +422,12 @@ async def run(args) -> dict:
     name = make_url(url).database or ""
     if not name.startswith("interview_agent_wb_r25_"):
         raise SystemExit(f"拒绝执行：{name} 不是本轮 sandbox 数据库")
+    # The gateway refuses to book an admission anywhere but the database this
+    # process declares. Declare the sandbox explicitly; a run that forgets now
+    # stops before the first request instead of billing DATABASE_URL.
+    settings.model_ledger_database = name
+    if expected_ledger_database() != name:
+        raise SystemExit(f"拒绝执行：账本目标 {expected_ledger_database()!r} 与沙箱 {name!r} 不一致")
     engine = create_async_engine(url)
     factory = async_sessionmaker(engine, expire_on_commit=False)
     started = datetime.now(timezone.utc)
@@ -483,7 +489,6 @@ async def run(args) -> dict:
                 factory, cases[pair["pair_id"]], user_id=user_id, skill_id=pair["skill_id"],
                 question=pair["question"], expected_points=pair["rubric"],
                 dimension=pair["dimension"], topic=pair["topic"], evaluator=evaluator)
-            request_user_id.set(user_id)
             return dict(sample=sample, user_id=user_id, evaluator=evaluator, core=core,
                         session_id=session_id, question_id=question_id, main=main,
                         answer_key=uuid4().hex,
@@ -493,15 +498,9 @@ async def run(args) -> dict:
         async def submit_one(pair, runtime):
             nonlocal consecutive, stop_reason
             sample = runtime["sample"]
-            # The scope must be set for *this* owner immediately before the call.
-            # Setting it while the session was opened billed both answers of a
-            # pair to whichever owner happened to be opened last.
-            # The interview module never sets a scope, so the gateway would fall
-            # back to ``db.session.async_session_factory`` — the production engine
-            # from DATABASE_URL. Point the ledger at *this* sandbox instead, and
-            # keep the route the product means to bill.
-            request_user_id.set(runtime["user_id"])
-            model_scope.set((factory, f"user:{runtime['user_id']}", runtime["user_id"], EVAL_ROUTE))
+            # The service binds the scope per call (owner, route, ledger database),
+            # so the harness no longer sets it. It only declares which database this
+            # process is allowed to bill, which is checked before every request.
             calls_before = budget.calls if budget else 0
             tokens_before = budget.tokens if budget else 0
             clock = time.perf_counter()
@@ -586,8 +585,6 @@ async def run(args) -> dict:
         if done:
             first = done[0]
             runtime = runtimes[first["sample_id"]]
-            request_user_id.set(runtime["user_id"])
-            model_scope.set((factory, f"user:{runtime['user_id']}", runtime["user_id"], EVAL_ROUTE))
             before_calls = _call_count(budget, runtime["evaluator"])
             before = await read_submission(factory, runtime["session_id"])
             events = await runtime["core"].answer(

@@ -31,7 +31,7 @@ from interview_api.infrastructure.models.router import (
     build_resume_profile_router, build_job_matching_router, build_model_router,
 )
 from interview_api.infrastructure.models.structured import generate_structured
-from interview_api.infrastructure.models.governance import model_scope
+from interview_api.infrastructure.models.scope import model_scope_for
 
 TARGET = "deepseek-v4-pro-ga-260813"
 CALL = ContextVar("acceptance_call", default=None)
@@ -177,16 +177,13 @@ async def run(batch, database):
             probe_inner = CompatibleModelProvider(base_url=base.base_url, api_key=base.api_key, model=base.model_name,
                 timeout_seconds=45, max_output_tokens=128, thinking_type=base.thinking_type, governed=True)
             probe_router = ModelRouter({"acceptance_probe": MeteredProvider(probe_inner, batch, "acceptance_probe", client)})
-            token = model_scope.set((factory, f"user:{uid}", uid, "acceptance_probe"))
-            try:
+            with model_scope_for(factory, user_id=uid, route="acceptance_probe"):
                 result = await generate_structured(probe_router, "acceptance_probe", system="Return JSON matching the provided schema. status=ok and ready=true.",
                     payload={}, response_model=Probe, timeout_seconds=45)
                 assert result.parsed.status == "ok" and result.parsed.ready is True
                 batch.records[-1]["business_validation"] = "PROBE_PASSED"
                 batch.save(status="PROBE_PASSED", routes=batch.routes)
                 print("PROBE_PASSED", flush=True)
-            finally:
-                model_scope.reset(token)
             routes = {r: MeteredProvider(p, batch, r, client) for router in configs[:2] for r, p in router.routes.items()}
             router = ModelRouter(routes, concurrency=configs[0].concurrency)
             core = MockInterviewService(factory, router)

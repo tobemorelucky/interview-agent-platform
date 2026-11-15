@@ -15,7 +15,6 @@ from interview_api.core.errors import AppError
 from .governance_models import ModelAdmission, ModelBudgetOwner
 
 request_user_id: ContextVar[int | None] = ContextVar("model_request_user", default=None)
-model_scope: ContextVar[tuple | None] = ContextVar("model_scope", default=None)
 provider_guard: ContextVar[object | None] = ContextVar("model_provider_guard", default=None)
 
 
@@ -81,14 +80,17 @@ class ModelGovernance:
 
 
 async def governed_call(provider, messages, operation):
-    scope = model_scope.get()
-    if scope is None:
-        from interview_api.infrastructure.db.session import async_session_factory
-        uid = request_user_id.get()
-        if uid is None:
-            raise AppError("MODEL_IDENTITY_REQUIRED", "模型调用缺少可信用户或系统任务身份", 403)
-        scope = (async_session_factory, f"user:{uid}", uid, "legacy_llm")
-    factory, owner, uid, route = scope
+    """Admit, send and settle exactly one request under the caller's own scope.
+
+    There is deliberately no fallback: inferring the owner from an ambient request
+    or the process-wide session factory is what booked calls as ``legacy_llm`` and
+    what let a sandbox harness bill the production ledger. A missing or mismatched
+    scope raises before any bytes are sent, so it costs nothing.
+    """
+    from .scope import assert_ledger_target, require_scope
+    scope = require_scope()
+    assert_ledger_target(scope)
+    factory, owner, uid, route = scope.factory, scope.owner, scope.user_id, scope.route
     reserve = len(json.dumps(messages, ensure_ascii=False).encode("utf-8")) + provider.max_output_tokens
     governance = ModelGovernance(factory)
     try:

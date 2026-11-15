@@ -35,7 +35,7 @@ def _provider(monkeypatch, *, thinking_type=None, finish_reason="stop", content=
     monkeypatch.setattr(module, "modelscope_connection", lambda: {
         "base_url": "http://offline.local/v1", "api_key": "offline", "model": "offline-model"})
     seen = []
-    provider = module.OpenAICompatibleLLMProvider(thinking_type=thinking_type)
+    provider = module.OpenAICompatibleLLMProvider(user_id=1, thinking_type=thinking_type)
     provider._client = _Client(SimpleNamespace(choices=[SimpleNamespace(
         finish_reason=finish_reason, message=SimpleNamespace(content=content))], usage=None), seen)
 

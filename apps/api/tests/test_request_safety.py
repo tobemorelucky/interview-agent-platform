@@ -17,7 +17,6 @@ import httpx
 import pytest
 from sqlalchemy import select
 
-from interview_api.infrastructure.models.governance import model_scope
 from interview_api.infrastructure.models.governance_models import ModelAdmission
 from interview_api.infrastructure.models.provider import CompatibleModelProvider, ModelProviderError
 
@@ -35,12 +34,10 @@ async def admission(factory, owner):
 
 
 async def call_and_capture(factory, owner, client):
-    token = model_scope.set((factory, owner, None, "test"))
-    try:
+    from interview_api.infrastructure.models.scope import model_scope_for
+    with model_scope_for(factory, owner=owner, route="test"):
         with pytest.raises(ModelProviderError) as failure:
             await offline(client).generate([{"role": "user", "content": "x"}], schema={})
-    finally:
-        model_scope.reset(token)
     return failure.value
 
 

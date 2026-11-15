@@ -6,6 +6,7 @@ from interview_api.core.exceptions import AppError
 
 VERSION = 'ROLE_CONTEXT_V1'
 SCORING_VERSION = 'FOLLOWUP_SCORING_V1'
+BOUNDARY_CONTRACT = 'FIVE_DIMENSION_BOUNDARIES_V1'
 
 # Deterministic contract mismatches: the same request can never succeed, and a
 # retry must not spend another model call. Streaming clients must not offer a
@@ -15,11 +16,31 @@ TERMINAL_CODES = frozenset({
     'CONTEXT_TARGET_NOT_FOUND',
     'CONTEXT_TARGET_SOURCES_MISSING',
     'CONTEXT_CANDIDATE_TARGET_NOT_FOUND',
+    # Attribution failures are configuration, not transient provider trouble:
+    # retrying the same request cannot fix them and must not spend another call.
+    'MODEL_SCOPE_REQUIRED',
+    'MODEL_LEDGER_TARGET_MISMATCH',
 })
 
 
 def enabled(payload):
     return payload.get('snapshot', {}).get('adaptive_policy', {}).get('context_projection') == VERSION
+
+
+def expected_evaluation_prompt(policy, *, gap_scope: bool, scoring: bool) -> str:
+    """Which Evaluation prompt this frozen policy must be read with.
+
+    A session either froze the five-dimension boundary contract (and therefore the
+    exact 2.3.4 prompt) or it did not (2.3.3 and older). Anything else is a mixed
+    contract and is refused rather than silently upgraded: re-reading an old answer
+    under a new rubric would change what its stored scores mean.
+    """
+    boundary = (policy or {}).get('evaluation_boundary_contract')
+    if boundary not in (None, BOUNDARY_CONTRACT):
+        raise AppError('EVALUATION_BOUNDARY_UNSUPPORTED', '本场评分边界契约不可用，未自动升级', 409)
+    if gap_scope:
+        return '2.3.4' if boundary else '2.3.3'
+    return '2.3.2' if scoring else '2.3.1'
 
 
 def frozen_target(blueprint, knowledge_id):
@@ -90,7 +111,10 @@ def model_payload(payload, route):
     main_version = policy['prompts']['interview_main']['version']
     expected_main = (MAIN_HARNESS.version, MAIN_HARNESS_CONTEXT_HINTS.version) if harness else (
         ('2.3.3',) if gap_scope else ('2.3.1',))
-    expected_eval = '2.3.3' if gap_scope else '2.3.2' if scoring else '2.3.1'
+    # 2.3.4 adds the five-dimension boundary contract. It is only accepted when the
+    # session froze that contract: an older session must keep reading 2.3.3 with the
+    # exact prompt it was scored under, and a mixed pair is refused, not upgraded.
+    expected_eval = expected_evaluation_prompt(policy, gap_scope=gap_scope, scoring=bool(scoring))
     if main_version not in expected_main or policy['prompts']['answer_evaluation']['version'] != expected_eval:
         raise AppError('CONTEXT_PROJECTION_PROMPT_MISMATCH', '投影与冻结 Prompt 契约不一致，未猜测兼容', 409)
     adaptive = result['adaptive']
