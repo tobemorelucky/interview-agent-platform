@@ -1193,3 +1193,27 @@ L3 前置条件（purge_requests 表、清理顺序、audit_logs 脱敏、Celery
 **资产**：正式库 `0025`/19/41/5/`model_admissions` 0；18 轮原件 `0026`/3/18/1/49；快照库 `0026`/1621/1761/219/147；MinIO 主 bucket 48 对象；三闸 OFF。新建 `interview_agent_wb_r25_live_20261115` 与 `..._r25_rehearsal_20261115`（0029/68 表），库总数 232→234，无删除。
 
 **扩到 30 份（待批准，未执行）**：先修引用上限与 route 归因；15 对 × 2 = 30 份，≥8 对反向长度、≥6 对覆盖 PARTIAL/NEAR_MISS；HTTP 40 / Token 220,000 / 30 min；新增两条硬指标——tc 扣分必须能在评语里找到**准确性**理由、同一对不得五维同步变化。
+
+---
+
+## 第二十六轮：模型账本归属、引用 Repair、五维评分准则（真实模型 HTTP=0，见 docs/105）
+
+**基线** `55d97aa` → 提交 `b2a5358`（P0 归属）、`267e011`（P1 评分准则/引用上限）、`3ce6d52`（docs）。全量 **1015 passed / 0 failed / 1 skipped**（业务 1003 + 迁移 12）。受保护库与 MinIO 未变。
+
+**先纠正上一轮的错误结论**：`docs/104 §7.2` 说"`modules/interview` 不设 `model_scope`"是**错的**。正式评价走 `ResearchModelCalls`（`public_career/research/audit.py`），它在 `provider.governed` 为真时设 scope，owner 由 `run_owner()` 从 session FK 反查。上一轮记成 `legacy_llm` 的真因是**我的 `GuardedEvaluation` 包装类没暴露 `governed`**，audit 跳过设置，网关落到回退分支。
+
+**但回退分支是真缺陷（已修）**：`governed_call` 原来在无 scope 时静默用 `db.session.async_session_factory` + route `legacy_llm`。外部夹具指向 sandbox 业务库、进程仍是正式配置时，账本会写进正式库；route 也永久失真。
+- 新增 `infrastructure/models/scope.py`：`ModelScope(factory, owner, user_id, route, ledger_database)` + `model_scope_for()`（ContextVar，进出即设/复位）+ `require_scope()`（缺 → 403 `MODEL_SCOPE_REQUIRED`）+ `assert_ledger_target()`（scope 库 ≠ `MODEL_LEDGER_DATABASE` → 409 `MODEL_LEDGER_TARGET_MISMATCH`，**均在预留前失败，0 费用**）+ `ledger_factory(db)`（有 session 用其 engine）。
+- `MockInterviewService.call_agent()` 每次 agent 调用包一层 scope → **即使 provider 包装类不暴露 `governed`，归属也不会错**（这正是上一轮的坑）。
+- 无用户的 JD 抽取显式记 `system:job-target-extract`；旧 SDK provider 三档显式 route（`resume_report` / `legacy_public_extraction` / `legacy_chat`）；两者都不成立才 403。
+- 两个新错误码进 `TERMINAL_CODES`（配置类错误不可重试）。
+- 测试进程用 `M1_TEST_DATABASE_URL` 声明自己的账本库，不再依赖 `DATABASE_URL` 恰好一致。
+- **历史账本未重写**：第 25 轮 8 条 admission 保持原样，只在 docs/104 加勘误。
+
+**引用上限（P1）**：Prompt 2.3.3 **没写条数**，schema `answer_quotes max_length=3`，超出即 `too_long` → `EVALUATION_QUOTE_SUBSET_V1` 二次请求。5 条确为逐字合法。**不提高上限**的原因：`ResolvedObservation.answer_spans` 也是 3，且由 quotes 逐个映射（`adaptive.py:296`），改上限会级联改证据语义；**不做确定性裁剪**的原因：多条引用可能支撑同一结论，删哪条需语义判断。→ 2.3.4 明确"at most 3"，Repair 保留兜底。离线重放（用捕获的 KF-A1 回答重建 5 条逐字引用）证明：裁剪后除 quotes 外逐字不变；改写引用 → `prepare()` 返回 None（拒绝，不静默丢）；改分数/塞入新引用 → `ValueError`。
+
+**五维评分（P1）**：新增 2.3.4 = 2.3.3 + 边界契约，新会话冻结 `evaluation_boundary_contract="FIVE_DIMENSION_BOUNDARIES_V1"`；旧会话仍 2.3.3，混合组合拒绝（`EVALUATION_BOUNDARY_UNSUPPORTED`）。要点：tc 只判"陈述是否准确"，遗漏不算技术错误（coverage 永不降 tc）；depth 只在缺理由/边界/验证时扣；多维扣分必须各有独立理由；不强制五维不同；核心机制错误 tc≤2 且 depth=2、次要细节 tc=3 且不单独压 depth；PARTIAL=遗漏无错机制、NEAR_MISS=含一处明确错误机制；Kafka 至少一次/幂等仅生产端/事务仅限 Kafka 内部/自增主键不能去重/offset 只有 seek 无事务回滚；checkpointer 无状态可选、恢复语境必需、快照写 super-step 边界；措辞不得一刀切"cannot"。五维字段、1..5、DB schema 未改。
+
+**测试 A–J**：A–E 靠契约与 Prompt 断言、F/G 靠引用重放、H 并发两 owner、I 跨库 409（两库均 0 写入）、J 无 scope 403（把 `async_session_factory` 换成"一调用就报错"证明回退已不存在）；另有官方 `create→start→answer` 路径 + governed 桩验证 route/owner。新增 15 个用例。
+
+**下一轮方案（未执行）**：4 对 8 份，全部 `commit_answer`；RAG-B1/A2 与 LG-B2/C1 **同题同答**复测（与第 25 轮前后对照），加 KF-C1/A2（EOS 边界）与 RAG-C1/C2（中间档）；HTTP 12（8 评价 + ≤4 修复）、Token 60,000、15 分钟；判据只看 tc 理由是否有准确性依据、coverage 缺口是否还进 tc、是否仍五维同步；**不宣称统计显著**。
