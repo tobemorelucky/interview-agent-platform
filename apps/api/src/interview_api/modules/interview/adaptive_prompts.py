@@ -138,6 +138,56 @@ The server derives cumulative goal state separately. Do not return or change the
 """)
 
 
+EVALUATION_BOUNDARIES = """
+Five dimensions have separate jobs. Score each one on its own evidence; a dimension may only be
+lowered for a reason that belongs to that dimension.
+- technical_correctness = accuracy of what the answer DOES state. Omission alone is not a technical
+  error. 5 = all technical claims accurate; 4 = all claims accurate with one imprecise term;
+  3 = one non-fatal inaccuracy that leaves the main mechanism usable; 2 = one key mechanism wrong
+  or two non-fatal errors; 1 = the core mechanism is wrong or the answer is technically unusable.
+- coverage = how much of the rubric the answer actually addresses. 5 = all points; 4 = all but one
+  minor point; 3 = at least half; 2 = less than half; 1 = almost none. Coverage never lowers
+  technical_correctness, and an omission is not a factual error.
+- depth = reasons, failure boundaries, trade-offs and how the claim would be validated. 5 = reason
+  plus failure window plus validation; 4 = one of the three missing; 3 = mechanism only; 2 = a
+  conclusion restated without a mechanism; 1 = slogans only. A coverage gap lowers depth only when
+  the missing part is a reason, a boundary or a validation step, and that deduction must cite it.
+- relevance = whether the answer addresses THIS question and the current goal. 5 = fully on
+  question; 4 = mostly, with one digression; 3 = partly drifts; 2 = largely off-question; 1 = off
+  topic. Fluency or length never raises relevance.
+- communication = order and causality of the explanation. 5 = ordered steps with causes; 4 = minor
+  structural weakness; 3 = understandable but disorganized; 2 = hard to follow; 1 = incoherent.
+The same defect may affect several dimensions, but each deduction needs its own dimension-specific
+reason; never restate one reason under two names. Do not force five different numbers and do not
+forbid equal numbers: equal scores are correct when the evidence is equal.
+Severity: a wrong core mechanism caps technical_correctness at 1-2 and depth at 2; a wrong side
+detail caps technical_correctness at 3 and does not by itself cap depth; a pure omission lowers
+coverage, and lowers depth only if it removes a reason, a boundary or a validation step.
+PARTIAL vs NEAR_MISS: use PARTIAL when the answer misses required parts but states no wrong
+mechanism; use NEEDS_CLARIFICATION when it states one specific wrong mechanism. When both happen,
+score the wrong mechanism as a technical error and list the omissions as missing_points.
+Judge these technical boundaries accurately, and state every correction no more absolutely than the
+mechanism allows:
+- Kafka consumers are at-least-once by default; producer idempotence is producer-side only; Kafka
+  transactions cover read-process-write inside Kafka, not arbitrary external systems; a database
+  auto-increment key cannot deduplicate a redelivered business message; offset reset or seek
+  re-reads records, and there is no transactional "offset rollback".
+- A LangGraph checkpointer is optional for stateless graphs but is the mechanism for persistence,
+  thread-scoped resume and human-in-the-loop; when the question asks about persistence or recovery,
+  treating it as a debug-only option is a mechanism error. Checkpoints are written at super-step
+  boundaries, not inside a node before it runs.
+- RRF fuses ranks with 1/(k+rank) and never uses raw score magnitude; a smaller k favours head ranks.
+Phrase each correction precisely: say the mechanism has no rollback API or is scoped to X, rather
+than a blanket "cannot".
+answer_quotes: at most 3, each an exact contiguous substring of this answer, chosen to support
+conclusions you actually draw. Never pad to a fixed count and never quote text that supports
+nothing you claim.
+"""
+
+EVALUATION_BOUNDARIES_PROMPT = PromptDefinition(
+    "answer_evaluation", "2.3.4", EVALUATION_GAP_SCOPED.system + EVALUATION_BOUNDARIES)
+
+
 MAIN_HARNESS = PromptDefinition("interview_main", "2.4.0-harness.1", MAIN_MEMORY_REFS.system.replace(
     "Return AdaptiveSelection JSON", "Use the supplied action JSON schema"
 ) + """
@@ -173,11 +223,12 @@ return FINAL directly. No tool call is required merely because more detail exist
 
 
 def freeze_prompts(contract=None, *, memory_guided=False, context_projection=False, evaluation_context=False,
-                   gap_scope=False):
+                   gap_scope=False, evaluation_boundaries=False):
     if context_projection:
         if gap_scope:
+            evaluation = EVALUATION_BOUNDARIES_PROMPT if evaluation_boundaries else EVALUATION_GAP_SCOPED
             return {p.name: dict(version=p.version, system=p.system, fingerprint=p.content_hash)
-                    for p in (MAIN_GAP_SCOPED, EVALUATION_GAP_SCOPED)}
+                    for p in (MAIN_GAP_SCOPED, evaluation)}
         return {p.name: dict(version=p.version, system=p.system, fingerprint=p.content_hash)
             for p in (MAIN_PROJECTED, EVALUATION_SCOPED if evaluation_context else EVALUATION_PROJECTED)}
     main = MAIN_MEMORY_REFS if memory_guided else MAIN_PAIRS_REFS if contract == "TARGET_SOURCE_PAIR_V1" else MAIN

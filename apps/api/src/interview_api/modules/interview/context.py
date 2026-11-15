@@ -223,8 +223,11 @@ async def build_context(db, user_id, request):
         context["adaptive_policy"] = dict(version="2.1.0", decision_contract="TARGET_SOURCE_PAIR_V1",
             context_projection="ROLE_CONTEXT_V1",
             evaluation_context="FOLLOWUP_SCORING_V1", gap_scope_contract=GAP_SCOPE_CONTRACT,
+            # New sessions freeze the five-dimension boundary contract with prompt
+            # 2.3.4. Existing sessions keep 2.3.3 and are still read with it.
+            evaluation_boundary_contract="FIVE_DIMENSION_BOUNDARIES_V1",
             prompts=freeze_prompts(contract="TARGET_SOURCE_PAIR_V1", memory_guided=True, context_projection=True,
-                evaluation_context=True, gap_scope=True), invalid_decision="FAIL_SAFE_RETRY_NO_EXTRA_CALL")
+                evaluation_context=True, gap_scope=True, evaluation_boundaries=True), invalid_decision="FAIL_SAFE_RETRY_NO_EXTRA_CALL")
         if request.main_harness:
             from interview_api.modules.interview.main_harness import VERSION as HARNESS_VERSION
             from interview_api.modules.interview.adaptive_prompts import MAIN_HARNESS_CONTEXT_HINTS as prompt
