@@ -1,0 +1,851 @@
+{
+  "head": "7d8c7ce",
+  "database": "interview_agent_wb_r27_live_20261115",
+  "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+  "provider": "modelscope",
+  "base_url": "https://api-inference.modelscope.cn/v1",
+  "prompt_version": "2.3.4",
+  "boundary_contract": "FIVE_DIMENSION_BOUNDARIES_V1",
+  "caps": {
+    "http": 12,
+    "tokens": 60000,
+    "seconds": 900.0
+  },
+  "totals": {
+    "http_calls": 8,
+    "tokens": 37382,
+    "elapsed_seconds": 62.4,
+    "ledger_statuses": {
+      "RESERVED": 0,
+      "SETTLED": 8,
+      "UNKNOWN": 0
+    },
+    "ledger_tokens": 37382,
+    "structured_repairs": 0,
+    "prompt_versions": [
+      "2.3.4"
+    ]
+  },
+  "stop_reason": null,
+  "pair_checks": [
+    {
+      "pair_id": "R25-RAG-P1",
+      "comparable": true,
+      "diff_fields": [],
+      "question_shared": true,
+      "rubric_shared": true,
+      "prompt_versions": [
+        "2.3.4",
+        "2.3.4"
+      ],
+      "boundary_contracts": [
+        "FIVE_DIMENSION_BOUNDARIES_V1",
+        "FIVE_DIMENSION_BOUNDARIES_V1"
+      ],
+      "fingerprint": "7e3ef6b9c0e69f81232a915386cf341ceb5faa14e98e1cd396e8992ba04baa7b"
+    },
+    {
+      "pair_id": "R25-LG-P1",
+      "comparable": true,
+      "diff_fields": [],
+      "question_shared": true,
+      "rubric_shared": true,
+      "prompt_versions": [
+        "2.3.4",
+        "2.3.4"
+      ],
+      "boundary_contracts": [
+        "FIVE_DIMENSION_BOUNDARIES_V1",
+        "FIVE_DIMENSION_BOUNDARIES_V1"
+      ],
+      "fingerprint": "1eafdd531c00747c40c103c09af2ee7a425e6bf75f08c93f9196f78c50149884"
+    },
+    {
+      "pair_id": "R27-KF-P1",
+      "comparable": true,
+      "diff_fields": [],
+      "question_shared": true,
+      "rubric_shared": true,
+      "prompt_versions": [
+        "2.3.4",
+        "2.3.4"
+      ],
+      "boundary_contracts": [
+        "FIVE_DIMENSION_BOUNDARIES_V1",
+        "FIVE_DIMENSION_BOUNDARIES_V1"
+      ],
+      "fingerprint": "e70189031ba993fdc344c6d830281b8a5bb54e4e613624e2df453848ba326462"
+    },
+    {
+      "pair_id": "R27-RAG-P2",
+      "comparable": true,
+      "diff_fields": [],
+      "question_shared": true,
+      "rubric_shared": true,
+      "prompt_versions": [
+        "2.3.4",
+        "2.3.4"
+      ],
+      "boundary_contracts": [
+        "FIVE_DIMENSION_BOUNDARIES_V1",
+        "FIVE_DIMENSION_BOUNDARIES_V1"
+      ],
+      "fingerprint": "7e3ef6b9c0e69f81232a915386cf341ceb5faa14e98e1cd396e8992ba04baa7b"
+    }
+  ],
+  "idempotency": {
+    "sample_id": "RAG-B1",
+    "extra_http_calls": 0,
+    "evaluations_before": 1,
+    "evaluations_after": 1,
+    "same_result": true,
+    "event_names": [
+      "evaluation",
+      "complete",
+      "done"
+    ],
+    "answer_status": "COMPLETED",
+    "session_status": "COMPLETED"
+  },
+  "pairs": [
+    {
+      "pair": "R25-RAG-P1",
+      "first": "RAG-B1",
+      "second": "RAG-A2",
+      "first_total": 20,
+      "second_total": 12,
+      "delta": 8,
+      "first_dims": [
+        5,
+        3,
+        3,
+        5,
+        4
+      ],
+      "second_dims": [
+        1,
+        2,
+        2,
+        4,
+        3
+      ],
+      "dim_deltas": [
+        4,
+        1,
+        1,
+        1,
+        1
+      ],
+      "po_longer_ratio": 3.59
+    },
+    {
+      "pair": "R25-LG-P1",
+      "first": "LG-B2",
+      "second": "LG-C1",
+      "first_total": 13,
+      "second_total": 18,
+      "delta": -5,
+      "first_dims": [
+        2,
+        2,
+        2,
+        4,
+        3
+      ],
+      "second_dims": [
+        2,
+        4,
+        3,
+        5,
+        4
+      ],
+      "dim_deltas": [
+        0,
+        -2,
+        -1,
+        -1,
+        -1
+      ],
+      "po_longer_ratio": 1.63
+    },
+    {
+      "pair": "R27-KF-P1",
+      "first": "KF-C1",
+      "second": "KF-A2",
+      "first_total": 19,
+      "second_total": 8,
+      "delta": 11,
+      "first_dims": [
+        2,
+        4,
+        4,
+        5,
+        4
+      ],
+      "second_dims": [
+        1,
+        1,
+        1,
+        2,
+        3
+      ],
+      "dim_deltas": [
+        1,
+        3,
+        3,
+        3,
+        1
+      ],
+      "po_longer_ratio": 1.61
+    },
+    {
+      "pair": "R27-RAG-P2",
+      "first": "RAG-C1",
+      "second": "RAG-C2",
+      "first_total": 21,
+      "second_total": 8,
+      "delta": 13,
+      "first_dims": [
+        3,
+        4,
+        4,
+        5,
+        5
+      ],
+      "second_dims": [
+        1,
+        1,
+        1,
+        2,
+        3
+      ],
+      "dim_deltas": [
+        2,
+        3,
+        3,
+        3,
+        2
+      ],
+      "po_longer_ratio": 1.13
+    }
+  ],
+  "evaluations": [
+    {
+      "sample": "RAG-B1",
+      "pair": "R25-RAG-P1",
+      "quality": "GOOD_SHORT",
+      "chars": 88,
+      "dims": {
+        "technical_correctness": 5,
+        "coverage": 3,
+        "depth": 3,
+        "relevance": 5,
+        "communication": 4
+      },
+      "total": 20,
+      "band": [
+        17,
+        22
+      ],
+      "in_band": true,
+      "prompt_version": "2.3.4",
+      "structured_retry": 0,
+      "eval_id": 1,
+      "answer_id": 1,
+      "session_id": 1,
+      "user_id": 1,
+      "agent_run": {
+        "status": "SUCCEEDED",
+        "graph": "mock_interview"
+      },
+      "eval_tokens": 4697,
+      "admission": {
+        "owner": "user:1",
+        "route": "answer_evaluation",
+        "status": "SETTLED",
+        "tokens": 4697,
+        "latency_ms": 7599
+      },
+      "tokens_match": true,
+      "evaluation_text": "回答准确给出了 RRF 的核心公式 1/(k+rank) 累加、k≈60 的常用取值，并正确指出只用名次因此无需把 BM25 与余弦归一到同一尺度，也点出代价是丢弃分数幅度、k 与截断深度需自行确定。技术表述无误。但覆盖上只答到 rubric 前四点中的部分：未说明 k 越小越偏向头部排名这一方向性机制，也未给出用带标注查询对比融合前后 Recall@k 或 nDCG 的验证方式；对“弱相关但排名靠前结果被抬高”这一代价只笼统说“丢掉分数幅度”，未展开该具体风险。深度停留在机制陈述，缺少失败边界与验证依据。整体结构清晰、因果基本连贯，属部分覆盖但无错误机制。",
+      "covered": [
+        "RRF 按 1/(k+rank) 累加，k 取 60 左右",
+        "只用名次，无需将 BM25 与余弦归一到同一尺度",
+        "代价是丢弃分数幅度，k 与截断深度需自行确定"
+      ],
+      "missing": [
+        "k 越小越偏向头部排名的方向性说明",
+        "弱相关但排名靠前的结果会被抬高这一具体代价",
+        "用带标注查询对比融合前后 Recall@k 或 nDCG 的验证方式"
+      ],
+      "issues": [],
+      "quotes": 3,
+      "http_calls": 1,
+      "latency_ms": 7773,
+      "scope_owner_ok": true,
+      "payload_forbidden": [],
+      "question_matches": true,
+      "rubric_matches": true,
+      "answer_equal": true
+    },
+    {
+      "sample": "RAG-A2",
+      "pair": "R25-RAG-P1",
+      "quality": "POOR_LONG_WRONG",
+      "chars": 316,
+      "dims": {
+        "technical_correctness": 1,
+        "coverage": 2,
+        "depth": 2,
+        "relevance": 4,
+        "communication": 3
+      },
+      "total": 12,
+      "band": [
+        1,
+        8
+      ],
+      "in_band": false,
+      "prompt_version": "2.3.4",
+      "structured_retry": 0,
+      "eval_id": 2,
+      "answer_id": 2,
+      "session_id": 2,
+      "user_id": 2,
+      "agent_run": {
+        "status": "SUCCEEDED",
+        "graph": "mock_interview"
+      },
+      "eval_tokens": 5020,
+      "admission": {
+        "owner": "user:2",
+        "route": "answer_evaluation",
+        "status": "SETTLED",
+        "tokens": 5020,
+        "latency_ms": 8130
+      },
+      "tokens_match": true,
+      "evaluation_text": "回答围绕混合检索融合展开，方向对题，但核心机制几乎全部说错。RRF 被描述为“把两路分数先相加再取对数 log(bm25+cosine)”，实际是按名次累加 1/(k+rank)，完全不使用原始分数；因此“BM25 与余弦都是 0 到 1、量纲一致可直接加权”的前提也不成立（BM25 无上界，余弦可为负）。k 的方向说反了：k 越小越偏向头部排名，而非越大。此外“RRF 一定优于加权求和、任何场景都应优先用”是绝对化错误结论，且“命中率提升三成”缺乏可验证的评测口径。仅“分两步、先归一化再考虑 RRF”的流程框架和“RRF 无需调参”的直觉方向尚可，但不足以支撑正确机制。",
+      "covered": [
+        "提到混合检索融合可分步处理，并提及 RRF 作为融合手段",
+        "指出 RRF 的一个好处是不需要针对分数尺度调参"
+      ],
+      "missing": [
+        "RRF 按名次取 1/(k+rank) 累加的正确计算方式",
+        "只用名次、无需统一 BM25 与余弦尺度的原因",
+        "丢弃分数幅度导致弱相关但排名靠前结果被抬高的代价",
+        "k 越小越偏向头部排名，以及 k、候选深度、截断数量的取舍",
+        "用带标注查询对比 Recall@k 或 nDCG 的验证方式"
+      ],
+      "issues": [
+        "RRF 公式错误：说成 log(bm25+cosine)，实际是 Σ1/(k+rank)",
+        "错误声称 BM25 与余弦相似度都是 0 到 1 且量纲一致",
+        "k 的方向说反：k 越大越偏向头部排名是错的，应为 k 越小越偏向头部",
+        "绝对化结论“RRF 一定优于加权求和、任何场景都应优先用”不成立",
+        "“top-k 命中率提升三成”缺少评测集与指标口径，无法验证"
+      ],
+      "quotes": 3,
+      "http_calls": 1,
+      "latency_ms": 8313,
+      "scope_owner_ok": true,
+      "payload_forbidden": [],
+      "question_matches": true,
+      "rubric_matches": true,
+      "answer_equal": true
+    },
+    {
+      "sample": "LG-B2",
+      "pair": "R25-LG-P1",
+      "quality": "PARTIAL",
+      "chars": 116,
+      "dims": {
+        "technical_correctness": 2,
+        "coverage": 2,
+        "depth": 2,
+        "relevance": 4,
+        "communication": 3
+      },
+      "total": 13,
+      "band": [
+        10,
+        15
+      ],
+      "in_band": true,
+      "prompt_version": "2.3.4",
+      "structured_retry": 0,
+      "eval_id": 3,
+      "answer_id": 3,
+      "session_id": 3,
+      "user_id": 3,
+      "agent_run": {
+        "status": "SUCCEEDED",
+        "graph": "mock_interview"
+      },
+      "eval_tokens": 4469,
+      "admission": {
+        "owner": "user:3",
+        "route": "answer_evaluation",
+        "status": "SETTLED",
+        "tokens": 4469,
+        "latency_ms": 6834
+      },
+      "tokens_match": true,
+      "evaluation_text": "回答正确指出 StateGraph 管理共享状态、节点读 state 返回更新、条件边控制走向，这部分准确。但持久化部分存在关键机制错误：把 checkpointer 说成“可选优化、不开也能跑、主要方便调试”，而本题问的正是持久化与恢复，checkpointer 恰恰是持久化、thread 级恢复和人工介入的机制，这是核心机制误判。恢复描述“重新跑一遍图就可以”也回避了从 checkpoint 快照恢复的机制。此外完全未涉及 reducer 合并语义、循环终止条件、checkpoint 是状态快照而非业务事务、外部工具副作用需幂等或补偿等要点。整体只覆盖了状态与边的基础，持久化与恢复方向错误且缺失关键边界。",
+      "covered": [
+        "StateGraph 声明共享 state，节点函数读 state 并返回更新",
+        "条件边可以控制执行走向"
+      ],
+      "missing": [
+        "reducer 决定字段如何合并",
+        "循环需要终止条件或最大步数",
+        "checkpointer 在每个 super-step 后保存快照并用 thread_id 关联",
+        "checkpoint 是状态快照，不等于业务事务",
+        "外部工具副作用需幂等或补偿，否则恢复后重复执行"
+      ],
+      "issues": [
+        "把 checkpointer 定位为可选调试优化，而它是持久化、断点恢复与人工介入的核心机制",
+        "“恢复重新跑一遍图”未说明从 checkpoint 快照恢复，回避了恢复机制"
+      ],
+      "quotes": 2,
+      "http_calls": 1,
+      "latency_ms": 7105,
+      "scope_owner_ok": true,
+      "payload_forbidden": [],
+      "question_matches": true,
+      "rubric_matches": true,
+      "answer_equal": true
+    },
+    {
+      "sample": "LG-C1",
+      "pair": "R25-LG-P1",
+      "quality": "NEAR_MISS",
+      "chars": 189,
+      "dims": {
+        "technical_correctness": 2,
+        "coverage": 4,
+        "depth": 3,
+        "relevance": 5,
+        "communication": 4
+      },
+      "total": 18,
+      "band": [
+        15,
+        20
+      ],
+      "in_band": true,
+      "prompt_version": "2.3.4",
+      "structured_retry": 0,
+      "eval_id": 4,
+      "answer_id": 4,
+      "session_id": 4,
+      "user_id": 4,
+      "agent_run": {
+        "status": "SUCCEEDED",
+        "graph": "mock_interview"
+      },
+      "eval_tokens": 4479,
+      "admission": {
+        "owner": "user:4",
+        "route": "answer_evaluation",
+        "status": "SETTLED",
+        "tokens": 4479,
+        "latency_ms": 6150
+      },
+      "tokens_match": true,
+      "evaluation_text": "回答覆盖了 StateGraph 共享 state、节点增量更新、reducer 合并、条件边分支循环、checkpointer 按 super-step 保存快照并用 thread_id 关联、支持断点恢复与人工介入、checkpoint 不等于业务事务、外部副作用需幂等，覆盖面较好。但结尾补充的『checkpointer 是在节点函数内部、节点逻辑执行前写入快照』是明确的机制错误：checkpoint 在 super-step 边界写入，而非节点内部执行前。该错误属于关键机制错误，拉低技术正确性；同时回答未给出循环的终止条件或最大步数这一边界，属于覆盖与深度上的缺失。整体结构清晰、因果基本连贯，但错误补充削弱了可信度。",
+      "covered": [
+        "StateGraph 声明共享 state，节点返回增量更新，reducer 决定合并",
+        "条件边支持分支与循环",
+        "checkpointer 在每个 super-step 后保存快照，用 thread_id 关联，支持断点恢复与人工介入",
+        "checkpoint 是状态快照，不等于业务事务",
+        "外部工具副作用需幂等"
+      ],
+      "missing": [
+        "循环需要终止条件或最大步数这一边界未说明",
+        "普通边与条件边的区分表述较简略"
+      ],
+      "issues": [
+        "『checkpointer 是在节点函数内部、节点逻辑执行前写入快照』错误：checkpoint 在 super-step 边界写入，不在节点内部执行前"
+      ],
+      "quotes": 2,
+      "http_calls": 1,
+      "latency_ms": 6502,
+      "scope_owner_ok": true,
+      "payload_forbidden": [],
+      "question_matches": true,
+      "rubric_matches": true,
+      "answer_equal": true
+    },
+    {
+      "sample": "KF-C1",
+      "pair": "R27-KF-P1",
+      "quality": "NEAR_MISS",
+      "chars": 157,
+      "dims": {
+        "technical_correctness": 2,
+        "coverage": 4,
+        "depth": 4,
+        "relevance": 5,
+        "communication": 4
+      },
+      "total": 19,
+      "band": [
+        15,
+        20
+      ],
+      "in_band": true,
+      "prompt_version": "2.3.4",
+      "structured_retry": 0,
+      "eval_id": 5,
+      "answer_id": 5,
+      "session_id": 5,
+      "user_id": 5,
+      "agent_run": {
+        "status": "SUCCEEDED",
+        "graph": "mock_interview"
+      },
+      "eval_tokens": 4510,
+      "admission": {
+        "owner": "user:5",
+        "route": "answer_evaluation",
+        "status": "SETTLED",
+        "tokens": 4510,
+        "latency_ms": 6563
+      },
+      "tokens_match": true,
+      "evaluation_text": "回答覆盖了业务幂等键、唯一约束、同事务去重与状态更新、手动提交 offset、重放窗口与死信补偿，主线机制正确且结构清晰。但结尾声称 Kafka exactly-once 能保证端到端只处理一次并包括写入外部数据库，这是关键机制错误：Kafka 事务的 exactly-once 作用域限于 Kafka 内部的读-处理-写以及 offset 提交，无法原子覆盖任意外部数据库写入；外部系统仍需业务幂等或两阶段/事务消息等方案。该错误使技术正确性受限，但主体去重方案仍可用。",
+      "covered": [
+        "业务幂等键（订单号+事件类型）加唯一约束",
+        "去重记录与订单状态更新在同一事务中提交",
+        "处理成功后手动提交 offset、关闭自动提交",
+        "业务提交成功但 offset 未提交会重放，靠幂等键兜住",
+        "反复失败进死信队列人工补偿"
+      ],
+      "missing": [
+        "未明确说明 Kafka 默认仅保证至少一次语义，去重必须落在业务侧这一前提",
+        "未说明 Kafka 事务 exactly-once 的作用域边界（仅限 Kafka 内部读写与 offset）"
+      ],
+      "issues": [
+        "声称 Kafka exactly-once 能保证端到端只处理一次并包括写入外部数据库，属于作用域错误：Kafka 事务不覆盖任意外部数据库写入"
+      ],
+      "quotes": 3,
+      "http_calls": 1,
+      "latency_ms": 6806,
+      "scope_owner_ok": true,
+      "payload_forbidden": [],
+      "question_matches": true,
+      "rubric_matches": true,
+      "answer_equal": true
+    },
+    {
+      "sample": "KF-A2",
+      "pair": "R27-KF-P1",
+      "quality": "POOR_LONG_WRONG",
+      "chars": 253,
+      "dims": {
+        "technical_correctness": 1,
+        "coverage": 1,
+        "depth": 1,
+        "relevance": 2,
+        "communication": 3
+      },
+      "total": 8,
+      "band": [
+        1,
+        8
+      ],
+      "in_band": true,
+      "prompt_version": "2.3.4",
+      "structured_retry": 0,
+      "eval_id": 6,
+      "answer_id": 6,
+      "session_id": 6,
+      "user_id": 6,
+      "agent_run": {
+        "status": "SUCCEEDED",
+        "graph": "mock_interview"
+      },
+      "eval_tokens": 4647,
+      "admission": {
+        "owner": "user:6",
+        "route": "answer_evaluation",
+        "status": "SETTLED",
+        "tokens": 4647,
+        "latency_ms": 7417
+      },
+      "tokens_match": true,
+      "evaluation_text": "答案围绕重复投递与订单只处理一次展开，方向相关，但核心机制几乎全部错误：Kafka 默认并非 exactly-once，消费者默认是至少一次；enable.idempotence 是生产者侧幂等，不能消除消费端重复；自动提交 offset 反而扩大重复窗口；数据库自增主键对同一业务消息重放会生成不同主键，无法去重；offset 没有回滚 API，seek/重置只能重读记录；先提交 offset 再处理业务会丢消息而非更安全。因此技术正确性判为 1，深度因核心机制错误封顶为 2 以下，实际只给出结论式断言，无竞态窗口与验证方式，判 1。覆盖上仅触及“重复”这一话题，rubric 五点均未正确覆盖，判 1。表达有先后顺序但因果链错误，判 3。",
+      "covered": [
+        "识别到消费端重复投递与订单只处理一次是本题主题"
+      ],
+      "missing": [
+        "Kafka 消费者默认至少一次语义，去重必须落在业务侧",
+        "业务幂等键（订单号+事件类型）加唯一约束",
+        "去重记录与订单状态更新在同一事务中提交",
+        "处理成功后手动提交 offset 并关闭自动提交",
+        "offset 与业务事务之间的窗口导致重启重放，需幂等键兜住；反复失败进死信并补偿"
+      ],
+      "issues": [
+        "称 Kafka 默认 exactly-once，错误：消费者默认至少一次",
+        "enable.idempotence 是生产者侧幂等，不能保证消费端只消费一次",
+        "自动提交 offset 会扩大重复窗口，不是可靠做法",
+        "数据库自增主键对重放消息会生成不同主键，无法去重",
+        "先提交 offset 再处理业务会丢消息，不是更安全",
+        "Kafka 没有 offset 回滚 API，seek/重置只能重读记录"
+      ],
+      "quotes": 3,
+      "http_calls": 1,
+      "latency_ms": 7560,
+      "scope_owner_ok": true,
+      "payload_forbidden": [],
+      "question_matches": true,
+      "rubric_matches": true,
+      "answer_equal": true
+    },
+    {
+      "sample": "RAG-C1",
+      "pair": "R27-RAG-P2",
+      "quality": "NEAR_MISS",
+      "chars": 139,
+      "dims": {
+        "technical_correctness": 3,
+        "coverage": 4,
+        "depth": 4,
+        "relevance": 5,
+        "communication": 5
+      },
+      "total": 21,
+      "band": [
+        15,
+        20
+      ],
+      "in_band": false,
+      "prompt_version": "2.3.4",
+      "structured_retry": 0,
+      "eval_id": 7,
+      "answer_id": 7,
+      "session_id": 7,
+      "user_id": 7,
+      "agent_run": {
+        "status": "SUCCEEDED",
+        "graph": "mock_interview"
+      },
+      "eval_tokens": 4736,
+      "admission": {
+        "owner": "user:7",
+        "route": "answer_evaluation",
+        "status": "SETTLED",
+        "tokens": 4736,
+        "latency_ms": 6603
+      },
+      "tokens_match": true,
+      "evaluation_text": "回答准确给出 RRF 的 1/(k+rank) 累加与 k=60，并正确指出只用名次、规避 BM25 与余弦尺度不可比，代价是丢弃分数幅度、弱相关但排名靠前会被抬高，还提到在验证集上调 k 与截断深度、用 Recall@k 对比融合前后，覆盖了大部分 rubric。但关键方向说反了：RRF 中 k 越小越偏向头部排名，k 越大越平滑、削弱头部优势；回答写成“k 越大越偏向头部排名”，属于一处非致命但明确的机制错误，因此技术正确性降为 3。验证部分只提 Recall@k，未提 nDCG 等排序质量指标，且未说明候选深度（每路取多少条）与截断数量的具体设定，深度略扣。整体结构清晰、因果有序。",
+      "covered": [
+        "RRF 按名次取 1/(k+rank) 累加，k 常取 60",
+        "只用名次，不需要把 BM25 与余弦归一到同一尺度",
+        "代价是丢弃分数幅度，弱相关但排名靠前的结果会被抬高",
+        "提到 k 与截断深度需要在验证集上调，并用 Recall@k 对比融合前后"
+      ],
+      "missing": [
+        "未说明每路候选深度（如各取 top-N）与最终截断数量的具体设定",
+        "验证只提 Recall@k，未提 nDCG 等排序质量指标",
+        "未说明 k 的取值对平滑程度的具体影响边界"
+      ],
+      "issues": [
+        "“k 越大越偏向头部排名”方向说反：RRF 中 k 越小越偏向头部排名，k 越大越平滑、削弱头部优势"
+      ],
+      "quotes": 3,
+      "http_calls": 1,
+      "latency_ms": 6734,
+      "scope_owner_ok": true,
+      "payload_forbidden": [],
+      "question_matches": true,
+      "rubric_matches": true,
+      "answer_equal": true
+    },
+    {
+      "sample": "RAG-C2",
+      "pair": "R27-RAG-P2",
+      "quality": "POOR_CONFUSED",
+      "chars": 157,
+      "dims": {
+        "technical_correctness": 1,
+        "coverage": 1,
+        "depth": 1,
+        "relevance": 2,
+        "communication": 3
+      },
+      "total": 8,
+      "band": [
+        1,
+        8
+      ],
+      "in_band": true,
+      "prompt_version": "2.3.4",
+      "structured_retry": 0,
+      "eval_id": 8,
+      "answer_id": 8,
+      "session_id": 8,
+      "user_id": 8,
+      "agent_run": {
+        "status": "SUCCEEDED",
+        "graph": "mock_interview"
+      },
+      "eval_tokens": 4824,
+      "admission": {
+        "owner": "user:8",
+        "route": "answer_evaluation",
+        "status": "SETTLED",
+        "tokens": 4824,
+        "latency_ms": 7340
+      },
+      "tokens_match": true,
+      "evaluation_text": "回答没有按题目要求说明 RRF 的计算方式，反而把 RRF 与 softmax 加权求和、cross-encoder 重排混为一谈，核心机制错误。RRF 只用名次做 1/(k+rank) 累加，不使用原始分数幅度，因此不需要把 BM25 与余弦相似度归一到同一尺度；回答却主张先 softmax 再加权求和，并称 BM25 与 dense 可放同一空间直接相加，这是对融合机制的误述。'cross-encoder 重排本质上和 RRF 是一回事'也错误：cross-encoder 是对候选做相关性打分，RRF 是名次融合，两者职责不同。回答未提及 k 常取 60、k 越小越偏向头部、丢弃分数幅度的代价、候选深度与截断参数，也未给出 Recall@k/nDCG 的验证方式。整体偏离当前问题，仅'重排阶段用 cross-encoder 重新打分'一句方向正确。",
+      "covered": [
+        "提到重排阶段可用 cross-encoder 对候选重新打分"
+      ],
+      "missing": [
+        "RRF 按名次取 1/(k+rank) 累加、k 常取 60 做平滑",
+        "只用名次因此无需把 BM25 与余弦相似度归一到同一尺度",
+        "代价是丢弃分数幅度，弱相关但排名靠前的结果会被抬高",
+        "k 越小越偏向头部排名，k 与候选深度、截断数量需要定",
+        "用带标注查询对比融合前后 Recall@k 或 nDCG 来验证"
+      ],
+      "issues": [
+        "把 RRF 描述为 softmax 加权求和，混淆了名次融合与分数加权融合",
+        "称 BM25 与 dense 可放同一空间归一化后直接相加，忽略两者分数尺度不可比",
+        "称 cross-encoder 重排本质上和 RRF 是一回事，混淆重排打分与名次融合"
+      ],
+      "quotes": 2,
+      "http_calls": 1,
+      "latency_ms": 7611,
+      "scope_owner_ok": true,
+      "payload_forbidden": [],
+      "question_matches": true,
+      "rubric_matches": true,
+      "answer_equal": true
+    }
+  ],
+  "before_after": [
+    {
+      "sample": "RAG-B1",
+      "old_dims": [
+        4,
+        3,
+        3,
+        5,
+        4
+      ],
+      "old_total": 19,
+      "new_dims": [
+        5,
+        3,
+        3,
+        5,
+        4
+      ],
+      "new_total": 20,
+      "delta": 1,
+      "tc_delta": 1,
+      "old_pv": "2.3.3",
+      "new_pv": "2.3.4"
+    },
+    {
+      "sample": "RAG-A2",
+      "old_dims": [
+        1,
+        1,
+        1,
+        3,
+        3
+      ],
+      "old_total": 9,
+      "new_dims": [
+        1,
+        2,
+        2,
+        4,
+        3
+      ],
+      "new_total": 12,
+      "delta": 3,
+      "tc_delta": 0,
+      "old_pv": "2.3.3",
+      "new_pv": "2.3.4"
+    },
+    {
+      "sample": "LG-B2",
+      "old_dims": [
+        2,
+        2,
+        2,
+        3,
+        3
+      ],
+      "old_total": 12,
+      "new_dims": [
+        2,
+        2,
+        2,
+        4,
+        3
+      ],
+      "new_total": 13,
+      "delta": 1,
+      "tc_delta": 0,
+      "old_pv": "2.3.3",
+      "new_pv": "2.3.4"
+    },
+    {
+      "sample": "LG-C1",
+      "old_dims": [
+        3,
+        3,
+        3,
+        4,
+        4
+      ],
+      "old_total": 17,
+      "new_dims": [
+        2,
+        4,
+        3,
+        5,
+        4
+      ],
+      "new_total": 18,
+      "delta": 1,
+      "tc_delta": -1,
+      "old_pv": "2.3.3",
+      "new_pv": "2.3.4"
+    },
+    {
+      "sample": "KF-A2",
+      "old_dims": [
+        1,
+        1,
+        1,
+        2,
+        2
+      ],
+      "old_total": 7,
+      "new_dims": [
+        1,
+        1,
+        1,
+        2,
+        3
+      ],
+      "new_total": 8,
+      "delta": 1,
+      "tc_delta": 0,
+      "old_pv": "2.3.3",
+      "new_pv": "2.3.4"
+    }
+  ],
+  "r25_baseline": {
+    "calls": 8,
+    "tokens": 29827,
+    "repairs": 2
+  }
+}

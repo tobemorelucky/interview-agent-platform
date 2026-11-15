@@ -1,0 +1,1295 @@
+{
+  "mode": "replay",
+  "database": "interview_agent_wb_r27_replay_20261115",
+  "started_at": "2026-11-15T08:08:51.943926+00:00",
+  "model": "replay",
+  "provider": "replay",
+  "caps": {
+    "http": 0
+  },
+  "expected_prompt_version": "2.3.4",
+  "expected_boundary_contract": "FIVE_DIMENSION_BOUNDARIES_V1",
+  "provider_base_url": "https://api-inference.modelscope.cn/v1",
+  "pairs": [
+    {
+      "pair_id": "R25-RAG-P1",
+      "question_id": "Q_RAG_01",
+      "topic": "rag_retrieval",
+      "contrast": "简短且正确 vs 更长且含明确技术错误（POOR/GOOD=3.6x）",
+      "expected_relation": "HIGHER_FIRST",
+      "samples": [
+        {
+          "sample_id": "RAG-B1",
+          "role": "FIRST",
+          "quality_label": "GOOD_SHORT",
+          "char_count": 88,
+          "expected_band": [
+            17,
+            22
+          ]
+        },
+        {
+          "sample_id": "RAG-A2",
+          "role": "SECOND",
+          "quality_label": "POOR_LONG_WRONG",
+          "char_count": 316,
+          "expected_band": [
+            1,
+            8
+          ]
+        }
+      ]
+    },
+    {
+      "pair_id": "R25-LG-P1",
+      "question_id": "Q_LG_01",
+      "topic": "agent",
+      "contrast": "基本正确但不完整 vs 大体合理但含一处关键机制错误",
+      "expected_relation": "HIGHER_SECOND_MODEST",
+      "samples": [
+        {
+          "sample_id": "LG-B2",
+          "role": "FIRST",
+          "quality_label": "PARTIAL",
+          "char_count": 116,
+          "expected_band": [
+            10,
+            15
+          ]
+        },
+        {
+          "sample_id": "LG-C1",
+          "role": "SECOND",
+          "quality_label": "NEAR_MISS",
+          "char_count": 189,
+          "expected_band": [
+            15,
+            20
+          ]
+        }
+      ]
+    },
+    {
+      "pair_id": "R27-KF-P1",
+      "question_id": "Q_KF_01",
+      "topic": "kafka_reliability",
+      "contrast": "Kafka exactly-once 边界 NEAR_MISS vs 更长且误解幂等/offset（POOR/GOOD=1.61x）",
+      "expected_relation": "HIGHER_FIRST",
+      "samples": [
+        {
+          "sample_id": "KF-C1",
+          "role": "FIRST",
+          "quality_label": "NEAR_MISS",
+          "char_count": 157,
+          "expected_band": [
+            15,
+            20
+          ]
+        },
+        {
+          "sample_id": "KF-A2",
+          "role": "SECOND",
+          "quality_label": "POOR_LONG_WRONG",
+          "char_count": 253,
+          "expected_band": [
+            1,
+            8
+          ]
+        }
+      ]
+    },
+    {
+      "pair_id": "R27-RAG-P2",
+      "question_id": "Q_RAG_01",
+      "topic": "rag_retrieval",
+      "contrast": "中间档 NEAR_MISS vs POOR_CONFUSED（同题，POOR 更长 1.13x）",
+      "expected_relation": "HIGHER_FIRST",
+      "samples": [
+        {
+          "sample_id": "RAG-C1",
+          "role": "FIRST",
+          "quality_label": "NEAR_MISS",
+          "char_count": 139,
+          "expected_band": [
+            15,
+            20
+          ]
+        },
+        {
+          "sample_id": "RAG-C2",
+          "role": "SECOND",
+          "quality_label": "POOR_CONFUSED",
+          "char_count": 157,
+          "expected_band": [
+            1,
+            8
+          ]
+        }
+      ]
+    }
+  ],
+  "submissions": [
+    {
+      "pair_id": "R25-RAG-P1",
+      "sample_id": "RAG-B1",
+      "role": "FIRST",
+      "quality_label": "GOOD_SHORT",
+      "char_count": 88,
+      "user_id": 1,
+      "session_id": 1,
+      "question_id": 1,
+      "answer_key": "73cbde04317743e383e25d5316f883bc",
+      "answer_text": "用 RRF：每路按名次取 1/(k+rank) 再累加，k 取 60 左右。它只看名次，所以不用把 BM25 和余弦归一到同一尺度；代价是丢掉分数幅度，k 和截断深度要自己定。",
+      "expected_band": [
+        17,
+        22
+      ],
+      "question_matches": true,
+      "rubric_matches": true,
+      "status": "SUBMITTED",
+      "event_names": [
+        "evaluation",
+        "complete",
+        "done"
+      ],
+      "events_digest": "b0e6e594453103b7c24cbd73d9273e7ab1166374ad2ba338cf96bf5f9ecc5c02",
+      "http_calls": 0,
+      "tokens": 0,
+      "latency_ms": 399,
+      "main_calls": [
+        "AdaptiveSelection"
+      ],
+      "payload_audit": [
+        {
+          "schema": "AdaptiveEvaluation",
+          "chars": 5722,
+          "owner": "user:1",
+          "forbidden": [],
+          "input_keys": [
+            "adaptive",
+            "answer",
+            "current_question",
+            "desired_difficulty",
+            "rubric",
+            "scoring_context",
+            "snapshot"
+          ],
+          "rubric_lines": 5,
+          "answer_chars": 88
+        }
+      ],
+      "scope_owner_ok": true,
+      "db": {
+        "session": {
+          "id": 1,
+          "status": "COMPLETED",
+          "state_version": 3,
+          "context_snapshot_id": 1
+        },
+        "question": {
+          "id": 1,
+          "status": "COMPLETED",
+          "text": "两路检索（BM25 与向量）的分数尺度不同，怎样做排序融合？请说明 RRF 的计算方式、好处与代价。",
+          "rubric": [
+            "RRF 按名次取 1/(k+rank) 累加，k 常取 60 做平滑",
+            "只用名次，因此不需要把 BM25 与余弦相似度归一到同一尺度",
+            "代价是丢弃分数幅度，弱相关但排名靠前的结果会被抬高",
+            "k 越小越偏向头部排名，k 与候选深度、截断数量都需要定",
+            "用带标注的查询对比融合前后的 Recall@k 或 nDCG，而不是凭感觉调参"
+          ]
+        },
+        "answer": {
+          "id": 1,
+          "status": "COMPLETED",
+          "error": null,
+          "text": "用 RRF：每路按名次取 1/(k+rank) 再累加，k 取 60 左右。它只看名次，所以不用把 BM25 和余弦归一到同一尺度；代价是丢掉分数幅度，k 和截断深度要自己定。"
+        },
+        "agent_run": {
+          "status": "SUCCEEDED",
+          "graph": "mock_interview"
+        },
+        "evaluations": [
+          {
+            "evaluation_id": 1,
+            "dims": {
+              "technical_correctness": 4,
+              "coverage": 4,
+              "depth": 4,
+              "relevance": 4,
+              "communication": 4
+            },
+            "total": 20,
+            "provider": "replay",
+            "model": "R24_SCRIPTED_EVALUATION",
+            "prompt_version": "2.3.4",
+            "structured_retry": 0,
+            "token_usage": {
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "total_tokens": 0
+            },
+            "artifact": {
+              "tool_observed_outcome": null,
+              "tool_result_ids": [],
+              "technical_correctness": 4,
+              "coverage": 4,
+              "depth": 4,
+              "relevance": 4,
+              "communication": 4,
+              "evaluation": "Replay 评价（彩排，非模型输出）",
+              "covered_points": [],
+              "missing_points": [],
+              "factual_or_reasoning_issues": [],
+              "follow_up_focus": [],
+              "next_action_recommendation": "NEXT",
+              "reference_answer": null,
+              "knowledge_observations": [
+                {
+                  "knowledge_id": "ai_agent_application:rag_retrieval",
+                  "state": "DEMONSTRATED_IN_SESSION",
+                  "answer_quotes": [
+                    "用 RRF：每路按名次取 1/(k+rank) 再累加，k 取 60 左右。它只看名次，所以不用把 BM25 和余弦归一到同一尺度；代价是丢掉分数幅度，k 和截"
+                  ],
+                  "missing_mechanisms": [],
+                  "resolved_gap_ids": []
+                }
+              ]
+            },
+            "agent_run_id": 5,
+            "answer_id": 1
+          }
+        ]
+      },
+      "prompt_version_ok": true
+    },
+    {
+      "pair_id": "R25-RAG-P1",
+      "sample_id": "RAG-A2",
+      "role": "SECOND",
+      "quality_label": "POOR_LONG_WRONG",
+      "char_count": 316,
+      "user_id": 2,
+      "session_id": 2,
+      "question_id": 2,
+      "answer_key": "6a45f5bd1fcd4712b546597942f23749",
+      "answer_text": "混合检索的融合我一般分两步。第一步把两路分数归一化，因为 BM25 和余弦相似度都是 0 到 1 之间的分数，量纲本来就一致，所以直接加权求和就可以：final = 0.5 * bm25 + 0.5 * cosine。第二步如果效果不好就上 RRF，RRF 的做法是把两路分数先相加再取对数，也就是 log(bm25 + cosine)，这样能把高分段的差异放大。RRF 的优点是完全不需要调参，k 固定 60 就行，而且 k 越大越偏向头部排名，越容易把最相关的结果顶上来。缺点是计算量比加权求和大一点。实际项目里我用 RRF 之后 top-k 命中率大概提升了三成，因为 RRF 一定优于加权求和，任何场景都应该优先用 RRF。",
+      "expected_band": [
+        1,
+        8
+      ],
+      "question_matches": true,
+      "rubric_matches": true,
+      "status": "SUBMITTED",
+      "event_names": [
+        "evaluation",
+        "complete",
+        "done"
+      ],
+      "events_digest": "8c808789ec301a700048e21a9c4d7d8fd5f77829966df50a7dd41c4c6fe39604",
+      "http_calls": 0,
+      "tokens": 0,
+      "latency_ms": 356,
+      "main_calls": [
+        "AdaptiveSelection"
+      ],
+      "payload_audit": [
+        {
+          "schema": "AdaptiveEvaluation",
+          "chars": 5950,
+          "owner": "user:2",
+          "forbidden": [],
+          "input_keys": [
+            "adaptive",
+            "answer",
+            "current_question",
+            "desired_difficulty",
+            "rubric",
+            "scoring_context",
+            "snapshot"
+          ],
+          "rubric_lines": 5,
+          "answer_chars": 316
+        }
+      ],
+      "scope_owner_ok": true,
+      "db": {
+        "session": {
+          "id": 2,
+          "status": "COMPLETED",
+          "state_version": 3,
+          "context_snapshot_id": 2
+        },
+        "question": {
+          "id": 2,
+          "status": "COMPLETED",
+          "text": "两路检索（BM25 与向量）的分数尺度不同，怎样做排序融合？请说明 RRF 的计算方式、好处与代价。",
+          "rubric": [
+            "RRF 按名次取 1/(k+rank) 累加，k 常取 60 做平滑",
+            "只用名次，因此不需要把 BM25 与余弦相似度归一到同一尺度",
+            "代价是丢弃分数幅度，弱相关但排名靠前的结果会被抬高",
+            "k 越小越偏向头部排名，k 与候选深度、截断数量都需要定",
+            "用带标注的查询对比融合前后的 Recall@k 或 nDCG，而不是凭感觉调参"
+          ]
+        },
+        "answer": {
+          "id": 2,
+          "status": "COMPLETED",
+          "error": null,
+          "text": "混合检索的融合我一般分两步。第一步把两路分数归一化，因为 BM25 和余弦相似度都是 0 到 1 之间的分数，量纲本来就一致，所以直接加权求和就可以：final = 0.5 * bm25 + 0.5 * cosine。第二步如果效果不好就上 RRF，RRF 的做法是把两路分数先相加再取对数，也就是 log(bm25 + cosine)，这样能把高分段的差异放大。RRF 的优点是完全不需要调参，k 固定 60 就行，而且 k 越大越偏向头部排名，越容易把最相关的结果顶上来。缺点是计算量比加权求和大一点。实际项目里我用 RRF 之后 top-k 命中率大概提升了三成，因为 RRF 一定优于加权求和，任何场景都应该优先用 RRF。"
+        },
+        "agent_run": {
+          "status": "SUCCEEDED",
+          "graph": "mock_interview"
+        },
+        "evaluations": [
+          {
+            "evaluation_id": 2,
+            "dims": {
+              "technical_correctness": 4,
+              "coverage": 4,
+              "depth": 4,
+              "relevance": 4,
+              "communication": 4
+            },
+            "total": 20,
+            "provider": "replay",
+            "model": "R24_SCRIPTED_EVALUATION",
+            "prompt_version": "2.3.4",
+            "structured_retry": 0,
+            "token_usage": {
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "total_tokens": 0
+            },
+            "artifact": {
+              "tool_observed_outcome": null,
+              "tool_result_ids": [],
+              "technical_correctness": 4,
+              "coverage": 4,
+              "depth": 4,
+              "relevance": 4,
+              "communication": 4,
+              "evaluation": "Replay 评价（彩排，非模型输出）",
+              "covered_points": [],
+              "missing_points": [],
+              "factual_or_reasoning_issues": [],
+              "follow_up_focus": [],
+              "next_action_recommendation": "NEXT",
+              "reference_answer": null,
+              "knowledge_observations": [
+                {
+                  "knowledge_id": "ai_agent_application:rag_retrieval",
+                  "state": "DEMONSTRATED_IN_SESSION",
+                  "answer_quotes": [
+                    "混合检索的融合我一般分两步。第一步把两路分数归一化，因为 BM25 和余弦相似度都是 0 到 1 之间的分数，量纲本来就一致，所以直接加权求和就可以：final"
+                  ],
+                  "missing_mechanisms": [],
+                  "resolved_gap_ids": []
+                }
+              ]
+            },
+            "agent_run_id": 6,
+            "answer_id": 2
+          }
+        ]
+      },
+      "prompt_version_ok": true
+    },
+    {
+      "pair_id": "R25-LG-P1",
+      "sample_id": "LG-B2",
+      "role": "FIRST",
+      "quality_label": "PARTIAL",
+      "char_count": 116,
+      "user_id": 3,
+      "session_id": 3,
+      "question_id": 3,
+      "answer_key": "7f170b740da64369a561e1f6a5336944",
+      "answer_text": "LangGraph 用 StateGraph 管理状态，节点函数读 state 返回更新，条件边可以控制走向。持久化用 checkpointer，不过我一般把它当可选优化，不开也能跑，开了主要是方便调试。恢复的话重新跑一遍图就可以。",
+      "expected_band": [
+        10,
+        15
+      ],
+      "question_matches": true,
+      "rubric_matches": true,
+      "status": "SUBMITTED",
+      "event_names": [
+        "evaluation",
+        "complete",
+        "done"
+      ],
+      "events_digest": "648b6d2b3779a91158bbc64b1ce23e983995ca22b42031530a8b245607c96630",
+      "http_calls": 0,
+      "tokens": 0,
+      "latency_ms": 298,
+      "main_calls": [
+        "AdaptiveSelection"
+      ],
+      "payload_audit": [
+        {
+          "schema": "AdaptiveEvaluation",
+          "chars": 5607,
+          "owner": "user:3",
+          "forbidden": [],
+          "input_keys": [
+            "adaptive",
+            "answer",
+            "current_question",
+            "desired_difficulty",
+            "rubric",
+            "scoring_context",
+            "snapshot"
+          ],
+          "rubric_lines": 5,
+          "answer_chars": 116
+        }
+      ],
+      "scope_owner_ok": true,
+      "db": {
+        "session": {
+          "id": 3,
+          "status": "COMPLETED",
+          "state_version": 3,
+          "context_snapshot_id": 3
+        },
+        "question": {
+          "id": 3,
+          "status": "COMPLETED",
+          "text": "LangGraph 怎样表示有状态的 Agent 执行过程？请说明状态、边、持久化与恢复之间的关系。",
+          "rubric": [
+            "StateGraph 声明共享 state，节点返回增量更新，reducer 决定字段如何合并",
+            "普通边与条件边表达分支和循环，循环需要终止条件或最大步数",
+            "checkpointer 在每个 super-step 后保存快照，用 thread_id 关联，支持断点恢复与人工介入",
+            "checkpoint 是状态快照，不等于业务事务",
+            "外部工具副作用仍需幂等或补偿，否则恢复后会重复执行"
+          ]
+        },
+        "answer": {
+          "id": 3,
+          "status": "COMPLETED",
+          "error": null,
+          "text": "LangGraph 用 StateGraph 管理状态，节点函数读 state 返回更新，条件边可以控制走向。持久化用 checkpointer，不过我一般把它当可选优化，不开也能跑，开了主要是方便调试。恢复的话重新跑一遍图就可以。"
+        },
+        "agent_run": {
+          "status": "SUCCEEDED",
+          "graph": "mock_interview"
+        },
+        "evaluations": [
+          {
+            "evaluation_id": 3,
+            "dims": {
+              "technical_correctness": 4,
+              "coverage": 4,
+              "depth": 4,
+              "relevance": 4,
+              "communication": 4
+            },
+            "total": 20,
+            "provider": "replay",
+            "model": "R24_SCRIPTED_EVALUATION",
+            "prompt_version": "2.3.4",
+            "structured_retry": 0,
+            "token_usage": {
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "total_tokens": 0
+            },
+            "artifact": {
+              "tool_observed_outcome": null,
+              "tool_result_ids": [],
+              "technical_correctness": 4,
+              "coverage": 4,
+              "depth": 4,
+              "relevance": 4,
+              "communication": 4,
+              "evaluation": "Replay 评价（彩排，非模型输出）",
+              "covered_points": [],
+              "missing_points": [],
+              "factual_or_reasoning_issues": [],
+              "follow_up_focus": [],
+              "next_action_recommendation": "NEXT",
+              "reference_answer": null,
+              "knowledge_observations": [
+                {
+                  "knowledge_id": "ai_agent_application:agent",
+                  "state": "DEMONSTRATED_IN_SESSION",
+                  "answer_quotes": [
+                    "LangGraph 用 StateGraph 管理状态，节点函数读 state 返回更新，条件边可以控制走向。持久化用 checkpointer，不过我一般把它"
+                  ],
+                  "missing_mechanisms": [],
+                  "resolved_gap_ids": []
+                }
+              ]
+            },
+            "agent_run_id": 11,
+            "answer_id": 3
+          }
+        ]
+      },
+      "prompt_version_ok": true
+    },
+    {
+      "pair_id": "R25-LG-P1",
+      "sample_id": "LG-C1",
+      "role": "SECOND",
+      "quality_label": "NEAR_MISS",
+      "char_count": 189,
+      "user_id": 4,
+      "session_id": 4,
+      "question_id": 4,
+      "answer_key": "92170beeb985427088c5130ba473baf3",
+      "answer_text": "StateGraph 声明共享 state，节点返回增量更新，reducer 决定合并；条件边支持分支与循环。checkpointer 在每个 super-step 后保存快照，用 thread_id 关联，所以能断点恢复和人工介入。checkpoint 是状态快照不是业务事务，外部副作用要幂等。补充一点：checkpointer 是在节点函数内部、节点逻辑执行前写入快照的。",
+      "expected_band": [
+        15,
+        20
+      ],
+      "question_matches": true,
+      "rubric_matches": true,
+      "status": "SUBMITTED",
+      "event_names": [
+        "evaluation",
+        "complete",
+        "done"
+      ],
+      "events_digest": "72ccbb05c0bf7d76bd3499a0e7fc9cbc69f8a5de74953020c653f093f9fa4726",
+      "http_calls": 0,
+      "tokens": 0,
+      "latency_ms": 297,
+      "main_calls": [
+        "AdaptiveSelection"
+      ],
+      "payload_audit": [
+        {
+          "schema": "AdaptiveEvaluation",
+          "chars": 5680,
+          "owner": "user:4",
+          "forbidden": [],
+          "input_keys": [
+            "adaptive",
+            "answer",
+            "current_question",
+            "desired_difficulty",
+            "rubric",
+            "scoring_context",
+            "snapshot"
+          ],
+          "rubric_lines": 5,
+          "answer_chars": 189
+        }
+      ],
+      "scope_owner_ok": true,
+      "db": {
+        "session": {
+          "id": 4,
+          "status": "COMPLETED",
+          "state_version": 3,
+          "context_snapshot_id": 4
+        },
+        "question": {
+          "id": 4,
+          "status": "COMPLETED",
+          "text": "LangGraph 怎样表示有状态的 Agent 执行过程？请说明状态、边、持久化与恢复之间的关系。",
+          "rubric": [
+            "StateGraph 声明共享 state，节点返回增量更新，reducer 决定字段如何合并",
+            "普通边与条件边表达分支和循环，循环需要终止条件或最大步数",
+            "checkpointer 在每个 super-step 后保存快照，用 thread_id 关联，支持断点恢复与人工介入",
+            "checkpoint 是状态快照，不等于业务事务",
+            "外部工具副作用仍需幂等或补偿，否则恢复后会重复执行"
+          ]
+        },
+        "answer": {
+          "id": 4,
+          "status": "COMPLETED",
+          "error": null,
+          "text": "StateGraph 声明共享 state，节点返回增量更新，reducer 决定合并；条件边支持分支与循环。checkpointer 在每个 super-step 后保存快照，用 thread_id 关联，所以能断点恢复和人工介入。checkpoint 是状态快照不是业务事务，外部副作用要幂等。补充一点：checkpointer 是在节点函数内部、节点逻辑执行前写入快照的。"
+        },
+        "agent_run": {
+          "status": "SUCCEEDED",
+          "graph": "mock_interview"
+        },
+        "evaluations": [
+          {
+            "evaluation_id": 4,
+            "dims": {
+              "technical_correctness": 4,
+              "coverage": 4,
+              "depth": 4,
+              "relevance": 4,
+              "communication": 4
+            },
+            "total": 20,
+            "provider": "replay",
+            "model": "R24_SCRIPTED_EVALUATION",
+            "prompt_version": "2.3.4",
+            "structured_retry": 0,
+            "token_usage": {
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "total_tokens": 0
+            },
+            "artifact": {
+              "tool_observed_outcome": null,
+              "tool_result_ids": [],
+              "technical_correctness": 4,
+              "coverage": 4,
+              "depth": 4,
+              "relevance": 4,
+              "communication": 4,
+              "evaluation": "Replay 评价（彩排，非模型输出）",
+              "covered_points": [],
+              "missing_points": [],
+              "factual_or_reasoning_issues": [],
+              "follow_up_focus": [],
+              "next_action_recommendation": "NEXT",
+              "reference_answer": null,
+              "knowledge_observations": [
+                {
+                  "knowledge_id": "ai_agent_application:agent",
+                  "state": "DEMONSTRATED_IN_SESSION",
+                  "answer_quotes": [
+                    "StateGraph 声明共享 state，节点返回增量更新，reducer 决定合并；条件边支持分支与循环。checkpointer 在每个 super-st"
+                  ],
+                  "missing_mechanisms": [],
+                  "resolved_gap_ids": []
+                }
+              ]
+            },
+            "agent_run_id": 12,
+            "answer_id": 4
+          }
+        ]
+      },
+      "prompt_version_ok": true
+    },
+    {
+      "pair_id": "R27-KF-P1",
+      "sample_id": "KF-C1",
+      "role": "FIRST",
+      "quality_label": "NEAR_MISS",
+      "char_count": 157,
+      "user_id": 5,
+      "session_id": 5,
+      "question_id": 5,
+      "answer_key": "79a4c8b355b14cd7ab7dfbc936b0edca",
+      "answer_text": "用业务幂等键（订单号加事件类型）加唯一约束，在同一个事务里写去重记录并更新订单状态，处理成功后再手动提交 offset，关闭自动提交。业务提交成功但 offset 未提交会重放，靠幂等键兜住；反复失败的进死信队列人工补偿。另外 Kafka 的 exactly-once 能保证端到端只处理一次，包括写入外部数据库。",
+      "expected_band": [
+        15,
+        20
+      ],
+      "question_matches": true,
+      "rubric_matches": true,
+      "status": "SUBMITTED",
+      "event_names": [
+        "evaluation",
+        "complete",
+        "done"
+      ],
+      "events_digest": "45f3f86246a68bb79a9847170c02a67fccb73817d9c2b877b58978766633b5ba",
+      "http_calls": 0,
+      "tokens": 0,
+      "latency_ms": 334,
+      "main_calls": [
+        "AdaptiveSelection"
+      ],
+      "payload_audit": [
+        {
+          "schema": "AdaptiveEvaluation",
+          "chars": 5576,
+          "owner": "user:5",
+          "forbidden": [],
+          "input_keys": [
+            "adaptive",
+            "answer",
+            "current_question",
+            "desired_difficulty",
+            "rubric",
+            "scoring_context",
+            "snapshot"
+          ],
+          "rubric_lines": 5,
+          "answer_chars": 157
+        }
+      ],
+      "scope_owner_ok": true,
+      "db": {
+        "session": {
+          "id": 5,
+          "status": "COMPLETED",
+          "state_version": 3,
+          "context_snapshot_id": 5
+        },
+        "question": {
+          "id": 5,
+          "status": "COMPLETED",
+          "text": "Kafka 消费者遇到重复投递时，如何保证订单只被处理一次业务结果？",
+          "rubric": [
+            "Kafka 只保证至少一次，去重必须落在业务侧",
+            "业务幂等键（订单号 + 事件类型）加唯一约束",
+            "去重记录与订单状态更新在同一事务中提交",
+            "处理成功后手动提交 offset，关闭自动提交",
+            "offset 与业务事务之间存在窗口，重启会重放，需幂等键兜住；反复失败进死信并补偿"
+          ]
+        },
+        "answer": {
+          "id": 5,
+          "status": "COMPLETED",
+          "error": null,
+          "text": "用业务幂等键（订单号加事件类型）加唯一约束，在同一个事务里写去重记录并更新订单状态，处理成功后再手动提交 offset，关闭自动提交。业务提交成功但 offset 未提交会重放，靠幂等键兜住；反复失败的进死信队列人工补偿。另外 Kafka 的 exactly-once 能保证端到端只处理一次，包括写入外部数据库。"
+        },
+        "agent_run": {
+          "status": "SUCCEEDED",
+          "graph": "mock_interview"
+        },
+        "evaluations": [
+          {
+            "evaluation_id": 5,
+            "dims": {
+              "technical_correctness": 4,
+              "coverage": 4,
+              "depth": 4,
+              "relevance": 4,
+              "communication": 4
+            },
+            "total": 20,
+            "provider": "replay",
+            "model": "R24_SCRIPTED_EVALUATION",
+            "prompt_version": "2.3.4",
+            "structured_retry": 0,
+            "token_usage": {
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "total_tokens": 0
+            },
+            "artifact": {
+              "tool_observed_outcome": null,
+              "tool_result_ids": [],
+              "technical_correctness": 4,
+              "coverage": 4,
+              "depth": 4,
+              "relevance": 4,
+              "communication": 4,
+              "evaluation": "Replay 评价（彩排，非模型输出）",
+              "covered_points": [],
+              "missing_points": [],
+              "factual_or_reasoning_issues": [],
+              "follow_up_focus": [],
+              "next_action_recommendation": "NEXT",
+              "reference_answer": null,
+              "knowledge_observations": [
+                {
+                  "knowledge_id": "java_backend:kafka_reliability",
+                  "state": "DEMONSTRATED_IN_SESSION",
+                  "answer_quotes": [
+                    "用业务幂等键（订单号加事件类型）加唯一约束，在同一个事务里写去重记录并更新订单状态，处理成功后再手动提交 offset，关闭自动提交。业务提交成功但 offse"
+                  ],
+                  "missing_mechanisms": [],
+                  "resolved_gap_ids": []
+                }
+              ]
+            },
+            "agent_run_id": 17,
+            "answer_id": 5
+          }
+        ]
+      },
+      "prompt_version_ok": true
+    },
+    {
+      "pair_id": "R27-KF-P1",
+      "sample_id": "KF-A2",
+      "role": "SECOND",
+      "quality_label": "POOR_LONG_WRONG",
+      "char_count": 253,
+      "user_id": 6,
+      "session_id": 6,
+      "question_id": 6,
+      "answer_key": "fecb60cdaf1b4197af8e8c8f27dbefb3",
+      "answer_text": "Kafka 默认就是 exactly-once，所以消费端不用额外做去重，只要把 enable.idempotence 打开、offset 用自动提交就行，消息只会被消费一次。如果还是出现重复，用数据库自增主键就能自动去重，因为每条消息插入时主键不同，重复的会插入失败直接跳过。另外 offset 提交和业务事务是两个独立的东西，先提交 offset 再处理业务更安全，因为这样不会重复消费。消费失败的话把 offset 回滚到上一条重新消费即可，Kafka 支持 offset 回滚，所以不需要死信队列。",
+      "expected_band": [
+        1,
+        8
+      ],
+      "question_matches": true,
+      "rubric_matches": true,
+      "status": "SUBMITTED",
+      "event_names": [
+        "evaluation",
+        "complete",
+        "done"
+      ],
+      "events_digest": "c0f4761e49503a47eedb840e8a3a3fdf039427899eefbad722e5f50cbdb0257b",
+      "http_calls": 0,
+      "tokens": 0,
+      "latency_ms": 345,
+      "main_calls": [
+        "AdaptiveSelection"
+      ],
+      "payload_audit": [
+        {
+          "schema": "AdaptiveEvaluation",
+          "chars": 5672,
+          "owner": "user:6",
+          "forbidden": [],
+          "input_keys": [
+            "adaptive",
+            "answer",
+            "current_question",
+            "desired_difficulty",
+            "rubric",
+            "scoring_context",
+            "snapshot"
+          ],
+          "rubric_lines": 5,
+          "answer_chars": 253
+        }
+      ],
+      "scope_owner_ok": true,
+      "db": {
+        "session": {
+          "id": 6,
+          "status": "COMPLETED",
+          "state_version": 3,
+          "context_snapshot_id": 6
+        },
+        "question": {
+          "id": 6,
+          "status": "COMPLETED",
+          "text": "Kafka 消费者遇到重复投递时，如何保证订单只被处理一次业务结果？",
+          "rubric": [
+            "Kafka 只保证至少一次，去重必须落在业务侧",
+            "业务幂等键（订单号 + 事件类型）加唯一约束",
+            "去重记录与订单状态更新在同一事务中提交",
+            "处理成功后手动提交 offset，关闭自动提交",
+            "offset 与业务事务之间存在窗口，重启会重放，需幂等键兜住；反复失败进死信并补偿"
+          ]
+        },
+        "answer": {
+          "id": 6,
+          "status": "COMPLETED",
+          "error": null,
+          "text": "Kafka 默认就是 exactly-once，所以消费端不用额外做去重，只要把 enable.idempotence 打开、offset 用自动提交就行，消息只会被消费一次。如果还是出现重复，用数据库自增主键就能自动去重，因为每条消息插入时主键不同，重复的会插入失败直接跳过。另外 offset 提交和业务事务是两个独立的东西，先提交 offset 再处理业务更安全，因为这样不会重复消费。消费失败的话把 offset 回滚到上一条重新消费即可，Kafka 支持 offset 回滚，所以不需要死信队列。"
+        },
+        "agent_run": {
+          "status": "SUCCEEDED",
+          "graph": "mock_interview"
+        },
+        "evaluations": [
+          {
+            "evaluation_id": 6,
+            "dims": {
+              "technical_correctness": 4,
+              "coverage": 4,
+              "depth": 4,
+              "relevance": 4,
+              "communication": 4
+            },
+            "total": 20,
+            "provider": "replay",
+            "model": "R24_SCRIPTED_EVALUATION",
+            "prompt_version": "2.3.4",
+            "structured_retry": 0,
+            "token_usage": {
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "total_tokens": 0
+            },
+            "artifact": {
+              "tool_observed_outcome": null,
+              "tool_result_ids": [],
+              "technical_correctness": 4,
+              "coverage": 4,
+              "depth": 4,
+              "relevance": 4,
+              "communication": 4,
+              "evaluation": "Replay 评价（彩排，非模型输出）",
+              "covered_points": [],
+              "missing_points": [],
+              "factual_or_reasoning_issues": [],
+              "follow_up_focus": [],
+              "next_action_recommendation": "NEXT",
+              "reference_answer": null,
+              "knowledge_observations": [
+                {
+                  "knowledge_id": "java_backend:kafka_reliability",
+                  "state": "DEMONSTRATED_IN_SESSION",
+                  "answer_quotes": [
+                    "Kafka 默认就是 exactly-once，所以消费端不用额外做去重，只要把 enable.idempotence 打开、offset 用自动提交就行，消息"
+                  ],
+                  "missing_mechanisms": [],
+                  "resolved_gap_ids": []
+                }
+              ]
+            },
+            "agent_run_id": 18,
+            "answer_id": 6
+          }
+        ]
+      },
+      "prompt_version_ok": true
+    },
+    {
+      "pair_id": "R27-RAG-P2",
+      "sample_id": "RAG-C1",
+      "role": "FIRST",
+      "quality_label": "NEAR_MISS",
+      "char_count": 139,
+      "user_id": 7,
+      "session_id": 7,
+      "question_id": 7,
+      "answer_key": "082fe9ce8e9441fd922446e595dc6661",
+      "answer_text": "RRF 按名次融合：每路取 1/(k+rank) 累加，k 常取 60。好处是不依赖原始分数尺度，规避 BM25 与余弦不可比的问题；代价是丢弃分数幅度，弱相关但排名靠前的会被抬高。k 越大越偏向头部排名，所以要在验证集上调 k 和截断深度，用 Recall@k 对比融合前后。",
+      "expected_band": [
+        15,
+        20
+      ],
+      "question_matches": true,
+      "rubric_matches": true,
+      "status": "SUBMITTED",
+      "event_names": [
+        "evaluation",
+        "complete",
+        "done"
+      ],
+      "events_digest": "644036659a8c40eb7e152891a7bb3c17adaada66a8780096298d3d2ff22f8903",
+      "http_calls": 0,
+      "tokens": 0,
+      "latency_ms": 286,
+      "main_calls": [
+        "AdaptiveSelection"
+      ],
+      "payload_audit": [
+        {
+          "schema": "AdaptiveEvaluation",
+          "chars": 5773,
+          "owner": "user:7",
+          "forbidden": [],
+          "input_keys": [
+            "adaptive",
+            "answer",
+            "current_question",
+            "desired_difficulty",
+            "rubric",
+            "scoring_context",
+            "snapshot"
+          ],
+          "rubric_lines": 5,
+          "answer_chars": 139
+        }
+      ],
+      "scope_owner_ok": true,
+      "db": {
+        "session": {
+          "id": 7,
+          "status": "COMPLETED",
+          "state_version": 3,
+          "context_snapshot_id": 7
+        },
+        "question": {
+          "id": 7,
+          "status": "COMPLETED",
+          "text": "两路检索（BM25 与向量）的分数尺度不同，怎样做排序融合？请说明 RRF 的计算方式、好处与代价。",
+          "rubric": [
+            "RRF 按名次取 1/(k+rank) 累加，k 常取 60 做平滑",
+            "只用名次，因此不需要把 BM25 与余弦相似度归一到同一尺度",
+            "代价是丢弃分数幅度，弱相关但排名靠前的结果会被抬高",
+            "k 越小越偏向头部排名，k 与候选深度、截断数量都需要定",
+            "用带标注的查询对比融合前后的 Recall@k 或 nDCG，而不是凭感觉调参"
+          ]
+        },
+        "answer": {
+          "id": 7,
+          "status": "COMPLETED",
+          "error": null,
+          "text": "RRF 按名次融合：每路取 1/(k+rank) 累加，k 常取 60。好处是不依赖原始分数尺度，规避 BM25 与余弦不可比的问题；代价是丢弃分数幅度，弱相关但排名靠前的会被抬高。k 越大越偏向头部排名，所以要在验证集上调 k 和截断深度，用 Recall@k 对比融合前后。"
+        },
+        "agent_run": {
+          "status": "SUCCEEDED",
+          "graph": "mock_interview"
+        },
+        "evaluations": [
+          {
+            "evaluation_id": 7,
+            "dims": {
+              "technical_correctness": 4,
+              "coverage": 4,
+              "depth": 4,
+              "relevance": 4,
+              "communication": 4
+            },
+            "total": 20,
+            "provider": "replay",
+            "model": "R24_SCRIPTED_EVALUATION",
+            "prompt_version": "2.3.4",
+            "structured_retry": 0,
+            "token_usage": {
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "total_tokens": 0
+            },
+            "artifact": {
+              "tool_observed_outcome": null,
+              "tool_result_ids": [],
+              "technical_correctness": 4,
+              "coverage": 4,
+              "depth": 4,
+              "relevance": 4,
+              "communication": 4,
+              "evaluation": "Replay 评价（彩排，非模型输出）",
+              "covered_points": [],
+              "missing_points": [],
+              "factual_or_reasoning_issues": [],
+              "follow_up_focus": [],
+              "next_action_recommendation": "NEXT",
+              "reference_answer": null,
+              "knowledge_observations": [
+                {
+                  "knowledge_id": "ai_agent_application:rag_retrieval",
+                  "state": "DEMONSTRATED_IN_SESSION",
+                  "answer_quotes": [
+                    "RRF 按名次融合：每路取 1/(k+rank) 累加，k 常取 60。好处是不依赖原始分数尺度，规避 BM25 与余弦不可比的问题；代价是丢弃分数幅度，弱相关"
+                  ],
+                  "missing_mechanisms": [],
+                  "resolved_gap_ids": []
+                }
+              ]
+            },
+            "agent_run_id": 23,
+            "answer_id": 7
+          }
+        ]
+      },
+      "prompt_version_ok": true
+    },
+    {
+      "pair_id": "R27-RAG-P2",
+      "sample_id": "RAG-C2",
+      "role": "SECOND",
+      "quality_label": "POOR_CONFUSED",
+      "char_count": 157,
+      "user_id": 8,
+      "session_id": 8,
+      "question_id": 8,
+      "answer_key": "8c912a8f74064aff85e25c769ed7db7c",
+      "answer_text": "融合这块我会先把两路分数做 softmax 变成概率分布，再加权求和，权重用验证集学出来。BM25 本质上是一种向量检索，只不过它的向量是稀疏的词袋向量，所以和 dense 检索可以放在同一个空间里比较，归一化之后直接相加就行。重排阶段再用 cross-encoder 把候选重新打分，本质上和 RRF 是一回事。",
+      "expected_band": [
+        1,
+        8
+      ],
+      "question_matches": true,
+      "rubric_matches": true,
+      "status": "SUBMITTED",
+      "event_names": [
+        "evaluation",
+        "complete",
+        "done"
+      ],
+      "events_digest": "d853887f7cbe76c823b4ec21fa2dd78e16ff5f3a159160cfe81cceeba2e01620",
+      "http_calls": 0,
+      "tokens": 0,
+      "latency_ms": 279,
+      "main_calls": [
+        "AdaptiveSelection"
+      ],
+      "payload_audit": [
+        {
+          "schema": "AdaptiveEvaluation",
+          "chars": 5791,
+          "owner": "user:8",
+          "forbidden": [],
+          "input_keys": [
+            "adaptive",
+            "answer",
+            "current_question",
+            "desired_difficulty",
+            "rubric",
+            "scoring_context",
+            "snapshot"
+          ],
+          "rubric_lines": 5,
+          "answer_chars": 157
+        }
+      ],
+      "scope_owner_ok": true,
+      "db": {
+        "session": {
+          "id": 8,
+          "status": "COMPLETED",
+          "state_version": 3,
+          "context_snapshot_id": 8
+        },
+        "question": {
+          "id": 8,
+          "status": "COMPLETED",
+          "text": "两路检索（BM25 与向量）的分数尺度不同，怎样做排序融合？请说明 RRF 的计算方式、好处与代价。",
+          "rubric": [
+            "RRF 按名次取 1/(k+rank) 累加，k 常取 60 做平滑",
+            "只用名次，因此不需要把 BM25 与余弦相似度归一到同一尺度",
+            "代价是丢弃分数幅度，弱相关但排名靠前的结果会被抬高",
+            "k 越小越偏向头部排名，k 与候选深度、截断数量都需要定",
+            "用带标注的查询对比融合前后的 Recall@k 或 nDCG，而不是凭感觉调参"
+          ]
+        },
+        "answer": {
+          "id": 8,
+          "status": "COMPLETED",
+          "error": null,
+          "text": "融合这块我会先把两路分数做 softmax 变成概率分布，再加权求和，权重用验证集学出来。BM25 本质上是一种向量检索，只不过它的向量是稀疏的词袋向量，所以和 dense 检索可以放在同一个空间里比较，归一化之后直接相加就行。重排阶段再用 cross-encoder 把候选重新打分，本质上和 RRF 是一回事。"
+        },
+        "agent_run": {
+          "status": "SUCCEEDED",
+          "graph": "mock_interview"
+        },
+        "evaluations": [
+          {
+            "evaluation_id": 8,
+            "dims": {
+              "technical_correctness": 4,
+              "coverage": 4,
+              "depth": 4,
+              "relevance": 4,
+              "communication": 4
+            },
+            "total": 20,
+            "provider": "replay",
+            "model": "R24_SCRIPTED_EVALUATION",
+            "prompt_version": "2.3.4",
+            "structured_retry": 0,
+            "token_usage": {
+              "input_tokens": 0,
+              "output_tokens": 0,
+              "total_tokens": 0
+            },
+            "artifact": {
+              "tool_observed_outcome": null,
+              "tool_result_ids": [],
+              "technical_correctness": 4,
+              "coverage": 4,
+              "depth": 4,
+              "relevance": 4,
+              "communication": 4,
+              "evaluation": "Replay 评价（彩排，非模型输出）",
+              "covered_points": [],
+              "missing_points": [],
+              "factual_or_reasoning_issues": [],
+              "follow_up_focus": [],
+              "next_action_recommendation": "NEXT",
+              "reference_answer": null,
+              "knowledge_observations": [
+                {
+                  "knowledge_id": "ai_agent_application:rag_retrieval",
+                  "state": "DEMONSTRATED_IN_SESSION",
+                  "answer_quotes": [
+                    "融合这块我会先把两路分数做 softmax 变成概率分布，再加权求和，权重用验证集学出来。BM25 本质上是一种向量检索，只不过它的向量是稀疏的词袋向量，所以和"
+                  ],
+                  "missing_mechanisms": [],
+                  "resolved_gap_ids": []
+                }
+              ]
+            },
+            "agent_run_id": 24,
+            "answer_id": 8
+          }
+        ]
+      },
+      "prompt_version_ok": true
+    }
+  ],
+  "pair_checks": [
+    {
+      "pair_id": "R25-RAG-P1",
+      "comparable": true,
+      "diff_fields": [],
+      "question_shared": true,
+      "rubric_shared": true,
+      "prompt_versions": [
+        "2.3.4",
+        "2.3.4"
+      ],
+      "boundary_contracts": [
+        "FIVE_DIMENSION_BOUNDARIES_V1",
+        "FIVE_DIMENSION_BOUNDARIES_V1"
+      ],
+      "fingerprint": "7e3ef6b9c0e69f81232a915386cf341ceb5faa14e98e1cd396e8992ba04baa7b"
+    },
+    {
+      "pair_id": "R25-LG-P1",
+      "comparable": true,
+      "diff_fields": [],
+      "question_shared": true,
+      "rubric_shared": true,
+      "prompt_versions": [
+        "2.3.4",
+        "2.3.4"
+      ],
+      "boundary_contracts": [
+        "FIVE_DIMENSION_BOUNDARIES_V1",
+        "FIVE_DIMENSION_BOUNDARIES_V1"
+      ],
+      "fingerprint": "1eafdd531c00747c40c103c09af2ee7a425e6bf75f08c93f9196f78c50149884"
+    },
+    {
+      "pair_id": "R27-KF-P1",
+      "comparable": true,
+      "diff_fields": [],
+      "question_shared": true,
+      "rubric_shared": true,
+      "prompt_versions": [
+        "2.3.4",
+        "2.3.4"
+      ],
+      "boundary_contracts": [
+        "FIVE_DIMENSION_BOUNDARIES_V1",
+        "FIVE_DIMENSION_BOUNDARIES_V1"
+      ],
+      "fingerprint": "e70189031ba993fdc344c6d830281b8a5bb54e4e613624e2df453848ba326462"
+    },
+    {
+      "pair_id": "R27-RAG-P2",
+      "comparable": true,
+      "diff_fields": [],
+      "question_shared": true,
+      "rubric_shared": true,
+      "prompt_versions": [
+        "2.3.4",
+        "2.3.4"
+      ],
+      "boundary_contracts": [
+        "FIVE_DIMENSION_BOUNDARIES_V1",
+        "FIVE_DIMENSION_BOUNDARIES_V1"
+      ],
+      "fingerprint": "7e3ef6b9c0e69f81232a915386cf341ceb5faa14e98e1cd396e8992ba04baa7b"
+    }
+  ],
+  "stop_reason": null,
+  "idempotency": {
+    "sample_id": "RAG-B1",
+    "extra_http_calls": 0,
+    "evaluations_before": 1,
+    "evaluations_after": 1,
+    "same_result": true,
+    "event_names": [
+      "evaluation",
+      "complete",
+      "done"
+    ],
+    "answer_status": "COMPLETED",
+    "session_status": "COMPLETED"
+  },
+  "ledger": [],
+  "totals": {
+    "http_calls": 0,
+    "tokens": 0,
+    "elapsed_seconds": 0,
+    "ledger_statuses": {
+      "RESERVED": 0,
+      "SETTLED": 0,
+      "UNKNOWN": 0
+    },
+    "ledger_tokens": 0,
+    "structured_repairs": 0,
+    "prompt_versions": [
+      "2.3.4"
+    ]
+  },
+  "provider_records": []
+}

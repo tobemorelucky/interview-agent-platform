@@ -1,0 +1,354 @@
+{
+  "generated_at": "2026-11-15T08:05:28.753462+00:00",
+  "dataset": "data\\sandbox_test_pkg_20261114\\2026校招JD_真实面经_模拟回答测试包",
+  "baseline_freeze": "r25_frozen_pairs.json",
+  "baseline_pair_ids": [
+    "R25-RAG-P1",
+    "R25-LG-P1"
+  ],
+  "expected_prompt_version": "2.3.4",
+  "selection_note": "4 对 8 份。前两对逐字复制第 25 轮 2.3.3 冻结对（题目/答案/rubric/JD/技能/锚点全同），用于严格前后对照；后两对沿用同一冻结题目与 JD，只替换配对样本。同一对共享 question_id + rubric，仅回答、用户、Session 不同。",
+  "pairs": [
+    {
+      "pair_id": "R25-RAG-P1",
+      "question_id": "Q_RAG_01",
+      "topic": "rag_retrieval",
+      "dimension": "检索与 RAG",
+      "skill_id": "ai_agent_application",
+      "jd_title": "AI Agent 应用开发工程师",
+      "jd_statements": [
+        "理解 RAG 检索与融合（混合召回、排序融合、RRF）",
+        "能说明召回与排序的参数取舍及验证方式"
+      ],
+      "question": "两路检索（BM25 与向量）的分数尺度不同，怎样做排序融合？请说明 RRF 的计算方式、好处与代价。",
+      "rubric": [
+        "RRF 按名次取 1/(k+rank) 累加，k 常取 60 做平滑",
+        "只用名次，因此不需要把 BM25 与余弦相似度归一到同一尺度",
+        "代价是丢弃分数幅度，弱相关但排名靠前的结果会被抬高",
+        "k 越小越偏向头部排名，k 与候选深度、截断数量都需要定",
+        "用带标注的查询对比融合前后的 Recall@k 或 nDCG，而不是凭感觉调参"
+      ],
+      "question_sha256": "a64e765b5518d1d1d0cba66ab5e40999191fa8da990dd2aa124650dd27cbe7d7",
+      "rubric_sha256": "3984c9228a4d02a807e4600d8d3474de3267d7386307e4af7dbe41d4a40114b1",
+      "contrast": "简短且正确 vs 更长且含明确技术错误（POOR/GOOD=3.6x）",
+      "expected_relation": "HIGHER_FIRST",
+      "samples": [
+        {
+          "role": "FIRST",
+          "sample_id": "RAG-B1",
+          "dataset_pair_id": "RAG-PAIR-B",
+          "quality_label": "GOOD_SHORT",
+          "char_count": 88,
+          "answer_text": "用 RRF：每路按名次取 1/(k+rank) 再累加，k 取 60 左右。它只看名次，所以不用把 BM25 和余弦归一到同一尺度；代价是丢掉分数幅度，k 和截断深度要自己定。",
+          "expected_band": [
+            17,
+            22
+          ],
+          "expected_relation": "HIGHER",
+          "human_check_points": [
+            "给出 1/(k+rank) 与 k≈60",
+            "说明只看名次、不需归一化",
+            "说明代价：丢分数幅度、参数要定"
+          ],
+          "human_technical_errors": [],
+          "answer_sha256": "0a98cf3d63c6e7b28abe468a22e13378efcaa21a3f902680f82ff0a779e62a16"
+        },
+        {
+          "role": "SECOND",
+          "sample_id": "RAG-A2",
+          "dataset_pair_id": "RAG-PAIR-A",
+          "quality_label": "POOR_LONG_WRONG",
+          "char_count": 316,
+          "answer_text": "混合检索的融合我一般分两步。第一步把两路分数归一化，因为 BM25 和余弦相似度都是 0 到 1 之间的分数，量纲本来就一致，所以直接加权求和就可以：final = 0.5 * bm25 + 0.5 * cosine。第二步如果效果不好就上 RRF，RRF 的做法是把两路分数先相加再取对数，也就是 log(bm25 + cosine)，这样能把高分段的差异放大。RRF 的优点是完全不需要调参，k 固定 60 就行，而且 k 越大越偏向头部排名，越容易把最相关的结果顶上来。缺点是计算量比加权求和大一点。实际项目里我用 RRF 之后 top-k 命中率大概提升了三成，因为 RRF 一定优于加权求和，任何场景都应该优先用 RRF。",
+          "expected_band": [
+            1,
+            8
+          ],
+          "expected_relation": "LOWER",
+          "human_check_points": [],
+          "human_technical_errors": [
+            {
+              "claim": "BM25 与余弦都是 0~1、量纲一致",
+              "why_wrong": "BM25 无上界，余弦可为负，两者量纲不同，不能直接相加"
+            },
+            {
+              "claim": "RRF 是两路分数相加再取对数",
+              "why_wrong": "RRF 是按名次取 1/(k+rank) 累加，与分数幅度无关"
+            },
+            {
+              "claim": "RRF 不需要调参、k 固定 60",
+              "why_wrong": "k、候选深度、截断数量都需要按数据确定"
+            },
+            {
+              "claim": "k 越大越偏向头部排名",
+              "why_wrong": "k 越小越偏向头部；k 越大名次差异被压平"
+            },
+            {
+              "claim": "RRF 一定优于加权求和",
+              "why_wrong": "加权求和保留分数幅度信息，优劣取决于数据与任务"
+            },
+            {
+              "claim": "命中率提升三成",
+              "why_wrong": "无实验数据支撑，属无依据结论"
+            }
+          ],
+          "answer_sha256": "3b74a4cebd86ac07e90082c65b086d1f18522e3a19b2334951d7a91155c62228"
+        }
+      ],
+      "case_key": "R25-RAG-P1"
+    },
+    {
+      "pair_id": "R25-LG-P1",
+      "question_id": "Q_LG_01",
+      "topic": "agent",
+      "dimension": "Agent 状态与编排",
+      "skill_id": "ai_agent_application",
+      "jd_title": "AI Agent 应用开发工程师",
+      "jd_statements": [
+        "了解 LangGraph 等有状态 Agent 编排与断点恢复",
+        "能说明 state、边与持久化之间的关系"
+      ],
+      "question": "LangGraph 怎样表示有状态的 Agent 执行过程？请说明状态、边、持久化与恢复之间的关系。",
+      "rubric": [
+        "StateGraph 声明共享 state，节点返回增量更新，reducer 决定字段如何合并",
+        "普通边与条件边表达分支和循环，循环需要终止条件或最大步数",
+        "checkpointer 在每个 super-step 后保存快照，用 thread_id 关联，支持断点恢复与人工介入",
+        "checkpoint 是状态快照，不等于业务事务",
+        "外部工具副作用仍需幂等或补偿，否则恢复后会重复执行"
+      ],
+      "question_sha256": "1298f8a18b9088353354140e0ab70df04a332fef2196dec6057d9ba2d692a868",
+      "rubric_sha256": "259aff6370b8f495e809b60ae0e1f98b766086a7d24ead1192b55109b69e06ee",
+      "contrast": "基本正确但不完整 vs 大体合理但含一处关键机制错误",
+      "expected_relation": "HIGHER_SECOND_MODEST",
+      "samples": [
+        {
+          "role": "FIRST",
+          "sample_id": "LG-B2",
+          "dataset_pair_id": "LG-PAIR-B",
+          "quality_label": "PARTIAL",
+          "char_count": 116,
+          "answer_text": "LangGraph 用 StateGraph 管理状态，节点函数读 state 返回更新，条件边可以控制走向。持久化用 checkpointer，不过我一般把它当可选优化，不开也能跑，开了主要是方便调试。恢复的话重新跑一遍图就可以。",
+          "expected_band": [
+            10,
+            15
+          ],
+          "expected_relation": "LOWER",
+          "human_check_points": [
+            "提到 StateGraph 与节点增量更新",
+            "提到条件边"
+          ],
+          "human_technical_errors": [
+            {
+              "claim": "把 checkpointer 当可选优化",
+              "why_wrong": "checkpointer 是持久化与恢复的必要机制，不是调试附属品"
+            },
+            {
+              "claim": "恢复就是重新跑一遍图",
+              "why_wrong": "恢复是从 checkpoint 继续，重跑会重复执行副作用"
+            }
+          ],
+          "answer_sha256": "3224e63c093db61413ed86b0dd4a0cf4de1bb17e63a5ade71014e137fca40fe8"
+        },
+        {
+          "role": "SECOND",
+          "sample_id": "LG-C1",
+          "dataset_pair_id": "LG-PAIR-C",
+          "quality_label": "NEAR_MISS",
+          "char_count": 189,
+          "answer_text": "StateGraph 声明共享 state，节点返回增量更新，reducer 决定合并；条件边支持分支与循环。checkpointer 在每个 super-step 后保存快照，用 thread_id 关联，所以能断点恢复和人工介入。checkpoint 是状态快照不是业务事务，外部副作用要幂等。补充一点：checkpointer 是在节点函数内部、节点逻辑执行前写入快照的。",
+          "expected_band": [
+            15,
+            20
+          ],
+          "expected_relation": "HIGHER",
+          "human_check_points": [
+            "StateGraph + reducer",
+            "条件边支持分支与循环",
+            "super-step 后存快照、thread_id 关联",
+            "checkpoint 非业务事务"
+          ],
+          "human_technical_errors": [
+            {
+              "claim": "checkpointer 在节点函数内部、节点逻辑执行前写入",
+              "why_wrong": "快照写入发生在 super-step 边界，不在节点内部、也不在节点执行前"
+            }
+          ],
+          "answer_sha256": "c2ca215cdb36e81444afb465e205d77f650d01300f4646d1fb76eb41176d6f0c"
+        }
+      ],
+      "case_key": "R25-LG-P1"
+    },
+    {
+      "pair_id": "R27-KF-P1",
+      "question_id": "Q_KF_01",
+      "topic": "kafka_reliability",
+      "dimension": "消息可靠性与幂等",
+      "skill_id": "java_backend",
+      "jd_title": "Java 后端开发工程师",
+      "jd_statements": [
+        "熟悉 Kafka 消费者可靠性（至少一次语义、offset 提交）",
+        "能在业务侧实现消息幂等，并说清 exactly-once 的边界"
+      ],
+      "question": "Kafka 消费者遇到重复投递时，如何保证订单只被处理一次业务结果？",
+      "rubric": [
+        "Kafka 只保证至少一次，去重必须落在业务侧",
+        "业务幂等键（订单号 + 事件类型）加唯一约束",
+        "去重记录与订单状态更新在同一事务中提交",
+        "处理成功后手动提交 offset，关闭自动提交",
+        "offset 与业务事务之间存在窗口，重启会重放，需幂等键兜住；反复失败进死信并补偿"
+      ],
+      "question_sha256": "8e8ca3935e36be132b6969e0e5a8cde788d4ad33b1df51b13ec18a3bbcff4173",
+      "rubric_sha256": "9b4a58627102ed23f04df2afd9bc5bb6f835ea44edda040ca148d9eba21c3002",
+      "contrast": "Kafka exactly-once 边界 NEAR_MISS vs 更长且误解幂等/offset（POOR/GOOD=1.61x）",
+      "expected_relation": "HIGHER_FIRST",
+      "samples": [
+        {
+          "role": "FIRST",
+          "sample_id": "KF-C1",
+          "dataset_pair_id": "KF-PAIR-C",
+          "quality_label": "NEAR_MISS",
+          "char_count": 157,
+          "answer_text": "用业务幂等键（订单号加事件类型）加唯一约束，在同一个事务里写去重记录并更新订单状态，处理成功后再手动提交 offset，关闭自动提交。业务提交成功但 offset 未提交会重放，靠幂等键兜住；反复失败的进死信队列人工补偿。另外 Kafka 的 exactly-once 能保证端到端只处理一次，包括写入外部数据库。",
+          "expected_band": [
+            15,
+            20
+          ],
+          "expected_relation": "HIGHER",
+          "human_check_points": [
+            "幂等键 + 唯一约束",
+            "同一事务写去重与状态",
+            "成功后手动提交 offset",
+            "offset 窗口与死信补偿"
+          ],
+          "human_technical_errors": [
+            {
+              "claim": "称 Kafka exactly-once 能保证端到端只处理一次、包括写外部数据库",
+              "why_wrong": "Kafka EOS 只覆盖 Kafka 内部读写（或事务性 consume-transform-produce），不保证任意外部系统"
+            }
+          ],
+          "answer_sha256": "e0a1571f6200765558fee1e49916e3b756947ff9598f5ec5c01691bac8f60946"
+        },
+        {
+          "role": "SECOND",
+          "sample_id": "KF-A2",
+          "dataset_pair_id": "KF-PAIR-A",
+          "quality_label": "POOR_LONG_WRONG",
+          "char_count": 253,
+          "answer_text": "Kafka 默认就是 exactly-once，所以消费端不用额外做去重，只要把 enable.idempotence 打开、offset 用自动提交就行，消息只会被消费一次。如果还是出现重复，用数据库自增主键就能自动去重，因为每条消息插入时主键不同，重复的会插入失败直接跳过。另外 offset 提交和业务事务是两个独立的东西，先提交 offset 再处理业务更安全，因为这样不会重复消费。消费失败的话把 offset 回滚到上一条重新消费即可，Kafka 支持 offset 回滚，所以不需要死信队列。",
+          "expected_band": [
+            1,
+            8
+          ],
+          "expected_relation": "LOWER",
+          "human_check_points": [],
+          "human_technical_errors": [
+            {
+              "claim": "Kafka 默认 exactly-once",
+              "why_wrong": "Kafka 消费侧默认为至少一次；EOS 需显式配置且范围有限"
+            },
+            {
+              "claim": "开幂等 producer 就能让消费端不重复",
+              "why_wrong": "幂等 producer 只消除生产端重试造成的重复"
+            },
+            {
+              "claim": "用自增主键自动去重",
+              "why_wrong": "重投的是同一条业务消息，自增主键无法识别业务幂等键"
+            },
+            {
+              "claim": "先提交 offset 再处理更安全",
+              "why_wrong": "先提交会丢消息；应先完成业务再提交 offset"
+            },
+            {
+              "claim": "offset 回滚即可重试，不需要死信队列",
+              "why_wrong": "offset 回滚代价高且不解决毒消息，仍需死信与补偿"
+            }
+          ],
+          "answer_sha256": "6d8168185d33daf66c051a34497bf62ff9001e13add7599925036f6c4451ff91"
+        }
+      ],
+      "case_key": "R25-KF-P1"
+    },
+    {
+      "pair_id": "R27-RAG-P2",
+      "question_id": "Q_RAG_01",
+      "topic": "rag_retrieval",
+      "dimension": "检索与 RAG",
+      "skill_id": "ai_agent_application",
+      "jd_title": "AI Agent 应用开发工程师",
+      "jd_statements": [
+        "理解 RAG 检索与融合（混合召回、排序融合、RRF）",
+        "能说明召回与排序的参数取舍及验证方式"
+      ],
+      "question": "两路检索（BM25 与向量）的分数尺度不同，怎样做排序融合？请说明 RRF 的计算方式、好处与代价。",
+      "rubric": [
+        "RRF 按名次取 1/(k+rank) 累加，k 常取 60 做平滑",
+        "只用名次，因此不需要把 BM25 与余弦相似度归一到同一尺度",
+        "代价是丢弃分数幅度，弱相关但排名靠前的结果会被抬高",
+        "k 越小越偏向头部排名，k 与候选深度、截断数量都需要定",
+        "用带标注的查询对比融合前后的 Recall@k 或 nDCG，而不是凭感觉调参"
+      ],
+      "question_sha256": "a64e765b5518d1d1d0cba66ab5e40999191fa8da990dd2aa124650dd27cbe7d7",
+      "rubric_sha256": "3984c9228a4d02a807e4600d8d3474de3267d7386307e4af7dbe41d4a40114b1",
+      "contrast": "中间档 NEAR_MISS vs POOR_CONFUSED（同题，POOR 更长 1.13x）",
+      "expected_relation": "HIGHER_FIRST",
+      "samples": [
+        {
+          "role": "FIRST",
+          "sample_id": "RAG-C1",
+          "dataset_pair_id": "RAG-PAIR-C",
+          "quality_label": "NEAR_MISS",
+          "char_count": 139,
+          "answer_text": "RRF 按名次融合：每路取 1/(k+rank) 累加，k 常取 60。好处是不依赖原始分数尺度，规避 BM25 与余弦不可比的问题；代价是丢弃分数幅度，弱相关但排名靠前的会被抬高。k 越大越偏向头部排名，所以要在验证集上调 k 和截断深度，用 Recall@k 对比融合前后。",
+          "expected_band": [
+            15,
+            20
+          ],
+          "expected_relation": "HIGHER",
+          "human_check_points": [
+            "给出 1/(k+rank) 与 k≈60",
+            "说明不依赖原始分数尺度",
+            "说明代价：丢幅度、抬高弱相关",
+            "给出 Recall@k 评估"
+          ],
+          "human_technical_errors": [
+            {
+              "claim": "k 越大越偏向头部排名",
+              "why_wrong": "方向相反：k 越小越偏向头部排名"
+            }
+          ],
+          "answer_sha256": "1b743eee2f17e7d02b4cf0631c3d6fa2b07c1c7721d36994f4ff4b0f3c7aa8fc"
+        },
+        {
+          "role": "SECOND",
+          "sample_id": "RAG-C2",
+          "dataset_pair_id": "RAG-PAIR-C",
+          "quality_label": "POOR_CONFUSED",
+          "char_count": 157,
+          "answer_text": "融合这块我会先把两路分数做 softmax 变成概率分布，再加权求和，权重用验证集学出来。BM25 本质上是一种向量检索，只不过它的向量是稀疏的词袋向量，所以和 dense 检索可以放在同一个空间里比较，归一化之后直接相加就行。重排阶段再用 cross-encoder 把候选重新打分，本质上和 RRF 是一回事。",
+          "expected_band": [
+            1,
+            8
+          ],
+          "expected_relation": "LOWER",
+          "human_check_points": [],
+          "human_technical_errors": [
+            {
+              "claim": "把 RRF 说成 softmax 后加权求和",
+              "why_wrong": "RRF 不使用分数幅度，也不是学习权重"
+            },
+            {
+              "claim": "称 BM25 是一种向量检索、与 dense 在同一空间可直接相加",
+              "why_wrong": "BM25 是词频统计的稀疏打分，需显式归一化才能与 dense 分数比较"
+            },
+            {
+              "claim": "称重排与 RRF 是一回事",
+              "why_wrong": "重排是对候选重新打分，RRF 是多路结果的名次融合，阶段与目的不同"
+            }
+          ],
+          "answer_sha256": "e64c9092ea485f30599bc6b4c10aba4e92ab37eae6f9aa777cf7ab06b9405a3b"
+        }
+      ],
+      "case_key": "R25-RAG-P1"
+    }
+  ]
+}
