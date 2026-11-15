@@ -60,17 +60,19 @@ def test_at_least_eight_pairs_control_for_length(samples):
     pairs = defaultdict(list)
     for row in samples:
         pairs[row["pair_id"]].append(row)
-    controlled, detail = 0, {}
+    controlled, reverse, detail = 0, 0, {}
     for pair_id, members in sorted(pairs.items()):
         higher = next(m for m in members if m["expected_relation"] == "HIGHER")
         lower = next(m for m in members if m["expected_relation"] == "LOWER")
         ratio = lower["char_count"] / higher["char_count"]
         detail[pair_id] = round(ratio, 2)
-        if ratio >= 0.95 or ratio <= 1.20:
-            controlled += 1
+        close = abs(ratio - 1) <= 0.20          # near-equal length
+        reversed_length = ratio > 1.05          # the worse answer is longer
+        controlled += bool(close or reversed_length)
+        reverse += bool(reversed_length)
     assert controlled >= 8, detail
-    # And at least one pair is the strict reverse case: the worse answer is longer.
-    assert any(ratio > 1.05 for ratio in detail.values()), detail
+    # A set where the good answer is always longer cannot test a length shortcut.
+    assert reverse >= 4, detail
 
 
 def test_char_count_and_hash_match_the_text(samples):
