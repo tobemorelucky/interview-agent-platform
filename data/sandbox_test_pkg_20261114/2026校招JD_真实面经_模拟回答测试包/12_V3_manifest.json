@@ -1,0 +1,205 @@
+{
+  "dataset_version": "V3_HARD_20261115",
+  "created_at": "2026-11-15",
+  "provenance": "全部为人工撰写的合成模拟回答；不是真实 JD、真实面经、真实候选人记录、真实 Evaluation 或模型 Capture",
+  "independence": "独立新文件 10/11/12；不覆盖 V2 的 08/09；V2 文件逐字未改",
+  "not_statistical_claim": "V3 是待评测输入，不含任何模型评分结果，不能用于宣称质量提升",
+  "sample_count": 16,
+  "question_count": 5,
+  "topics": [
+    "agent",
+    "kafka_reliability",
+    "python",
+    "rag_retrieval",
+    "redis"
+  ],
+  "categories": [
+    "A_TECHNICALLY_CORRECT_SHORT",
+    "B_CORRECT_WITH_OMISSIONS",
+    "C_KEY_MECHANISM_ERROR",
+    "D_SIDE_DETAIL_ERROR",
+    "E_LONG_ON_TOPIC_CORE_WRONG",
+    "F_CONCEPT_SWAP_OR_UNSUPPORTED"
+  ],
+  "category_counts": {
+    "A_TECHNICALLY_CORRECT_SHORT": 3,
+    "B_CORRECT_WITH_OMISSIONS": 2,
+    "C_KEY_MECHANISM_ERROR": 3,
+    "D_SIDE_DETAIL_ERROR": 3,
+    "E_LONG_ON_TOPIC_CORE_WRONG": 2,
+    "F_CONCEPT_SWAP_OR_UNSUPPORTED": 3
+  },
+  "label_definitions": {
+    "GOOD_SHORT": "技术陈述全部正确但篇幅短、覆盖有限",
+    "CORRECT_WITH_OMISSIONS": "技术陈述全部正确，遗漏 rubric 中的若干要点与边界",
+    "NEAR_MISS": "大部分正确，含一处明确错误（关键机制错或次要细节错）",
+    "POOR_LONG_WRONG": "切题、篇幅长，但核心机制多处错误",
+    "POOR_CONFUSED": "表达流畅但偷换概念或把相邻机制混为一谈",
+    "UNSUPPORTED_CLAIM": "主干机制正确，但追加未经证明的量化或普适结论"
+  },
+  "difficulty_category_definitions": {
+    "A_TECHNICALLY_CORRECT_SHORT": "技术正确但回答简短",
+    "B_CORRECT_WITH_OMISSIONS": "技术正确但遗漏部分要求",
+    "C_KEY_MECHANISM_ERROR": "大部分正确但包含一处关键机制错误",
+    "D_SIDE_DETAIL_ERROR": "大部分正确但只存在次要细节错误",
+    "E_LONG_ON_TOPIC_CORE_WRONG": "长篇、切题但核心机制错误",
+    "F_CONCEPT_SWAP_OR_UNSUPPORTED": "表达流畅但偷换概念或补充未经证明的结论"
+  },
+  "severity_definitions": {
+    "NONE": "无技术错误",
+    "SIDE_DETAIL": "错误只涉及实现参数或前提描述，删掉该句后主干结论仍成立",
+    "KEY_MECHANISM": "错误改动本题主干机制或时序，使后续结论失去依据",
+    "CONCEPT_SWAP": "用相邻概念替换题目核心概念",
+    "UNSUPPORTED_CLAIM": "结论无证据、无口径或把经验绝对化",
+    "CORE_WRONG_MULTIPLE": "多处核心机制错误"
+  },
+  "strict_distinction_rule": "correct_points 只记录候选人逐字说对的内容；candidate_did_not_say 列出候选人没说、但模型可能推断其知道的正确知识。评测时不得把后者计入 covered_points。",
+  "blind_context_contract": "待评测模型只能收到 blind_context 里的 question / rubric / answer 三项；forbidden_in_model_context 列出的字段一律不得进入模型上下文。",
+  "band_policy": "expected_band 是人工方向性先验，不是真值、不是通过判据，也不用于调 Prompt；每份都带 band_uncertainty。下一阶段判据应优先用相对关系与严重度一致性。",
+  "pairs": [
+    {
+      "pair_id": "V3-P01",
+      "samples": [
+        "V3-A1",
+        "V3-C1"
+      ],
+      "comparability": "SAME_TOPIC_STRICT",
+      "expected": "A1_HIGHER",
+      "note": "反向长度：错答案更长"
+    },
+    {
+      "pair_id": "V3-P02",
+      "samples": [
+        "V3-A2",
+        "V3-E1"
+      ],
+      "comparability": "SAME_TOPIC_STRICT",
+      "expected": "A2_HIGHER",
+      "note": "反向长度"
+    },
+    {
+      "pair_id": "V3-P03",
+      "samples": [
+        "V3-A3",
+        "V3-E2"
+      ],
+      "comparability": "SAME_TOPIC_STRICT",
+      "expected": "A3_HIGHER",
+      "note": "反向长度"
+    },
+    {
+      "pair_id": "V3-P04",
+      "samples": [
+        "V3-B1",
+        "V3-C3"
+      ],
+      "comparability": "SAME_TOPIC_STRICT",
+      "expected": "B1_HIGHER",
+      "note": "无错 vs 一处关键机制错"
+    },
+    {
+      "pair_id": "V3-P05",
+      "samples": [
+        "V3-B2",
+        "V3-C2"
+      ],
+      "comparability": "SAME_TOPIC_STRICT",
+      "expected": "B2_HIGHER",
+      "note": "无错 vs 一处关键机制错"
+    },
+    {
+      "pair_id": "V3-P06",
+      "samples": [
+        "V3-D1",
+        "V3-F1"
+      ],
+      "comparability": "SAME_TOPIC_STRICT",
+      "expected": "D1_HIGHER",
+      "note": "次要细节错 vs 概念偷换"
+    },
+    {
+      "pair_id": "V3-P07",
+      "samples": [
+        "V3-D2",
+        "V3-F2"
+      ],
+      "comparability": "CROSS_TOPIC_RELATIVE_ONLY",
+      "expected": "UNCERTAIN",
+      "note": "刻意不给方向性判据：2.3.4 对「正确但夹带无据结论」无锚点"
+    },
+    {
+      "pair_id": "V3-P08",
+      "samples": [
+        "V3-D3",
+        "V3-F3"
+      ],
+      "comparability": "CROSS_TOPIC_RELATIVE_ONLY",
+      "expected": "UNCERTAIN",
+      "note": "跨主题，仅作相对参照"
+    }
+  ],
+  "severity_consistency_groups": [
+    {
+      "group": "SIDE_DETAIL",
+      "samples": [
+        "V3-D1",
+        "V3-D2",
+        "V3-D3"
+      ],
+      "expected_metric": "technical_correctness 的极差 <= 1",
+      "purpose": "检验不同主题下同类次要错误的扣分是否一致"
+    },
+    {
+      "group": "KEY_MECHANISM",
+      "samples": [
+        "V3-C1",
+        "V3-C2",
+        "V3-C3"
+      ],
+      "expected_metric": "technical_correctness 的极差 <= 1",
+      "purpose": "检验不同主题下同类关键机制错的扣分是否一致"
+    },
+    {
+      "group": "GRADIENT",
+      "samples": [
+        "V3-D1",
+        "V3-C1",
+        "V3-D3",
+        "V3-C3"
+      ],
+      "expected_metric": "每组内 SIDE_DETAIL 的 tc 严格高于 KEY_MECHANISM",
+      "purpose": "检验严重度梯度而非绝对分数"
+    }
+  ],
+  "readiness": [
+    {
+      "question_id": "Q_RAG_01",
+      "official_chain_runnable": true,
+      "reason": "蓝图已产出 rag_retrieval target"
+    },
+    {
+      "question_id": "Q_LG_01",
+      "official_chain_runnable": true,
+      "reason": "蓝图已产出 agent target"
+    },
+    {
+      "question_id": "Q_KF_01",
+      "official_chain_runnable": true,
+      "reason": "蓝图已产出 kafka_reliability target"
+    },
+    {
+      "question_id": "Q_FASTAPI_01",
+      "official_chain_runnable": false,
+      "reason": "需 python target 的合法 JD 语句；yield 清理时序依 Starlette 版本，断言须标版本"
+    },
+    {
+      "question_id": "Q_REDIS_01",
+      "official_chain_runnable": false,
+      "reason": "技能 priority_topics 含 redis，但当前夹具蓝图未产出 redis target；需含 redis/缓存/分布式锁 的 JD 语句"
+    }
+  ],
+  "historical_db_warning": "历史复制库/批量回放库中的上千条 Evaluation 是复制或 Replay 产物，不能按行数当作独立真实样本量。本 V3 只有 16 份人工独立撰写的待评测回答。",
+  "no_scoring_changes": "本轮不修改五维字段、评分逻辑、Prompt、Schema 或数据库迁移；不为提高预期带命中率而调整评分。",
+  "score_range_policy": "五维各 1..5，总分物理范围 5..25。V2 的 POOR 带 [1,8] 下界 1–4 不可达；V3 全部区间落在 5..25 内。区间仍是人工方向性先验，不是真值。",
+  "v2_band_defect_note": "顺带发现：V2 的 POOR 样本 expected_band=[1,8] 含不可达下界；历史 V2 结果不改写，仅在此记录，V3 已修正。"
+}
