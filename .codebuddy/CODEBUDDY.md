@@ -1217,3 +1217,31 @@ L3 前置条件（purge_requests 表、清理顺序、audit_logs 脱敏、Celery
 **测试 A–J**：A–E 靠契约与 Prompt 断言、F/G 靠引用重放、H 并发两 owner、I 跨库 409（两库均 0 写入）、J 无 scope 403（把 `async_session_factory` 换成"一调用就报错"证明回退已不存在）；另有官方 `create→start→answer` 路径 + governed 桩验证 route/owner。新增 15 个用例。
 
 **下一轮方案（未执行）**：4 对 8 份，全部 `commit_answer`；RAG-B1/A2 与 LG-B2/C1 **同题同答**复测（与第 25 轮前后对照），加 KF-C1/A2（EOS 边界）与 RAG-C1/C2（中间档）；HTTP 12（8 评价 + ≤4 修复）、Token 60,000、15 分钟；判据只看 tc 理由是否有准确性依据、coverage 缺口是否还进 tc、是否仍五维同步；**不宣称统计显著**。
+
+---
+
+## 第二十七轮：Evaluation 2.3.4 真实模型验证（4 对 / 8 份 / 8 HTTP / 37,382 tokens，见 docs/106）
+
+**基线** `7d8c7ce`。用户指出上轮报告写 `0e89a1f`、审计报告写 `7d8c7ce` —— 两者在同一线性历史，`0e89a1f..HEAD` 只有 `docs/105` 的 2 行补注，是报告列表顺序问题，**运行代码完全一致**。P0 归属修复（scope.py / governed_call / call_agent）与 Prompt 2.3.4（EVALUATION_BOUNDARIES_PROMPT + `FIVE_DIMENSION_BOUNDARIES_V1`）均在当前版本；DB 实测 8 条评价 `pv=2.3.4`。未切换/重置代码、未改产品代码。
+
+**Provider 实测**：`LLM_PROVIDER=modelscope`、`https://api-inference.modelscope.cn/v1`（免费 API-Inference，非 API-Provider）、`deepseek-ai/DeepSeek-V4.1-Flash-1017`、`ms-` token；仓库内 `dashscope/aliyuncs/ark.cn` 命中 0 个文件，`.env` 的火山 `LLM_BASE_URL` 在 `use_modelscope=True` 时被短路；主出题 8 次全为 Replay。脚本发送前断言 base_url / model / 冻结版本 / 账本目标，负向测试指向历史库被拒（0 请求）。
+
+**沙箱**：新建 5 个 0029/68 表空库（live/rehearsal/rehearsal2/replay/ledger），238→243；0 HTTP 彩排 replay 8/8、ledger 8 条 admission 全 SETTLED。受保护资产（正式库 0025/19/41/5/0、18 轮原件 0026/3/18/1/49、快照库 0026/1621/1761/219/147、r25 live 6/6/0/8、MinIO 48 对象、三闸 OFF）零变化。
+
+**严格前后对照**：`r27_frozen_pairs.json` 前两对逐字复制第 25 轮（2.3.3）冻结对，并复用 2.3.3 的三个夹具公司名；跨轮语义比对 5 个重叠样本除 `adaptive_policy` 新增边界契约 + prompt 2.3.3→2.3.4 外全同。新增 KF-C1/A2 与 RAG-C1/C2（**注意**：RAG-C1/C2 实为 NEAR_MISS vs POOR_CONFUSED，不是两个中间档；真正的 PARTIAL/NEAR_MISS 是 LG-B2/C1）。
+
+**8 份五维**（技术/覆盖/深度/相关/表达）：RAG-B1 `5/3/3/5/4=20`、RAG-A2 `1/2/2/4/3=12`、LG-B2 `2/2/2/4/3=13`、LG-C1 `2/4/3/5/4=18`、KF-C1 `2/4/4/5/4=19`、KF-A2 `1/1/1/2/3=8`、RAG-C1 `3/4/4/5/5=21`、RAG-C2 `1/1/1/2/3=8`。四对差值 +8 / +5（第二份更高）/ +11 / +13，方向全对，三对为「错答案更长」的反向长度控制。
+
+**确认修复**：
+- **tc / coverage 解耦**：`RAG-B1` 零技术错误，tc 由 2.3.3 的 4 → **5**，评语「技术表述无误」、`issues=[]`；覆盖缺口只落在 coverage=3 / depth=3。这是上一轮唯一复现的缺陷，本轮在唯一个对照样本上消失。
+- **五维不再档位化**：2.3.3 的 LG-B2→LG-C1 是同步 +1（2/2/2/3/3 → 3/3/3/4/4），2.3.4 变为 (0,+2,+1,+1,+1)；LG-C1 出现 tc↓ / coverage↑ 的反向分解。
+- **Repair 2/8 → 0/8**：8 份 `answer_quotes` 全 ≤3、`structured_retry` 全 0。但 2.3.4 提示词 3,748→7,452 字符，单次 input +约 900 tokens，8 次无 Repair 仍用 37,382 tokens（2.3.3 的 8 次含 2 Repair 为 29,827）——省的是 HTTP 与不确定性，不是 token。
+- **措辞不再绝对化**：KF-A2 把「Kafka 不支持 offset 回滚」改为「没有回滚 API，seek/重置只能重读记录」；KF-C1 说清 EOS 仅限 Kafka 内部、不覆盖外部数据库；LG-B2 只在「本题问持久化与恢复」语境下说 checkpointer 是必要机制，未宣称所有 LangGraph 场景绝对必需。**这三条规定都写进了 2.3.4 提示词，只证明解释不再出错，不证明模型脱离提示词独立掌握边界。**
+
+**未改善 / 变差（必须如实保留）**：预期带 6/8；5 个重叠样本两轮都是 4/5，唯一出带的 `RAG-A2` 从 9 **恶化到 12**（relevance=4 / coverage=2 / depth=2 把核心机制全错的长答案抬出 [1,8]）。模型还把该答案中的错误说法「RRF 完全不需要调参、k 固定 60」改写成「不需要针对分数尺度调参」计入 `covered_points` —— 改写式过度给分。另 `LG-C1` 与 `RAG-C1` 同属「单一附加错误细节」，却分别判 tc=2 与 tc=3，严重度锚点不一致。8 份评语未发现技术幻觉。
+
+**链路**：8/8 `commit_answer` 落库、session/question/answer 全 COMPLETED、24 run 全 SUCCEEDED、幂等 0 新请求 0 新评价、8 条 admission 全 SETTLED（owner `user:1..8`、route `answer_evaluation`）、`admission_tokens == eval_tokens == 37,382` 逐条相等、0 UNKNOWN、8 条 capability_memories 全属一次性用户、0 memory_proposal / 0 coach。预算 8 HTTP / 37,382 tokens / 62.4 s，均未触上限，`stop_reason=None`。
+
+**样本量**：4 对 8 份、仅 **5 个**严格前后对照样本、单次调用无重复采样，**不宣称统计显著优势或整体质量提升**。
+
+**下一阶段建议（未执行）**：先做 12 对 / 24 份定点补测（正确但简短跨主题、单一附加错误细节、切题但机制全错的长答案），HTTP 26–28 / Token 120K / 25 min；确认问题稳定后再另行批准 2.3.5 最小澄清（POOR 出带、禁止改写式给分、side detail 判据）。本轮不改提示词、不扩到 30 份、不新增功能。
