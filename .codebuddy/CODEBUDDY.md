@@ -1164,3 +1164,32 @@ L3 前置条件（purge_requests 表、清理顺序、audit_logs 脱敏、Celery
 **新建隔离库**：`interview_agent_wb_r24_test_20261115`（0029/68 表）、`interview_agent_v21_r24_20261115`（迁移专用），库总数 230→232，无删除。受保护库与 MinIO 48 对象未变。
 
 **预算**：Evaluation 单次 3.3–4.2K tokens（均值 ≈4.0K，含 `reference_answer`），Main 单题 4.9–6.0K；6/20/30 份 = 6/20/30 HTTP（含 ≤10% 修复重试 7/22/33），≈24K/81K/121K tokens；旧方案（Main 也真实出题）90 HTTP/≈360K。题面可 Replay（0 HTTP），同 answer 重复提交可复用（0 HTTP）。**≤8 次短程验收方案（3 对×2 + 2 修复预留，Token 上限 40K、10 分钟）已备未执行**。
+
+---
+
+## 第二十五轮：Evaluation 正式链路真实模型短程验收（6 次评价 / 8 HTTP / 29,827 tokens，见 docs/104）
+
+**基线** `610e366` → 提交 `e982528`（验收脚本）、`17b2eaf`（docs/104）。模型仍是 `deepseek-ai/DeepSeek-V4.1-Flash-1017`（脚本内断言，未切换）；不 push/reset/clean，未改评分提示词、未新增 Agent、未开 Coach Harness。
+
+**冻结 3 对（V2 重组，同对共享 question_id + rubric，脚本断言 + DB 回读逐字一致）**：RAG `RAG-B1`(88 字) vs `RAG-A2`(316 字，3.59× 反向)；LG `LG-B2`(116) vs `LG-C1`(189，测中间档)；KF `KF-A1`(229) vs `KF-A2`(253，POOR 更长 1.10×)。
+
+**分数**：19 vs 9（+10）、12 vs 17（中间档可区分）、24 vs 7（+17）。仅 `RAG-A2` 高 1 分（9 出 [1,8] 带）。三对上下文 `diff_fields=[]`（题目/rubric/JD/技能指纹/蓝图 target 全一致），仅 user/session/行 id 不同。
+
+**确认的模型质量缺陷**：
+- **跨维度重复扣分复现**：`RAG-B1` 零技术错误却 `tc=4`，评语给的理由全是"未说明/未给出"（覆盖缺口）；技能锚点 `technical_correctness` 只定义"机制和术语是否准确"。上一轮 G3 同类，本轮 `KF-A1` 未复现 → 依赖措辞，不是稳定规则，但确实存在，会压"正确但简短"的回答 1–2 分。
+- **中间档五维同步 +1**（2/2/2/3/3 → 3/3/3/4/4），偏"档位化"而非逐维判断。
+- **exactly-once 边界仍未验证**：模型只纠正"默认 EOS"，未说明范围（仅 Kafka 内部/事务性管道，不覆盖外部系统）。不能据此判定掌握或不掌握。
+- **纠正第 24 轮结论**：POOR 不再固定 1/1/1/2/2 —— tc/cov/depth 稳定贴 1，relevance/communication 出现 2 与 3 的差异（9 分 vs 7 分）。
+- 15/16 条纠错准确，1 条绝对化（"Kafka 不支持 offset 回滚"——可用 `seek`/重置位点）；未发现纠错幻觉；未观察到长度奖励（最短 88 字得 19）。
+
+**链路**：6/6 走 `commit_answer` 落库、6 条评价、session/question/answer 全 COMPLETED、run 全 SUCCEEDED、幂等重提 0 新账本 0 新评价、盲测载荷无标签（`rubric_lines=5`、`answer_chars` 与字数一致）、0 coach、0 memory_proposal、6 条 `capability_memories` 全属一次性用户。8 条 admission 全 SETTLED、0 UNKNOWN、0 unreported；评价行 token 与账本逐条相等。
+
+**两次额外 HTTP 的真实原因（非模型错误）**：模型给 5 条逐字引用，`KnowledgeObservation.answer_quotes` 的 `max_length=3` → 触发 `EVALUATION_QUOTE_SUBSET_V1` 子集修复（5→3），每次多花 ≈3.5K tokens（占 33%）。修复安全（`validate()` 断言除引用外字段未变），但属结构性成本；扩到 30 份前应处理（提高上限或提示词限 3 条），**本轮不改提示词**。
+
+**自查出的夹具缺陷（已修 + 离线证明）**：`model_scope` 原在**开会话**时设置，同一对第二场覆盖第一场 → 两份评价都记到第二个 owner（金额不错、owner 标签错）。改为**每次提交前**设置；新增 `--evaluation ledger` 模式，用 `LedgerProbe`（真实 `governed_call` 网关 + 固定回复，**0 HTTP**）验证：6 次提交 → 6 条 admission，owner 各自独立，route `answer_evaluation`，全 SETTLED；重复提交不新增。
+
+**产品侧 P3（未改）**：全仓库 `model_scope.set` 只在 `job_target/service.py`、`public_career/research/audit.py` 与简历 provider；`modules/interview` 与 `api/` 都没有 → `governed_call` 回退成 `route=legacy_llm` + `db.session.async_session_factory`（正式库）。线上只是 route 归因失真；对任何外部夹具会**把账本写进正式库**（夹具必须自己设 scope）。
+
+**资产**：正式库 `0025`/19/41/5/`model_admissions` 0；18 轮原件 `0026`/3/18/1/49；快照库 `0026`/1621/1761/219/147；MinIO 主 bucket 48 对象；三闸 OFF。新建 `interview_agent_wb_r25_live_20261115` 与 `..._r25_rehearsal_20261115`（0029/68 表），库总数 232→234，无删除。
+
+**扩到 30 份（待批准，未执行）**：先修引用上限与 route 归因；15 对 × 2 = 30 份，≥8 对反向长度、≥6 对覆盖 PARTIAL/NEAR_MISS；HTTP 40 / Token 220,000 / 30 min；新增两条硬指标——tc 扣分必须能在评语里找到**准确性**理由、同一对不得五维同步变化。
