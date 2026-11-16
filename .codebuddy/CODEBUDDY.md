@@ -1274,3 +1274,19 @@ L3 前置条件（purge_requests 表、清理顺序、audit_logs 脱敏、Celery
 **下一阶段方案 `R28-REAL-JD-MVP`（未执行，等待单独批准）**：1 条闭环（真实 JD → 解析/Requirement+Skill → 脱敏真实简历 → ResumeProfile → Main 3 题 → Evaluation 冻结 2.3.4 → Coach → CapabilityMemory → Training 读取）；**HTTP 上限 12 / Token 70,000 / 20 min**；不做 Live Search、Job Matching 模型排序、Coach Harness、L3/L4、任何删除清理；UNKNOWN/配额立即停；全部经 ModelGovernance。判据靠证据链逐跳可核对与「covered_points 必须有逐字依据」，不靠分数带。
 
 **资产**：库总数仍 **243（本轮未新建库、未写入受保护库）**；正式库 0025/19/41/5/0、18 轮原件 0026/3/18/1/49、快照库 0026/1621/1761/219/147、r25 6/6/0/8、r27 8/8/0/8、MinIO 48 对象、purge 与 Coach Harness 全 OFF。未改 `AGENTS.md`/`CLAUDE.md`/`.claude/`，未 push/reset/clean。
+
+---
+
+## 第二十九轮（R28 前置）：真实 JD × 真实简历全链路准入预检（真实模型 HTTP=0，见 docs/108）
+
+**基线** `aac83f9`。本轮只做材料准入、零 HTTP 预检与预算重算，不跑真实模型、不改 Prompt/Schema/评分/迁移、不新建库。
+
+**预检结论**：`apps/api/scripts/r29_input_readiness_precheck.py` 在 `DATABASE_URL` 与 `MODEL_LEDGER_DATABASE` 同时指向 `interview_agent_wb_r26_alt_20261115`（0029 / 68 表 / 全 0 行）时，**唯一阻断项是 `REAL_RESUME_MISSING`**。默认环境（`DATABASE_URL` 指正式库、`MODEL_LEDGER_DATABASE` 为空）另有 3 条账本阻断项。
+
+**材料**：9 份原件 sha256 全通过；4 份真实 JD 中 **JD03（工行科技菁英）0 个主题命中**，JD02/JD04 各 1–2 个，JD01 命中 6 个；**真实简历 0 份**（`data/` 无文件，正式库 38 份全为测试简历，5 份 PROCESSING 空 raw_text）。主题命中是必要不充分条件，实际蓝图 target 未验证。
+
+**预算重算（修正 docs/107）**：1 场 3 题 = **10 HTTP / ≈63,100 token**：`resume_report` 1 + `resume_profile` 1 + JD 解析 1 + 出题 3 + 评价 3 + Coach 1。原分解把 **Skill 推荐**算作 1 次 HTTP（实为规则匹配 0 次），又漏掉 `resume_report` 1 次，总数碰巧对、分解错。70,000 token 只剩 ≈6.8K 余量，建议 **13 HTTP / 90,000**；3 题后 `QUESTION_COUNT_REACHED` 直接 COMPLETE，不再请求主面试官。
+
+**三条真风险**：① `resume_report` 走全局 `async_session_factory`（`infrastructure/llm/provider.py:60`），必须同时改进程 `DATABASE_URL`，否则 409 或静默写正式库；② Coach 历史失败是**五次不同原因**的链（`COACH_INPUT_BUDGET`→`COACH_COMPUTED_NUMBER`→`CAPTURE_GUARD`→`MODEL_USER_QUOTA`→`model_request_failed`），不是单一误判规则；③ `covered_points` 过度给分（RAG-A2）未修，验收时不得当作「已掌握」证据。
+
+**资产**：未新建库（`pg_database` 245 = 242 业务 + 3 系统，与 docs/107 的 243 差一次口径，已记录不追溯）；MinIO 48 对象；三闸 OFF；离线回归 19 passed / 0 failed。
