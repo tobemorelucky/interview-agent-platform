@@ -1,6 +1,7 @@
 """Versioned deterministic qualification, literal Evidence matching and rank policy."""
 import re
 from interview_api.modules.public_career.fingerprints import normalize_text
+from interview_api.modules.public_career.requirement_vocabulary import normalize_requirement_type
 
 POLICY_VERSION = "literal-evidence-eligibility-v1"
 GAP_MESSAGE = "当前 CandidateProfile / ResumeEvidence 中没有相关证明材料，不表示候选人不会。"
@@ -73,8 +74,14 @@ def evidence_matrix(job, profile):
             requirement_ref=f"requirement:{requirement['id']}", statement=requirement["statement"],
             job_description_version_id=job["jd_id"], candidate_profile_version_id=profile["id"],
             status="NO_EVIDENCE", supports=[], message=GAP_MESSAGE)
-        if norm(requirement.get("requirement_type") or "") in {"education", "major", "graduation_year", "location", "eligibility"}:
+        requirement_type = normalize_requirement_type(requirement.get("requirement_type"))
+        if requirement_type.is_hard_eligibility:
             row.update(status="NOT_APPLICABLE", message="硬资格条件独立处理，不计作技术适配证据")
+        elif not requirement_type.can_be_technical:
+            # An unmapped or multi-category label must not be scored as a
+            # technical skill by default; review has to classify it first.
+            row.update(status="NOT_APPLICABLE",
+                       message=f"要求类别未知或存在歧义（{requirement.get('requirement_type')!r}），需人工确认，不计作技术适配证据")
         else:
             # Requirement normalized_value must name one literal topic. Existing
             # free-form values are conservative: only exact/literal text overlaps.

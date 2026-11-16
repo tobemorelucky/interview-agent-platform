@@ -48,8 +48,12 @@ class PublicCareerLibrary:
             JobRequirement.job_description_version_id == jd.id).order_by(JobRequirement.id))).all()
         # The full acquired page is an admin/evidence artifact, not a public
         # republication endpoint. Users follow the canonical source for context.
+        from interview_api.modules.public_career.requirement_vocabulary import describe
+        # Public projection reports the strength consumers actually use, so a
+        # compound sentence ending in 优先 is not shown as wholly optional.
         result.update(description=jd.raw_text[:500], description_truncated=len(jd.raw_text) > 500, requirements=[dict(id=r.id, text=r.statement,
-            type=r.requirement_type, importance=r.importance) for r in requirements])
+            type=describe(r.statement, r.requirement_type, r.importance)["type"],
+            importance=describe(r.statement, r.requirement_type, r.importance)["effective_strength"]) for r in requirements])
         return result
 
     async def experiences(self, limit=20, offset=0, experience_id=None):

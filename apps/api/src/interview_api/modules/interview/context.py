@@ -9,6 +9,7 @@ from interview_api.modules.candidate_profile.models import CandidateProfileVersi
 from interview_api.modules.resume.models import Resume
 from interview_api.modules.public_career.models import Company, Job, JobDescriptionVersion, JobRequirement, Source, SourceSnapshot
 from interview_api.modules.public_career.fingerprints import compute_content_fingerprint, compute_question_fingerprint
+from interview_api.modules.public_career.requirement_vocabulary import effective_strength
 from interview_api.modules.candidate_profile.evidence import digest
 from interview_api.modules.experience.models import InterviewQuestion, InterviewExperience
 from interview_api.modules.memory.snapshot import build_memory_snapshot
@@ -149,7 +150,11 @@ async def build_context(db, user_id, request):
         requirements=[dict(id=r["id"], statement=r["statement"], importance=r["importance"],
                            fingerprint=compute_content_fingerprint(r["statement"]),
                            topic=r.get("topic"), source=r.get("source")) if isinstance(r, dict)
-                      else dict(id=r.id, statement=r.statement, importance=r.importance,
+                      # Public JD requirements keep the provider's raw strength;
+                      # a compound sentence ending in 优先 still has a mandatory
+                      # clause, so the recorded case is never taken at face value.
+                      else dict(id=r.id, statement=r.statement,
+                                importance=effective_strength(r.statement, r.importance).value,
                                 fingerprint=compute_content_fingerprint(r.statement)) for r in requirements],
         public_questions=[dict(id=q.id, question=q.question, expected_points=(q.standard_answer or q.original_answer or "").splitlines(),
                                dimension=q.category or "综合", difficulty=q.difficulty,

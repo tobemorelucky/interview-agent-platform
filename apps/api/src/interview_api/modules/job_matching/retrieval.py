@@ -12,6 +12,7 @@ from interview_api.modules.candidate_profile.models import CandidateProfileVersi
 from interview_api.modules.candidate_profile.service import CandidateProfileService, iter_facts
 from interview_api.modules.candidate_profile.evidence import digest
 from interview_api.modules.job_matching.policy import norm, eligibility, evidence_matrix, ranking_components, pre_rank_key
+from interview_api.modules.public_career.requirement_vocabulary import effective_strength
 
 
 async def profile_snapshot(db, user_id, version_id=None):
@@ -88,7 +89,9 @@ async def retrieve(db, profile, filters):
             jd_id=jd.id, jd_version_number=jd.version_number, jd_fingerprint=jd.content_fingerprint,
             matching_constraints=structured.get("matching_constraints", {}), tags=tags,
             requirements=[dict(id=r.id, requirement_type=r.requirement_type, normalized_value=r.normalized_value,
-                statement=r.statement, importance=r.importance, claim_id=r.claim_id) for r in requirements],
+                statement=r.statement,
+                importance=effective_strength(r.statement, r.importance).value,
+                claim_id=r.claim_id) for r in requirements],
             demo=bool((jd.metadata_json or {}).get("fixture") or (jd.metadata_json or {}).get("demo") or (jd.metadata_json or {}).get("mode") == "replay"),
             sql_tag_overlap=count)
         item["input_fingerprint"] = digest(item)

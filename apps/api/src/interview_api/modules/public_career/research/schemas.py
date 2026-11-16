@@ -2,7 +2,7 @@
 
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from interview_api.modules.experience.agents.schemas import (
     ExtractionExperience, ExtractionQuestion, RoutingResult, RoutingQuestionResult, ReliabilityResult,
@@ -45,6 +45,29 @@ class SupportedStatement(BaseModel):
 class RequirementExtraction(SupportedStatement):
     requirement_type: str | None = Field(default=None, max_length=64)
     importance: str | None = Field(default=None, max_length=32)
+
+    @field_validator("requirement_type")
+    @classmethod
+    def _canonical_type(cls, value: str | None) -> str | None:
+        """Free-text labels are normalised at ingestion; unknown stays UNKNOWN.
+
+        Providers disagree on vocabulary (SKILL vs 技能 vs 编程能力). Storing the
+        canonical value keeps downstream membership tests honest, and an unmapped
+        label is never upgraded to a technical skill: it becomes UNKNOWN so
+        Matching declines it and review has to decide.
+        """
+        if value is None:
+            return None
+        from interview_api.modules.public_career.requirement_vocabulary import normalize_requirement_type
+        return normalize_requirement_type(value).value.value
+
+    @field_validator("importance")
+    @classmethod
+    def _canonical_strength(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        from interview_api.modules.public_career.requirement_vocabulary import normalize_strength
+        return normalize_strength(value).value
 
 
 class JobJDExtraction(BaseModel):
