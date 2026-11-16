@@ -1,0 +1,52 @@
+{
+ "generated_at": "2026-11-16T11:06:06.192079+00:00",
+ "model_http_calls": 0,
+ "synthetic_candidate": true,
+ "not_a_real_candidate": true,
+ "fixture": {
+  "user_id": 2,
+  "resume_id": 1,
+  "profile_id": 1,
+  "profile_version_id": 1,
+  "created": {
+   "user": false,
+   "resume": false,
+   "profile": false,
+   "version": false
+  }
+ },
+ "build_context": {
+  "ok": true,
+  "company_name": "沐瞳科技",
+  "job_title": "【2027届秋招】后端开发工程师（AI向/数据平台）",
+  "jd_version_number": 1,
+  "jd_fingerprint_matches_row": true,
+  "requirements": 10,
+  "requirement_strength": {
+   "REQUIRED": 7,
+   "PREFERRED": 3,
+   "UNKNOWN": 0
+  },
+  "fingerprints_unique": true,
+  "first_requirement": "2027届本科及以上学历，计算机、软件工程、数据科学、人工智能等相关专业优先",
+  "public_questions": 0,
+  "budgets": {
+   "question_count": 3,
+   "max_follow_ups": 2,
+   "max_rounds": 40,
+   "max_duration_seconds": 7200,
+   "max_model_tokens": 200000
+  },
+  "profile_is_synthetic": true,
+  "context_digest": "41384d48423498a6",
+  "source_resume_matches_fixture": true
+ },
+ "job": {
+  "job_id": 5,
+  "company": "沐瞳科技",
+  "title": "【2027届秋招】后端开发工程师（AI向/数据平台）",
+  "jd_id": 5,
+  "jd_version": 1,
+  "status": "PUBLISHED"
+ }
+}

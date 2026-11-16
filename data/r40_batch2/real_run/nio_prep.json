@@ -1,0 +1,55 @@
+{
+ "mode": "nio",
+ "database": "interview_agent_wb_jd_r31_20261116",
+ "environment": {
+  "database": "interview_agent_wb_jd_r31_20261116",
+  "routes": {
+   "public_research_extract": {
+    "provider": "modelscope",
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017"
+   },
+   "public_research_quality": {
+    "provider": "modelscope",
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017"
+   }
+  }
+ },
+ "started_at": "2026-11-16T11:01:30.013539+00:00",
+ "budget": {
+  "max_http": 2,
+  "max_tokens": 8000,
+  "normal_http": 2
+ },
+ "jds": {},
+ "predecessor": {
+  "task_id": 2,
+  "status": "FAILED",
+  "frozen_job_title": "车端AI Agent与应用生态系统架构工程师",
+  "content_sha256": "aef49bb3a4d5fbdf3557f650076b92140f18e611a842d06ce2028344b3b18055",
+  "error": "MANUAL_EXTRACTED_IDENTITY_MISMATCH: MANUAL_EXTRACTED_IDENTITY_MISMATCH"
+ },
+ "revision_requested": {
+  "job_title": "校招-车端 AI Agent 与应用生态系统架构工程师",
+  "source_url": "https://nio.jobs.feishu.cn/campus/position/7673028675729656105/detail"
+ },
+ "revision": {
+  "task_id": 4,
+  "revision_of": 2,
+  "status": "READY_FOR_EXTRACTION",
+  "reused": false,
+  "second_call_task_id": 4,
+  "second_call_reused": true,
+  "idempotent": true
+ },
+ "prep_only": true,
+ "ledger": {
+  "http": 0,
+  "tokens": 0,
+  "statuses": [
+   "SETTLED"
+  ],
+  "tokens_after": 16921,
+  "http_after": 6
+ },
+ "finished_at": "2026-11-16T11:01:30.177331+00:00"
+}

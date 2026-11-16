@@ -1,0 +1,39 @@
+Unity中国
+AI Agent 算法研发工程师
+Unity China AI 团队正在构建能够在复杂数字世界中自主理解、规划、执行和学习的下一代 AI Agent。
+依托 Unity Engine 及真实游戏开发环境，我们可以为 Agent 提供独特的 代码、GUI、Editor、3D 场景、工具链和可执行环境反馈，研究模型如何完成从简单工具调用到 Long-Horizon Software Engineering Task 的能力跃迁。
+我们的目标不仅是构建 Agent 产品，更希望研究 Agent Model、Agentic RL、Harness、Environment、Data 与 Evaluation 的共同演进。
+- 参与下一代 LLM Agent 核心算法研发，提升模型在复杂长程任务中的规划、推理、工具使用、执行和自我修正能力。
+- 研究 Coding Agent 和 Interactive Agent，在代码生成、仓库级理解、Unity Editor 操作、场景构建、调试和性能优化等真实任务中提升端到端任务完成率。
+- 研究 ReAct、Plan-and-Execute、Reflection、Verifier、Multi-Agent 等 Agent 范式，并探索更加通用和高效的 Agent Architecture。
+- 参与 Agent Harness 与 Environment 设计，研究模型、工具和环境之间的交互范式，包括 CLI、GUI、文件系统、代码执行、Editor API 和外部工具调用。
+- 建设高质量 Agent Trajectory 数据体系，研究多步 Tool Use、Long-Horizon Trajectory、失败轨迹、Self-Correction 数据的生成、筛选和利用。
+- 研究 Agentic RL，通过真实环境反馈、可验证任务和自动化 Reward 提升模型的规划与执行能力。
+- 研究 Context Engineering，包括长上下文管理、历史压缩、Memory、Tool Context 和动态上下文选择等问题。
+- 建立以 Task Success Rate 为核心的 Agent Evaluation 体系，设计覆盖正确性、鲁棒性、执行效率和成本的自动评测方法。
+- 基于 Agent Trace 和失败案例分析模型行为，定位 Planning、Tool Use、Context、Model 或 Environment 中的瓶颈，并推动算法优化。
+- 探索 Self-Evolving Agent、Multi-Agent RL、Test-Time Scaling、Harness–Policy Co-evolution 等前沿方向。
+- 与模型后训练、Infra 和 Unity Engine 团队紧密合作，推动 Agent 算法在真实复杂开发任务中落地。
+你将获得
+- 深度参与 Unity 新一代 Coding Agent for Game 的核心研究工作。
+- 接触业界前沿 Agentic RL、LLM Post-training、Agent Evaluation、Coding Agent 技术体系。
+- 与国际化研究团队合作，参与高质量研究项目，并有机会推动成果发表于顶级 AI 学术会议。
+- 在真实工业场景中完成从 数据 → Post-training → RL → Evaluation → Agent 部署 的完整研发闭环。
+- 2027 届本科、硕士或博士毕业生，计算机科学、人工智能、软件工程、数学等相关专业。
+- 具备扎实的机器学习、深度学习和算法基础，对 Transformer 和大语言模型有较深入理解。
+- 熟练掌握 Python，具备良好的工程实现能力，能够独立完成算法原型和实验系统开发。
+- 对 LLM Agent 有深入兴趣，理解 Tool Use / Function Calling、ReAct、Planning、Memory、RAG 等基本技术。
+- 对大模型后训练有基本理解，了解 SFT、Preference Learning、RL 或 Agentic RL 等训练方法。
+- 具备较强的问题抽象和实验设计能力，能够从复杂 Agent 执行轨迹中发现失败模式并提出可验证的改进方案。
+- 对真实复杂任务和模型行为具有好奇心，愿意深入研究 Agent 在开放环境中的能力边界。
+- 具备良好的自驱力、学习能力和团队协作能力。
+加分项
+- 有 Coding Agent、Computer Use Agent、GUI Agent、Web Agent 或 Multi-Agent 相关研究 / 项目经历。
+- 有 Agentic RL、Code RL、RLVR 或强化学习相关研究经验。
+- 有 Agent Harness、Sandbox、Environment、Tool Calling Framework 等相关开发经验。
+- 有 Agent Trajectory 数据生成、合成数据、自动标注或数据飞轮相关经验。
+- 熟悉 SWE-bench、Terminal-Bench、WebArena、OSWorld 等 Agent / Coding Benchmark。
+- 熟悉 verl、OpenRLHF、TRL、vLLM、SGLang 等训练或推理框架。
+- 具备优秀的软件工程能力，有大型开源项目贡献、ACM / ICPC 等竞赛经历。
+- 在 NeurIPS、ICML、ICLR、ACL、EMNLP、KDD、The Web Conference 等会议有论文发表或高质量研究经历。
+- 有 Unity、Unreal Engine、游戏开发、图形学或交互式仿真环境相关经验。

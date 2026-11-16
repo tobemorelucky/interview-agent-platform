@@ -1,0 +1,181 @@
+{
+ "generated_at": "2026-11-16T11:00:54.093937+00:00",
+ "model_http_calls": 0,
+ "records": [
+  {
+   "jd_key": "UNITY_AGENT_029",
+   "company": "Unity中国",
+   "job_title": "AI Agent 算法研发工程师",
+   "display_title": "AI Agent算法研发工程师",
+   "direction": "AI Agent",
+   "selection_reason": "Unity 官方招聘页；AI Agent 算法方向，与既有 AI 研发岗差异明显",
+   "source_url": "https://recruiting.unity.cn/982864/position/7686376033126385939/detail",
+   "job_id": "7686376033126385939",
+   "job_id_kind": "position_path",
+   "source_grade": "OFFICIAL_PAGE_CAPTURED",
+   "captured_at": "2026-11-16T07:31:08+00:00",
+   "dom_path": "data\\incoming_20261116c\\captured\\dom\\OFFICIAL_CAND_029.html",
+   "dom_sha256": "d25e07f2afbc86403aa4b2df1861511bddcc9456c5095ec55fba14f4fb2c3551",
+   "body_blocks_sha256": "4abd711b5b6763cce65d7443331c0dc62297ccdfc9c59d9dc58b2e55df020ec5",
+   "text_path": "data\\r40_batch2\\text\\UNITY_AGENT_029.txt",
+   "text_sha256": "1cd1ff2fdedc7775f242275d9851efce2b6115f8264c299c4898922de0a188cc",
+   "text_chars": 2408,
+   "projection": {
+    "mode": "PAGE_IDENTITY_HEADER + BODY_BLOCKS",
+    "header_lines": [
+     "Unity中国",
+     "AI Agent 算法研发工程师"
+    ],
+    "body_lines": 37,
+    "added_section_headings": 0,
+    "note": "两行身份取自页面自身（DOM 标题元素 + 站点企业名），正文块逐字未改"
+   },
+   "identity": {
+    "label_is_page_literal": true,
+    "literal_in_dom": true,
+    "literal_in_visible_text": true,
+    "company_in_page": true
+   }
+  },
+  {
+   "jd_key": "MODELBEST_LLM_031",
+   "company": "面壁智能",
+   "job_title": "大模型算法工程师 - 智能体方向",
+   "display_title": "2027 大模型算法工程师-智能体方向",
+   "direction": "LLM/RAG",
+   "selection_reason": "面壁官方飞书招聘页；RAG/Agent 应用方向，正文含检索与框架要求",
+   "source_url": "https://modelbest.jobs.feishu.cn/campus/position/7516643657231911180/detail",
+   "job_id": "7516643657231911180",
+   "job_id_kind": "position_path",
+   "source_grade": "OFFICIAL_PAGE_CAPTURED",
+   "captured_at": "2026-11-16T07:31:43+00:00",
+   "dom_path": "data\\incoming_20261116c\\captured\\dom\\OFFICIAL_CAND_031.html",
+   "dom_sha256": "1c0f0b34f84f706d63bffe3da488203b23dbc6fb57dfe959839d77b2af7f7832",
+   "body_blocks_sha256": "ff5f30047dc8097809c9ac929ae31fb1f05756a47f49c76193b898bb9c8e7fc9",
+   "text_path": "data\\r40_batch2\\text\\MODELBEST_LLM_031.txt",
+   "text_sha256": "961ddc58c9b27a2fe2c196df202e7c85ba7b2ea6b54a29295a1b9aa22dc6932d",
+   "text_chars": 509,
+   "projection": {
+    "mode": "PAGE_IDENTITY_HEADER + BODY_BLOCKS",
+    "header_lines": [
+     "面壁智能",
+     "大模型算法工程师 - 智能体方向"
+    ],
+    "body_lines": 12,
+    "added_section_headings": 0,
+    "note": "两行身份取自页面自身（DOM 标题元素 + 站点企业名），正文块逐字未改"
+   },
+   "identity": {
+    "label_is_page_literal": true,
+    "literal_in_dom": true,
+    "literal_in_visible_text": true,
+    "company_in_page": true
+   }
+  },
+  {
+   "jd_key": "MOONTON_BACKEND_7673023051731503402",
+   "company": "沐瞳科技",
+   "job_title": "【2027届秋招】后端开发工程师（AI向/数据平台）",
+   "display_title": "后端开发工程师（AI向/数据平台）",
+   "direction": "后端",
+   "selection_reason": "沐瞳官方页；Java/Python 后端方向，补后端样本",
+   "source_url": "https://moonton.jobs.feishu.cn/campus/position/7673023051731503402/detail",
+   "job_id": "7673023051731503402",
+   "job_id_kind": "position_path",
+   "source_grade": "OFFICIAL_PAGE_CAPTURED",
+   "captured_at": "2026-11-16T07:42:10+00:00",
+   "dom_path": "data\\incoming_20261116c\\captured\\dom\\沐瞳科技_POS_7673023051731503402.html",
+   "dom_sha256": "26ea2eebf7c88154b5d836284cfcc2eaac8105a022a088dd7599e1f68c4f8c1d",
+   "body_blocks_sha256": "faa98636bb43e1fcc3c543a30888773fb3294b084cc4776714d03080079cdc3a",
+   "text_path": "data\\r40_batch2\\text\\MOONTON_BACKEND_7673023051731503402.txt",
+   "text_sha256": "c474a9a24cd51347900259d8927754d1fc9eeeecf041d12e10bf2291cfc8466e",
+   "text_chars": 857,
+   "projection": {
+    "mode": "PAGE_IDENTITY_HEADER + BODY_BLOCKS",
+    "header_lines": [
+     "沐瞳科技",
+     "【2027届秋招】后端开发工程师（AI向/数据平台）"
+    ],
+    "body_lines": 11,
+    "added_section_headings": 0,
+    "note": "两行身份取自页面自身（DOM 标题元素 + 站点企业名），正文块逐字未改"
+   },
+   "identity": {
+    "label_is_page_literal": true,
+    "literal_in_dom": true,
+    "literal_in_visible_text": true,
+    "company_in_page": true
+   }
+  },
+  {
+   "jd_key": "NIO_INFER_021",
+   "company": "蔚来",
+   "job_title": "校招-AI推理引擎开发工程师",
+   "display_title": "AI推理引擎开发工程师",
+   "direction": "推理引擎",
+   "selection_reason": "蔚来官方页；推理引擎/性能优化方向，与 AI Agent 岗不重叠",
+   "source_url": "https://nio.jobs.feishu.cn/campus/position/7673027294877337866/detail",
+   "job_id": "7673027294877337866",
+   "job_id_kind": "position_path",
+   "source_grade": "OFFICIAL_PAGE_CAPTURED",
+   "captured_at": "2026-11-16T07:29:14+00:00",
+   "dom_path": "data\\incoming_20261116c\\captured\\dom\\OFFICIAL_CAND_021.html",
+   "dom_sha256": "e84c3034c7e95e5dadde46e0a0313414a4062af2f37262770759f7bf0deabde5",
+   "body_blocks_sha256": "8c42b5e72396ddaa07306c31329e4520881cd8a07852b3aeb857d5b11d3c8257",
+   "text_path": "data\\r40_batch2\\text\\NIO_INFER_021.txt",
+   "text_sha256": "64030b161aa05191e667b37792aab7a240278153b17af2cf5256f23fe538164b",
+   "text_chars": 580,
+   "projection": {
+    "mode": "PAGE_IDENTITY_HEADER + BODY_BLOCKS",
+    "header_lines": [
+     "蔚来",
+     "校招-AI推理引擎开发工程师"
+    ],
+    "body_lines": 10,
+    "added_section_headings": 0,
+    "note": "两行身份取自页面自身（DOM 标题元素 + 站点企业名），正文块逐字未改"
+   },
+   "identity": {
+    "label_is_page_literal": true,
+    "literal_in_dom": true,
+    "literal_in_visible_text": true,
+    "company_in_page": true
+   }
+  },
+  {
+   "jd_key": "KYLINOS_KERNEL_aa9be729",
+   "company": "麒麟软件",
+   "job_title": "「2027校招」Linux内核研发工程师",
+   "display_title": "Linux内核研发工程师",
+   "direction": "基础软件/内核",
+   "selection_reason": "华为无 DOM 快照，按规则替换；麒麟官方详情页内核岗，独立 jobAdId",
+   "source_url": "https://kylinos.zhiye.com/campus/detail?jobAdId=aa9be729-b218-4707-987f-07d0864184a9",
+   "job_id": "aa9be729-b218-4707-987f-07d0864184a9",
+   "job_id_kind": "jobAdId",
+   "source_grade": "OFFICIAL_PAGE_CAPTURED",
+   "captured_at": "2026-11-16T07:39:31+00:00",
+   "dom_path": "data\\incoming_20261116c\\captured\\dom\\KYLINOS_aa9be729.html",
+   "dom_sha256": "292c17cc1b050af1772a9be006d283331c2454c4a5ce27a34ae93c43b264a7bd",
+   "body_blocks_sha256": "b65b49816891f7f3c72d2ca4dd2e414216af6bfa83002b78523c88730d523d01",
+   "text_path": "data\\r40_batch2\\text\\KYLINOS_KERNEL_aa9be729.txt",
+   "text_sha256": "e87f74b47a5e43fb747269eff10dd3baf52c31e61fc0ea63b197b6b7d2a87922",
+   "text_chars": 533,
+   "projection": {
+    "mode": "PAGE_IDENTITY_HEADER + BODY_BLOCKS",
+    "header_lines": [
+     "麒麟软件",
+     "「2027校招」Linux内核研发工程师"
+    ],
+    "body_lines": 13,
+    "added_section_headings": 0,
+    "note": "两行身份取自页面自身（DOM 标题元素 + 站点企业名），正文块逐字未改"
+   },
+   "identity": {
+    "label_is_page_literal": true,
+    "literal_in_dom": true,
+    "literal_in_visible_text": true,
+    "company_in_page": true
+   }
+  }
+ ]
+}
