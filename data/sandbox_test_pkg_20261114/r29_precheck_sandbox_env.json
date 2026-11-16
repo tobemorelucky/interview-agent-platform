@@ -1,0 +1,333 @@
+{
+  "round": "R29_PRECHECK",
+  "http_calls": 0,
+  "generated_at": "2026-11-16T02:25:06.108192+00:00",
+  "environment": {
+    "provider": {
+      "llm_provider": "modelscope",
+      "use_modelscope": true,
+      "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+      "api_key_present": true,
+      "api_key_prefix": "ms-***"
+    },
+    "gates": {
+      "purge_execution_enabled": false,
+      "interview_coach_harness": false
+    },
+    "ledger_target": {
+      "database": "interview_agent_wb_r26_alt_20261115",
+      "env_declared": true
+    }
+  },
+  "sandbox": {
+    "database": "interview_agent_wb_r26_alt_20261115",
+    "alembic_version": "0029",
+    "table_count": 68,
+    "row_counts": {
+      "users": 0,
+      "resumes": 0,
+      "candidate_profiles": 0,
+      "companies": 0,
+      "job_description_versions": 0,
+      "user_job_targets": 0,
+      "interview_sessions": 0,
+      "interview_answers": 0,
+      "interview_questions": 0,
+      "interview_evaluations": 0,
+      "final_interview_reports": 0,
+      "model_admissions": 0,
+      "capability_memories": 0
+    },
+    "empty": true
+  },
+  "process_database": {
+    "session_factory_database": "interview_agent_wb_r26_alt_20261115",
+    "expected_ledger_database": "interview_agent_wb_r26_alt_20261115",
+    "resume_extraction_uses_global_factory": true
+  },
+  "storage": {
+    "endpoint": "localhost:9000",
+    "bucket": "interview-agent",
+    "bucket_exists": true,
+    "object_count": 48
+  },
+  "materials": {
+    "manifest": {
+      "path": "E:\\work\\code\\python\\interview-agent-platform\\data\\manual_sources\\2026-10-05\\manifest.json",
+      "live_search_used": false,
+      "acquisition_mode": "MANUAL_SOURCE_IMPORT",
+      "sources": 9
+    },
+    "jd": [
+      {
+        "id": "JD01",
+        "company": "华为",
+        "job_title": "AI应用工程师",
+        "source_type": "official",
+        "document_type": "job_jd",
+        "source_url": "https://career.huawei.com/cn/job-details?advertisementId=36390",
+        "chars": 1093,
+        "sha256_match": true,
+        "acquisition_mode": "MANUAL_SOURCE_IMPORT",
+        "topics": [
+          "rag_retrieval",
+          "mysql_consistency",
+          "llm",
+          "java",
+          "python",
+          "system_design"
+        ],
+        "skills": [
+          "ai_agent_application",
+          "bank_it",
+          "java_backend"
+        ],
+        "blueprint_targets": [
+          "java",
+          "llm",
+          "mysql_consistency",
+          "python",
+          "rag_retrieval",
+          "system_design"
+        ],
+        "runnable": true
+      },
+      {
+        "id": "JD02",
+        "company": "中国移动通信集团浙江有限公司嘉兴分公司",
+        "job_title": "AI工程师",
+        "source_type": "community",
+        "document_type": "job_jd",
+        "source_url": "https://career.nankai.edu.cn/correcruit/content/id/105053.html",
+        "chars": 989,
+        "sha256_match": true,
+        "acquisition_mode": "MANUAL_SOURCE_IMPORT",
+        "topics": [
+          "llm",
+          "system_design"
+        ],
+        "skills": [
+          "ai_agent_application",
+          "bank_it",
+          "java_backend"
+        ],
+        "blueprint_targets": [
+          "llm",
+          "system_design"
+        ],
+        "runnable": true
+      },
+      {
+        "id": "JD03",
+        "company": "中国工商银行广东省分行",
+        "job_title": "科技菁英",
+        "source_type": "community",
+        "document_type": "job_jd",
+        "source_url": "https://career.nankai.edu.cn/correcruit/content/id/118080.html",
+        "chars": 947,
+        "sha256_match": true,
+        "acquisition_mode": "MANUAL_SOURCE_IMPORT",
+        "topics": [],
+        "skills": [],
+        "blueprint_targets": [],
+        "runnable": false
+      },
+      {
+        "id": "JD04",
+        "company": "中国移动通信集团湖北有限公司",
+        "job_title": "AI研发工程师",
+        "source_type": "community",
+        "document_type": "job_jd",
+        "source_url": "https://job.hust.edu.cn/zpinfo1/2438053.htm",
+        "chars": 1114,
+        "sha256_match": true,
+        "acquisition_mode": "MANUAL_SOURCE_IMPORT",
+        "topics": [
+          "data_security"
+        ],
+        "skills": [
+          "bank_it"
+        ],
+        "blueprint_targets": [
+          "data_security"
+        ],
+        "runnable": true
+      }
+    ],
+    "experience": [
+      {
+        "id": "EXP01",
+        "company": "华为",
+        "job_title": "后端开发岗",
+        "source_type": "community",
+        "document_type": "interview_experience",
+        "source_url": "https://www.nowcoder.com/discuss/927377559333933056",
+        "chars": 2276,
+        "sha256_match": true,
+        "acquisition_mode": "MANUAL_SOURCE_IMPORT",
+        "topics": [
+          "rag_retrieval",
+          "kafka_reliability",
+          "redis",
+          "mysql_consistency",
+          "agent",
+          "llm",
+          "java",
+          "python",
+          "system_design"
+        ],
+        "skills": [
+          "ai_agent_application",
+          "bank_it",
+          "java_backend"
+        ],
+        "blueprint_targets": [
+          "agent",
+          "java",
+          "kafka_reliability",
+          "llm",
+          "mysql_consistency",
+          "python",
+          "rag_retrieval",
+          "redis",
+          "system_design"
+        ],
+        "runnable": true
+      },
+      {
+        "id": "EXP02",
+        "company": "字节跳动",
+        "job_title": "算法岗",
+        "source_type": "community",
+        "document_type": "interview_experience",
+        "source_url": "https://www.nowcoder.com/discuss/922309082860507136",
+        "chars": 2265,
+        "sha256_match": true,
+        "acquisition_mode": "MANUAL_SOURCE_IMPORT",
+        "topics": [
+          "rag_retrieval",
+          "redis",
+          "mysql_consistency",
+          "agent",
+          "llm"
+        ],
+        "skills": [
+          "ai_agent_application",
+          "bank_it",
+          "java_backend"
+        ],
+        "blueprint_targets": [
+          "agent",
+          "llm",
+          "mysql_consistency",
+          "rag_retrieval",
+          "redis"
+        ],
+        "runnable": true
+      },
+      {
+        "id": "EXP03",
+        "company": "上海银行",
+        "job_title": "金融科技（应用开发）",
+        "source_type": "community",
+        "document_type": "interview_experience",
+        "source_url": "https://www.nowcoder.com/feed/main/detail/ffb04e90e3db4083bfaa1a7a8e06b938",
+        "chars": 940,
+        "sha256_match": true,
+        "acquisition_mode": "MANUAL_SOURCE_IMPORT",
+        "topics": [
+          "rag_retrieval",
+          "agent",
+          "java"
+        ],
+        "skills": [
+          "ai_agent_application",
+          "bank_it",
+          "java_backend"
+        ],
+        "blueprint_targets": [
+          "agent",
+          "java",
+          "rag_retrieval"
+        ],
+        "runnable": true
+      },
+      {
+        "id": "EXP04",
+        "company": "中国移动研究院",
+        "job_title": "AI算法工程师",
+        "source_type": "community",
+        "document_type": "interview_experience",
+        "source_url": "https://www.nowcoder.com/discuss/427769028658184192",
+        "chars": 313,
+        "sha256_match": true,
+        "acquisition_mode": "MANUAL_SOURCE_IMPORT",
+        "topics": [],
+        "skills": [],
+        "blueprint_targets": [],
+        "runnable": false
+      },
+      {
+        "id": "EXP05",
+        "company": "中国工商银行",
+        "job_title": "科技菁英",
+        "source_type": "community",
+        "document_type": "interview_experience",
+        "source_url": "https://www.nowcoder.com/discuss/655487632662622208",
+        "chars": 1084,
+        "sha256_match": true,
+        "acquisition_mode": "MANUAL_SOURCE_IMPORT",
+        "topics": [],
+        "skills": [],
+        "blueprint_targets": [],
+        "runnable": false
+      }
+    ],
+    "resume": {
+      "candidate_paths": [],
+      "real_resume_count": 0,
+      "real_resumes": []
+    },
+    "topic_vocabulary_size": 10,
+    "skill_priority_topics": {
+      "ai_agent_application": [
+        "rag_retrieval",
+        "agent",
+        "llm",
+        "python",
+        "system_design"
+      ],
+      "bank_it": [
+        "data_security",
+        "mysql_consistency",
+        "system_design",
+        "java",
+        "kafka_reliability"
+      ],
+      "java_backend": [
+        "java",
+        "mysql_consistency",
+        "redis",
+        "kafka_reliability",
+        "system_design"
+      ]
+    }
+  },
+  "verdict": {
+    "ready": false,
+    "blocking": [
+      "REAL_RESUME_MISSING"
+    ],
+    "warnings": [],
+    "missing_materials": [
+      "真实简历（脱敏）",
+      "候选人授权与岗位意向",
+      "人工参考答案/评分金标复核"
+    ],
+    "runnable_jd": [
+      "JD01",
+      "JD02",
+      "JD04"
+    ]
+  }
+}
