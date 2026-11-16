@@ -1,0 +1,138 @@
+{
+ "database": "interview_agent_wb_jd_r31_20261116",
+ "started_at": "2026-11-16T08:39:32.664606+00:00",
+ "provider": {
+  "public_research_extract": {
+   "provider": "modelscope",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017"
+  },
+  "public_research_quality": {
+   "provider": "modelscope",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017"
+  }
+ },
+ "limits": {
+  "max_http": 10,
+  "max_tokens": 30000
+ },
+ "prompt_versions": {
+  "job_jd": "1.0.1",
+  "quality": "1.0.0",
+  "note": "resolved by ManualSourcePromptRegistry"
+ },
+ "jds": {
+  "MOONTON_AGENT_005": {
+   "textarea": {
+    "chars": 1111,
+    "sha256": "315c006260b5bdb71a41a8cda09b6ea594fa7c0a3510a6e606f1849612968ab6"
+   },
+   "prepared": {
+    "refresh_task_id": 3,
+    "source_snapshot_id": 3,
+    "status": "READY_FOR_EXTRACTION",
+    "reused": false
+   },
+   "agent": {
+    "status": "COMPLETED",
+    "company_id": 2,
+    "job_id": 2,
+    "jd_version_id": 2,
+    "publication_status": "WAITING_REVIEW",
+    "manual_publication_decision": "WAITING_REVIEW",
+    "manual_source_type": "official",
+    "error": null
+   },
+   "ledger": {
+    "http_attempts": 2,
+    "tokens": 5383,
+    "statuses": [
+     "SETTLED"
+    ]
+   }
+  }
+ },
+ "stopped": null,
+ "ledger_total": {
+  "http_attempts": 6,
+  "tokens": 16921,
+  "statuses": [
+   "SETTLED"
+  ],
+  "routes": [
+   "public_research_extract",
+   "public_research_quality"
+  ],
+  "models": [
+   "deepseek-ai/DeepSeek-V4.1-Flash-1017"
+  ],
+  "steps": [
+   {
+    "step": "job_jd",
+    "status": "SUCCEEDED",
+    "usage": {
+     "input_tokens": 1639,
+     "output_tokens": 1324,
+     "total_tokens": 2963
+    },
+    "structured_retry": 0,
+    "error": null
+   },
+   {
+    "step": "quality",
+    "status": "SUCCEEDED",
+    "usage": {
+     "input_tokens": 2360,
+     "output_tokens": 168,
+     "total_tokens": 2528
+    },
+    "structured_retry": 0,
+    "error": null
+   },
+   {
+    "step": "job_jd",
+    "status": "SUCCEEDED",
+    "usage": {
+     "input_tokens": 1811,
+     "output_tokens": 1456,
+     "total_tokens": 3267
+    },
+    "structured_retry": 0,
+    "error": null
+   },
+   {
+    "step": "quality",
+    "status": "SUCCEEDED",
+    "usage": {
+     "input_tokens": 2676,
+     "output_tokens": 104,
+     "total_tokens": 2780
+    },
+    "structured_retry": 0,
+    "error": null
+   },
+   {
+    "step": "job_jd",
+    "status": "SUCCEEDED",
+    "usage": {
+     "input_tokens": 1601,
+     "output_tokens": 1315,
+     "total_tokens": 2916
+    },
+    "structured_retry": 0,
+    "error": null
+   },
+   {
+    "step": "quality",
+    "status": "SUCCEEDED",
+    "usage": {
+     "input_tokens": 2316,
+     "output_tokens": 151,
+     "total_tokens": 2467
+    },
+    "structured_retry": 0,
+    "error": null
+   }
+  ]
+ },
+ "finished_at": "2026-11-16T08:39:42.132354+00:00"
+}

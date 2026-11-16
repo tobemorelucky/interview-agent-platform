@@ -1,0 +1,207 @@
+{
+ "database": "interview_agent_wb_jd_r31_20261116",
+ "started_at": "2026-11-16T08:38:32.933716+00:00",
+ "provider": {
+  "public_research_extract": {
+   "provider": "modelscope",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017"
+  },
+  "public_research_quality": {
+   "provider": "modelscope",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017"
+  }
+ },
+ "limits": {
+  "max_http": 10,
+  "max_tokens": 30000
+ },
+ "prompt_versions": {
+  "job_jd": "1.0.1",
+  "quality": "1.0.0",
+  "note": "resolved by ManualSourcePromptRegistry"
+ },
+ "jds": {
+  "KYLINOS_AI_002": {
+   "textarea": {
+    "chars": 1161,
+    "sha256": "bf918ee9c90c2b6dec9f45e946c158215ea104146b33c410bf762fcb5a5ca6ff"
+   },
+   "prepared": {
+    "refresh_task_id": 1,
+    "source_snapshot_id": 1,
+    "status": "READY_FOR_EXTRACTION",
+    "reused": false
+   },
+   "agent": {
+    "status": "COMPLETED",
+    "company_id": 1,
+    "job_id": 1,
+    "jd_version_id": 1,
+    "publication_status": "WAITING_REVIEW",
+    "manual_publication_decision": "WAITING_REVIEW",
+    "manual_source_type": "official",
+    "error": null
+   },
+   "ledger": {
+    "http_attempts": 2,
+    "tokens": 5491,
+    "statuses": [
+     "SETTLED"
+    ]
+   }
+  },
+  "NIO_AIA_025": {
+   "textarea": {
+    "chars": 1461,
+    "sha256": "bfff84a1fdc42da85c5a0fe35e75eb16ec3203bdbd4b1fdfc699dfad98a411bc"
+   },
+   "prepared": {
+    "refresh_task_id": 2,
+    "source_snapshot_id": 2,
+    "status": "READY_FOR_EXTRACTION",
+    "reused": false
+   },
+   "agent": {
+    "status": "FAILED",
+    "company_id": null,
+    "job_id": null,
+    "jd_version_id": null,
+    "publication_status": null,
+    "manual_publication_decision": null,
+    "manual_source_type": null,
+    "error": "MANUAL_EXTRACTED_IDENTITY_MISMATCH: MANUAL_EXTRACTED_IDENTITY_MISMATCH"
+   },
+   "ledger": {
+    "http_attempts": 2,
+    "tokens": 6047,
+    "statuses": [
+     "SETTLED"
+    ]
+   }
+  }
+ },
+ "stopped": {
+  "reason": "AGENT_NOT_COMPLETED",
+  "jd_key": "NIO_AIA_025",
+  "error": "MANUAL_EXTRACTED_IDENTITY_MISMATCH: MANUAL_EXTRACTED_IDENTITY_MISMATCH",
+  "http_attempts": 4,
+  "tokens": 11538,
+  "statuses": [
+   "SETTLED"
+  ],
+  "routes": [
+   "public_research_extract",
+   "public_research_quality"
+  ],
+  "models": [
+   "deepseek-ai/DeepSeek-V4.1-Flash-1017"
+  ],
+  "steps": [
+   {
+    "step": "job_jd",
+    "status": "SUCCEEDED",
+    "usage": {
+     "input_tokens": 1639,
+     "output_tokens": 1324,
+     "total_tokens": 2963
+    },
+    "structured_retry": 0,
+    "error": null
+   },
+   {
+    "step": "quality",
+    "status": "SUCCEEDED",
+    "usage": {
+     "input_tokens": 2360,
+     "output_tokens": 168,
+     "total_tokens": 2528
+    },
+    "structured_retry": 0,
+    "error": null
+   },
+   {
+    "step": "job_jd",
+    "status": "SUCCEEDED",
+    "usage": {
+     "input_tokens": 1811,
+     "output_tokens": 1456,
+     "total_tokens": 3267
+    },
+    "structured_retry": 0,
+    "error": null
+   },
+   {
+    "step": "quality",
+    "status": "SUCCEEDED",
+    "usage": {
+     "input_tokens": 2676,
+     "output_tokens": 104,
+     "total_tokens": 2780
+    },
+    "structured_retry": 0,
+    "error": null
+   }
+  ]
+ },
+ "ledger_total": {
+  "http_attempts": 4,
+  "tokens": 11538,
+  "statuses": [
+   "SETTLED"
+  ],
+  "routes": [
+   "public_research_extract",
+   "public_research_quality"
+  ],
+  "models": [
+   "deepseek-ai/DeepSeek-V4.1-Flash-1017"
+  ],
+  "steps": [
+   {
+    "step": "job_jd",
+    "status": "SUCCEEDED",
+    "usage": {
+     "input_tokens": 1639,
+     "output_tokens": 1324,
+     "total_tokens": 2963
+    },
+    "structured_retry": 0,
+    "error": null
+   },
+   {
+    "step": "quality",
+    "status": "SUCCEEDED",
+    "usage": {
+     "input_tokens": 2360,
+     "output_tokens": 168,
+     "total_tokens": 2528
+    },
+    "structured_retry": 0,
+    "error": null
+   },
+   {
+    "step": "job_jd",
+    "status": "SUCCEEDED",
+    "usage": {
+     "input_tokens": 1811,
+     "output_tokens": 1456,
+     "total_tokens": 3267
+    },
+    "structured_retry": 0,
+    "error": null
+   },
+   {
+    "step": "quality",
+    "status": "SUCCEEDED",
+    "usage": {
+     "input_tokens": 2676,
+     "output_tokens": 104,
+     "total_tokens": 2780
+    },
+    "structured_retry": 0,
+    "error": null
+   }
+  ]
+ },
+ "finished_at": "2026-11-16T08:38:52.969230+00:00"
+}

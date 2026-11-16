@@ -1,0 +1,786 @@
+{
+ "generated_at": "2026-11-16T08:41:15.953704+00:00",
+ "database": "interview_agent_wb_jd_r31_20261116",
+ "redaction": {
+  "contains": [
+   "public JD text",
+   "ledger rows",
+   "step metadata",
+   "structured extraction"
+  ],
+  "excludes": [
+   "api keys",
+   "authorization headers",
+   "user data",
+   "raw provider responses"
+  ]
+ },
+ "ledger": [
+  {
+   "call_key": "7f3a4076ea704b3986ffe0bc3517ac13",
+   "route": "public_research_extract",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "status": "SETTLED",
+   "reserved_tokens": 12804,
+   "actual_tokens": 2963,
+   "created_at": "2026-11-16T08:38:33.390616+00:00",
+   "finished_at": "2026-11-16T08:38:40.809583+00:00"
+  },
+  {
+   "call_key": "2400aaac37b546b99b8df69b0923e807",
+   "route": "public_research_quality",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "status": "SETTLED",
+   "reserved_tokens": 15456,
+   "actual_tokens": 2528,
+   "created_at": "2026-11-16T08:38:40.956320+00:00",
+   "finished_at": "2026-11-16T08:38:44.582875+00:00"
+  },
+  {
+   "call_key": "95abc49f7a2b4e748dafb8f0570ac4ee",
+   "route": "public_research_extract",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "status": "SETTLED",
+   "reserved_tokens": 13492,
+   "actual_tokens": 3267,
+   "created_at": "2026-11-16T08:38:44.917386+00:00",
+   "finished_at": "2026-11-16T08:38:51.173697+00:00"
+  },
+  {
+   "call_key": "052bcc8240644c46b89ce1167ef524b5",
+   "route": "public_research_quality",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "status": "SETTLED",
+   "reserved_tokens": 16543,
+   "actual_tokens": 2780,
+   "created_at": "2026-11-16T08:38:51.200588+00:00",
+   "finished_at": "2026-11-16T08:38:52.860208+00:00"
+  },
+  {
+   "call_key": "a69498b68d2440dbaa67e9f229acb170",
+   "route": "public_research_extract",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "status": "SETTLED",
+   "reserved_tokens": 12606,
+   "actual_tokens": 2916,
+   "created_at": "2026-11-16T08:39:33.044652+00:00",
+   "finished_at": "2026-11-16T08:39:39.340312+00:00"
+  },
+  {
+   "call_key": "98dbf612fff24004a5e9b56f7e86ccc2",
+   "route": "public_research_quality",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "status": "SETTLED",
+   "reserved_tokens": 15173,
+   "actual_tokens": 2467,
+   "created_at": "2026-11-16T08:39:39.366574+00:00",
+   "finished_at": "2026-11-16T08:39:41.652031+00:00"
+  }
+ ],
+ "runs": [
+  {
+   "id": 1,
+   "refresh_task_id": 1,
+   "status": "SUCCEEDED",
+   "error": null,
+   "started_at": "2026-11-16T08:38:33.227807+00:00",
+   "finished_at": "2026-11-16T08:38:44.806839+00:00",
+   "output_keys": [
+    "acquisition_mode",
+    "agent_run_id",
+    "company_id",
+    "independent_content_count",
+    "jd_version_id",
+    "job_id",
+    "manual_publication_decision",
+    "manual_source",
+    "manual_source_type",
+    "multi_source",
+    "occurrence_count",
+    "publication_status",
+    "refresh_task_id",
+    "source_count",
+    "status",
+    "target"
+   ]
+  },
+  {
+   "id": 2,
+   "refresh_task_id": 2,
+   "status": "FAILED",
+   "error": "MANUAL_EXTRACTED_IDENTITY_MISMATCH: MANUAL_EXTRACTED_IDENTITY_MISMATCH",
+   "started_at": "2026-11-16T08:38:44.877074+00:00",
+   "finished_at": "2026-11-16T08:38:52.916794+00:00",
+   "output_keys": []
+  },
+  {
+   "id": 3,
+   "refresh_task_id": 3,
+   "status": "SUCCEEDED",
+   "error": null,
+   "started_at": "2026-11-16T08:39:32.894027+00:00",
+   "finished_at": "2026-11-16T08:39:42.103671+00:00",
+   "output_keys": [
+    "acquisition_mode",
+    "agent_run_id",
+    "company_id",
+    "independent_content_count",
+    "jd_version_id",
+    "job_id",
+    "manual_publication_decision",
+    "manual_source",
+    "manual_source_type",
+    "multi_source",
+    "occurrence_count",
+    "publication_status",
+    "refresh_task_id",
+    "source_count",
+    "status",
+    "target"
+   ]
+  }
+ ],
+ "steps": [
+  {
+   "id": 1,
+   "agent_run_id": 1,
+   "step": "job_jd",
+   "status": "SUCCEEDED",
+   "prompt": "job_jd@1.0.1",
+   "provider": "modelscope",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "usage": {
+    "input_tokens": 1639,
+    "output_tokens": 1324,
+    "total_tokens": 2963
+   },
+   "structured_retry": 0,
+   "latency_ms": 7458,
+   "error": null,
+   "input_json": {
+    "route": "public_research_extract",
+    "prompt_hash": "d86cd5227e543edbd9791bd0b56b061c8f3adf441684d385f483b379788af751",
+    "thinking_type": "disabled"
+   },
+   "output_json": {
+    "schema": "JobJDExtraction",
+    "model_invocations": [
+     {
+      "provider": "modelscope",
+      "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+      "fallback_reason": null,
+      "status": "SUCCEEDED",
+      "usage": {
+       "input_tokens": 1639,
+       "output_tokens": 1324,
+       "total_tokens": 2963,
+       "reasoning_tokens": null
+      },
+      "latency_ms": 7455
+     }
+    ],
+    "usage_complete": true
+   }
+  },
+  {
+   "id": 2,
+   "agent_run_id": 1,
+   "step": "quality",
+   "status": "SUCCEEDED",
+   "prompt": "quality@1.0.0",
+   "provider": "modelscope",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "usage": {
+    "input_tokens": 2360,
+    "output_tokens": 168,
+    "total_tokens": 2528
+   },
+   "structured_retry": 0,
+   "latency_ms": 3638,
+   "error": null,
+   "input_json": {
+    "route": "public_research_quality",
+    "prompt_hash": "600c2b5f24f928f7e56ca5abf06f0e0468f12c71de80934df05e3ad770f0a220",
+    "thinking_type": "disabled"
+   },
+   "output_json": {
+    "schema": "ResearchQuality",
+    "model_invocations": [
+     {
+      "provider": "modelscope",
+      "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+      "fallback_reason": null,
+      "status": "SUCCEEDED",
+      "usage": {
+       "input_tokens": 2360,
+       "output_tokens": 168,
+       "total_tokens": 2528,
+       "reasoning_tokens": null
+      },
+      "latency_ms": 3638
+     }
+    ],
+    "usage_complete": true,
+    "risk_flags": [
+     "岗位职责覆盖范围极广（操作系统AI助手、智能体框架、大模型算法优化、AI计算框架与算子、推理引擎、AI Infra、安卓框架层AI服务、端侧部署），可能反映多团队合并招聘或职责边界不清",
+     "任职资格中多项为“优先”而非硬性要求，实际筛选标准与岗位描述可能存在偏差",
+     "岗位为2027届校园招聘，发布与毕业时间跨度较大，招聘计划存在调整或取消的不确定性",
+     "部分职责（如安卓框架层AI服务、CUDA/高性能计算、国产硬件平台适配）与核心AI研发方向跨度较大，候选人匹配难度高",
+     "证据仅来自单一招聘页面，缺少公司官方渠道或第三方交叉验证"
+    ],
+    "suitable": true
+   }
+  },
+  {
+   "id": 3,
+   "agent_run_id": 2,
+   "step": "job_jd",
+   "status": "SUCCEEDED",
+   "prompt": "job_jd@1.0.1",
+   "provider": "modelscope",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "usage": {
+    "input_tokens": 1811,
+    "output_tokens": 1456,
+    "total_tokens": 3267
+   },
+   "structured_retry": 0,
+   "latency_ms": 6263,
+   "error": null,
+   "input_json": {
+    "route": "public_research_extract",
+    "prompt_hash": "d86cd5227e543edbd9791bd0b56b061c8f3adf441684d385f483b379788af751",
+    "thinking_type": "disabled"
+   },
+   "output_json": {
+    "schema": "JobJDExtraction",
+    "model_invocations": [
+     {
+      "provider": "modelscope",
+      "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+      "fallback_reason": null,
+      "status": "SUCCEEDED",
+      "usage": {
+       "input_tokens": 1811,
+       "output_tokens": 1456,
+       "total_tokens": 3267,
+       "reasoning_tokens": null
+      },
+      "latency_ms": 6263
+     }
+    ],
+    "usage_complete": true
+   }
+  },
+  {
+   "id": 4,
+   "agent_run_id": 2,
+   "step": "quality",
+   "status": "SUCCEEDED",
+   "prompt": "quality@1.0.0",
+   "provider": "modelscope",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "usage": {
+    "input_tokens": 2676,
+    "output_tokens": 104,
+    "total_tokens": 2780
+   },
+   "structured_retry": 0,
+   "latency_ms": 1671,
+   "error": null,
+   "input_json": {
+    "route": "public_research_quality",
+    "prompt_hash": "600c2b5f24f928f7e56ca5abf06f0e0468f12c71de80934df05e3ad770f0a220",
+    "thinking_type": "disabled"
+   },
+   "output_json": {
+    "schema": "ResearchQuality",
+    "model_invocations": [
+     {
+      "provider": "modelscope",
+      "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+      "fallback_reason": null,
+      "status": "SUCCEEDED",
+      "usage": {
+       "input_tokens": 2676,
+       "output_tokens": 104,
+       "total_tokens": 2780,
+       "reasoning_tokens": null
+      },
+      "latency_ms": 1671
+     }
+    ],
+    "usage_complete": true,
+    "risk_flags": [
+     "education requirement is PhD-only, which sharply narrows the candidate pool",
+     "JD text is split across multiple evidence excerpts; some requirement statements are consolidated from a single evidence ID covering a bulleted list",
+     "several requirements are framed as 'at least one of' directions, so the extraction may overstate the breadth of mandatory skills",
+     "no evidence of compensation, team size, or hiring timeline",
+     "identity evidence is limited to a single source excerpt"
+    ],
+    "suitable": true
+   }
+  },
+  {
+   "id": 5,
+   "agent_run_id": 3,
+   "step": "job_jd",
+   "status": "SUCCEEDED",
+   "prompt": "job_jd@1.0.1",
+   "provider": "modelscope",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "usage": {
+    "input_tokens": 1601,
+    "output_tokens": 1315,
+    "total_tokens": 2916
+   },
+   "structured_retry": 0,
+   "latency_ms": 6311,
+   "error": null,
+   "input_json": {
+    "route": "public_research_extract",
+    "prompt_hash": "d86cd5227e543edbd9791bd0b56b061c8f3adf441684d385f483b379788af751",
+    "thinking_type": "disabled"
+   },
+   "output_json": {
+    "schema": "JobJDExtraction",
+    "model_invocations": [
+     {
+      "provider": "modelscope",
+      "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+      "fallback_reason": null,
+      "status": "SUCCEEDED",
+      "usage": {
+       "input_tokens": 1601,
+       "output_tokens": 1315,
+       "total_tokens": 2916,
+       "reasoning_tokens": null
+      },
+      "latency_ms": 6311
+     }
+    ],
+    "usage_complete": true
+   }
+  },
+  {
+   "id": 6,
+   "agent_run_id": 3,
+   "step": "quality",
+   "status": "SUCCEEDED",
+   "prompt": "quality@1.0.0",
+   "provider": "modelscope",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "usage": {
+    "input_tokens": 2316,
+    "output_tokens": 151,
+    "total_tokens": 2467
+   },
+   "structured_retry": 0,
+   "latency_ms": 2297,
+   "error": null,
+   "input_json": {
+    "route": "public_research_quality",
+    "prompt_hash": "600c2b5f24f928f7e56ca5abf06f0e0468f12c71de80934df05e3ad770f0a220",
+    "thinking_type": "disabled"
+   },
+   "output_json": {
+    "schema": "ResearchQuality",
+    "model_invocations": [
+     {
+      "provider": "modelscope",
+      "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+      "fallback_reason": null,
+      "status": "SUCCEEDED",
+      "usage": {
+       "input_tokens": 2316,
+       "output_tokens": 151,
+       "total_tokens": 2467,
+       "reasoning_tokens": null
+      },
+      "latency_ms": 2297
+     }
+    ],
+    "usage_complete": true,
+    "risk_flags": [
+     "校招岗位（2027届秋招），非社招，候选人届别/毕业时间需匹配",
+     "JD 文本在证据间被截断（ev_099ffa3108fe6e9f0b17b12d 结尾与 ev_abc49cb3f85bb39d3214c6ac 开头衔接），部分要求跨证据拼接，需核对原文完整性",
+     "岗位归属“研发 - 大数据”方向，但职责聚焦 AI Agent 平台，团队定位与实际工作内容需进一步确认",
+     "多项要求为“了解/优先”级别，实际筛选门槛与面试深度未在证据中体现"
+    ],
+    "suitable": true
+   }
+  }
+ ],
+ "jd_versions": [
+  {
+   "id": 1,
+   "job_id": 1,
+   "version": 1,
+   "publication_status": "WAITING_REVIEW",
+   "raw_text_sha256": "c7831bc72c7fdaf1cddc552fffc6648d8c19844b04be7f203a8ca8e0d4ddb9b0",
+   "structured_data": {
+    "company_name": "麒麟软件",
+    "job_title": "AI研发工程师",
+    "identity_evidence_ids": [
+     "ev_88298905a2c570d3eba8909a"
+    ],
+    "jd_evidence_ids": [
+     "ev_88298905a2c570d3eba8909a",
+     "ev_f2221609ab99cee9628273fd"
+    ],
+    "requirements": [
+     {
+      "statement": "计算机、人工智能、数学、软件工程等相关专业，2027届本/硕/博毕业生均可投递",
+      "evidence_ids": [
+       "ev_f2221609ab99cee9628273fd"
+      ],
+      "requirement_type": "EDUCATION",
+      "importance": "REQUIRED"
+     },
+     {
+      "statement": "熟练掌握Python，熟悉C/C++/Go/Java等至少一种编程语言",
+      "evidence_ids": [
+       "ev_f2221609ab99cee9628273fd"
+      ],
+      "requirement_type": "SKILL",
+      "importance": "REQUIRED"
+     },
+     {
+      "statement": "熟悉深度学习框架（PyTorch/TensorFlow），掌握Transformer、大模型训练等核心技术原理",
+      "evidence_ids": [
+       "ev_f2221609ab99cee9628273fd"
+      ],
+      "requirement_type": "SKILL",
+      "importance": "REQUIRED"
+     },
+     {
+      "statement": "了解LLM大模型原理及LangChain等主流AI编程框架，了解工具调用、Prompt工程、RAG向量知识库相关技术",
+      "evidence_ids": [
+       "ev_f2221609ab99cee9628273fd"
+      ],
+      "requirement_type": "SKILL",
+      "importance": "REQUIRED"
+     },
+     {
+      "statement": "了解AI计算框架基本原理和算子实现逻辑，了解CPU/GPU硬件架构，有算子开发或推理部署经验者优先",
+      "evidence_ids": [
+       "ev_f2221609ab99cee9628273fd"
+      ],
+      "requirement_type": "SKILL",
+      "importance": "PREFERRED"
+     },
+     {
+      "statement": "熟悉至少一种推理引擎（onnx-runtime、tf-lite、mnn、TensorRT、vLLM、Triton等），了解模型部署流程，有NVIDIA GPU、Jetson等平台模型部署经验者优先",
+      "evidence_ids": [
+       "ev_f2221609ab99cee9628273fd"
+      ],
+      "requirement_type": "SKILL",
+      "importance": "PREFERRED"
+     },
+     {
+      "statement": "熟悉Linux操作系统，了解系统API、进程权限机制，了解计算机体系结构与异构计算基础，有CUDA开发、高性能计算经验者优先",
+      "evidence_ids": [
+       "ev_f2221609ab99cee9628273fd"
+      ],
+      "requirement_type": "SKILL",
+      "importance": "PREFERRED"
+     },
+     {
+      "statement": "具备良好的数学基础，有大模型微调、智能体开发、端侧部署或安卓AI应用开发经验者优先",
+      "evidence_ids": [
+       "ev_f2221609ab99cee9628273fd"
+      ],
+      "requirement_type": "SKILL",
+      "importance": "PREFERRED"
+     },
+     {
+      "statement": "有操作系统AI助手、智能体项目落地经验或国产操作系统、飞腾/龙芯等国产硬件平台开发经验者优先",
+      "evidence_ids": [
+       "ev_f2221609ab99cee9628273fd"
+      ],
+      "requirement_type": "EXPERIENCE",
+      "importance": "PREFERRED"
+     },
+     {
+      "statement": "具备良好的问题分析能力、文档编写能力与跨团队协作意识，自我驱动，学习能力强",
+      "evidence_ids": [
+       "ev_f2221609ab99cee9628273fd"
+      ],
+      "requirement_type": "SOFT_SKILL",
+      "importance": "REQUIRED"
+     }
+    ],
+    "attributes": [
+     {
+      "statement": "北京市,天津市,湖南省·长沙市",
+      "evidence_ids": [
+       "ev_88298905a2c570d3eba8909a"
+      ],
+      "field": "LOCATION"
+     },
+     {
+      "statement": "2026-09-04 发布",
+      "evidence_ids": [
+       "ev_88298905a2c570d3eba8909a"
+      ],
+      "field": "PUBLISHED_AT"
+     },
+     {
+      "statement": "负责操作系统AI助手、AI子系统上层应用开发，基于Agent、RAG技术开发操作系统场景智能技能和应用，完成工具调用、知识库问答、故障辅助诊断等功能",
+      "evidence_ids": [
+       "ev_88298905a2c570d3eba8909a"
+      ],
+      "field": "RESPONSIBILITY"
+     },
+     {
+      "statement": "负责操作系统端AI智能体核心框架开发，实现任务拆解、工具调用、记忆管理等基础能力，封装操作系统能力并做好调用权限与安全隔离",
+      "evidence_ids": [
+       "ev_88298905a2c570d3eba8909a"
+      ],
+      "field": "RESPONSIBILITY"
+     },
+     {
+      "statement": "参与大模型核心技术研发，包括Agent智能体、NLP对话生成等方向的算法设计与实现，开展INT8/INT4低精度量化、知识蒸馏、强化学习（RLHF/PPO）等模型优化",
+      "evidence_ids": [
+       "ev_88298905a2c570d3eba8909a"
+      ],
+      "field": "RESPONSIBILITY"
+     },
+     {
+      "statement": "负责AI计算框架（TensorFlow、PyTorch等）与GPU/NPU/DSP等硬件的适配，开展AI算子优化，研发端侧/边缘侧推理引擎与轻量化部署方案",
+      "evidence_ids": [
+       "ev_88298905a2c570d3eba8909a"
+      ],
+      "field": "RESPONSIBILITY"
+     },
+     {
+      "statement": "负责AI大模型应用开发、AI Infra测评、异构算力融合优化及智能运维系统（故障预测、性能监控、资源调度）等核心模块研发，优化AI生态工具链",
+      "evidence_ids": [
+       "ev_88298905a2c570d3eba8909a"
+      ],
+      "field": "RESPONSIBILITY"
+     },
+     {
+      "statement": "支持安卓框架层AI服务的架构设计与研发（含集成编译和版本构建），负责移动端技术开发，排查解决复杂场景下的性能瓶颈（Crash、ANR、内存溢出等）",
+      "evidence_ids": [
+       "ev_88298905a2c570d3eba8909a"
+      ],
+      "field": "RESPONSIBILITY"
+     },
+     {
+      "statement": "完成端侧大模型适配调优，落地端云协同方案，搭建RAG知识库与智能体评测体系，适配国产软硬件平台；跟踪前沿技术，输出技术调研报告、专利或文档",
+      "evidence_ids": [
+       "ev_88298905a2c570d3eba8909a",
+       "ev_f2221609ab99cee9628273fd"
+      ],
+      "field": "RESPONSIBILITY"
+     }
+    ]
+   },
+   "metadata_keys": [
+    "attribute_claims",
+    "credibility",
+    "identity_claim_id",
+    "independent_content_count",
+    "manual_source",
+    "multi_source",
+    "occurrence_count",
+    "quality_assessment",
+    "quality_gate",
+    "source_count"
+   ]
+  },
+  {
+   "id": 2,
+   "job_id": 2,
+   "version": 1,
+   "publication_status": "WAITING_REVIEW",
+   "raw_text_sha256": "afaeb58e0926e4e420d88cf10c7f70ca81686e3d87322cd2c63d5217fd5b6223",
+   "structured_data": {
+    "company_name": "沐瞳科技",
+    "job_title": "Agent开发工程师（平台）",
+    "identity_evidence_ids": [
+     "ev_099ffa3108fe6e9f0b17b12d"
+    ],
+    "jd_evidence_ids": [
+     "ev_099ffa3108fe6e9f0b17b12d",
+     "ev_abc49cb3f85bb39d3214c6ac"
+    ],
+    "requirements": [
+     {
+      "statement": "本科及以上学历，计算机、软件工程、人工智能等相关专业优先",
+      "evidence_ids": [
+       "ev_099ffa3108fe6e9f0b17b12d"
+      ],
+      "requirement_type": "学历/专业",
+      "importance": "required"
+     },
+     {
+      "statement": "具备扎实的编程基础，熟悉 Go、Python 等主流编程语言，具备良好的代码习惯和工程意识",
+      "evidence_ids": [
+       "ev_099ffa3108fe6e9f0b17b12d"
+      ],
+      "requirement_type": "编程能力",
+      "importance": "required"
+     },
+     {
+      "statement": "了解数据结构、算法、操作系统、计算机网络、数据库等基础知识，能够理解并参与平台型系统的设计与开发",
+      "evidence_ids": [
+       "ev_099ffa3108fe6e9f0b17b12d",
+       "ev_abc49cb3f85bb39d3214c6ac"
+      ],
+      "requirement_type": "计算机基础",
+      "importance": "required"
+     },
+     {
+      "statement": "了解服务端开发基础，熟悉 HTTP/gRPC API、数据库、缓存、消息队列、任务调度、权限控制、日志监控等常见后端开发概念",
+      "evidence_ids": [
+       "ev_abc49cb3f85bb39d3214c6ac"
+      ],
+      "requirement_type": "后端开发",
+      "importance": "required"
+     },
+     {
+      "statement": "有 Go 服务端开发经验优先",
+      "evidence_ids": [
+       "ev_abc49cb3f85bb39d3214c6ac"
+      ],
+      "requirement_type": "后端开发",
+      "importance": "preferred"
+     },
+     {
+      "statement": "对大模型、AI Agent、开发者工具和智能工作流有浓厚兴趣，并有相关工具的实际使用经验",
+      "evidence_ids": [
+       "ev_abc49cb3f85bb39d3214c6ac"
+      ],
+      "requirement_type": "领域兴趣/经验",
+      "importance": "required"
+     },
+     {
+      "statement": "了解 Prompt Engineering、LLM API、RAG、Function Calling / Tool Use、Agent 工作流等基本概念；课程、实习或个人项目经验均可",
+      "evidence_ids": [
+       "ev_abc49cb3f85bb39d3214c6ac"
+      ],
+      "requirement_type": "AI/Agent 技术知识",
+      "importance": "required"
+     },
+     {
+      "statement": "具备较强的学习能力、问题拆解能力和动手能力，能够完成方案分析、原型开发和效果验证",
+      "evidence_ids": [
+       "ev_abc49cb3f85bb39d3214c6ac"
+      ],
+      "requirement_type": "通用能力",
+      "importance": "required"
+     },
+     {
+      "statement": "具备良好的沟通协作能力，愿意深入游戏研发及不同业务流程理解真实需求，并推动 AI 能力在实际场景中落地",
+      "evidence_ids": [
+       "ev_abc49cb3f85bb39d3214c6ac"
+      ],
+      "requirement_type": "软技能",
+      "importance": "required"
+     },
+     {
+      "statement": "了解 Agent SDK、LangChain、AutoGen、MCP、RAG、上下文工程、Prompt 编排、多 Agent 协作或自动化工作流等相关技术者优先",
+      "evidence_ids": [
+       "ev_abc49cb3f85bb39d3214c6ac"
+      ],
+      "requirement_type": "AI/Agent 技术知识",
+      "importance": "preferred"
+     },
+     {
+      "statement": "了解 Agent 调试、运行追踪、效果评测、日志分析、Token 成本分析或可观测性建设者优先",
+      "evidence_ids": [
+       "ev_abc49cb3f85bb39d3214c6ac"
+      ],
+      "requirement_type": "AI/Agent 工程实践",
+      "importance": "preferred"
+     },
+     {
+      "statement": "对 AI Native 产品、人机协作方式、Agent 工作台形态或智能研发工具有自己的思考或实践",
+      "evidence_ids": [
+       "ev_abc49cb3f85bb39d3214c6ac"
+      ],
+      "requirement_type": "领域理解",
+      "importance": "preferred"
+     }
+    ],
+    "attributes": [
+     {
+      "statement": "上海",
+      "evidence_ids": [
+       "ev_099ffa3108fe6e9f0b17b12d"
+      ],
+      "field": "LOCATION"
+     },
+     {
+      "statement": "参与 AI Agent 平台及智能工作工具的建设，探索 AI 在游戏研发和日常工作中的应用",
+      "evidence_ids": [
+       "ev_099ffa3108fe6e9f0b17b12d"
+      ],
+      "field": "RESPONSIBILITY"
+     },
+     {
+      "statement": "参与 Agent 工作流、上下文工程、知识检索、工具调用和自动化任务等能力的研发与优化",
+      "evidence_ids": [
+       "ev_099ffa3108fe6e9f0b17b12d"
+      ],
+      "field": "RESPONSIBILITY"
+     },
+     {
+      "statement": "参与 Agent、Skill、插件及 AI 应用的接入、调试、发布和复用，推动优秀实践沉淀为标准化能力",
+      "evidence_ids": [
+       "ev_099ffa3108fe6e9f0b17b12d"
+      ],
+      "field": "RESPONSIBILITY"
+     },
+     {
+      "statement": "推动 AI 能力与项目管理、文档、消息及研发工具等现有系统集成，融入真实业务流程",
+      "evidence_ids": [
+       "ev_099ffa3108fe6e9f0b17b12d"
+      ],
+      "field": "RESPONSIBILITY"
+     },
+     {
+      "statement": "参与模型调用、运行追踪、效果评测和成本分析，持续提升 Agent 的稳定性、易用性和任务完成效果",
+      "evidence_ids": [
+       "ev_099ffa3108fe6e9f0b17b12d"
+      ],
+      "field": "RESPONSIBILITY"
+     },
+     {
+      "statement": "跟进大模型、Agent 框架和 AI 编程工具等前沿技术，参与技术调研、原型验证与工程化落地",
+      "evidence_ids": [
+       "ev_099ffa3108fe6e9f0b17b12d"
+      ],
+      "field": "RESPONSIBILITY"
+     },
+     {
+      "statement": "与产品、研发、TA、引擎、工具链等团队协作，理解实际问题并提供 AI Native 的解决方案",
+      "evidence_ids": [
+       "ev_099ffa3108fe6e9f0b17b12d"
+      ],
+      "field": "RESPONSIBILITY"
+     }
+    ]
+   },
+   "metadata_keys": [
+    "attribute_claims",
+    "credibility",
+    "identity_claim_id",
+    "independent_content_count",
+    "manual_source",
+    "multi_source",
+    "occurrence_count",
+    "quality_assessment",
+    "quality_gate",
+    "source_count"
+   ]
+  }
+ ],
+ "totals": {
+  "http_attempts": 6,
+  "tokens": 16921,
+  "repairs": 0
+ }
+}
