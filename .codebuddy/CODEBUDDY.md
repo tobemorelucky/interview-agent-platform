@@ -1376,3 +1376,19 @@ L3 前置条件（purge_requests 表、清理顺序、audit_logs 脱敏、Celery
 **预算**：正常 6 HTTP（每份 2），修复 +2，硬上限 **10 HTTP / 30,000 token**；正常 token ≈19.1K（6,043/7,023/6,052）。停止条件：HTTP≥10、token≥30K、账本/归属类 409/403、同份连续 2 次证据拒绝、Provider 连续 2 次失败。
 
 **资产**：生产库未变（5/38/19/41/5/4/0）；库总量 246→249（+3 沙箱，均写 `COMMENT` 标注用途）；MinIO 生产桶仍 48 对象，新建 `interview-agent-r31-jd` 0 对象；Redis 用 db7（0 key）；Evaluation 2.3.4 `e7704357b5fc37ba` 未改；既有 Research/发布测试 45 passed、新契约测试 10 passed。
+
+---
+
+## 第三十五轮：3 份真实 JD 正式入库（真实模型 6 HTTP / 16,921 token，见 docs/114）
+
+**授权** 6 HTTP / 上限 10 / 30K token。实测 **6 次 / 16,921 token / 0 repair / 27.6s**，账本 6 行全 `SETTLED`。库 `interview_agent_wb_jd_r31_20261116`，`modelscope / deepseek-ai/DeepSeek-V4.1-Flash-1017`，`job_jd@1.0.1` + `quality@1.0.0`。
+
+**结果**：麒麟 `COMPLETED`（JD v1，10 条要求 R5/P5）；沐瞳 `COMPLETED`（JD v2，12 条 9 required/3 preferred）；**蔚来 `FAILED` → `MANUAL_EXTRACTED_IDENTITY_MISMATCH`，零实体残留**。
+
+**蔚来根因**：catalog 身份校验已过（模型抽的身份逐字在页面里），败在 `validate_expected_identity` 与 manifest 标签比对。`normalize_text` 只折叠空格不删除，manifest 写的 `车端AI Agent与应用生态系统架构工程师` ≠ 页面 `校招-车端 AI Agent 与应用生态系统架构工程师`。**教训：manifest 的 company/job_title 必须取页面字面串，不能用展示名。** 另外失败时模型返回的身份不被持久化 → 无法 100% 还原，属可诊断性缺陷。
+
+**质量结论**：幻觉 0（22/22 statement 均为原文子串）、遗漏 0（9→10、11→12 各 1 次忠实拆分）、错误归类 2 类：① 麒麟 5 条「尾句带优先」被整句降为 PREFERRED（Linux/推理引擎被过度降级）；② **importance/requirement_type 无受控词表**，麒麟 `REQUIRED`+英文类型、沐瞳 `required`+中文类型，导致 `job_matching/policy.py:76` 能把麒麟 `EDUCATION` 排除、不能排除沐瞳 `学历/专业`。
+
+**发布**：两岗均 `WAITING_REVIEW`，`publishable=true`（22/22 有 Claim、偏移 100% 精确），`audit_logs=0`（未发布）。建议沐瞳先归一词表再发布。幂等已验证（重复 prepare 复用 task #1）。
+
+**扩展**：剩余 49 份 ≈98 HTTP / 276K token（实测 5,640 token/份）；开跑前必须先修「身份字面标签」与「词表受控」。生产库未变（4 份 JD）；沙箱 2 份不计入生产。
