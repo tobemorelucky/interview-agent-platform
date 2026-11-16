@@ -1,0 +1,21 @@
+{
+  "release": "2026-11-16-importable-corrected-v1",
+  "source_jd_paraphrases": 15,
+  "full_synthetic_jds": 50,
+  "publicly_reported_interview_flows": 3,
+  "paraphrased_interview_questions": 39,
+  "synthetic_answer_count": 40,
+  "authentic_verbatim_full_jd_count": 0,
+  "source_based_paraphrases_not_original_full_jd": true,
+  "license_notice": "不能把原文改写当成企业官方JD原文；真实公司网页内容应按网站许可和项目Evidence流程获取、核验。",
+  "does_not_create_official_sessions": true,
+  "sandbox_only": true,
+  "caveat": "真实公开面经为用户自述，不能独立证明面试发生；所有题目由助手改写，回答为合成。",
+  "database_import_smoke_counts": {
+    "sbx_jds_sourced": 15,
+    "sbx_jds_synthetic": 50,
+    "sbx_interview_flows": 3,
+    "sbx_interview_questions": 39,
+    "sbx_answer_pairs": 40
+  }
+}

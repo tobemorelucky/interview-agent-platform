@@ -1,0 +1,29 @@
+{
+  "database": "interview_agent_wb_sandbox_pack_20261116",
+  "http_calls_to_model": 0,
+  "refusal": {
+    "code": "MATCH_PROFILE_REQUIRED",
+    "message": "请先生成候选人画像",
+    "status": 409
+  },
+  "rows_before": {
+    "users": 0,
+    "candidate_profiles": 0,
+    "candidate_profile_versions": 0,
+    "job_match_runs": 0,
+    "job_match_candidates": 0,
+    "job_description_versions": 0,
+    "job_requirements": 0
+  },
+  "rows_after": {
+    "users": 0,
+    "candidate_profiles": 0,
+    "candidate_profile_versions": 0,
+    "job_match_runs": 0,
+    "job_match_candidates": 0,
+    "job_description_versions": 0,
+    "job_requirements": 0
+  },
+  "no_rows_written": true,
+  "verdict": "REFUSED_BEFORE_MODEL_CALL"
+}

@@ -1,0 +1,54 @@
+{
+  "database": "interview_agent_wb_sandbox_pack_20261116",
+  "http_calls_to_model": 0,
+  "tables": {
+    "sbx_jds_sourced": {
+      "source_rows": 15,
+      "inserted": 15,
+      "stored_rows": 15,
+      "hash_mismatched": []
+    },
+    "sbx_jds_synthetic": {
+      "source_rows": 50,
+      "inserted": 50,
+      "stored_rows": 50,
+      "hash_mismatched": []
+    },
+    "sbx_interview_flows": {
+      "source_rows": 3,
+      "inserted": 3,
+      "stored_rows": 3,
+      "hash_mismatched": []
+    },
+    "sbx_interview_questions": {
+      "source_rows": 39,
+      "inserted": 39,
+      "stored_rows": 39,
+      "hash_mismatched": []
+    },
+    "sbx_answer_pairs": {
+      "source_rows": 40,
+      "inserted": 40,
+      "stored_rows": 40,
+      "hash_mismatched": []
+    }
+  },
+  "business_tables_after_import": {
+    "users": 0,
+    "resumes": 0,
+    "candidate_profiles": 0,
+    "companies": 0,
+    "jobs": 0,
+    "job_description_versions": 0,
+    "job_requirements": 0,
+    "user_job_targets": 0,
+    "interview_sessions": 0,
+    "interview_questions": 0,
+    "interview_answers": 0,
+    "interview_evaluations": 0,
+    "final_interview_reports": 0,
+    "capability_memories": 0,
+    "model_admissions": 0
+  },
+  "business_tables_untouched": true
+}

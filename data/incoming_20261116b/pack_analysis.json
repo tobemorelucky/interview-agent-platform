@@ -1,0 +1,123 @@
+{
+  "database": "interview_agent_wb_sandbox_pack_20261116",
+  "http_calls_to_model": 0,
+  "counts": {
+    "sourced": 15,
+    "synthetic": 50,
+    "flows": 3,
+    "questions": 39,
+    "answers": 40
+  },
+  "provenance_problems": [],
+  "empty_or_short_bodies": [],
+  "missing_responsibility_or_requirement": [],
+  "duplicates": {
+    "within_sourced": [],
+    "within_synthetic": [],
+    "same_company_role": [],
+    "cross_manual": []
+  },
+  "coverage": {
+    "sourced_with_topic": 15,
+    "synthetic_with_topic": 50,
+    "sourced_status": {
+      "RECOMMENDED": 9,
+      "NO_APPLICABLE_SKILL": 6
+    },
+    "synthetic_status": {
+      "NO_APPLICABLE_SKILL": 44,
+      "RECOMMENDED": 6
+    },
+    "sourced_recommended_skill": {
+      "ai_agent_application": 7,
+      "null": 6,
+      "bank_it": 1,
+      "java_backend": 1
+    },
+    "synthetic_recommended_skill": {
+      "null": 44,
+      "ai_agent_application": 5,
+      "java_backend": 1
+    },
+    "sourced_leader": {
+      "ai_agent_application": 8,
+      "java_backend": 4,
+      "bank_it": 3
+    },
+    "synthetic_leader": {
+      "bank_it": 44,
+      "ai_agent_application": 5,
+      "java_backend": 1
+    },
+    "topic_distribution": {
+      "mysql_consistency": 58,
+      "agent": 18,
+      "python": 47,
+      "system_design": 55,
+      "data_security": 52,
+      "rag_retrieval": 19,
+      "llm": 6,
+      "redis": 11,
+      "java": 14,
+      "kafka_reliability": 5
+    }
+  },
+  "parse_chain": {
+    "sourced": {
+      "jobs": 15,
+      "with_requirements": 15,
+      "avg_requirements": 7.0,
+      "status": {
+        "RECOMMENDED": 8,
+        "NO_APPLICABLE_SKILL": 6,
+        "AMBIGUOUS": 1
+      },
+      "recommended": {
+        "ai_agent_application": 7,
+        "java_backend": 1
+      }
+    },
+    "synthetic": {
+      "jobs": 50,
+      "with_requirements": 50,
+      "avg_requirements": 11.0,
+      "status": {
+        "NO_APPLICABLE_SKILL": 41,
+        "RECOMMENDED": 9
+      },
+      "recommended": {
+        "ai_agent_application": 8,
+        "java_backend": 1
+      }
+    },
+    "zero_requirement_jobs": [],
+    "note": "rule_extract 是零模型路径（parse_source=RULE），只证明文本可解析出可用要求，不代表模型解析质量"
+  },
+  "formal_import_blockers": {
+    "verbatim_evidence": "15 份正文是改写（full_verbatim_from_official=false）→ 无法通过逐字 Evidence 校验",
+    "requirement_labels": "需求条目是自然语言列表，不是带 external_ref 的结构化 requirement",
+    "owner_scope": "没有用户/岗位归属，user_job_targets 无法建立",
+    "research_flow": "正式导入需 public_research_extract 解析（本轮 HTTP=0，未执行）"
+  },
+  "question_flows": {
+    "per_flow": {
+      "FLOW_CMB_BACKEND_20261008": 8,
+      "FLOW_DINGTALK_AI_20260831": 15,
+      "FLOW_NC_BYTEDANCE_20260923": 16
+    },
+    "declared": {
+      "FLOW_CMB_BACKEND_20261008": 8,
+      "FLOW_DINGTALK_AI_20260831": 15,
+      "FLOW_NC_BYTEDANCE_20260923": 16
+    }
+  },
+  "answers": {
+    "labels": {
+      "GOOD": 20,
+      "POOR": 20
+    },
+    "unique_questions": 20,
+    "human_gold": 0,
+    "with_pii": 0
+  }
+}
