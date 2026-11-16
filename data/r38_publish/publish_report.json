@@ -1,0 +1,1184 @@
+{
+ "generated_at": "2026-11-16T10:44:09.129185+00:00",
+ "environment": {
+  "database_url": "postgresql+asyncpg://***:***@localhost:5432/***_wb_jd_r31_20261116",
+  "model_ledger_database": "interview_agent_wb_jd_r31_20261116"
+ },
+ "sandbox": "interview_agent_wb_jd_r31_20261116",
+ "model_http_calls": 0,
+ "reviewer": {
+  "id": 1,
+  "email": "r33.reviewer@example.com",
+  "role": "ADMIN",
+  "is_active": true
+ },
+ "negative_control": {
+  "selectable_jobs_at_this_run_start": 2,
+  "selectable_jobs_before_first_publish": 0,
+  "note": "The 0 was measured by the pre-publish dry run of this script, when both versions were still WAITING_REVIEW. Later runs see 2, which is the point: the targets query filters on PUBLISHED. before_json in audit_logs keeps the pre-publication state permanently."
+ },
+ "pre_publish": [
+  {
+   "jd_id": 1,
+   "job_id": 1,
+   "company": "麒麟软件",
+   "job_title": "AI研发工程师",
+   "version": 1,
+   "publication_status": "PUBLISHED",
+   "job_status": "ACTIVE",
+   "company_status": "ACTIVE",
+   "body_chars": 1186,
+   "body_equals_snapshot": true,
+   "snapshot_hash_ok": true,
+   "identity": {
+    "claim_id": 1,
+    "category": "JOB_JD",
+    "statement": "麒麟软件: AI研发工程师",
+    "evidence": 1,
+    "excerpts": [
+     "麒麟软件\r\n「2027校招」AI研发工程师\r\n校园招聘\r\n全职\r\n北京市,天津市,湖南省·长沙市\r\n2026-09-04"
+    ],
+    "company_literal_in_body": true,
+    "title_literal_in_body": true
+   },
+   "requirements": [
+    {
+     "id": 1,
+     "statement": "计算机、人工智能、数学、软件工程等相关专业，2027届本/硕/博毕业生均可投递",
+     "stored_strength": "REQUIRED",
+     "type": "EDUCATION",
+     "claim_id": 11,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "EDUCATION",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": true,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "计算机、人工智能、数学、软件工程等相关专业",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "2027届本/硕/博毕业生均可投递",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 2,
+     "statement": "熟练掌握Python，熟悉C/C++/Go/Java等至少一种编程语言",
+     "stored_strength": "REQUIRED",
+     "type": "SKILL",
+     "claim_id": 12,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "熟练掌握Python",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "熟悉C/C++/Go/Java等至少一种编程语言",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 3,
+     "statement": "熟悉深度学习框架（PyTorch/TensorFlow），掌握Transformer、大模型训练等核心技术原理",
+     "stored_strength": "REQUIRED",
+     "type": "SKILL",
+     "claim_id": 13,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "熟悉深度学习框架（PyTorch/TensorFlow）",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "掌握Transformer、大模型训练等核心技术原理",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 4,
+     "statement": "了解LLM大模型原理及LangChain等主流AI编程框架，了解工具调用、Prompt工程、RAG向量知识库相关技术",
+     "stored_strength": "REQUIRED",
+     "type": "SKILL",
+     "claim_id": 14,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "了解LLM大模型原理及LangChain等主流AI编程框架",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "了解工具调用、Prompt工程、RAG向量知识库相关技术",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 5,
+     "statement": "了解AI计算框架基本原理和算子实现逻辑，了解CPU/GPU硬件架构，有算子开发或推理部署经验者优先",
+     "stored_strength": "PREFERRED",
+     "type": "SKILL",
+     "claim_id": 15,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": true,
+     "clauses": [
+      {
+       "text": "了解AI计算框架基本原理和算子实现逻辑",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "了解CPU/GPU硬件架构",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "有算子开发或推理部署经验者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1,
+     "mandatory_clauses_not_in_body": []
+    },
+    {
+     "id": 6,
+     "statement": "熟悉至少一种推理引擎（onnx-runtime、tf-lite、mnn、TensorRT、vLLM、Triton等），了解模型部署流程，有NVIDIA GPU、Jetson等平台模型部署经验者优先",
+     "stored_strength": "PREFERRED",
+     "type": "SKILL",
+     "claim_id": 16,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": true,
+     "clauses": [
+      {
+       "text": "熟悉至少一种推理引擎（onnx-runtime、tf-lite、mnn、TensorRT、vLLM、Triton等）",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "了解模型部署流程",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "有NVIDIA GPU、Jetson等平台模型部署经验者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1,
+     "mandatory_clauses_not_in_body": []
+    },
+    {
+     "id": 7,
+     "statement": "熟悉Linux操作系统，了解系统API、进程权限机制，了解计算机体系结构与异构计算基础，有CUDA开发、高性能计算经验者优先",
+     "stored_strength": "PREFERRED",
+     "type": "SKILL",
+     "claim_id": 17,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": true,
+     "clauses": [
+      {
+       "text": "熟悉Linux操作系统",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "了解系统API、进程权限机制",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "了解计算机体系结构与异构计算基础",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "有CUDA开发、高性能计算经验者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1,
+     "mandatory_clauses_not_in_body": []
+    },
+    {
+     "id": 8,
+     "statement": "具备良好的数学基础，有大模型微调、智能体开发、端侧部署或安卓AI应用开发经验者优先",
+     "stored_strength": "PREFERRED",
+     "type": "SKILL",
+     "claim_id": 18,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": true,
+     "clauses": [
+      {
+       "text": "具备良好的数学基础",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "有大模型微调、智能体开发、端侧部署或安卓AI应用开发经验者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1,
+     "mandatory_clauses_not_in_body": []
+    },
+    {
+     "id": 9,
+     "statement": "有操作系统AI助手、智能体项目落地经验或国产操作系统、飞腾/龙芯等国产硬件平台开发经验者优先",
+     "stored_strength": "PREFERRED",
+     "type": "EXPERIENCE",
+     "claim_id": 19,
+     "effective_strength": "PREFERRED",
+     "type_normalized": "EXPERIENCE",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "有操作系统AI助手、智能体项目落地经验或国产操作系统、飞腾/龙芯等国产硬件平台开发经验者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 10,
+     "statement": "具备良好的问题分析能力、文档编写能力与跨团队协作意识，自我驱动，学习能力强",
+     "stored_strength": "REQUIRED",
+     "type": "SOFT_SKILL",
+     "claim_id": 20,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SOFT_SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "具备良好的问题分析能力、文档编写能力与跨团队协作意识",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "自我驱动",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "学习能力强",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    }
+   ],
+   "counts": {
+    "requirements": 10,
+    "evidence_problems": 0,
+    "stored_strength": {
+     "REQUIRED": 5,
+     "PREFERRED": 5
+    },
+    "effective_strength": {
+     "REQUIRED": 9,
+     "PREFERRED": 1
+    }
+   },
+   "mixed_clauses": [
+    {
+     "id": 5,
+     "clauses": [
+      {
+       "text": "了解AI计算框架基本原理和算子实现逻辑",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "了解CPU/GPU硬件架构",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "有算子开发或推理部署经验者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "stored": "PREFERRED",
+     "effective": "REQUIRED"
+    },
+    {
+     "id": 6,
+     "clauses": [
+      {
+       "text": "熟悉至少一种推理引擎（onnx-runtime、tf-lite、mnn、TensorRT、vLLM、Triton等）",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "了解模型部署流程",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "有NVIDIA GPU、Jetson等平台模型部署经验者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "stored": "PREFERRED",
+     "effective": "REQUIRED"
+    },
+    {
+     "id": 7,
+     "clauses": [
+      {
+       "text": "熟悉Linux操作系统",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "了解系统API、进程权限机制",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "了解计算机体系结构与异构计算基础",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "有CUDA开发、高性能计算经验者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "stored": "PREFERRED",
+     "effective": "REQUIRED"
+    },
+    {
+     "id": 8,
+     "clauses": [
+      {
+       "text": "具备良好的数学基础",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "有大模型微调、智能体开发、端侧部署或安卓AI应用开发经验者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "stored": "PREFERRED",
+     "effective": "REQUIRED"
+    }
+   ],
+   "type_status": {
+    "ambiguous": [],
+    "unknown": [],
+    "unknown_not_hard_eligibility": []
+   },
+   "skill_preview": {
+    "status": "RECOMMENDED",
+    "recommended_skill_id": "ai_agent_application",
+    "score": null,
+    "reason": "岗位的AI研发、RAG、AI应用与该专业规则相符。"
+   },
+   "matching_preview": {
+    "NOT_APPLICABLE": 1,
+    "NO_EVIDENCE": 9,
+    "rows": [
+     {
+      "id": 1,
+      "status": "NOT_APPLICABLE"
+     },
+     {
+      "id": 2,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 3,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 4,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 5,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 6,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 7,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 8,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 9,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 10,
+      "status": "NO_EVIDENCE"
+     }
+    ]
+   },
+   "problems": [],
+   "advisory": []
+  },
+  {
+   "jd_id": 2,
+   "job_id": 2,
+   "company": "沐瞳科技",
+   "job_title": "Agent开发工程师（平台）",
+   "version": 1,
+   "publication_status": "PUBLISHED",
+   "job_status": "ACTIVE",
+   "company_status": "ACTIVE",
+   "body_chars": 1140,
+   "body_equals_snapshot": true,
+   "snapshot_hash_ok": true,
+   "identity": {
+    "claim_id": 21,
+    "category": "JOB_JD",
+    "statement": "沐瞳科技: Agent开发工程师（平台）",
+    "evidence": 1,
+    "excerpts": [
+     "【2027届秋招】Agent开发工程师（平台） - 加入沐瞳科技\r\n【2027届秋招】Agent开发工程师（平台）\r\n上"
+    ],
+    "company_literal_in_body": true,
+    "title_literal_in_body": true
+   },
+   "requirements": [
+    {
+     "id": 11,
+     "statement": "本科及以上学历，计算机、软件工程、人工智能等相关专业优先",
+     "stored_strength": "required",
+     "type": "学历/专业",
+     "claim_id": 30,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "EDUCATION",
+     "type_status": "AMBIGUOUS",
+     "is_hard_eligibility": true,
+     "compound_mixed": true,
+     "clauses": [
+      {
+       "text": "本科及以上学历",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "计算机、软件工程、人工智能等相关专业优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1,
+     "mandatory_clauses_not_in_body": []
+    },
+    {
+     "id": 12,
+     "statement": "具备扎实的编程基础，熟悉 Go、Python 等主流编程语言，具备良好的代码习惯和工程意识",
+     "stored_strength": "required",
+     "type": "编程能力",
+     "claim_id": 31,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "具备扎实的编程基础",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "熟悉 Go、Python 等主流编程语言",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "具备良好的代码习惯和工程意识",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": false,
+     "statement_in_raw_squashed": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 13,
+     "statement": "了解数据结构、算法、操作系统、计算机网络、数据库等基础知识，能够理解并参与平台型系统的设计与开发",
+     "stored_strength": "required",
+     "type": "计算机基础",
+     "claim_id": 32,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "了解数据结构、算法、操作系统、计算机网络、数据库等基础知识",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "能够理解并参与平台型系统的设计与开发",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 2,
+     "evidence_offset_exact": 2,
+     "evidence_literal_in_body": 2
+    },
+    {
+     "id": 14,
+     "statement": "了解服务端开发基础，熟悉 HTTP/gRPC API、数据库、缓存、消息队列、任务调度、权限控制、日志监控等常见后端开发概念",
+     "stored_strength": "required",
+     "type": "后端开发",
+     "claim_id": 33,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "了解服务端开发基础",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "熟悉 HTTP/gRPC API、数据库、缓存、消息队列、任务调度、权限控制、日志监控等常见后端开发概念",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 15,
+     "statement": "有 Go 服务端开发经验优先",
+     "stored_strength": "preferred",
+     "type": "后端开发",
+     "claim_id": 34,
+     "effective_strength": "PREFERRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "有 Go 服务端开发经验优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 16,
+     "statement": "对大模型、AI Agent、开发者工具和智能工作流有浓厚兴趣，并有相关工具的实际使用经验",
+     "stored_strength": "required",
+     "type": "领域兴趣/经验",
+     "claim_id": 35,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "EXPERIENCE",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "对大模型、AI Agent、开发者工具和智能工作流有浓厚兴趣",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "并有相关工具的实际使用经验",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 17,
+     "statement": "了解 Prompt Engineering、LLM API、RAG、Function Calling / Tool Use、Agent 工作流等基本概念；课程、实习或个人项目经验均可",
+     "stored_strength": "required",
+     "type": "AI/Agent 技术知识",
+     "claim_id": 36,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "了解 Prompt Engineering、LLM API、RAG、Function Calling / Tool Use、Agent 工作流等基本概念",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "课程、实习或个人项目经验均可",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 18,
+     "statement": "具备较强的学习能力、问题拆解能力和动手能力，能够完成方案分析、原型开发和效果验证",
+     "stored_strength": "required",
+     "type": "通用能力",
+     "claim_id": 37,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SOFT_SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "具备较强的学习能力、问题拆解能力和动手能力",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "能够完成方案分析、原型开发和效果验证",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 19,
+     "statement": "具备良好的沟通协作能力，愿意深入游戏研发及不同业务流程理解真实需求，并推动 AI 能力在实际场景中落地",
+     "stored_strength": "required",
+     "type": "软技能",
+     "claim_id": 38,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SOFT_SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "具备良好的沟通协作能力",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "愿意深入游戏研发及不同业务流程理解真实需求",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "并推动 AI 能力在实际场景中落地",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 20,
+     "statement": "了解 Agent SDK、LangChain、AutoGen、MCP、RAG、上下文工程、Prompt 编排、多 Agent 协作或自动化工作流等相关技术者优先",
+     "stored_strength": "preferred",
+     "type": "AI/Agent 技术知识",
+     "claim_id": 39,
+     "effective_strength": "PREFERRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "了解 Agent SDK、LangChain、AutoGen、MCP、RAG、上下文工程、Prompt 编排、多 Agent 协作或自动化工作流等相关技术者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 21,
+     "statement": "了解 Agent 调试、运行追踪、效果评测、日志分析、Token 成本分析或可观测性建设者优先",
+     "stored_strength": "preferred",
+     "type": "AI/Agent 工程实践",
+     "claim_id": 40,
+     "effective_strength": "PREFERRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "了解 Agent 调试、运行追踪、效果评测、日志分析、Token 成本分析或可观测性建设者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 22,
+     "statement": "对 AI Native 产品、人机协作方式、Agent 工作台形态或智能研发工具有自己的思考或实践",
+     "stored_strength": "preferred",
+     "type": "领域理解",
+     "claim_id": 41,
+     "effective_strength": "PREFERRED",
+     "type_normalized": "EXPERIENCE",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "对 AI Native 产品、人机协作方式、Agent 工作台形态或智能研发工具有自己的思考或实践",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    }
+   ],
+   "counts": {
+    "requirements": 12,
+    "evidence_problems": 0,
+    "stored_strength": {
+     "required": 8,
+     "preferred": 4
+    },
+    "effective_strength": {
+     "REQUIRED": 8,
+     "PREFERRED": 4
+    }
+   },
+   "mixed_clauses": [
+    {
+     "id": 11,
+     "clauses": [
+      {
+       "text": "本科及以上学历",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "计算机、软件工程、人工智能等相关专业优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "stored": "required",
+     "effective": "REQUIRED"
+    }
+   ],
+   "type_status": {
+    "ambiguous": [
+     11
+    ],
+    "unknown": [],
+    "unknown_not_hard_eligibility": []
+   },
+   "skill_preview": {
+    "status": "RECOMMENDED",
+    "recommended_skill_id": "ai_agent_application",
+    "score": null,
+    "reason": "岗位的RAG与该专业规则相符。"
+   },
+   "matching_preview": {
+    "NOT_APPLICABLE": 1,
+    "NO_EVIDENCE": 11,
+    "rows": [
+     {
+      "id": 11,
+      "status": "NOT_APPLICABLE"
+     },
+     {
+      "id": 12,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 13,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 14,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 15,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 16,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 17,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 18,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 19,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 20,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 21,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 22,
+      "status": "NO_EVIDENCE"
+     }
+    ]
+   },
+   "problems": [],
+   "advisory": [
+    "STATEMENT_WHITESPACE_VARIANT:req12"
+   ]
+  }
+ ],
+ "published": {
+  "1": {
+   "jd_version_id": 1,
+   "job_id": 1,
+   "publication_status": "PUBLISHED",
+   "reused": true,
+   "body_chars": 1186,
+   "requirements": 10,
+   "repeat_call": {
+    "jd_version_id": 1,
+    "job_id": 1,
+    "publication_status": "PUBLISHED",
+    "reused": true
+   }
+  },
+  "2": {
+   "jd_version_id": 2,
+   "job_id": 2,
+   "publication_status": "PUBLISHED",
+   "reused": true,
+   "body_chars": 1140,
+   "requirements": 12,
+   "repeat_call": {
+    "jd_version_id": 2,
+    "job_id": 2,
+    "publication_status": "PUBLISHED",
+    "reused": true
+   }
+  }
+ },
+ "post_checks": {
+  "matching_coverage": {
+   "status": "LIMITED",
+   "candidate_count": 2,
+   "excluded_count": 0,
+   "top_n": 20,
+   "retrieval_window": 200,
+   "window_may_be_truncated": false,
+   "omitted_eligible_count": 0,
+   "message": "只使用已发布公共数据；岗位库覆盖不足时不联网补库。"
+  },
+  "versions": [
+   {
+    "id": 1,
+    "job_id": 1,
+    "version_number": 1,
+    "publication_status": "PUBLISHED",
+    "published_at": "2026-11-16 10:38:27.739696+00:00",
+    "metadata_json": "{\"identity_claim_id\": 1, \"quality_gate\": [\"quality_risk_requires_review\"], \"quality_assessment\": {\"suitable\": true, \"risk_flags\": [\"\\u5c97\\u4f4d\\u804c\\u8d23\\u8986\\u76d6\\u8303\\u56f4\\u6781\\u5e7f\\uff08\\u64cd\\u4f5c\\u7cfb\\u7edfAI\\u52a9\\u624b\\u3001\\u667a\\u80fd\\u4f53\\u6846\\u67b6\\u3001\\u5927\\u6a21\\u578b\\u7b97\\u6cd5\\u4f18\\u5316\\u3001AI\\u8ba1\\u7b97\\u6846\\u67b6\\u4e0e\\u7b97\\u5b50\\u3001\\u63a8\\u7406\\u5f15\\u64ce\\u3001AI Infra\\u3001\\u5b89\\u5353\\u6846\\u67b6\\u5c42AI\\u670d\\u52a1\\u3001\\u7aef\\u4fa7\\u90e8\\u7f72\\uff09\\uff0c\\u53ef\\u80fd\\u53cd\\u6620\\u591a\\u56e2\\u961f\\u5408\\u5e76\\u62db\\u8058\\u6216\\u804c\\u8d23\\u8fb9\\u754c\\u4e0d\\u6e05\", \"\\u4efb\\u804c\\u8d44\\u683c\\u4e2d\\u591a\\u9879\\u4e3a\\u201c\\u4f18\\u5148\\u201d\\u800c\\u975e\\u786c\\u6027\\u8981\\u6c42\\uff0c\\u5b9e\\u9645\\u7b5b\\u9009\\u6807\\u51c6\\u4e0e\\u5c97\\u4f4d\\u63cf\\u8ff0\\u53ef\\u80fd\\u5b58\\u5728\\u504f\\u5dee\", \"\\u5c97\\u4f4d\\u4e3a2027\\u5c4a\\u6821\\u56ed\\u62db\\u8058\\uff0c\\u53d1\\u5e03\\u4e0e\\u6bd5\\u4e1a\\u65f6\\u95f4\\u8de8\\u5ea6\\u8f83\\u5927\\uff0c\\u62db\\u8058\\u8ba1\\u5212\\u5b58\\u5728\\u8c03\\u6574\\u6216\\u53d6\\u6d88\\u7684\\u4e0d\\u786e\\u5b9a\\u6027\", \"\\u90e8\\u5206\\u804c\\u8d23\\uff08\\u5982\\u5b89\\u5353\\u6846\\u67b6\\u5c42AI\\u670d\\u52a1\\u3001CUDA/\\u9ad8\\u6027\\u80fd\\u8ba1\\u7b97\\u3001\\u56fd\\u4ea7\\u786c\\u4ef6\\u5e73\\u53f0\\u9002\\u914d\\uff09\\u4e0e\\u6838\\u5fc3AI\\u7814\\u53d1\\u65b9\\u5411\\u8de8\\u5ea6\\u8f83\\u5927\\uff0c\\u5019\\u9009\\u4eba\\u5339\\u914d\\u96be\\u5ea6\\u9ad8\", \"\\u8bc1\\u636e\\u4ec5\\u6765\\u81ea\\u5355\\u4e00\\u62db\\u8058\\u9875\\u9762\\uff0c\\u7f3a\\u5c11\\u516c\\u53f8\\u5b98\\u65b9\\u6e20\\u9053\\u6216\\u7b2c\\u4e09\\u65b9\\u4ea4\\u53c9\\u9a8c\\u8bc1\"]}, \"manual_source\": {\"schema_version\": 1, \"acquisition_mode\": \"MANUAL_SOURCE_IMPORT\", \"source_snapshot_id\": 1, \"canonical_url\": \"https://kylinos.zhiye.com/campus/detail?jobAdId=0b8de09c-3508-4144-99b2-3ddcfd88a29b\", \"source_type\": \"official\", \"document_type\": \"job_jd\", \"company\": \"\\u9e92\\u9e9f\\u8f6f\\u4ef6\", \"job_title\": \"AI\\u7814\\u53d1\\u5de5\\u7a0b\\u5e08\", \"content_sha256\": \"c7831bc72c7fdaf1cddc552fffc6648d8c19844b04be7f203a8ca8e0d4ddb9b0\", \"content_fingerprint\": \"3b98d5df72d052a4bd98d03f1e58b27aaf327607d331f18951ba91d0be2469e0\", \"acquired_at\": \"2026-11-16T08:16:32.882271+00:00\", \"acquisition_timestamp_semantics\": \"LOCAL_BODY_SAVE_TIME\", \"file_name\": \"KYLINOS_AI_002.txt\"}, \"attribute_claims\": [{\"field\": \"LOCATION\", \"claim_id\": 2}, {\"field\": \"PUBLISHED_AT\", \"claim_id\": 3}, {\"field\": \"RESPONSIBILITY\", \"claim_id\": 4}, {\"field\": \"RESPONSIBILITY\", \"claim_id\": 5}, {\"field\": \"RESPONSIBILITY\", \"claim_id\": 6}, {\"field\": \"RESPONSIBILITY\", \"claim_id\": 7}, {\"field\": \"RESPONSIBILITY\", \"claim_id\": 8}, {\"field\": \"RESPONSIBILITY\", \"claim_id\": 9}, {\"field\": \"RESPONSIBILITY\", \"claim_id\": 10}], \"credibility\": \"source_support_signals\", \"independent_content_count\": 1, \"occurrence_count\": 1, \"multi_source\": false, \"source_count\": 1, \"manual_review\": {\"reviewer_id\": 1, \"reviewed_at\": \"2026-11-16T10:38:27.739696+00:00\", \"reason\": \"\\u4eba\\u5de5\\u5ba1\\u6838\\u901a\\u8fc7\\uff08R33 \\u6c99\\u7bb1\\uff09\\u3002\\u6765\\u6e90\\uff1a\\u9e92\\u9e9f\\u8f6f\\u4ef6\\u5b98\\u65b9\\u8be6\\u60c5\\u9875 jobAdId=0b8de09c-3508-4144-99b2-3ddcfd88a29b\\uff0c\\u6b63\\u6587\\u4e0e\\u5feb\\u7167\\u9010\\u5b57\\u4e00\\u81f4\\uff0c\\u8eab\\u4efd\\u4e0e\\u5168\\u90e8\\u8981\\u6c42\\u5747\\u6709 Claim/Evidence \\u4e14\\u504f\\u79fb\\u7cbe\\u786e\\u30024 \\u6761\\u6df7\\u5408\\u53e5\\uff08req 5-8\\uff09\\u6309\\u5206\\u53e5\\u53e3\\u5f84\\u5224\\u4e3a\\u542b\\u5f3a\\u5236\\u6761\\u6b3e\\uff1a\\u524d\\u534a\\u6bb5\\u4e3a\\u786c\\u6027\\u6280\\u672f\\u8981\\u6c42\\uff0c\\u5c3e\\u53e5\\u201c\\u8005\\u4f18\\u5148\\u201d\\u4ec5\\u9002\\u7528\\u4e8e\\u52a0\\u5206\\u9879\\uff0c\\u672a\\u628a\\u6574\\u53e5\\u964d\\u4e3a PREFERRED\\uff0c\\u4e5f\\u672a\\u6539\\u5199\\u539f\\u6587\\u6216\\u5b58\\u50a8\\u503c\\u3002\", \"matching_constraints\": {}, \"literal_alignment_topics\": {}}}"
+   },
+   {
+    "id": 2,
+    "job_id": 2,
+    "version_number": 1,
+    "publication_status": "PUBLISHED",
+    "published_at": "2026-11-16 10:38:27.969186+00:00",
+    "metadata_json": "{\"identity_claim_id\": 21, \"quality_gate\": [\"quality_risk_requires_review\"], \"quality_assessment\": {\"suitable\": true, \"risk_flags\": [\"\\u6821\\u62db\\u5c97\\u4f4d\\uff082027\\u5c4a\\u79cb\\u62db\\uff09\\uff0c\\u975e\\u793e\\u62db\\uff0c\\u5019\\u9009\\u4eba\\u5c4a\\u522b/\\u6bd5\\u4e1a\\u65f6\\u95f4\\u9700\\u5339\\u914d\", \"JD \\u6587\\u672c\\u5728\\u8bc1\\u636e\\u95f4\\u88ab\\u622a\\u65ad\\uff08ev_099ffa3108fe6e9f0b17b12d \\u7ed3\\u5c3e\\u4e0e ev_abc49cb3f85bb39d3214c6ac \\u5f00\\u5934\\u8854\\u63a5\\uff09\\uff0c\\u90e8\\u5206\\u8981\\u6c42\\u8de8\\u8bc1\\u636e\\u62fc\\u63a5\\uff0c\\u9700\\u6838\\u5bf9\\u539f\\u6587\\u5b8c\\u6574\\u6027\", \"\\u5c97\\u4f4d\\u5f52\\u5c5e\\u201c\\u7814\\u53d1 - \\u5927\\u6570\\u636e\\u201d\\u65b9\\u5411\\uff0c\\u4f46\\u804c\\u8d23\\u805a\\u7126 AI Agent \\u5e73\\u53f0\\uff0c\\u56e2\\u961f\\u5b9a\\u4f4d\\u4e0e\\u5b9e\\u9645\\u5de5\\u4f5c\\u5185\\u5bb9\\u9700\\u8fdb\\u4e00\\u6b65\\u786e\\u8ba4\", \"\\u591a\\u9879\\u8981\\u6c42\\u4e3a\\u201c\\u4e86\\u89e3/\\u4f18\\u5148\\u201d\\u7ea7\\u522b\\uff0c\\u5b9e\\u9645\\u7b5b\\u9009\\u95e8\\u69db\\u4e0e\\u9762\\u8bd5\\u6df1\\u5ea6\\u672a\\u5728\\u8bc1\\u636e\\u4e2d\\u4f53\\u73b0\"]}, \"manual_source\": {\"schema_version\": 1, \"acquisition_mode\": \"MANUAL_SOURCE_IMPORT\", \"source_snapshot_id\": 3, \"canonical_url\": \"https://moonton.jobs.feishu.cn/campus/position/7668253932858362118/detail\", \"source_type\": \"official\", \"document_type\": \"job_jd\", \"company\": \"\\u6c90\\u77b3\\u79d1\\u6280\", \"job_title\": \"Agent\\u5f00\\u53d1\\u5de5\\u7a0b\\u5e08\\uff08\\u5e73\\u53f0\\uff09\", \"content_sha256\": \"afaeb58e0926e4e420d88cf10c7f70ca81686e3d87322cd2c63d5217fd5b6223\", \"content_fingerprint\": \"a5320f305f7f2cbb9ea71abccb6a923e2c5b2a9f9c6b587b2d9d73c820cef86f\", \"acquired_at\": \"2026-11-16T08:16:28.629247+00:00\", \"acquisition_timestamp_semantics\": \"LOCAL_BODY_SAVE_TIME\", \"file_name\": \"MOONTON_AGENT_005.txt\"}, \"attribute_claims\": [{\"field\": \"LOCATION\", \"claim_id\": 22}, {\"field\": \"RESPONSIBILITY\", \"claim_id\": 23}, {\"field\": \"RESPONSIBILITY\", \"claim_id\": 24}, {\"field\": \"RESPONSIBILITY\", \"claim_id\": 25}, {\"field\": \"RESPONSIBILITY\", \"claim_id\": 26}, {\"field\": \"RESPONSIBILITY\", \"claim_id\": 27}, {\"field\": \"RESPONSIBILITY\", \"claim_id\": 28}, {\"field\": \"RESPONSIBILITY\", \"claim_id\": 29}], \"credibility\": \"source_support_signals\", \"independent_content_count\": 1, \"occurrence_count\": 1, \"multi_source\": false, \"source_count\": 1, \"manual_review\": {\"reviewer_id\": 1, \"reviewed_at\": \"2026-11-16T10:38:27.969186+00:00\", \"reason\": \"\\u4eba\\u5de5\\u5ba1\\u6838\\u901a\\u8fc7\\uff08R33 \\u6c99\\u7bb1\\uff09\\u3002\\u6765\\u6e90\\uff1a\\u6c90\\u77b3\\u79d1\\u6280\\u5b98\\u65b9\\u98de\\u4e66\\u62db\\u8058\\u9875 position/7668253932858362118\\uff0c\\u6b63\\u6587\\u4e0e\\u5feb\\u7167\\u9010\\u5b57\\u4e00\\u81f4\\uff0c12 \\u6761\\u8981\\u6c42\\u5747\\u6709 Claim/Evidence \\u4e14\\u504f\\u79fb\\u7cbe\\u786e\\u3002req \\u4e2d\\u201c\\u5b66\\u5386/\\u4e13\\u4e1a\\u201d\\u6807\\u7b7e\\u7ecf\\u539f\\u6587\\u6838\\u5bf9\\u786e\\u8ba4\\u4e3a\\u5b66\\u5386\\u4e0e\\u4e13\\u4e1a\\u786c\\u8d44\\u683c\\uff08\\u539f\\u6587\\uff1a\\u672c\\u79d1\\u53ca\\u4ee5\\u4e0a\\u5b66\\u5386\\u2026\\uff09\\uff0c\\u5f52\\u4e00\\u5316\\u4e3a EDUCATION \\u540e\\u4e0d\\u8ba1\\u5165\\u6280\\u672f\\u9002\\u914d\\uff0c\\u672a\\u6e05\\u7a7a\\u98ce\\u9669\\u6807\\u8bb0\\u3002\", \"matching_constraints\": {}, \"literal_alignment_topics\": {}}}"
+   }
+  ],
+  "audit_logs": [
+   {
+    "id": 1,
+    "actor_user_id": 1,
+    "actor_role": "ADMIN",
+    "action": "public_career.jd.publish",
+    "resource_type": "JobDescriptionVersion",
+    "resource_id": "1",
+    "status": "SUCCESS",
+    "before_json": {
+     "publication_status": "WAITING_REVIEW",
+     "job_status": "WAITING_REVIEW",
+     "company_status": "WAITING_REVIEW"
+    },
+    "after_json": {
+     "publication_status": "PUBLISHED"
+    }
+   },
+   {
+    "id": 2,
+    "actor_user_id": 1,
+    "actor_role": "ADMIN",
+    "action": "public_career.jd.publish",
+    "resource_type": "JobDescriptionVersion",
+    "resource_id": "2",
+    "status": "SUCCESS",
+    "before_json": {
+     "publication_status": "WAITING_REVIEW",
+     "job_status": "WAITING_REVIEW",
+     "company_status": "WAITING_REVIEW"
+    },
+    "after_json": {
+     "publication_status": "PUBLISHED"
+    }
+   }
+  ],
+  "counts": {
+   "companies": 2,
+   "jobs": 2,
+   "jd_versions": 2,
+   "requirements": 22,
+   "claims": 41,
+   "claim_evidence": 43,
+   "admissions": 6,
+   "users": 1
+  },
+  "selectable_jobs_now": 2,
+  "login": {
+   "status": 200
+  },
+  "targets": {
+   "status": 200,
+   "jobs": [
+    {
+     "job_id": 2,
+     "company": "沐瞳科技",
+     "title": "Agent开发工程师（平台）",
+     "skill_status": "RECOMMENDED",
+     "skill": "ai_agent_application"
+    },
+    {
+     "job_id": 1,
+     "company": "麒麟软件",
+     "title": "AI研发工程师",
+     "skill_status": "RECOMMENDED",
+     "skill": "ai_agent_application"
+    }
+   ]
+  },
+  "public_jobs": {
+   "status": 200,
+   "count": 2
+  },
+  "context_projection": {
+   "1": {
+    "rows": 10,
+    "strength": {
+     "REQUIRED": 9,
+     "PREFERRED": 1
+    },
+    "fingerprints_unique": true
+   },
+   "2": {
+    "rows": 12,
+    "strength": {
+     "REQUIRED": 8,
+     "PREFERRED": 4
+    },
+    "fingerprints_unique": true
+   }
+  },
+  "skill_after_publish": {
+   "1": {
+    "status": "RECOMMENDED",
+    "recommended_skill_id": "ai_agent_application",
+    "score": null,
+    "reason": "岗位的AI研发、RAG、AI应用与该专业规则相符。",
+    "jd_id": 1
+   },
+   "2": {
+    "status": "RECOMMENDED",
+    "recommended_skill_id": "ai_agent_application",
+    "score": null,
+    "reason": "岗位的RAG与该专业规则相符。",
+    "jd_id": 2
+   }
+  },
+  "matching_rows": {
+   "1": {
+    "status": "ACTIVE",
+    "requirements": [
+     {
+      "id": 1,
+      "importance": "REQUIRED"
+     },
+     {
+      "id": 2,
+      "importance": "REQUIRED"
+     },
+     {
+      "id": 3,
+      "importance": "REQUIRED"
+     },
+     {
+      "id": 4,
+      "importance": "REQUIRED"
+     },
+     {
+      "id": 5,
+      "importance": "REQUIRED"
+     },
+     {
+      "id": 6,
+      "importance": "REQUIRED"
+     },
+     {
+      "id": 7,
+      "importance": "REQUIRED"
+     },
+     {
+      "id": 8,
+      "importance": "REQUIRED"
+     },
+     {
+      "id": 9,
+      "importance": "PREFERRED"
+     },
+     {
+      "id": 10,
+      "importance": "REQUIRED"
+     }
+    ]
+   },
+   "2": {
+    "status": "ACTIVE",
+    "requirements": [
+     {
+      "id": 11,
+      "importance": "REQUIRED"
+     },
+     {
+      "id": 12,
+      "importance": "REQUIRED"
+     },
+     {
+      "id": 13,
+      "importance": "REQUIRED"
+     },
+     {
+      "id": 14,
+      "importance": "REQUIRED"
+     },
+     {
+      "id": 15,
+      "importance": "PREFERRED"
+     },
+     {
+      "id": 16,
+      "importance": "REQUIRED"
+     },
+     {
+      "id": 17,
+      "importance": "REQUIRED"
+     },
+     {
+      "id": 18,
+      "importance": "REQUIRED"
+     },
+     {
+      "id": 19,
+      "importance": "REQUIRED"
+     },
+     {
+      "id": 20,
+      "importance": "PREFERRED"
+     },
+     {
+      "id": 21,
+      "importance": "PREFERRED"
+     },
+     {
+      "id": 22,
+      "importance": "PREFERRED"
+     }
+    ]
+   }
+  },
+  "versions_total": 2,
+  "published_total": 2
+ },
+ "blocking": {},
+ "advisory": {
+  "2": [
+   "STATEMENT_WHITESPACE_VARIANT:req12"
+  ]
+ }
+}
