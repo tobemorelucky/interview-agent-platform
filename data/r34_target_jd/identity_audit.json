@@ -1,0 +1,115 @@
+{
+ "literals": {
+  "document_title": "校招-车端 AI Agent 与应用生态系统架构工程师 - 蔚来校招",
+  "job_title_element": "校招-车端 AI Agent 与应用生态系统架构工程师",
+  "job_id_in_body": "A25338A",
+  "company_mentions_in_dom": 28
+ },
+ "manifest_expectation": {
+  "company": "蔚来",
+  "job_title": "车端AI Agent与应用生态系统架构工程师"
+ },
+ "candidates": [
+  {
+   "candidate": "manifest_r31",
+   "job_title": "车端AI Agent与应用生态系统架构工程师",
+   "normalize_text": "车端ai agent与应用生态系统架构工程师",
+   "in_snapshot_literal": false,
+   "equals_page_element": false,
+   "equals_manifest": true,
+   "stripped_core": "车端ai agent与应用生态系统架构工程师",
+   "substantive_equal_to_page": false,
+   "whitespace_only_difference_vs_page": false
+  },
+  {
+   "candidate": "page_jobtitle_literal",
+   "job_title": "校招-车端 AI Agent 与应用生态系统架构工程师",
+   "normalize_text": "校招-车端 ai agent 与应用生态系统架构工程师",
+   "in_snapshot_literal": true,
+   "equals_page_element": true,
+   "equals_manifest": false,
+   "stripped_core": "车端 ai agent 与应用生态系统架构工程师",
+   "substantive_equal_to_page": true,
+   "whitespace_only_difference_vs_page": true
+  },
+  {
+   "candidate": "channel_prefix_stripped",
+   "job_title": "车端 AI Agent 与应用生态系统架构工程师",
+   "normalize_text": "车端 ai agent 与应用生态系统架构工程师",
+   "in_snapshot_literal": true,
+   "equals_page_element": false,
+   "equals_manifest": false,
+   "stripped_core": "车端 ai agent 与应用生态系统架构工程师",
+   "substantive_equal_to_page": true,
+   "whitespace_only_difference_vs_page": false
+  }
+ ],
+ "guards": [
+  {
+   "candidate": "车端AI Agent与应用生态系统架构工程师",
+   "evidence_identity_ok": false,
+   "evidence_error": "Claim must cite at least one Evidence ID",
+   "expected_identity_ok": true,
+   "expected_error": null
+  },
+  {
+   "candidate": "校招-车端 AI Agent 与应用生态系统架构工程师",
+   "evidence_identity_ok": true,
+   "evidence_error": null,
+   "expected_identity_ok": false,
+   "expected_error": "MANUAL_EXTRACTED_IDENTITY_MISMATCH"
+  },
+  {
+   "candidate": "车端 AI Agent 与应用生态系统架构工程师",
+   "evidence_identity_ok": true,
+   "evidence_error": null,
+   "expected_identity_ok": false,
+   "expected_error": "MANUAL_EXTRACTED_IDENTITY_MISMATCH"
+  }
+ ],
+ "task_2": {
+  "task_id": 2,
+  "task_status": "FAILED",
+  "task_error": "MANUAL_EXTRACTED_IDENTITY_MISMATCH: MANUAL_EXTRACTED_IDENTITY_MISMATCH",
+  "manifest": {
+   "company": "蔚来",
+   "job_title": "车端AI Agent与应用生态系统架构工程师",
+   "content_sha256": "aef49bb3a4d5fbdf3557f650076b92140f18e611a842d06ce2028344b3b18055"
+  },
+  "snapshot_id": 2,
+  "snapshot_chars": 1500,
+  "snapshot_hash_ok": true,
+  "residual": {
+   "companies": 2,
+   "jobs": 2,
+   "jd_versions": 2,
+   "claims": 41,
+   "requirements": 22,
+   "claim_evidence": 43,
+   "nio_entities": 0
+  },
+  "tasks": [
+   {
+    "id": 1,
+    "status": "COMPLETED"
+   },
+   {
+    "id": 2,
+    "status": "FAILED"
+   },
+   {
+    "id": 3,
+    "status": "COMPLETED"
+   }
+  ],
+  "retry_legal": true
+ },
+ "corrected_mapping": {
+  "job_title": "车端 AI Agent 与应用生态系统架构工程师",
+  "expected_identity": "PASS"
+ },
+ "corrected_label_retry": {
+  "prepare_ok": false,
+  "error": "ManualImportError: MANUAL_IMPORT_IDENTITY_CONFLICT"
+ }
+}

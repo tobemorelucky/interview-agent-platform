@@ -1,0 +1,1037 @@
+{
+ "checked_at": "2026-11-16T09:11:42.369724+00:00",
+ "database": "interview_agent_wb_jd_r31_20261116",
+ "jds": {
+  "麒麟软件#1": {
+   "jd_version_id": 1,
+   "version": 1,
+   "company": "麒麟软件",
+   "job_title": "AI研发工程师",
+   "company_status": "WAITING_REVIEW",
+   "job_status": "WAITING_REVIEW",
+   "publication_status": "WAITING_REVIEW",
+   "source_url": "https://kylinos.zhiye.com/campus/detail?jobAdId=0b8de09c-3508-4144-99b2-3ddcfd88a29b",
+   "source_type": "official",
+   "snapshot_chars": 1186,
+   "snapshot_sha256": "c7831bc72c7fdaf1cddc552fffc6648d8c19844b04be7f203a8ca8e0d4ddb9b0",
+   "snapshot_sha256_ok": true,
+   "raw_text_equals_snapshot": true,
+   "identity_claim_ok": true,
+   "quality": {
+    "suitable": true,
+    "risk_flags": [
+     "岗位职责覆盖范围极广（操作系统AI助手、智能体框架、大模型算法优化、AI计算框架与算子、推理引擎、AI Infra、安卓框架层AI服务、端侧部署），可能反映多团队合并招聘或职责边界不清",
+     "任职资格中多项为“优先”而非硬性要求，实际筛选标准与岗位描述可能存在偏差",
+     "岗位为2027届校园招聘，发布与毕业时间跨度较大，招聘计划存在调整或取消的不确定性",
+     "部分职责（如安卓框架层AI服务、CUDA/高性能计算、国产硬件平台适配）与核心AI研发方向跨度较大，候选人匹配难度高",
+     "证据仅来自单一招聘页面，缺少公司官方渠道或第三方交叉验证"
+    ]
+   },
+   "quality_gate": [
+    "quality_risk_requires_review"
+   ],
+   "requirements": [
+    {
+     "id": 1,
+     "statement": "计算机、人工智能、数学、软件工程等相关专业，2027届本/硕/博毕业生均可投递",
+     "stored_type": "EDUCATION",
+     "stored_strength": "REQUIRED",
+     "type": "EDUCATION",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": true,
+     "can_be_technical": false,
+     "effective_strength": "REQUIRED",
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "计算机、人工智能、数学、软件工程等相关专业",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "2027届本/硕/博毕业生均可投递",
+       "strength": "REQUIRED"
+      }
+     ],
+     "evidence_rows": 1,
+     "offsets_ok": true
+    },
+    {
+     "id": 2,
+     "statement": "熟练掌握Python，熟悉C/C++/Go/Java等至少一种编程语言",
+     "stored_type": "SKILL",
+     "stored_strength": "REQUIRED",
+     "type": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "can_be_technical": true,
+     "effective_strength": "REQUIRED",
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "熟练掌握Python",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "熟悉C/C++/Go/Java等至少一种编程语言",
+       "strength": "REQUIRED"
+      }
+     ],
+     "evidence_rows": 1,
+     "offsets_ok": true
+    },
+    {
+     "id": 3,
+     "statement": "熟悉深度学习框架（PyTorch/TensorFlow），掌握Transformer、大模型训练等核心技术原理",
+     "stored_type": "SKILL",
+     "stored_strength": "REQUIRED",
+     "type": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "can_be_technical": true,
+     "effective_strength": "REQUIRED",
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "熟悉深度学习框架（PyTorch/TensorFlow）",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "掌握Transformer、大模型训练等核心技术原理",
+       "strength": "REQUIRED"
+      }
+     ],
+     "evidence_rows": 1,
+     "offsets_ok": true
+    },
+    {
+     "id": 4,
+     "statement": "了解LLM大模型原理及LangChain等主流AI编程框架，了解工具调用、Prompt工程、RAG向量知识库相关技术",
+     "stored_type": "SKILL",
+     "stored_strength": "REQUIRED",
+     "type": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "can_be_technical": true,
+     "effective_strength": "REQUIRED",
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "了解LLM大模型原理及LangChain等主流AI编程框架",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "了解工具调用、Prompt工程、RAG向量知识库相关技术",
+       "strength": "REQUIRED"
+      }
+     ],
+     "evidence_rows": 1,
+     "offsets_ok": true
+    },
+    {
+     "id": 5,
+     "statement": "了解AI计算框架基本原理和算子实现逻辑，了解CPU/GPU硬件架构，有算子开发或推理部署经验者优先",
+     "stored_type": "SKILL",
+     "stored_strength": "PREFERRED",
+     "type": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "can_be_technical": true,
+     "effective_strength": "REQUIRED",
+     "compound_mixed": true,
+     "clauses": [
+      {
+       "text": "了解AI计算框架基本原理和算子实现逻辑",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "了解CPU/GPU硬件架构",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "有算子开发或推理部署经验者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "evidence_rows": 1,
+     "offsets_ok": true
+    },
+    {
+     "id": 6,
+     "statement": "熟悉至少一种推理引擎（onnx-runtime、tf-lite、mnn、TensorRT、vLLM、Triton等），了解模型部署流程，有NVIDIA GPU、Jetson等平台模型部署经验者优先",
+     "stored_type": "SKILL",
+     "stored_strength": "PREFERRED",
+     "type": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "can_be_technical": true,
+     "effective_strength": "REQUIRED",
+     "compound_mixed": true,
+     "clauses": [
+      {
+       "text": "熟悉至少一种推理引擎（onnx-runtime、tf-lite、mnn、TensorRT、vLLM、Triton等）",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "了解模型部署流程",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "有NVIDIA GPU、Jetson等平台模型部署经验者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "evidence_rows": 1,
+     "offsets_ok": true
+    },
+    {
+     "id": 7,
+     "statement": "熟悉Linux操作系统，了解系统API、进程权限机制，了解计算机体系结构与异构计算基础，有CUDA开发、高性能计算经验者优先",
+     "stored_type": "SKILL",
+     "stored_strength": "PREFERRED",
+     "type": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "can_be_technical": true,
+     "effective_strength": "REQUIRED",
+     "compound_mixed": true,
+     "clauses": [
+      {
+       "text": "熟悉Linux操作系统",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "了解系统API、进程权限机制",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "了解计算机体系结构与异构计算基础",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "有CUDA开发、高性能计算经验者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "evidence_rows": 1,
+     "offsets_ok": true
+    },
+    {
+     "id": 8,
+     "statement": "具备良好的数学基础，有大模型微调、智能体开发、端侧部署或安卓AI应用开发经验者优先",
+     "stored_type": "SKILL",
+     "stored_strength": "PREFERRED",
+     "type": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "can_be_technical": true,
+     "effective_strength": "REQUIRED",
+     "compound_mixed": true,
+     "clauses": [
+      {
+       "text": "具备良好的数学基础",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "有大模型微调、智能体开发、端侧部署或安卓AI应用开发经验者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "evidence_rows": 1,
+     "offsets_ok": true
+    },
+    {
+     "id": 9,
+     "statement": "有操作系统AI助手、智能体项目落地经验或国产操作系统、飞腾/龙芯等国产硬件平台开发经验者优先",
+     "stored_type": "EXPERIENCE",
+     "stored_strength": "PREFERRED",
+     "type": "EXPERIENCE",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "can_be_technical": true,
+     "effective_strength": "PREFERRED",
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "有操作系统AI助手、智能体项目落地经验或国产操作系统、飞腾/龙芯等国产硬件平台开发经验者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "evidence_rows": 1,
+     "offsets_ok": true
+    },
+    {
+     "id": 10,
+     "statement": "具备良好的问题分析能力、文档编写能力与跨团队协作意识，自我驱动，学习能力强",
+     "stored_type": "SOFT_SKILL",
+     "stored_strength": "REQUIRED",
+     "type": "SOFT_SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "can_be_technical": true,
+     "effective_strength": "REQUIRED",
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "具备良好的问题分析能力、文档编写能力与跨团队协作意识",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "自我驱动",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "学习能力强",
+       "strength": "REQUIRED"
+      }
+     ],
+     "evidence_rows": 1,
+     "offsets_ok": true
+    }
+   ],
+   "attributes": [
+    {
+     "field": "LOCATION",
+     "statement": "北京市,天津市,湖南省·长沙市",
+     "literal": true
+    },
+    {
+     "field": "PUBLISHED_AT",
+     "statement": "2026-09-04 发布",
+     "literal": true
+    },
+    {
+     "field": "RESPONSIBILITY",
+     "statement": "负责操作系统AI助手、AI子系统上层应用开发，基于Agent、RAG技术开发操作系统场景智能技能和应用，完成工具调用、知识库问答、故障辅助诊断等功能",
+     "literal": true
+    },
+    {
+     "field": "RESPONSIBILITY",
+     "statement": "负责操作系统端AI智能体核心框架开发，实现任务拆解、工具调用、记忆管理等基础能力，封装操作系统能力并做好调用权限与安全隔离",
+     "literal": true
+    },
+    {
+     "field": "RESPONSIBILITY",
+     "statement": "参与大模型核心技术研发，包括Agent智能体、NLP对话生成等方向的算法设计与实现，开展INT8/INT4低精度量化、知识蒸馏、强化学习（RLHF/PPO）等模型优化",
+     "literal": true
+    },
+    {
+     "field": "RESPONSIBILITY",
+     "statement": "负责AI计算框架（TensorFlow、PyTorch等）与GPU/NPU/DSP等硬件的适配，开展AI算子优化，研发端侧/边缘侧推理引擎与轻量化部署方案",
+     "literal": true
+    },
+    {
+     "field": "RESPONSIBILITY",
+     "statement": "负责AI大模型应用开发、AI Infra测评、异构算力融合优化及智能运维系统（故障预测、性能监控、资源调度）等核心模块研发，优化AI生态工具链",
+     "literal": true
+    },
+    {
+     "field": "RESPONSIBILITY",
+     "statement": "支持安卓框架层AI服务的架构设计与研发（含集成编译和版本构建），负责移动端技术开发，排查解决复杂场景下的性能瓶颈（Crash、ANR、内存溢出等）",
+     "literal": true
+    },
+    {
+     "field": "RESPONSIBILITY",
+     "statement": "完成端侧大模型适配调优，落地端云协同方案，搭建RAG知识库与智能体评测体系，适配国产软硬件平台；跟踪前沿技术，输出技术调研报告、专利或文档",
+     "literal": true
+    }
+   ],
+   "requirement_total": 10,
+   "stored_strength_counts": {
+    "REQUIRED": 5,
+    "PREFERRED": 5,
+    "OTHER": 0
+   },
+   "effective_strength_counts": {
+    "REQUIRED": 9,
+    "PREFERRED": 1
+   },
+   "type_counts": {
+    "EDUCATION": 1,
+    "EXPERIENCE": 1,
+    "SKILL": 7,
+    "SOFT_SKILL": 1
+   },
+   "hard_eligibility_count": 1,
+   "problems": [
+    "STRENGTH_OVER_GENERALISED:5:PREFERRED->REQUIRED",
+    "STRENGTH_OVER_GENERALISED:6:PREFERRED->REQUIRED",
+    "STRENGTH_OVER_GENERALISED:7:PREFERRED->REQUIRED",
+    "STRENGTH_OVER_GENERALISED:8:PREFERRED->REQUIRED"
+   ],
+   "stored_strength_raw": [
+    "PREFERRED",
+    "REQUIRED"
+   ],
+   "blocking": [],
+   "advisory": [
+    "STRENGTH_OVER_GENERALISED:5:PREFERRED->REQUIRED",
+    "STRENGTH_OVER_GENERALISED:6:PREFERRED->REQUIRED",
+    "STRENGTH_OVER_GENERALISED:7:PREFERRED->REQUIRED",
+    "STRENGTH_OVER_GENERALISED:8:PREFERRED->REQUIRED"
+   ],
+   "skill_after_publish": null,
+   "skill_preview_before_publish": {
+    "policy_version": "1.2.0",
+    "job_id": 1,
+    "jd_id": 1,
+    "jd_fingerprint": "3b98d5df72d052a4bd98d03f1e58b27aaf327607d331f18951ba91d0be2469e0",
+    "status": "RECOMMENDED",
+    "auto_select": true,
+    "recommended_skill_id": "ai_agent_application",
+    "recommended_version": "1.0.0",
+    "reason": "岗位的AI研发、RAG、AI应用与该专业规则相符。",
+    "ranking": [
+     {
+      "skill_id": "ai_agent_application",
+      "version": "1.0.0",
+      "label": "AI / Agent 应用开发",
+      "ranking_points": 23,
+      "content_points": 15,
+      "title_points": 8,
+      "signals": [
+       "responsibility",
+       "title"
+      ],
+      "excluded": false,
+      "contextual": true,
+      "evidence": [
+       {
+        "field": "title",
+        "requirement_id": null,
+        "term": "AI研发",
+        "excerpt": "AI研发工程师"
+       },
+       {
+        "field": "requirements",
+        "requirement_id": 4,
+        "term": "RAG",
+        "excerpt": "了解LLM大模型原理及LangChain等主流AI编程框架，了解工具调用、Prompt工程、RAG向量知识库相关技术"
+       },
+       {
+        "field": "requirements",
+        "requirement_id": 8,
+        "term": "AI应用",
+        "excerpt": "具备良好的数学基础，有大模型微调、智能体开发、端侧部署或安卓AI应用开发经验者优先"
+       },
+       {
+        "field": "requirements",
+        "requirement_id": 8,
+        "term": "智能体",
+        "excerpt": "具备良好的数学基础，有大模型微调、智能体开发、端侧部署或安卓AI应用开发经验者优先"
+       },
+       {
+        "field": "requirements",
+        "requirement_id": 4,
+        "term": "RAG",
+        "excerpt": "了解LLM大模型原理及LangChain等主流AI编程框架，了解工具调用、Prompt工程、RAG向量知识库相关技术"
+       },
+       {
+        "field": "requirements",
+        "requirement_id": 4,
+        "term": "LangChain",
+        "excerpt": "了解LLM大模型原理及LangChain等主流AI编程框架，了解工具调用、Prompt工程、RAG向量知识库相关技术"
+       },
+       {
+        "field": "requirements",
+        "requirement_id": 3,
+        "term": "大模型",
+        "excerpt": "熟悉深度学习框架（PyTorch/TensorFlow），掌握Transformer、大模型训练等核心技术原理"
+       }
+      ],
+      "reason": "岗位的AI研发、RAG、AI应用与该专业规则相符。",
+      "rank": 1
+     },
+     {
+      "skill_id": "bank_it",
+      "version": "1.0.0",
+      "label": "银行信息科技岗位",
+      "ranking_points": 6,
+      "content_points": 6,
+      "title_points": 0,
+      "signals": [],
+      "excluded": false,
+      "contextual": false,
+      "evidence": [
+       {
+        "field": "requirements",
+        "requirement_id": 7,
+        "term": "权限",
+        "excerpt": "熟悉Linux操作系统，了解系统API、进程权限机制，了解计算机体系结构与异构计算基础，有CUDA开发、高性能计算经验者优先"
+       },
+       {
+        "field": "requirements",
+        "requirement_id": 2,
+        "term": "编程",
+        "excerpt": "熟练掌握Python，熟悉C/C++/Go/Java等至少一种编程语言"
+       }
+      ],
+      "reason": "岗位的权限、编程与该专业规则相符。",
+      "rank": 2
+     },
+     {
+      "skill_id": "java_backend",
+      "version": "1.0.0",
+      "label": "Java 后端开发",
+      "ranking_points": 3,
+      "content_points": 3,
+      "title_points": 0,
+      "signals": [],
+      "excluded": false,
+      "contextual": false,
+      "evidence": [
+       {
+        "field": "requirements",
+        "requirement_id": 2,
+        "term": "Java",
+        "excerpt": "熟练掌握Python，熟悉C/C++/Go/Java等至少一种编程语言"
+       }
+      ],
+      "reason": "岗位的Java与该专业规则相符。",
+      "rank": 3
+     }
+    ],
+    "decision": {
+     "min_score": 9,
+     "min_content": 6,
+     "min_margin": 3,
+     "leader_by_points": "ai_agent_application",
+     "leader_by_content": null,
+     "ambiguity_reason": null
+    }
+   }
+  },
+  "沐瞳科技#2": {
+   "jd_version_id": 2,
+   "version": 1,
+   "company": "沐瞳科技",
+   "job_title": "Agent开发工程师（平台）",
+   "company_status": "WAITING_REVIEW",
+   "job_status": "WAITING_REVIEW",
+   "publication_status": "WAITING_REVIEW",
+   "source_url": "https://moonton.jobs.feishu.cn/campus/position/7668253932858362118/detail",
+   "source_type": "official",
+   "snapshot_chars": 1140,
+   "snapshot_sha256": "afaeb58e0926e4e420d88cf10c7f70ca81686e3d87322cd2c63d5217fd5b6223",
+   "snapshot_sha256_ok": true,
+   "raw_text_equals_snapshot": true,
+   "identity_claim_ok": true,
+   "quality": {
+    "suitable": true,
+    "risk_flags": [
+     "校招岗位（2027届秋招），非社招，候选人届别/毕业时间需匹配",
+     "JD 文本在证据间被截断（ev_099ffa3108fe6e9f0b17b12d 结尾与 ev_abc49cb3f85bb39d3214c6ac 开头衔接），部分要求跨证据拼接，需核对原文完整性",
+     "岗位归属“研发 - 大数据”方向，但职责聚焦 AI Agent 平台，团队定位与实际工作内容需进一步确认",
+     "多项要求为“了解/优先”级别，实际筛选门槛与面试深度未在证据中体现"
+    ]
+   },
+   "quality_gate": [
+    "quality_risk_requires_review"
+   ],
+   "requirements": [
+    {
+     "id": 11,
+     "statement": "本科及以上学历，计算机、软件工程、人工智能等相关专业优先",
+     "stored_type": "学历/专业",
+     "stored_strength": "required",
+     "type": "EDUCATION",
+     "type_status": "AMBIGUOUS",
+     "is_hard_eligibility": true,
+     "can_be_technical": false,
+     "effective_strength": "REQUIRED",
+     "compound_mixed": true,
+     "clauses": [
+      {
+       "text": "本科及以上学历",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "计算机、软件工程、人工智能等相关专业优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "evidence_rows": 1,
+     "offsets_ok": true
+    },
+    {
+     "id": 12,
+     "statement": "具备扎实的编程基础，熟悉 Go、Python 等主流编程语言，具备良好的代码习惯和工程意识",
+     "stored_type": "编程能力",
+     "stored_strength": "required",
+     "type": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "can_be_technical": true,
+     "effective_strength": "REQUIRED",
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "具备扎实的编程基础",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "熟悉 Go、Python 等主流编程语言",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "具备良好的代码习惯和工程意识",
+       "strength": "REQUIRED"
+      }
+     ],
+     "evidence_rows": 1,
+     "offsets_ok": true
+    },
+    {
+     "id": 13,
+     "statement": "了解数据结构、算法、操作系统、计算机网络、数据库等基础知识，能够理解并参与平台型系统的设计与开发",
+     "stored_type": "计算机基础",
+     "stored_strength": "required",
+     "type": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "can_be_technical": true,
+     "effective_strength": "REQUIRED",
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "了解数据结构、算法、操作系统、计算机网络、数据库等基础知识",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "能够理解并参与平台型系统的设计与开发",
+       "strength": "REQUIRED"
+      }
+     ],
+     "evidence_rows": 2,
+     "offsets_ok": true
+    },
+    {
+     "id": 14,
+     "statement": "了解服务端开发基础，熟悉 HTTP/gRPC API、数据库、缓存、消息队列、任务调度、权限控制、日志监控等常见后端开发概念",
+     "stored_type": "后端开发",
+     "stored_strength": "required",
+     "type": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "can_be_technical": true,
+     "effective_strength": "REQUIRED",
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "了解服务端开发基础",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "熟悉 HTTP/gRPC API、数据库、缓存、消息队列、任务调度、权限控制、日志监控等常见后端开发概念",
+       "strength": "REQUIRED"
+      }
+     ],
+     "evidence_rows": 1,
+     "offsets_ok": true
+    },
+    {
+     "id": 15,
+     "statement": "有 Go 服务端开发经验优先",
+     "stored_type": "后端开发",
+     "stored_strength": "preferred",
+     "type": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "can_be_technical": true,
+     "effective_strength": "PREFERRED",
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "有 Go 服务端开发经验优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "evidence_rows": 1,
+     "offsets_ok": true
+    },
+    {
+     "id": 16,
+     "statement": "对大模型、AI Agent、开发者工具和智能工作流有浓厚兴趣，并有相关工具的实际使用经验",
+     "stored_type": "领域兴趣/经验",
+     "stored_strength": "required",
+     "type": "EXPERIENCE",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "can_be_technical": true,
+     "effective_strength": "REQUIRED",
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "对大模型、AI Agent、开发者工具和智能工作流有浓厚兴趣",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "并有相关工具的实际使用经验",
+       "strength": "REQUIRED"
+      }
+     ],
+     "evidence_rows": 1,
+     "offsets_ok": true
+    },
+    {
+     "id": 17,
+     "statement": "了解 Prompt Engineering、LLM API、RAG、Function Calling / Tool Use、Agent 工作流等基本概念；课程、实习或个人项目经验均可",
+     "stored_type": "AI/Agent 技术知识",
+     "stored_strength": "required",
+     "type": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "can_be_technical": true,
+     "effective_strength": "REQUIRED",
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "了解 Prompt Engineering、LLM API、RAG、Function Calling / Tool Use、Agent 工作流等基本概念",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "课程、实习或个人项目经验均可",
+       "strength": "REQUIRED"
+      }
+     ],
+     "evidence_rows": 1,
+     "offsets_ok": true
+    },
+    {
+     "id": 18,
+     "statement": "具备较强的学习能力、问题拆解能力和动手能力，能够完成方案分析、原型开发和效果验证",
+     "stored_type": "通用能力",
+     "stored_strength": "required",
+     "type": "SOFT_SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "can_be_technical": true,
+     "effective_strength": "REQUIRED",
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "具备较强的学习能力、问题拆解能力和动手能力",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "能够完成方案分析、原型开发和效果验证",
+       "strength": "REQUIRED"
+      }
+     ],
+     "evidence_rows": 1,
+     "offsets_ok": true
+    },
+    {
+     "id": 19,
+     "statement": "具备良好的沟通协作能力，愿意深入游戏研发及不同业务流程理解真实需求，并推动 AI 能力在实际场景中落地",
+     "stored_type": "软技能",
+     "stored_strength": "required",
+     "type": "SOFT_SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "can_be_technical": true,
+     "effective_strength": "REQUIRED",
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "具备良好的沟通协作能力",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "愿意深入游戏研发及不同业务流程理解真实需求",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "并推动 AI 能力在实际场景中落地",
+       "strength": "REQUIRED"
+      }
+     ],
+     "evidence_rows": 1,
+     "offsets_ok": true
+    },
+    {
+     "id": 20,
+     "statement": "了解 Agent SDK、LangChain、AutoGen、MCP、RAG、上下文工程、Prompt 编排、多 Agent 协作或自动化工作流等相关技术者优先",
+     "stored_type": "AI/Agent 技术知识",
+     "stored_strength": "preferred",
+     "type": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "can_be_technical": true,
+     "effective_strength": "PREFERRED",
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "了解 Agent SDK、LangChain、AutoGen、MCP、RAG、上下文工程、Prompt 编排、多 Agent 协作或自动化工作流等相关技术者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "evidence_rows": 1,
+     "offsets_ok": true
+    },
+    {
+     "id": 21,
+     "statement": "了解 Agent 调试、运行追踪、效果评测、日志分析、Token 成本分析或可观测性建设者优先",
+     "stored_type": "AI/Agent 工程实践",
+     "stored_strength": "preferred",
+     "type": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "can_be_technical": true,
+     "effective_strength": "PREFERRED",
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "了解 Agent 调试、运行追踪、效果评测、日志分析、Token 成本分析或可观测性建设者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "evidence_rows": 1,
+     "offsets_ok": true
+    },
+    {
+     "id": 22,
+     "statement": "对 AI Native 产品、人机协作方式、Agent 工作台形态或智能研发工具有自己的思考或实践",
+     "stored_type": "领域理解",
+     "stored_strength": "preferred",
+     "type": "EXPERIENCE",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "can_be_technical": true,
+     "effective_strength": "PREFERRED",
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "对 AI Native 产品、人机协作方式、Agent 工作台形态或智能研发工具有自己的思考或实践",
+       "strength": "REQUIRED"
+      }
+     ],
+     "evidence_rows": 1,
+     "offsets_ok": true
+    }
+   ],
+   "attributes": [
+    {
+     "field": "LOCATION",
+     "statement": "上海",
+     "literal": true
+    },
+    {
+     "field": "RESPONSIBILITY",
+     "statement": "参与 AI Agent 平台及智能工作工具的建设，探索 AI 在游戏研发和日常工作中的应用",
+     "literal": true
+    },
+    {
+     "field": "RESPONSIBILITY",
+     "statement": "参与 Agent 工作流、上下文工程、知识检索、工具调用和自动化任务等能力的研发与优化",
+     "literal": true
+    },
+    {
+     "field": "RESPONSIBILITY",
+     "statement": "参与 Agent、Skill、插件及 AI 应用的接入、调试、发布和复用，推动优秀实践沉淀为标准化能力",
+     "literal": true
+    },
+    {
+     "field": "RESPONSIBILITY",
+     "statement": "推动 AI 能力与项目管理、文档、消息及研发工具等现有系统集成，融入真实业务流程",
+     "literal": true
+    },
+    {
+     "field": "RESPONSIBILITY",
+     "statement": "参与模型调用、运行追踪、效果评测和成本分析，持续提升 Agent 的稳定性、易用性和任务完成效果",
+     "literal": true
+    },
+    {
+     "field": "RESPONSIBILITY",
+     "statement": "跟进大模型、Agent 框架和 AI 编程工具等前沿技术，参与技术调研、原型验证与工程化落地",
+     "literal": true
+    },
+    {
+     "field": "RESPONSIBILITY",
+     "statement": "与产品、研发、TA、引擎、工具链等团队协作，理解实际问题并提供 AI Native 的解决方案",
+     "literal": true
+    }
+   ],
+   "requirement_total": 12,
+   "stored_strength_counts": {
+    "REQUIRED": 8,
+    "PREFERRED": 4,
+    "OTHER": 0
+   },
+   "effective_strength_counts": {
+    "REQUIRED": 8,
+    "PREFERRED": 4
+   },
+   "type_counts": {
+    "EDUCATION": 1,
+    "EXPERIENCE": 2,
+    "SKILL": 7,
+    "SOFT_SKILL": 2
+   },
+   "hard_eligibility_count": 1,
+   "problems": [
+    "REQUIREMENT_TYPE_AMBIGUOUS:11:'学历/专业'",
+    "STRENGTH_OVER_GENERALISED:11:required->REQUIRED"
+   ],
+   "stored_strength_raw": [
+    "preferred",
+    "required"
+   ],
+   "blocking": [],
+   "advisory": [
+    "REQUIREMENT_TYPE_AMBIGUOUS:11:'学历/专业'",
+    "STRENGTH_OVER_GENERALISED:11:required->REQUIRED"
+   ],
+   "skill_after_publish": null,
+   "skill_preview_before_publish": {
+    "policy_version": "1.2.0",
+    "job_id": 2,
+    "jd_id": 2,
+    "jd_fingerprint": "a5320f305f7f2cbb9ea71abccb6a923e2c5b2a9f9c6b587b2d9d73c820cef86f",
+    "status": "RECOMMENDED",
+    "auto_select": true,
+    "recommended_skill_id": "ai_agent_application",
+    "recommended_version": "1.0.0",
+    "reason": "岗位的RAG与该专业规则相符。",
+    "ranking": [
+     {
+      "skill_id": "ai_agent_application",
+      "version": "1.0.0",
+      "label": "AI / Agent 应用开发",
+      "ranking_points": 15,
+      "content_points": 15,
+      "title_points": 0,
+      "signals": [
+       "responsibility"
+      ],
+      "excluded": false,
+      "contextual": true,
+      "evidence": [
+       {
+        "field": "requirements",
+        "requirement_id": 17,
+        "term": "RAG",
+        "excerpt": "了解 Prompt Engineering、LLM API、RAG、Function Calling / Tool Use、Agent 工作流等基本概念；课程、实习或个人项目经验均可"
+       },
+       {
+        "field": "requirements",
+        "requirement_id": 20,
+        "term": "RAG",
+        "excerpt": "了解 Agent SDK、LangChain、AutoGen、MCP、RAG、上下文工程、Prompt 编排、多 Agent 协作或自动化工作流等相关技术者优先"
+       },
+       {
+        "field": "requirements",
+        "requirement_id": 17,
+        "term": "RAG",
+        "excerpt": "了解 Prompt Engineering、LLM API、RAG、Function Calling / Tool Use、Agent 工作流等基本概念；课程、实习或个人项目经验均可"
+       },
+       {
+        "field": "requirements",
+        "requirement_id": 16,
+        "term": "Agent",
+        "excerpt": "对大模型、AI Agent、开发者工具和智能工作流有浓厚兴趣，并有相关工具的实际使用经验"
+       },
+       {
+        "field": "requirements",
+        "requirement_id": 16,
+        "term": "大模型",
+        "excerpt": "对大模型、AI Agent、开发者工具和智能工作流有浓厚兴趣，并有相关工具的实际使用经验"
+       }
+      ],
+      "reason": "岗位的RAG与该专业规则相符。",
+      "rank": 1
+     },
+     {
+      "skill_id": "bank_it",
+      "version": "1.0.0",
+      "label": "银行信息科技岗位",
+      "ranking_points": 9,
+      "content_points": 9,
+      "title_points": 0,
+      "signals": [],
+      "excluded": false,
+      "contextual": false,
+      "evidence": [
+       {
+        "field": "requirements",
+        "requirement_id": 14,
+        "term": "权限",
+        "excerpt": "了解服务端开发基础，熟悉 HTTP/gRPC API、数据库、缓存、消息队列、任务调度、权限控制、日志监控等常见后端开发概念"
+       },
+       {
+        "field": "requirements",
+        "requirement_id": 12,
+        "term": "编程",
+        "excerpt": "具备扎实的编程基础，熟悉 Go、Python 等主流编程语言，具备良好的代码习惯和工程意识"
+       },
+       {
+        "field": "requirements",
+        "requirement_id": 13,
+        "term": "数据库",
+        "excerpt": "了解数据结构、算法、操作系统、计算机网络、数据库等基础知识，能够理解并参与平台型系统的设计与开发"
+       }
+      ],
+      "reason": "岗位的权限、编程、数据库与该专业规则相符。",
+      "rank": 2
+     },
+     {
+      "skill_id": "java_backend",
+      "version": "1.0.0",
+      "label": "Java 后端开发",
+      "ranking_points": 6,
+      "content_points": 6,
+      "title_points": 0,
+      "signals": [
+       "responsibility"
+      ],
+      "excluded": false,
+      "contextual": true,
+      "evidence": [
+       {
+        "field": "requirements",
+        "requirement_id": 14,
+        "term": "后端开发",
+        "excerpt": "了解服务端开发基础，熟悉 HTTP/gRPC API、数据库、缓存、消息队列、任务调度、权限控制、日志监控等常见后端开发概念"
+       }
+      ],
+      "reason": "岗位的后端开发与该专业规则相符。",
+      "rank": 3
+     }
+    ],
+    "decision": {
+     "min_score": 9,
+     "min_content": 6,
+     "min_margin": 3,
+     "leader_by_points": "ai_agent_application",
+     "leader_by_content": null,
+     "ambiguity_reason": null
+    }
+   }
+  }
+ },
+ "tasks": [
+  {
+   "id": 1,
+   "status": "COMPLETED",
+   "error": ""
+  },
+  {
+   "id": 2,
+   "status": "FAILED",
+   "error": "MANUAL_EXTRACTED_IDENTITY_MISMATCH: MANUAL_EXTRACTED_IDENTITY_MISMATCH"
+  },
+  {
+   "id": 3,
+   "status": "COMPLETED",
+   "error": ""
+  }
+ ],
+ "audit_logs": 0,
+ "not_imported": [
+  {
+   "company": "蔚来",
+   "job_title": "车端AI Agent与应用生态系统架构工程师",
+   "reason": "MANUAL_EXTRACTED_IDENTITY_MISMATCH (R31)",
+   "identity_recheck": "corrected label passes both guards; retry blocked by MANUAL_IMPORT_IDENTITY_CONFLICT"
+  }
+ ]
+}
