@@ -1,0 +1,22 @@
+{
+  "captured_at": "2026-11-16T07:46:16+00:00",
+  "http_calls_to_model": 0,
+  "ok": 1,
+  "failed": 0,
+  "records": [
+    {
+      "id": "KYLINOS_ad0a24f2",
+      "company": "麒麟软件",
+      "title": "虚拟化研发工程师",
+      "url": "https://kylinos.zhiye.com/campus/detail?jobAdId=ad0a24f2-004e-4cab-acab-fe888c9a564d",
+      "captured_at": "2026-11-16T07:46:14+00:00",
+      "page_title": "麒麟软件",
+      "method": "MARKER_WINDOW",
+      "chars": 124,
+      "text_sha256": "52768a39a1a2e2a4c4dc9042864909b9a5447d175035ece1ace1f2f859ccb719",
+      "seconds": 4.9,
+      "verdict": "OK",
+      "quality": "OK_SHORT"
+    }
+  ]
+}

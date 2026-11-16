@@ -1,0 +1,11 @@
+* 探索 agent harness / runtime 在车载场景下对话系统的研究和应用，包括论文调研、方案设计、数据分析、效果优化、代码实现等工作，用极致的工程手段把Agent做到更快、把系统做到量产级的稳定与可观测；
+* 直接参与公司自研 Agent harness 框架的全链路设计与开发，包括Agentic Loop、工具系统、会话持久化、上下文压缩、Hook 机制、MCP 协议
+* 参与实时语音工程研发：全流式链路构建、barge-in、端到端时延优化
+* 针对 Agent 执行链路分析与问题定位；优化 Agent 响应效率、稳定性及容错能力；
+* 对接离线SFT/agentic RL训练环境，协助提升端到端模型效果；
+* 计算机、软件工程、人工智能等相关专业
+* 熟练掌握以下至少一种语言 Python（优先）/Typescript/Java，熟悉 Python 异步编程范式者优先， 或熟练掌握 C++/GO/Java/Rust * 良好的编码习惯和代码质量意识；熟悉 Git 协作开发流程；具备基本的软件工程和系统设计能力。
+* 对 agent harness 相关组件模块有比较清晰的认识，熟悉LLM 基础原理、Prompt Engineering、Agent Framework、Tool Calling / Function Calling、RAG、MCP、A2A、ACP 等
+* 深度使用过 Cursor、Claude Code、Codex 等 Agent Coding 产品，熟悉agentic coding范式，并且能够有效把控最终结果质量；
+* 熟悉 LangGraph、PydanticAI、OpenAI Agents SDK、CrewAI、AutoGen 等框架；
+* 加分项：有 Voice Agent / 实时语音 / WebSocket 实时通信经验；用过 LiveKit Agents、Pipecat 等框架；

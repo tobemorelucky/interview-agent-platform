@@ -1,0 +1,22 @@
+{
+  "captured_at": "2026-11-16T07:46:43+00:00",
+  "http_calls_to_model": 0,
+  "ok": 0,
+  "failed": 1,
+  "records": [
+    {
+      "id": "KYLINOS_02255f5f",
+      "company": "麒麟软件",
+      "title": "前端研发工程师",
+      "url": "https://kylinos.zhiye.com/campus/detail?jobAdId=02255f5f-b789-4631-a441-ca003eda8cbb",
+      "captured_at": "2026-11-16T07:46:41+00:00",
+      "page_title": "麒麟软件",
+      "method": "MARKER_WINDOW",
+      "chars": 190,
+      "text_sha256": "4993a29a3fb483ccd293d44ca7903d19ff98c01e95bc6b28fa4012437aeb2b9d",
+      "seconds": 4.8,
+      "verdict": "OK",
+      "quality": "TOO_SHORT_UNRESOLVED"
+    }
+  ]
+}

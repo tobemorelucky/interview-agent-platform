@@ -1,0 +1,60 @@
+{
+  "captured_at": "2026-11-16T07:25:12+00:00",
+  "http_calls_to_model": 0,
+  "ok": 4,
+  "failed": 0,
+  "records": [
+    {
+      "id": "OFFICIAL_CAND_001",
+      "company": "麒麟软件",
+      "title": "2027校招 Python研发工程师",
+      "url": "https://www.kylinos.cn/about/job/campusRecruitment/",
+      "captured_at": "2026-11-16T07:24:33+00:00",
+      "page_title": "校园招聘-麒麟软件-国产操作系统",
+      "method": "LIST_ITEM",
+      "chars": 803,
+      "text_sha256": "2db716f49847f57385507b5b8754b5154f39c1f8b6ea73f3b1de4039ea6f76f4",
+      "seconds": 10.7,
+      "verdict": "OK"
+    },
+    {
+      "id": "OFFICIAL_CAND_002",
+      "company": "麒麟软件",
+      "title": "2027校招 AI研发工程师",
+      "url": "https://www.kylinos.cn/about/job/campusRecruitment/",
+      "captured_at": "2026-11-16T07:24:46+00:00",
+      "page_title": "校园招聘-麒麟软件-国产操作系统",
+      "method": "LIST_ITEM",
+      "chars": 1278,
+      "text_sha256": "c5c25a5c275759dd23d9f39032e21db80edd316e2d4393e6eccc396bc03f4b81",
+      "seconds": 10.5,
+      "verdict": "OK"
+    },
+    {
+      "id": "OFFICIAL_CAND_003",
+      "company": "麒麟软件",
+      "title": "2027校招 后端研发工程师（Go/Java）",
+      "url": "https://www.kylinos.cn/about/job/campusRecruitment/",
+      "captured_at": "2026-11-16T07:24:58+00:00",
+      "page_title": "校园招聘-麒麟软件-国产操作系统",
+      "method": "LIST_ITEM",
+      "chars": 838,
+      "text_sha256": "4357be0e2c667928830ea61942605c122cde1d015e0bacfc4df208c382b3560f",
+      "seconds": 11.0,
+      "verdict": "OK"
+    },
+    {
+      "id": "OFFICIAL_CAND_004",
+      "company": "麒麟软件",
+      "title": "2027校招 云原生研发工程师",
+      "url": "https://www.kylinos.cn/about/job/campusRecruitment/",
+      "captured_at": "2026-11-16T07:25:11+00:00",
+      "page_title": "校园招聘-麒麟软件-国产操作系统",
+      "method": "LIST_ITEM",
+      "chars": 550,
+      "text_sha256": "5df009b62963ee7fd5041edb81b656c848f91d3028e0036a5b53a0ec9807fe53",
+      "seconds": 11.0,
+      "verdict": "OK"
+    }
+  ]
+}

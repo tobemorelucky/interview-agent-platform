@@ -1,0 +1,20 @@
+1.负责基于主流车载SoC平台的BSP开发,包括Bootloader、Kernel、Device Driver的移植与调试。
+2.负责自研硬件bringup工作,支持工厂生产,PV/DV试验,制作相关工具,解决软件问题。
+3.参与座舱系统级的优化化、内存管理、功耗控制及多核负载均匀衡,确保系统流畅稳定。
+4.虚拟化技术支持,Hypervisor (QNX/Android/Linux)环境下的资源隔离、跨域通信及外设透传功能的落地。
+5.配合应用层及测试团队,快速定位并解决死机、重启、黑屏等底无层疑难问题(Crash/ANR/Hang Analysis)。
+专业背景:
+计算机、电子工程、自动化、通信工程等相关专业,硕士及以上学历。
+编程基础:
+扎实的C/C++语言功底,熟悉数据结构与算法,了解常觉设计模式。
+操作系统:
+熟悉Linux Kernel架构及常用子系统(V4L2,ALSA, DRM/KMS, Input等)。
+或熟悉Android Framework底层机制及Binder/HIDL/AIDL通信原理。
+硬件认知:
+能看懂基本电路原理图,了解 I2C,SPI, UART, PCIe, MIPI-DSI,CSI等常见总线协议及调试方法。
+调试能力:
+熟练使用GDB,Perf, Systrace,CrashDump等分析工具具,有实际排查内核Panic或系统卡顿经验者优
+先。
+综合素质:
+具备良好的英语文档阅读能力,逻辑清晰,对汽车电子行业有热情,抗压能力强。具备使用AI工具提高工
+作效率的能力。

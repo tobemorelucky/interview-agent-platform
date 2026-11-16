@@ -1,0 +1,11 @@
+{
+  "date": "2026-11-16",
+  "official_distinct_source_seed_count": 31,
+  "full_exact_official_jd_count_in_this_archive": 0,
+  "self_reported_interview_flow_count": 6,
+  "paraphrased_interview_question_count": 59,
+  "real_human_answer_count": 0,
+  "business_db_rows_created": 0,
+  "provenance": "official source links verified by public web search; text capture to be done locally",
+  "status": "SOURCE_SEED_AND_STAGING_ONLY"
+}

@@ -1,0 +1,21 @@
+{
+  "captured_at": "2026-11-16T07:47:43+00:00",
+  "http_calls_to_model": 0,
+  "ok": 1,
+  "failed": 0,
+  "records": [
+    {
+      "id": "NIO_POS_7706836903262423339",
+      "company": "蔚来",
+      "title": "7706836903262423339",
+      "url": "https://nio.jobs.feishu.cn/campus/position/7706836903262423339/detail",
+      "captured_at": "2026-11-16T07:47:41+00:00",
+      "page_title": "校招-ONVO 内饰空间体验经理  - 蔚来校招",
+      "method": "BLOCK_CONTENT",
+      "chars": 349,
+      "text_sha256": "66e1fea0b19f6df653b54a9ed3c625c43915ce1492d250185ffe3e8ab680395e",
+      "seconds": 8.6,
+      "verdict": "OK"
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "captured_at": "2026-11-16T07:44:52+00:00",
+  "http_calls_to_model": 0,
+  "ok": 2,
+  "failed": 0,
+  "records": [
+    {
+      "id": "NIO_POS_7707592102096718121",
+      "company": "蔚来",
+      "title": "7707592102096718121",
+      "url": "https://nio.jobs.feishu.cn/campus/position/7707592102096718121/detail",
+      "captured_at": "2026-11-16T07:44:40+00:00",
+      "page_title": "校招-智能辅助驾驶端到端闭环仿真研发工程师 - 蔚来校招",
+      "method": "BLOCK_CONTENT",
+      "chars": 1020,
+      "text_sha256": "953651f1f639b03af78fa89e367db92e129497ee6c31941edc0d1269a05c28f3",
+      "seconds": 9.3,
+      "verdict": "OK"
+    },
+    {
+      "id": "NIO_POS_7707568917389510955",
+      "company": "蔚来",
+      "title": "7707568917389510955",
+      "url": "https://nio.jobs.feishu.cn/campus/position/7707568917389510955/detail",
+      "captured_at": "2026-11-16T07:44:51+00:00",
+      "page_title": "校招-数字化产品运营-业务运营管理 - 蔚来校招",
+      "method": "BLOCK_CONTENT",
+      "chars": 646,
+      "text_sha256": "5a75fc9bfca7b84a96333529ff48c473d2b1862aeea0ff69e280babf25444f2a",
+      "seconds": 8.7,
+      "verdict": "OK"
+    }
+  ]
+}
