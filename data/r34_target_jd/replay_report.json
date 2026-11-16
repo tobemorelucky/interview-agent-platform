@@ -1,0 +1,313 @@
+{
+ "database": "interview_agent_wb_jd_replay2_r31_20261116",
+ "model_http_calls": 0,
+ "official_domains_configured": {},
+ "started_at": "2026-11-16T08:19:24.837765+00:00",
+ "jds": {
+  "KYLINOS_AI_002": {
+   "prepared": {
+    "refresh_task_id": 1,
+    "source_id": 1,
+    "source_snapshot_id": 1,
+    "status": "READY_FOR_EXTRACTION",
+    "reused": false,
+    "content_sha256": "c7831bc72c7fdaf1cddc552fffc6648d8c19844b04be7f203a8ca8e0d4ddb9b0"
+   },
+   "snapshot_chars": 1186,
+   "evidence_spans": 2,
+   "fixture": {
+    "requirements": 9,
+    "required": 9,
+    "preferred": 0,
+    "attributes": 8
+   },
+   "failure_injection": {
+    "result_status": "FAILED",
+    "task_status": "FAILED",
+    "error": "RuntimeError: R31_INJECTED_CLAIM_FAILURE",
+    "companies_after_failure": 0,
+    "jd_versions_after_failure": 0,
+    "published_after_failure": 0
+   },
+   "retry_prepare": {
+    "refresh_task_id": 1,
+    "reused": true,
+    "status": "FAILED"
+   },
+   "agent_result": {
+    "status": "COMPLETED",
+    "company_id": 2,
+    "job_id": 2,
+    "jd_version_id": 1,
+    "publication_status": "WAITING_REVIEW",
+    "manual_publication_decision": "WAITING_REVIEW",
+    "manual_source_type": "official",
+    "error": null
+   },
+   "publish": {
+    "jd_version_id": 1,
+    "job_id": 2,
+    "publication_status": "PUBLISHED",
+    "reused": false
+   },
+   "evidence": {
+    "total": 9,
+    "offset_exact": 9,
+    "literal": 9,
+    "without_claim": 0,
+    "samples": [
+     {
+      "requirement_id": 1,
+      "importance": "REQUIRED",
+      "type": "education",
+      "statement": "1、计算机、人工智能、数学、软件工程等相关专业，2027届本/硕/博毕业生均可投",
+      "claim": true,
+      "evidence_rows": 1,
+      "offset_exact": true,
+      "literal_in_evidence": true
+     },
+     {
+      "requirement_id": 2,
+      "importance": "REQUIRED",
+      "type": "skill",
+      "statement": "2、熟练掌握Python，熟悉C/C++/Go/Java等至少一种编程语言；熟悉",
+      "claim": true,
+      "evidence_rows": 1,
+      "offset_exact": true,
+      "literal_in_evidence": true
+     },
+     {
+      "requirement_id": 3,
+      "importance": "REQUIRED",
+      "type": "skill",
+      "statement": "3、了解LLM大模型原理及LangChain等主流AI编程框架，了解工具调用、P",
+      "claim": true,
+      "evidence_rows": 1,
+      "offset_exact": true,
+      "literal_in_evidence": true
+     }
+    ]
+   }
+  },
+  "NIO_AIA_025": {
+   "prepared": {
+    "refresh_task_id": 2,
+    "source_id": 3,
+    "source_snapshot_id": 3,
+    "status": "READY_FOR_EXTRACTION",
+    "reused": false,
+    "content_sha256": "aef49bb3a4d5fbdf3557f650076b92140f18e611a842d06ce2028344b3b18055"
+   },
+   "snapshot_chars": 1500,
+   "evidence_spans": 3,
+   "fixture": {
+    "requirements": 15,
+    "required": 10,
+    "preferred": 5,
+    "attributes": 6
+   },
+   "agent_result": {
+    "status": "COMPLETED",
+    "company_id": 3,
+    "job_id": 3,
+    "jd_version_id": 2,
+    "publication_status": "WAITING_REVIEW",
+    "manual_publication_decision": "WAITING_REVIEW",
+    "manual_source_type": "official",
+    "error": null
+   },
+   "publish": {
+    "jd_version_id": 2,
+    "job_id": 3,
+    "publication_status": "PUBLISHED",
+    "reused": false
+   },
+   "evidence": {
+    "total": 15,
+    "offset_exact": 15,
+    "literal": 14,
+    "without_claim": 0,
+    "samples": [
+     {
+      "requirement_id": 10,
+      "importance": "REQUIRED",
+      "type": "education",
+      "statement": "博士学历，计算机、人工智能、软件工程、人机交互、机器人、操作系统、分布式系统等相",
+      "claim": true,
+      "evidence_rows": 1,
+      "offset_exact": true,
+      "literal_in_evidence": true
+     },
+     {
+      "requirement_id": 11,
+      "importance": "REQUIRED",
+      "type": "skill",
+      "statement": "熟悉以下至少一个方向：",
+      "claim": true,
+      "evidence_rows": 1,
+      "offset_exact": true,
+      "literal_in_evidence": true
+     },
+     {
+      "requirement_id": 12,
+      "importance": "REQUIRED",
+      "type": "skill",
+      "statement": "AI Agent、tool calling、MCP、workflow engin",
+      "claim": true,
+      "evidence_rows": 1,
+      "offset_exact": true,
+      "literal_in_evidence": true
+     }
+    ]
+   }
+  },
+  "MOONTON_AGENT_005": {
+   "prepared": {
+    "refresh_task_id": 3,
+    "source_id": 4,
+    "source_snapshot_id": 4,
+    "status": "READY_FOR_EXTRACTION",
+    "reused": false,
+    "content_sha256": "afaeb58e0926e4e420d88cf10c7f70ca81686e3d87322cd2c63d5217fd5b6223"
+   },
+   "snapshot_chars": 1140,
+   "evidence_spans": 2,
+   "fixture": {
+    "requirements": 11,
+    "required": 8,
+    "preferred": 3,
+    "attributes": 7
+   },
+   "agent_result": {
+    "status": "COMPLETED",
+    "company_id": 4,
+    "job_id": 4,
+    "jd_version_id": 3,
+    "publication_status": "WAITING_REVIEW",
+    "manual_publication_decision": "WAITING_REVIEW",
+    "manual_source_type": "official",
+    "error": null
+   },
+   "publish": {
+    "jd_version_id": 3,
+    "job_id": 4,
+    "publication_status": "PUBLISHED",
+    "reused": false
+   },
+   "evidence": {
+    "total": 11,
+    "offset_exact": 11,
+    "literal": 11,
+    "without_claim": 0,
+    "samples": [
+     {
+      "requirement_id": 25,
+      "importance": "REQUIRED",
+      "type": "education",
+      "statement": "1. 本科及以上学历，计算机、软件工程、人工智能等相关专业优先；",
+      "claim": true,
+      "evidence_rows": 1,
+      "offset_exact": true,
+      "literal_in_evidence": true
+     },
+     {
+      "requirement_id": 26,
+      "importance": "REQUIRED",
+      "type": "skill",
+      "statement": "2. 具备扎实的编程基础，熟悉 Go、Python等主流编程语言，具备良好的代码",
+      "claim": true,
+      "evidence_rows": 1,
+      "offset_exact": true,
+      "literal_in_evidence": true
+     },
+     {
+      "requirement_id": 27,
+      "importance": "REQUIRED",
+      "type": "skill",
+      "statement": "3. 了解数据结构、算法、操作系统、计算机网络、数据库等基础知识，能够理解并参与",
+      "claim": true,
+      "evidence_rows": 2,
+      "offset_exact": true,
+      "literal_in_evidence": true
+     }
+    ]
+   }
+  }
+ },
+ "reviewer": {
+  "user_id": 1,
+  "role": "ADMIN",
+  "note": "sandbox-only account, no login password"
+ },
+ "idempotency": {
+  "prepare_reused": true,
+  "same_task_id": true,
+  "agent_rerun_refused": "ValueError: Research requires READY_FOR_EXTRACTION (or explicit interview rerun)",
+  "republish_reused": true
+ },
+ "isolation": [
+  {
+   "company": "麒麟软件",
+   "job": "AI研发工程师",
+   "job_id": 2,
+   "version": 1,
+   "status": "PUBLISHED"
+  },
+  {
+   "company": "蔚来",
+   "job": "车端AI Agent与应用生态系统架构工程师",
+   "job_id": 3,
+   "version": 1,
+   "status": "PUBLISHED"
+  },
+  {
+   "company": "沐瞳科技",
+   "job": "Agent开发工程师（平台）",
+   "job_id": 4,
+   "version": 1,
+   "status": "PUBLISHED"
+  }
+ ],
+ "targets_before_publish": null,
+ "targets_after_publish": [
+  {
+   "company": "沐瞳科技",
+   "job": "Agent开发工程师（平台）",
+   "job_id": 4,
+   "skill": "ai_agent_application",
+   "status": "RECOMMENDED",
+   "reason": "岗位的RAG与该专业规则相符。",
+   "ranking_points": null
+  },
+  {
+   "company": "蔚来",
+   "job": "车端AI Agent与应用生态系统架构工程师",
+   "job_id": 3,
+   "skill": "ai_agent_application",
+   "status": "RECOMMENDED",
+   "reason": "岗位的大模型应用、RAG与该专业规则相符。",
+   "ranking_points": null
+  },
+  {
+   "company": "麒麟软件",
+   "job": "AI研发工程师",
+   "job_id": 2,
+   "skill": "ai_agent_application",
+   "status": "RECOMMENDED",
+   "reason": "岗位的AI研发、RAG、AI应用与该专业规则相符。",
+   "ranking_points": null
+  }
+ ],
+ "counts": {
+  "companies": 3,
+  "jobs": 3,
+  "jd_versions": 3,
+  "published": 3,
+  "requirements": 35,
+  "claims": 59,
+  "claim_evidence": 63,
+  "tasks": 3,
+  "audit_logs": 3
+ },
+ "finished_at": "2026-11-16T08:19:25.932298+00:00"
+}

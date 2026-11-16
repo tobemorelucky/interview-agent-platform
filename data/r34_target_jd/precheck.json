@@ -1,0 +1,184 @@
+{
+ "generated_at": "2026-11-16T08:21:33.984870+00:00",
+ "model_http_calls": 0,
+ "environment": {
+  "DATABASE_URL_database": "interview_agent_wb_jd_r31_20261116",
+  "MODEL_LEDGER_DATABASE": "interview_agent_wb_jd_r31_20261116",
+  "expected_database": "interview_agent_wb_jd_r31_20261116",
+  "process_database_matches": true,
+  "ledger_matches_process": true,
+  "REDIS_URL": "redis://localhost:6379/7",
+  "MINIO_BUCKET": "interview-agent-r31-jd"
+ },
+ "providers": {
+  "public_research_extract": {
+   "provider": "modelscope",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "governed": true,
+   "fallbacks": []
+  },
+  "public_research_quality": {
+   "provider": "modelscope",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "governed": true,
+   "fallbacks": []
+  }
+ },
+ "database": {
+  "alembic_version": "0029",
+  "public_tables": 68,
+  "row_counts": {
+   "users": 0,
+   "resumes": 0,
+   "companies": 0,
+   "jobs": 0,
+   "job_description_versions": 0,
+   "job_requirements": 0,
+   "sources": 0,
+   "source_snapshots": 0,
+   "claims": 0,
+   "claim_evidence": 0,
+   "public_data_refresh_tasks": 0,
+   "interview_sessions": 0,
+   "interview_evaluations": 0,
+   "final_interview_reports": 0,
+   "model_admissions": 0,
+   "capability_memories": 0,
+   "audit_logs": 0,
+   "user_job_targets": 0
+  }
+ },
+ "storage": {
+  "bucket": "interview-agent-r31-jd",
+  "bucket_exists": true,
+  "objects_in_bucket": 0,
+  "bucket_list": [
+   "a-bucket",
+   "interview-agent",
+   "interview-agent-r17-e2e",
+   "interview-agent-r17-test",
+   "interview-agent-r18-e2e",
+   "interview-agent-r20-rc",
+   "interview-agent-r22-rc",
+   "interview-agent-r31-jd",
+   "interview-agent-sandbox-test-20261114"
+  ]
+ },
+ "redis": {
+  "url_configured": "redis://localhost:6379/7",
+  "db0": {
+   "db": 0,
+   "dbsize": 0
+  },
+  "db7": {
+   "db": 7,
+   "dbsize": 0
+  }
+ },
+ "official_domains": {},
+ "targets": [
+  {
+   "jd_key": "NIO_AIA_025",
+   "company": "蔚来",
+   "job_title": "车端AI Agent与应用生态系统架构工程师",
+   "job_id_kind": "FEISHU_POSITION_ID",
+   "job_id": "7673028675729656105",
+   "source_url": "https://nio.jobs.feishu.cn/campus/position/7673028675729656105/detail",
+   "source_grade": "OFFICIAL_PAGE_CAPTURED",
+   "text_sha256": "bfff84a1fdc42da85c5a0fe35e75eb16ec3203bdbd4b1fdfc699dfad98a411bc",
+   "sha256_matches_file": true,
+   "captured_at": "2026-11-16T08:16:20.615419+00:00",
+   "still_live": true,
+   "identity_in_text": {
+    "company": true,
+    "job_title": true
+   },
+   "sections": {
+    "responsibilities": 7,
+    "requirements": 10,
+    "bonuses": 5
+   },
+   "hygiene": {
+    "nav_markers_found": [],
+    "other_job_titles_found": [],
+    "chars": 1462,
+    "lines": 38
+   }
+  },
+  {
+   "jd_key": "MOONTON_AGENT_005",
+   "company": "沐瞳科技",
+   "job_title": "Agent开发工程师（平台）",
+   "job_id_kind": "FEISHU_POSITION_ID",
+   "job_id": "7668253932858362118",
+   "source_url": "https://moonton.jobs.feishu.cn/campus/position/7668253932858362118/detail",
+   "source_grade": "OFFICIAL_PAGE_CAPTURED",
+   "text_sha256": "315c006260b5bdb71a41a8cda09b6ea594fa7c0a3510a6e606f1849612968ab6",
+   "sha256_matches_file": true,
+   "captured_at": "2026-11-16T08:16:28.636083+00:00",
+   "still_live": true,
+   "identity_in_text": {
+    "company": true,
+    "job_title": true
+   },
+   "sections": {
+    "responsibilities": 8,
+    "requirements": 8,
+    "bonuses": 3
+   },
+   "hygiene": {
+    "nav_markers_found": [],
+    "other_job_titles_found": [],
+    "chars": 1112,
+    "lines": 28
+   }
+  },
+  {
+   "jd_key": "KYLINOS_AI_002",
+   "company": "麒麟软件",
+   "job_title": "AI研发工程师",
+   "job_id_kind": "BEISEN_JOB_AD_ID",
+   "job_id": "0b8de09c-3508-4144-99b2-3ddcfd88a29b",
+   "source_url": "https://kylinos.zhiye.com/campus/detail?jobAdId=0b8de09c-3508-4144-99b2-3ddcfd88a29b",
+   "source_grade": "OFFICIAL_PAGE_CAPTURED",
+   "text_sha256": "bf918ee9c90c2b6dec9f45e946c158215ea104146b33c410bf762fcb5a5ca6ff",
+   "sha256_matches_file": true,
+   "captured_at": "2026-11-16T08:16:32.884015+00:00",
+   "still_live": true,
+   "identity_in_text": {
+    "company": true,
+    "job_title": true
+   },
+   "sections": {
+    "responsibilities": 7,
+    "requirements": 9,
+    "bonuses": 0
+   },
+   "hygiene": {
+    "nav_markers_found": [],
+    "other_job_titles_found": [],
+    "chars": 1162,
+    "lines": 24
+   }
+  }
+ ],
+ "blocking": [],
+ "warnings": [
+  "OFFICIAL_DOMAINS_EMPTY_ALL_3_WILL_BE_WAITING_REVIEW"
+ ],
+ "ready": true,
+ "budget": {
+  "normal_http": 6,
+  "normal_breakdown": {
+   "job_jd_extraction": 3,
+   "quality_assessment": 3
+  },
+  "repair_http_allowance": 2,
+  "hard_stop_http": 10,
+  "token_cap": 30000,
+  "prompt_versions": {
+   "job_jd": "1.0.1 (manual)",
+   "quality": "1.0.0"
+  }
+ }
+}
