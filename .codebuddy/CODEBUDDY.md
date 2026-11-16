@@ -1444,3 +1444,29 @@ L3 前置条件（purge_requests 表、清理顺序、audit_logs 脱敏、Celery
 **沙箱**：5 公司 / 7 岗位 / 7 版本（**5 PUBLISHED** + 2 WAITING_REVIEW）/ 77 要求 / 125 claim / 130 evidence / 18 账本 / 6 审计 / 2 用户（1 审核员 + 1 **明确标注合成**候选人）。targets 200 返回 5 岗；`build_context` 用合成画像跑通：10 条 7R/3P，0 模型调用。
 
 **剩余**：44 份 = PASS 12 / NEEDS_REVIEW 31（22 份仅缺小节标题）/ REJECT 1。下批 5 份 ≈10 HTTP / 28K。生产库未变（4 份 JD），库 250，MinIO 48/0，Evaluation 2.3.4 未改。测试 14 + 65 + 163 全 0 failed。
+
+---
+
+## 第三十九轮：R35 待审定位与下批准备（HTTP=0，见 docs/118）
+
+**基线** `e639bec`。零模型、零写入。**蔚来的具体失败字段查不出来**：68 张表无 capture 表，`experience_agent_step_runs.output_json` 只存白名单键，`research/audit.py` 明写不存原始响应 → `attributes` 不入库，不推测。
+
+**但机制查出来了**：`EvidenceCatalog` 每 600 字硬切，NIO 第 17 行占 585–649 跨边界，**逐字句用单块引用判 False、双块才 True**（其余 12 条元数据行单块全 True）；quality 步骤自己报了 `证据文本在句子中间被截断`。同时发现 manual 路径 **requirements 不做逐字校验、只有 attributes 做**，而 `job_jd@1.0.1` 全文 0 次提到 attribute（web 版 1.1.0 才有约束）。
+
+**待审两份**：面壁 `#4` r40 仅语序调整（等价）；蔚来 `#6` r57 删"但不限于"= **实质收窄**、r58 加"包括"删英文注释（轻）、r63 删"的"（无）。两份证据都是**整篇一个 span**（0–523 / 0–592）→ offset 命中零区分度。`publish_jd` 只能改状态，无任何改文本通道；但 `published_jobs()` 取"每个 job 已发布的最大版本号"→ v2 更正版天然可替代 v1。
+
+**下批 6 份** + **22 份无小节口径校正**：26 带标记 / 19 仅此一个 flag / **16 可准入**（R34 的 22 是"26−4 短正文"混算）。测试 135 + 191 全 0 failed。
+
+---
+
+## 第四十轮：R36 F1 分块修复 + 蔚来重试 + M1（2 HTTP / 6,075 token，见 docs/119）
+
+**F1**（`research/evidence.py` +44/−3）：新增 `chunk_bounds()`，切点向最近换行回退（损失 ≤300）或前探（≤900），单行 >900 才硬切；顺带修掉"预算截断后 start 仍 +600 造成空洞"。正文/offset/Hash/`supports_literal`/attribute 校验一律未改；`evidence_key` 对新导入会变（hash 含 offset），已核查无回解点。
+
+**回归**：新增 16 例（10 类要求全覆盖）+ 改写 5 例；全量 **799 passed / 407 skipped / 1 failed**，唯一失败是 `test_runtime_target_safety`（环境需导出 `DATABASE_URL`，导出后 20/20 通过）。样本 7 份 206 行被切 **11→0**（**不等于未来归零**，单行 >900 仍切）。130 条证据 0 offset 失败、8 快照 hash 全对、7 版本正文逐字节不变、分类与 R34 一致、行切 6→0。
+
+**蔚来重试**：前置 F1 自检通过 + 冻结输入一致 + task#4 复用（0 HTTP）→ `force=True` 2 HTTP / 6,075 / 0 repair → **仍 FAILED，同一错误**。关键判读：quality 的 `evidence_fragmentation` **消失**（F1 生效），而 38/38 行均可单块证明 → 失败只能来自**模型语句本身非原文**；0 残留，task#2 未动。根因指向 prompt 无 attributes 约束，救它需升 `1.0.2`，不是再重试。
+
+**M1**（`public_career/corrections.py`）：前驱只读、新 claim 照抄 evidence、同 `literal_within` 语义、after 不为 True 即 422、audit before/after、指纹幂等。演练 4 条：面壁 r40 与蔚来 r57/r58/r63 **before 全 False / after 全 True**；负向探针 `CORRECTION_NOT_LITERAL` 拒绝。**写库被 `uq_job_description_versions_job_fingerprint` 拒绝**（正文不许改 → 指纹必然相同）→ savepoint 回滚 **0 行**。要落库须迁移 `0030`（该唯一索引加 `WHERE publication_status='PUBLISHED'`），未执行 DDL，两份仍 WAITING_REVIEW。
+
+**下批 6 份（最终）**：麒麟安全 / 麒麟嵌入式 / 沐瞳 AI测试 / 蔚来视觉 / 蔚来后训练 `018` / 沐瞳 Unity `012`（替换 R35 的产品经理与供应链岗）；2/2/2 企业分布已是语料上限（仅 3 家有 DOM）。预算 12 HTTP / 30K，上限 16 / 45K；`018`/`012` 无小节标题须逐条查逐字。沙箱 5 PUBLISHED / 2 WAITING / 7 版本 / 130 证据 / 20 账本 52,228 token；生产库、MinIO 48、250 库、Evaluation 2.3.4 未动。
