@@ -1,0 +1,94 @@
+{
+  "round": "R31_PRECHECK",
+  "http_calls_to_model": 0,
+  "generated_at": "2026-11-16T06:29:10.937580+00:00",
+  "environment": {
+    "provider": {
+      "llm_provider": "modelscope",
+      "use_modelscope": true,
+      "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+      "api_key_present": true,
+      "api_key_prefix": "ms-***"
+    },
+    "gates": {
+      "purge_execution_enabled": false,
+      "interview_coach_harness": false
+    },
+    "sandbox": {
+      "database": "interview_agent_wb_r26_alt_20261115",
+      "alembic_version": "0029",
+      "table_count": 68,
+      "row_counts": {
+        "users": 0,
+        "resumes": 0,
+        "resume_reports": 0,
+        "candidate_profiles": 0,
+        "companies": 0,
+        "job_description_versions": 0,
+        "job_requirements": 0,
+        "user_job_targets": 0,
+        "interview_sessions": 0,
+        "interview_evaluations": 0,
+        "model_admissions": 0
+      },
+      "empty": true
+    },
+    "ledger": {
+      "process_database": "interview_agent_wb_r26_alt_20261115",
+      "expected_ledger_database": "interview_agent_wb_r26_alt_20261115",
+      "declared_env": "interview_agent_wb_r26_alt_20261115"
+    },
+    "storage": {
+      "endpoint": "localhost:9000",
+      "bucket": "interview-agent",
+      "bucket_exists": true,
+      "object_count": 48
+    },
+    "frozen_prompt": {
+      "version": "2.3.4",
+      "system_chars": 7452,
+      "fingerprint": "e7704357b5fc37ba",
+      "matches_docs_108": true
+    },
+    "resume_limits": {
+      "max_file_size_mb": 10,
+      "supported": [
+        "docx",
+        "pdf"
+      ],
+      "ocr": false
+    }
+  },
+  "resume": {
+    "path": "..\\..\\.runtime\\r31_parser_probe\\PARSER_PROBE_NOT_A_RESUME.docx",
+    "suffix": "docx",
+    "bytes": 37012,
+    "sha256": "a671a1ab5f79988f5e7657e86eb93317ee64b1dcf7ebaf0b42051a30c0f0fb99",
+    "chars": 196,
+    "cjk_chars": 112,
+    "cjk_ratio": 0.571,
+    "lines": 11,
+    "sections": {
+      "education": true,
+      "work_experience": false,
+      "internship": true,
+      "projects": true,
+      "skills": true,
+      "awards": true
+    },
+    "pii_hits": {
+      "phone": 0,
+      "email": 0,
+      "id_card": 0,
+      "bank_card": 0
+    },
+    "pii_clean": true,
+    "preview_head": "【解析探针 · 非真实简历 · 仅用于验证文本抽取路径】\n教育背景\n解析探针大学 计算机科学与技术 硕士 2024-2027（虚构）\n实习经历\n解析探针公司 后端开发实习（虚构）：实现检索接口与评测脚本\n项目经历\n探针项目 A（虚构）：RAG 检索服务，负责分块策略与召回评估\n专业技能\nPython / FastAPI / Redis / LangGraph（探针占位）\n获奖\n探针奖项占位",
+    "verdict": "TEXT_TOO_SHORT",
+    "note": "疑似扫描版 PDF 或空文档；平台无 OCR，不会兜底"
+  },
+  "blocking": [
+    "RESUME_TEXT_TOO_SHORT"
+  ],
+  "ready": false
+}

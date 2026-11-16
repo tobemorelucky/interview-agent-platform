@@ -1,0 +1,66 @@
+{
+  "round": "R31_PRECHECK",
+  "http_calls_to_model": 0,
+  "generated_at": "2026-11-16T06:29:00.680060+00:00",
+  "environment": {
+    "provider": {
+      "llm_provider": "modelscope",
+      "use_modelscope": true,
+      "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+      "api_key_present": true,
+      "api_key_prefix": "ms-***"
+    },
+    "gates": {
+      "purge_execution_enabled": false,
+      "interview_coach_harness": false
+    },
+    "sandbox": {
+      "database": "interview_agent_wb_r26_alt_20261115",
+      "alembic_version": "0029",
+      "table_count": 68,
+      "row_counts": {
+        "users": 0,
+        "resumes": 0,
+        "resume_reports": 0,
+        "candidate_profiles": 0,
+        "companies": 0,
+        "job_description_versions": 0,
+        "job_requirements": 0,
+        "user_job_targets": 0,
+        "interview_sessions": 0,
+        "interview_evaluations": 0,
+        "model_admissions": 0
+      },
+      "empty": true
+    },
+    "ledger": {
+      "process_database": "interview_agent_wb_r26_alt_20261115",
+      "expected_ledger_database": "interview_agent_wb_r26_alt_20261115",
+      "declared_env": "interview_agent_wb_r26_alt_20261115"
+    },
+    "storage": {
+      "endpoint": "localhost:9000",
+      "bucket": "interview-agent",
+      "bucket_exists": true,
+      "object_count": 48
+    },
+    "frozen_prompt": {
+      "version": "2.3.4",
+      "system_chars": 7452,
+      "fingerprint": "e7704357b5fc37ba",
+      "matches_docs_108": true
+    },
+    "resume_limits": {
+      "max_file_size_mb": 10,
+      "supported": [
+        "docx",
+        "pdf"
+      ],
+      "ocr": false
+    }
+  },
+  "blocking": [
+    "RESUME_NOT_PROVIDED"
+  ],
+  "ready": false
+}
