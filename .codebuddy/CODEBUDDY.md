@@ -1355,3 +1355,24 @@ L3 前置条件（purge_requests 表、清理顺序、audit_logs 脱敏、Celery
 **离线测试**：`rule_extract` 44/48 出要求；`recommend` 仅 14/48 `RECOMMENDED`（通用岗位描述压不过阈值，规则宁可不给结论）；主题命中 42/48；Matching 仍被 409 `MATCH_PROFILE_REQUIRED` 阻断。
 
 **未做**：未导入业务表（两条路径预算：A 私有草稿 52 次/57–73K；B 正式 Research 104 次/120–145K，均需授权）；飞书列表分页未做，导致 88% 来自 3 家——已列为阻断 B3。
+
+---
+
+## 第三十四轮：3 份真实 JD 正式入库准备（零 HTTP 预演，见 docs/113）
+
+**基线** `db40251`。本轮真实模型 **HTTP=0**：只做来源核验、字段映射、零 HTTP 预演与预算。未改 Prompt/Agent/Schema/迁移，未写正式库，未 push。
+
+**三份目标**（均为当天重渲染的官方详情页，不是改写稿）：
+- 蔚来 车端AI Agent与应用生态系统架构工程师 `7673028675729656105`（正文另含职位 ID `A25338A`），1,461 字
+- 沐瞳科技 Agent开发工程师（平台）`7668253932858362118`，1,111 字
+- 麒麟软件 AI研发工程师 `jobAdId=0b8de09c-3508-4144-99b2-3ddcfd88a29b`，1,161 字（改用详情页，替代 R33 的列表页切片；标点/段标题差异 6 行，内容缺失 0）
+
+**链路**：`ManualImportService.prepare`（0 模型）→ `PublicDataResearchAgent.run`（**2 次模型**：`job_jd@1.0.1` + `quality@1.0.0`）→ `PublicCareerReviewService.publish_jd`（0 模型，需 ADMIN）→ `recommend_jobs` / `GET /interviews/targets`（0 模型）。`_publish_job` 全部确定性。
+
+**预演（ReplayModelProvider + 真实代码路径）**：3/3 `COMPLETED`；35 条 Requirement 全部 `offset_exact` 且字面命中引用证据（9/9、15/15、11/11）；`raw_text` 与快照逐字相等；失败注入后 companies/jd_versions/published 全 0；`prepare` 复用同 task、`run` 拒绝重跑、`publish` 复用版本；3 公司 3 job 各 v1；发布后 targets 3 行且均 `RECOMMENDED → ai_agent_application`。
+
+**关键发现**：① Research Agent 写入的是 `WAITING_REVIEW`，**不是 PUBLISHED**，未审核时前端 0 行（attempt-1 库实测）；② `public_research_official_domains` 为空时门禁 reason 写成 `unverified_or_community_source`，对官方来源是**标签错误**，建议不改配置直接走 ADMIN 审核；③ Owner 由 `run_owner` 解析为 `system:public-career`（FK 链），不接受客户端传值。
+
+**预算**：正常 6 HTTP（每份 2），修复 +2，硬上限 **10 HTTP / 30,000 token**；正常 token ≈19.1K（6,043/7,023/6,052）。停止条件：HTTP≥10、token≥30K、账本/归属类 409/403、同份连续 2 次证据拒绝、Provider 连续 2 次失败。
+
+**资产**：生产库未变（5/38/19/41/5/4/0）；库总量 246→249（+3 沙箱，均写 `COMMENT` 标注用途）；MinIO 生产桶仍 48 对象，新建 `interview-agent-r31-jd` 0 对象；Redis 用 db7（0 key）；Evaluation 2.3.4 `e7704357b5fc37ba` 未改；既有 Research/发布测试 45 passed、新契约测试 10 passed。
