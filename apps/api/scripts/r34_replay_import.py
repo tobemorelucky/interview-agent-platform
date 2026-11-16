@@ -39,7 +39,7 @@ from interview_api.modules.public_career.review import PublicCareerReviewService
 from interview_api.modules.users.models import User
 
 REPO = Path(__file__).resolve().parents[3]
-MANIFEST = REPO / "data" / "r34_target_jd" / "manifest.json"
+MANIFEST = REPO / "data" / "r34_target_jd" / "source_manifest.json"
 
 HEADING_LINES = {"职位描述", "职位要求", "工作职责", "任职资格", "岗位职责", "任职要求", "加分项", "你将负责", "我们希望你具备"}
 EDUCATION_HINTS = ("学历", "专业", "毕业生", "博士", "硕士", "本科")

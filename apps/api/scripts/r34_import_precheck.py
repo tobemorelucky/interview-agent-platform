@@ -19,7 +19,7 @@ import asyncpg
 
 REPO = Path(__file__).resolve().parents[3]
 DATA = REPO / "data" / "r34_target_jd"
-MANIFEST = DATA / "manifest.json"
+MANIFEST = DATA / "source_manifest.json"
 
 EXPECTED_DATABASE = "interview_agent_wb_jd_r31_20261116"
 EXPECTED_MINIO_BUCKET = "interview-agent-r31-jd"

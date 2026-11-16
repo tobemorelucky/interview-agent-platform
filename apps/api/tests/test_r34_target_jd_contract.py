@@ -19,7 +19,7 @@ NAV_MARKERS = ("首页", "热招岗位", "培养与发展", "校招答疑", "立
 
 @pytest.fixture(scope="module")
 def manifest():
-    return json.loads((DATA / "manifest.json").read_text(encoding="utf-8"))
+    return json.loads((DATA / "source_manifest.json").read_text(encoding="utf-8"))
 
 
 @pytest.fixture(scope="module")

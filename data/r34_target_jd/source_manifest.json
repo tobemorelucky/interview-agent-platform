@@ -1,0 +1,344 @@
+{
+ "generated_at": "2026-11-16T08:16:32.972710+00:00",
+ "model_http_calls": 0,
+ "browser_http_requests": 3,
+ "records": [
+  {
+   "jd_key": "NIO_AIA_025",
+   "company": "蔚来",
+   "job_title": "车端AI Agent与应用生态系统架构工程师",
+   "job_id_kind": "FEISHU_POSITION_ID",
+   "job_id": "7673028675729656105",
+   "source_url": "https://nio.jobs.feishu.cn/campus/position/7673028675729656105/detail",
+   "source_grade": "OFFICIAL_PAGE_CAPTURED",
+   "render": {
+    "tool": "headless_chrome_dump_dom",
+    "virtual_time_budget_ms": 20000,
+    "rendered_at": "2026-11-16T08:16:20.615419+00:00"
+   },
+   "offline_markers": [],
+   "still_live": true,
+   "dom_sha256": "130fb820f66ab4c08b296c2be01e65e2dbfcc2df182c61bf8540deae3683e305",
+   "dom_sha256_round33": "e8cead19e4fd44529e5afb07e10a233dea40b07abb8e71d89dd2f78bf9813235",
+   "dom_bytes_stable_vs_round33": false,
+   "body_text_superset_of_round33": true,
+   "body_lines_missing_vs_round33": [],
+   "content_missing_count": 0,
+   "format_variant_count": 0,
+   "dom_path": "data\\r34_target_jd\\dom\\NIO_AIA_025.html",
+   "text_sha256": "bfff84a1fdc42da85c5a0fe35e75eb16ec3203bdbd4b1fdfc699dfad98a411bc",
+   "text_path": "data\\r34_target_jd\\text\\NIO_AIA_025.txt",
+   "text_chars": 1461,
+   "visible_lines": 44,
+   "projection": {
+    "rule": "DOC_TITLE + [JOB_TITLE_LINE..BODY_END]",
+    "dropped_nav_lines": [
+     "职位",
+     "校招官网",
+     "社招官网",
+     "关于蔚来",
+     "登录"
+    ],
+    "dropped_footer_lines": [
+     "投递"
+    ]
+   },
+   "sections": {
+    "responsibilities": [
+     "跟踪 AI Agent、OpenClaw 类开放生态、MCP / tool calling、workflow、multi-agent、agent memory、local-first agent、权限治理和插件生态的发展趋势。",
+     "分析这些 AI Agent 能力进入车端后的系统架构需求，包括应用框架、工具注册、权限模型、上下文管理、长期记忆、用户确认机制、沙箱隔离、安全审计和异常回滚。",
+     "参与设计车端 AI Agent 应用平台架构，使车端大模型能够安全、可控、可审计地调用车辆能力、座舱能力、云端服务和第三方应用。",
+     "研究车端 AI 应用生态如何与 OS、SOA 服务、车辆信号、用户数据、账号体系、隐私安全、车云协同和开发者工具链结合。",
+     "推动车端 AI Agent 典型场景 POC，例如车内个人助手、跨应用任务执行、行程规划、车辆控制、安全确认、服务推荐、用户记忆和多 Agent 协同。",
+     "将 AI 应用生态需求转化为平台架构指标和工程需求，包括延迟、可靠性、权限边界、数据最小化、离线能力、端云分工、资源占用和安全风险。",
+     "职位要求"
+    ],
+    "requirements": [
+     "博士学历，计算机、人工智能、软件工程、人机交互、机器人、操作系统、分布式系统等相关方向。",
+     "熟悉以下至少一个方向：",
+     "AI Agent、tool calling、MCP、workflow engine、多 Agent 协作；",
+     "OpenClaw、AutoGPT、LangGraph、CrewAI、Dify、Coze 等 AI 应用 / Agent 框架；",
+     "大模型应用开发、长期记忆、RAG、agent memory、context engineering；",
+     "应用沙箱、权限系统、安全策略、可信执行、隐私保护；",
+     "OS、应用框架、中间件、SOA、端云协同或开发者生态。",
+     "能够从 AI 应用形态反推底层系统架构，而不只是开发单个 demo。",
+     "对“AI 如何成为下一代应用入口”有自己的判断，并愿意把判断落到车端平台设计中。",
+     "具备跨团队沟通能力，能够连接 AI 应用、OS、座舱、云服务、安全、法务合规和产品体验团队。"
+    ],
+    "bonuses": [
+     "有开源 Agent 框架、AI 应用平台、插件生态、开发者平台或工具链建设经验。",
+     "熟悉 prompt injection、tool abuse、权限绕过、供应链攻击、agent sandbox 等 AI Agent 安全问题。",
+     "有智能汽车、机器人、IoT、手机、PC、可穿戴设备等端侧 AI 应用经验。",
+     "既能写 POC，也能抽象平台能力和系统边界。",
+     "有开源贡献、开发者社区运营或 AI 应用生态建设经验。"
+    ],
+    "counts": {
+     "responsibilities": 7,
+     "requirements": 10,
+     "bonuses": 5
+    }
+   },
+   "identity_in_text": {
+    "company": true,
+    "job_title": true
+   }
+  },
+  {
+   "jd_key": "MOONTON_AGENT_005",
+   "company": "沐瞳科技",
+   "job_title": "Agent开发工程师（平台）",
+   "job_id_kind": "FEISHU_POSITION_ID",
+   "job_id": "7668253932858362118",
+   "source_url": "https://moonton.jobs.feishu.cn/campus/position/7668253932858362118/detail",
+   "source_grade": "OFFICIAL_PAGE_CAPTURED",
+   "render": {
+    "tool": "headless_chrome_dump_dom",
+    "virtual_time_budget_ms": 20000,
+    "rendered_at": "2026-11-16T08:16:28.636083+00:00"
+   },
+   "offline_markers": [],
+   "still_live": true,
+   "dom_sha256": "83e2e494e2bdc985df3d235f5b8e593f103e18d7aa5c96e661b7a229bb6ab175",
+   "dom_sha256_round33": "63c51ca4a89d7b2e90048fb131f76f1fd26f52506e2a4984734aa97cecff82fa",
+   "dom_bytes_stable_vs_round33": false,
+   "body_text_superset_of_round33": true,
+   "body_lines_missing_vs_round33": [],
+   "content_missing_count": 0,
+   "format_variant_count": 0,
+   "dom_path": "data\\r34_target_jd\\dom\\MOONTON_AGENT_005.html",
+   "text_sha256": "315c006260b5bdb71a41a8cda09b6ea594fa7c0a3510a6e606f1849612968ab6",
+   "text_path": "data\\r34_target_jd\\text\\MOONTON_AGENT_005.txt",
+   "text_chars": 1111,
+   "visible_lines": 34,
+   "projection": {
+    "rule": "DOC_TITLE + [JOB_TITLE_LINE..BODY_END]",
+    "dropped_nav_lines": [
+     "首页",
+     "热招岗位",
+     "培养与发展",
+     "校招答疑",
+     "登录"
+    ],
+    "dropped_footer_lines": [
+     "投递"
+    ]
+   },
+   "sections": {
+    "responsibilities": [
+     "1. 参与 AI Agent 平台及智能工作工具的建设，探索 AI 在游戏研发和日常工作中的应用；",
+     "2. 参与 Agent 工作流、上下文工程、知识检索、工具调用和自动化任务等能力的研发与优化；",
+     "3. 参与 Agent、Skill、插件及 AI 应用的接入、调试、发布和复用，推动优秀实践沉淀为标准化能力；",
+     "4. 推动 AI 能力与项目管理、文档、消息及研发工具等现有系统集成，融入真实业务流程；",
+     "5. 参与模型调用、运行追踪、效果评测和成本分析，持续提升 Agent 的稳定性、易用性和任务完成效果；",
+     "6. 跟进大模型、Agent 框架和 AI 编程工具等前沿技术，参与技术调研、原型验证与工程化落地；",
+     "7. 与产品、研发、TA、引擎、工具链等团队协作，理解实际问题并提供 AI Native 的解决方案。",
+     "职位要求"
+    ],
+    "requirements": [
+     "1. 本科及以上学历，计算机、软件工程、人工智能等相关专业优先；",
+     "2. 具备扎实的编程基础，熟悉 Go、Python等主流编程语言，具备良好的代码习惯和工程意识；",
+     "3. 了解数据结构、算法、操作系统、计算机网络、数据库等基础知识，能够理解并参与平台型系统的设计与开发；",
+     "4. 了解服务端开发基础，熟悉 HTTP/gRPC API、数据库、缓存、消息队列、任务调度、权限控制、日志监控等常见后端开发概念；有 Go 服务端开发经验优先；",
+     "5. 对大模型、AI Agent、开发者工具和智能工作流有浓厚兴趣，并有相关工具的实际使用经验；",
+     "6. 了解 Prompt Engineering、LLM API、RAG、Function Calling / Tool Use、Agent 工作流等基本概念；课程、实习或个人项目经验均可；",
+     "7. 具备较强的学习能力、问题拆解能力和动手能力，能够完成方案分析、原型开发和效果验证；",
+     "8. 具备良好的沟通协作能力，愿意深入游戏研发及不同业务流程理解真实需求，并推动 AI 能力在实际场景中落地。"
+    ],
+    "bonuses": [
+     "1. 了解 Agent SDK、LangChain、AutoGen、MCP、RAG、上下文工程、Prompt 编排、多 Agent 协作或自动化工作流等相关技术者优先；",
+     "2. 了解 Agent 调试、运行追踪、效果评测、日志分析、Token 成本分析或可观测性建设者优先；",
+     "3. 对 AI Native 产品、人机协作方式、Agent 工作台形态或智能研发工具有自己的思考或实践。"
+    ],
+    "counts": {
+     "responsibilities": 8,
+     "requirements": 8,
+     "bonuses": 3
+    }
+   },
+   "identity_in_text": {
+    "company": true,
+    "job_title": true
+   }
+  },
+  {
+   "jd_key": "KYLINOS_AI_002",
+   "company": "麒麟软件",
+   "job_title": "AI研发工程师",
+   "job_id_kind": "BEISEN_JOB_AD_ID",
+   "job_id": "0b8de09c-3508-4144-99b2-3ddcfd88a29b",
+   "source_url": "https://kylinos.zhiye.com/campus/detail?jobAdId=0b8de09c-3508-4144-99b2-3ddcfd88a29b",
+   "source_grade": "OFFICIAL_PAGE_CAPTURED",
+   "render": {
+    "tool": "headless_chrome_dump_dom",
+    "virtual_time_budget_ms": 20000,
+    "rendered_at": "2026-11-16T08:16:32.884015+00:00"
+   },
+   "offline_markers": [],
+   "still_live": true,
+   "dom_sha256": "5206b56234c47ed89ab90b2c9d464a071264c5339d6e91308a62e4dfa033c2c4",
+   "dom_sha256_round33": "8001331f1ab560884e6df62fb7e6b4308cf5edd55bcf9559d01b6963bf7a3303",
+   "dom_bytes_stable_vs_round33": false,
+   "body_text_superset_of_round33": false,
+   "body_lines_missing_vs_round33": [
+    {
+     "line": "北京市，天津市，湖南省·长沙市",
+     "kind": "FORMAT_VARIANT"
+    },
+    {
+     "line": "工作地点：北京市，天津市，湖南省·长沙市",
+     "kind": "FORMAT_VARIANT"
+    },
+    {
+     "line": "发布时间：2026-09-04",
+     "kind": "FORMAT_VARIANT"
+    },
+    {
+     "line": "岗位职责：",
+     "kind": "FORMAT_VARIANT"
+    },
+    {
+     "line": "任职要求：",
+     "kind": "FORMAT_VARIANT"
+    },
+    {
+     "line": "投递地址",
+     "kind": "FORMAT_VARIANT"
+    }
+   ],
+   "content_missing_count": 0,
+   "format_variant_count": 6,
+   "dom_path": "data\\r34_target_jd\\dom\\KYLINOS_AI_002.html",
+   "text_sha256": "bf918ee9c90c2b6dec9f45e946c158215ea104146b33c410bf762fcb5a5ca6ff",
+   "text_path": "data\\r34_target_jd\\text\\KYLINOS_AI_002.txt",
+   "text_chars": 1161,
+   "visible_lines": 39,
+   "projection": {
+    "rule": "DOC_TITLE + [JOB_TITLE_LINE..BODY_END]",
+    "dropped_nav_lines": [
+     "首页",
+     "高层次人才招聘",
+     "社会招聘",
+     "校园招聘",
+     "顶尖技术实习生招聘",
+     "登录/注册"
+    ],
+    "dropped_footer_lines": [
+     "立即投递",
+     "收藏",
+     "©2026 麒麟软件",
+     "京ICP备05051632号-16",
+     "京公网安备 11010802032024号",
+     "|",
+     "隐私政策",
+     "Powered by Beisen",
+     "职位详情"
+    ]
+   },
+   "sections": {
+    "responsibilities": [
+     "1、负责操作系统AI助手、AI子系统上层应用开发，基于Agent、RAG技术开发操作系统场景智能技能和应用，完成工具调用、知识库问答、故障辅助诊断等功能；",
+     "2、负责操作系统端AI智能体核心框架开发，实现任务拆解、工具调用、记忆管理等基础能力，封装操作系统能力并做好调用权限与安全隔离；",
+     "3、参与大模型核心技术研发，包括Agent智能体、NLP对话生成等方向的算法设计与实现，开展INT8/INT4低精度量化、知识蒸馏、强化学习（RLHF/PPO）等模型优化；",
+     "4、负责AI计算框架（TensorFlow、PyTorch等）与GPU/NPU/DSP等硬件的适配，开展AI算子优化，研发端侧/边缘侧推理引擎与轻量化部署方案；",
+     "5、负责AI大模型应用开发、AI Infra测评、异构算力融合优化及智能运维系统（故障预测、性能监控、资源调度）等核心模块研发，优化AI生态工具链；",
+     "6、支持安卓框架层AI服务的架构设计与研发（含集成编译和版本构建），负责移动端技术开发，排查解决复杂场景下的性能瓶颈（Crash、ANR、内存溢出等）；",
+     "7、完成端侧大模型适配调优，落地端云协同方案，搭建RAG知识库与智能体评测体系，适配国产软硬件平台；跟踪前沿技术，输出技术调研报告、专利或文档。"
+    ],
+    "requirements": [
+     "1、计算机、人工智能、数学、软件工程等相关专业，2027届本/硕/博毕业生均可投递；",
+     "2、熟练掌握Python，熟悉C/C++/Go/Java等至少一种编程语言；熟悉深度学习框架（PyTorch/TensorFlow），掌握Transformer、大模型训练等核心技术原理；",
+     "3、了解LLM大模型原理及LangChain等主流AI编程框架，了解工具调用、Prompt工程、RAG向量知识库相关技术；",
+     "4、了解AI计算框架基本原理和算子实现逻辑，了解CPU/GPU硬件架构，有算子开发或推理部署经验者优先；",
+     "5、熟悉至少一种推理引擎（onnx-runtime、tf-lite、mnn、TensorRT、vLLM、Triton等），了解模型部署流程，有NVIDIA GPU、Jetson等平台模型部署经验者优先；",
+     "6、熟悉Linux操作系统，了解系统API、进程权限机制，了解计算机体系结构与异构计算基础，有CUDA开发、高性能计算经验者优先；",
+     "7、具备良好的数学基础，有大模型微调、智能体开发、端侧部署或安卓AI应用开发经验者优先；",
+     "8、有操作系统AI助手、智能体项目落地经验或国产操作系统、飞腾/龙芯等国产硬件平台开发经验者优先；",
+     "9、具备良好的问题分析能力、文档编写能力与跨团队协作意识，自我驱动，学习能力强。"
+    ],
+    "bonuses": [],
+    "counts": {
+     "responsibilities": 7,
+     "requirements": 9,
+     "bonuses": 0
+    }
+   },
+   "identity_in_text": {
+    "company": true,
+    "job_title": true
+   }
+  }
+ ],
+ "dedupe_vs_round33_corpus": {
+  "against": "data\\incoming_20261116c\\jd_corpus.json",
+  "records": [
+   {
+    "jd_key": "NIO_AIA_025",
+    "same_company_and_title": [
+     "OFFICIAL_CAND_025"
+    ],
+    "same_job_id_in_url": [
+     "OFFICIAL_CAND_025"
+    ],
+    "same_job_id_in_list_page_dom": [],
+    "verdict": "SAME_POSTING_IN_ROUND33_CORPUS"
+   },
+   {
+    "jd_key": "MOONTON_AGENT_005",
+    "same_company_and_title": [
+     "OFFICIAL_CAND_005"
+    ],
+    "same_job_id_in_url": [
+     "OFFICIAL_CAND_005"
+    ],
+    "same_job_id_in_list_page_dom": [],
+    "verdict": "SAME_POSTING_IN_ROUND33_CORPUS"
+   },
+   {
+    "jd_key": "KYLINOS_AI_002",
+    "same_company_and_title": [
+     "OFFICIAL_CAND_002"
+    ],
+    "same_job_id_in_url": [],
+    "same_job_id_in_list_page_dom": [
+     "OFFICIAL_CAND_002",
+     "OFFICIAL_CAND_003",
+     "OFFICIAL_CAND_001",
+     "OFFICIAL_CAND_004"
+    ],
+    "verdict": "SAME_POSTING_VIA_LIST_PAGE_LINK"
+   }
+  ]
+ },
+ "dedupe_vs_formal_db": {
+  "against_database": "interview_agent",
+  "formal_jd_versions": 4,
+  "formal_jds": [
+   "中国移动通信集团浙江有限公司嘉兴分公司/AI工程师 v1 PUBLISHED",
+   "中国工商银行广东省分行/科技菁英 v1 PUBLISHED",
+   "中国移动通信集团湖北有限公司/AI研发工程师 v1 PUBLISHED",
+   "华为/AI应用工程师 v1 PUBLISHED"
+  ],
+  "records": [
+   {
+    "jd_key": "NIO_AIA_025",
+    "same_company_in_formal_db": [],
+    "same_job_title_in_formal_db": [],
+    "duplicate": false
+   },
+   {
+    "jd_key": "MOONTON_AGENT_005",
+    "same_company_in_formal_db": [],
+    "same_job_title_in_formal_db": [],
+    "duplicate": false
+   },
+   {
+    "jd_key": "KYLINOS_AI_002",
+    "same_company_in_formal_db": [],
+    "same_job_title_in_formal_db": [
+     "中国移动通信集团湖北有限公司/AI研发工程师"
+    ],
+    "duplicate": false
+   }
+  ]
+ }
+}

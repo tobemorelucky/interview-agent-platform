@@ -317,7 +317,7 @@ async def formal_db_dedupe(records: list[dict]) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--out", default=str(OUT / "manifest.json"))
+    parser.add_argument("--out", default=str(OUT / "source_manifest.json"))
     args = parser.parse_args()
     records = [build(config) for config in TARGETS]
     import asyncio
