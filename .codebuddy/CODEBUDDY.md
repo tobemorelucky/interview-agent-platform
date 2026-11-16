@@ -1408,3 +1408,21 @@ L3 前置条件（purge_requests 表、清理顺序、audit_logs 脱敏、Celery
 **发布前审核**：麒麟、沐瞳**无阻断项**，均 `WAITING_REVIEW`、`publishable`；蔚来无版本。`audit_logs=0`（未发布）。沐瞳 `学历/专业` 判 AMBIGUOUS（不误算技术缺口）。Skill 预览均 `RECOMMENDED → ai_agent_application`（`recommend_jobs` 只读 ACTIVE+PUBLISHED，发布前为空，故用同一规则直接算只读预览）。
 
 **49 份共性阻断**：① 身份标签必须取页面字面（失败率 33%）；② 修正后无法重试（`IDENTITY_CONFLICT`）；③ 类型歧义需人工映射；④ 混合句强度（已投影修复）；⑤ 失败时抽取身份不落库。回归 152/41/119 三次运行全 0 failed。
+
+---
+
+## 第三十七轮：R33 沙箱 Admin 发布两份 JD + 蔚来身份修订 + 49 份预检（真实模型 HTTP=0，见 docs/116）
+
+**基线** `2146dcd`。本轮 0 模型调用，沙箱账本仍 6 行 / 16,921 token。
+
+**发布**：麒麟 `#1`、沐瞳 `#2` 均 `PUBLISHED`（`2026-11-16T10:38:27Z`），走 `PublicCareerReviewService.publish_jd`（0 模型，需 ADMIN）。审计 2 行 `ADMIN/SUCCESS`，`before_json=WAITING_REVIEW`。重复 publish `reused=true`，版本数仍 2。`GET /api/v1/interview/targets` 200 返回 2 岗；`/public-career/jobs` 200/2；Skill 均 `RECOMMENDED→ai_agent_application`。
+
+**最后一条原始 importance 路径已修**：`project_requirements()` 的用户目标分支改用 `consumer_strength()`——只允许 `PREFERRED+混合句→REQUIRED`，**`UNKNOWN` 永不被提升**。五条读取路径（targets/skill/matching/context/library）现全部归一。
+
+**强度口径**：麒麟存储 5R/5P → 下游 9R/1P（4 条混合句，分句可在正文逐字指认）；沐瞳 8R/4P，`学历/专业` 判 AMBIGUOUS→EDUCATION→Matching `NOT_APPLICABLE`（不计技术缺口）。未改落库强度、未生成派生行、未清 risk_flags。
+
+**蔚来**：未发请求，仍 FAILED。新增 `ManualImportService.prepare_identity_revision`（无 schema 变更、零调用点）：前驱须 FAILED、URL/正文 Hash 必须相同、新标签须在快照出现、忽略空白后须仍含旧标签、确定性 key 幂等、audit 记录、前驱完全不动。Replay（新库 replay3）10 项全过：复现原失败→修订 COMPLETED、重复提交同 task、错误公司/他岗标题/过短标签/未变标签/前驱已 COMPLETED 全部按码拒绝。
+
+**49 份预检**：PASS 13 / NEEDS_REVIEW 35 / REJECT 1（MANUAL_JD03 招聘公告无要求）。身份差异 49/49 都不是页面字面：36 仅渠道前缀、3 仅空格、6 措辞不同、4 无 DOM。42 份需确定性投影。26 份无小节标题。3 份需换详情页 URL。教训：初版检查器把"结尾无句号"当截断误判 10 份、列表页 `h4[title]` 取到别家岗位——两处都是检查器的错，已修。
+
+**资产**：生产库 5/38/19/41/5/4/0 未变；沙箱 2 公司/2 岗位/2 版本/22 要求/41 Claim/43 Evidence/6 账本/2 审计/1 沙箱审核员；库 249→250（+replay3）；MinIO 生产桶 48、隔离桶 0；Evaluation 2.3.4 `e7704357b5fc37ba` 未变；未删/未归档/未 push。测试 25 + 134 + 133 全 0 failed。
