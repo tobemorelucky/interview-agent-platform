@@ -1,0 +1,217 @@
+{
+  "http_calls_to_model": 0,
+  "source": {
+    "url": "https://minims.cn/archives/J20260801095700579582",
+    "title": "AI Agent 开发面试实战：RAG、LangGraph 与后端基础全记录",
+    "source_kind": "PUBLIC_REPORTED_INTERVIEW",
+    "reported_interview_date": "2026-06-09",
+    "publication_date": "2026-06-10",
+    "source_page_checked": "HTTP 404（原页已不可访问；站点根域可访问）",
+    "archive_checked": "此环境无法连接 archive.org（代理 502），未确认是否存在快照",
+    "identity_verdict": "UNVERIFIED_SOURCE_ORIGINAL_PAGE_GONE"
+  },
+  "questions": {
+    "count": 23,
+    "contract_issues": [],
+    "topics": {
+      "rag": {
+        "count": 10,
+        "system_topic": "rag_retrieval",
+        "in_vocabulary": true,
+        "reason_if_unmapped": null,
+        "recognized_by_regex": 5
+      },
+      "agent": {
+        "count": 3,
+        "system_topic": "agent",
+        "in_vocabulary": true,
+        "reason_if_unmapped": null,
+        "recognized_by_regex": 1
+      },
+      "redis": {
+        "count": 3,
+        "system_topic": "redis",
+        "in_vocabulary": true,
+        "reason_if_unmapped": null,
+        "recognized_by_regex": 3
+      },
+      "cs_fundamentals": {
+        "count": 2,
+        "system_topic": null,
+        "in_vocabulary": false,
+        "reason_if_unmapped": "系统词表没有「计算机基础」主题，只有具体技术域；数据结构/设计模式题无法落到蓝图 target",
+        "recognized_by_regex": 0
+      },
+      "algorithm": {
+        "count": 5,
+        "system_topic": null,
+        "in_vocabulary": false,
+        "reason_if_unmapped": "系统词表无「算法」主题；排序/动态规划题不属于任何技能 priority_topics",
+        "recognized_by_regex": 0
+      }
+    },
+    "mapped_questions": 16,
+    "unmapped_questions": 7
+  },
+  "duplicates": {
+    "near_pairs": [],
+    "max_sequence": 0.0,
+    "cross_corpus_v3": [],
+    "cross_max": 0.0
+  },
+  "answers": {
+    "count": 18,
+    "issues": [],
+    "pair_count_anomalies": {},
+    "labels": {
+      "GOOD_SYNTHETIC": 9,
+      "POOR_SYNTHETIC": 9
+    },
+    "pairs": [
+      {
+        "question_id": "FH20260609_Q01",
+        "good_chars": 113,
+        "poor_chars": 69,
+        "length_ratio": 1.64,
+        "good_poor_sequence": 0.1059,
+        "good_poor_jaccard": 0.0061,
+        "checkpoints": 3,
+        "checkpoint_bigram_coverage": [
+          0.2,
+          0.333,
+          0.0
+        ],
+        "poor_checkpoints": 3,
+        "labels_leaked_into_text": false
+      },
+      {
+        "question_id": "FH20260609_Q03",
+        "good_chars": 99,
+        "poor_chars": 63,
+        "length_ratio": 1.57,
+        "good_poor_sequence": 0.0959,
+        "good_poor_jaccard": 0.0,
+        "checkpoints": 3,
+        "checkpoint_bigram_coverage": [
+          0.333,
+          0.333,
+          0.167
+        ],
+        "poor_checkpoints": 3,
+        "labels_leaked_into_text": false
+      },
+      {
+        "question_id": "FH20260609_Q07",
+        "good_chars": 95,
+        "poor_chars": 69,
+        "length_ratio": 1.38,
+        "good_poor_sequence": 0.094,
+        "good_poor_jaccard": 0.014,
+        "checkpoints": 3,
+        "checkpoint_bigram_coverage": [
+          0.2,
+          0.4,
+          0.5
+        ],
+        "poor_checkpoints": 3,
+        "labels_leaked_into_text": false
+      },
+      {
+        "question_id": "FH20260609_Q08",
+        "good_chars": 95,
+        "poor_chars": 66,
+        "length_ratio": 1.44,
+        "good_poor_sequence": 0.068,
+        "good_poor_jaccard": 0.0,
+        "checkpoints": 3,
+        "checkpoint_bigram_coverage": [
+          0.0,
+          0.0,
+          0.5
+        ],
+        "poor_checkpoints": 3,
+        "labels_leaked_into_text": false
+      },
+      {
+        "question_id": "FH20260609_Q09",
+        "good_chars": 99,
+        "poor_chars": 71,
+        "length_ratio": 1.39,
+        "good_poor_sequence": 0.2078,
+        "good_poor_jaccard": 0.0345,
+        "checkpoints": 3,
+        "checkpoint_bigram_coverage": [
+          0.25,
+          0.5,
+          0.2
+        ],
+        "poor_checkpoints": 3,
+        "labels_leaked_into_text": false
+      },
+      {
+        "question_id": "FH20260609_Q12",
+        "good_chars": 129,
+        "poor_chars": 82,
+        "length_ratio": 1.57,
+        "good_poor_sequence": 0.1684,
+        "good_poor_jaccard": 0.0575,
+        "checkpoints": 3,
+        "checkpoint_bigram_coverage": [
+          0.167,
+          0.0,
+          0.643
+        ],
+        "poor_checkpoints": 3,
+        "labels_leaked_into_text": false
+      },
+      {
+        "question_id": "FH20260609_Q14",
+        "good_chars": 139,
+        "poor_chars": 84,
+        "length_ratio": 1.65,
+        "good_poor_sequence": 0.1481,
+        "good_poor_jaccard": 0.0113,
+        "checkpoints": 3,
+        "checkpoint_bigram_coverage": [
+          0.667,
+          0.0,
+          0.6
+        ],
+        "poor_checkpoints": 3,
+        "labels_leaked_into_text": false
+      },
+      {
+        "question_id": "FH20260609_Q15",
+        "good_chars": 114,
+        "poor_chars": 86,
+        "length_ratio": 1.33,
+        "good_poor_sequence": 0.2485,
+        "good_poor_jaccard": 0.0966,
+        "checkpoints": 3,
+        "checkpoint_bigram_coverage": [
+          0.429,
+          0.667,
+          0.714
+        ],
+        "poor_checkpoints": 3,
+        "labels_leaked_into_text": false
+      },
+      {
+        "question_id": "FH20260609_Q16",
+        "good_chars": 115,
+        "poor_chars": 85,
+        "length_ratio": 1.35,
+        "good_poor_sequence": 0.1871,
+        "good_poor_jaccard": 0.0321,
+        "checkpoints": 3,
+        "checkpoint_bigram_coverage": [
+          0.333,
+          0.5,
+          0.4
+        ],
+        "poor_checkpoints": 3,
+        "labels_leaked_into_text": false
+      }
+    ]
+  }
+}
