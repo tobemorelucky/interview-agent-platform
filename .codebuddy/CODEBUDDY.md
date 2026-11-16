@@ -1290,3 +1290,19 @@ L3 前置条件（purge_requests 表、清理顺序、audit_logs 脱敏、Celery
 **三条真风险**：① `resume_report` 走全局 `async_session_factory`（`infrastructure/llm/provider.py:60`），必须同时改进程 `DATABASE_URL`，否则 409 或静默写正式库；② Coach 历史失败是**五次不同原因**的链（`COACH_INPUT_BUDGET`→`COACH_COMPUTED_NUMBER`→`CAPTURE_GUARD`→`MODEL_USER_QUOTA`→`model_request_failed`），不是单一误判规则；③ `covered_points` 过度给分（RAG-A2）未修，验收时不得当作「已掌握」证据。
 
 **资产**：未新建库（`pg_database` 245 = 242 业务 + 3 系统，与 docs/107 的 243 差一次口径，已记录不追溯）；MinIO 48 对象；三闸 OFF；离线回归 19 passed / 0 failed。
+
+---
+
+## 第三十轮：第二批数据包接收（23 题 / 18 份合成回答 / 13 条 JD 候选，真实模型 HTTP=0，见 docs/109）
+
+**基线** `2db004c`。包 `真实面经与JD扩充包_20261116.zip` 6/6 sha256 通过，解压到 `data/incoming_20261116/`。未改 Prompt/Agent/Schema/迁移，未写业务表，未建库，未 push。
+
+**三问答复**：累计**已核验独立真实 JD = 8 份**（既有 4 + 麒麟软件官方页 4，各带独立 `jobAdId`）；**有公开出处的面经问题 = 23 道，但原页已 404**（`minims.cn/archives/...` → HTTP 404，archive.org 本机不可达 502）→ 只能标 `UNVERIFIED_SOURCE_ORIGINAL_PAGE_GONE`；缺脱敏真实简历、42 份 JD、人工金标、真实逐字回答。
+
+**23 道题**：契约 0 问题；两两相似度最高 **0.00**、与 V3 最高 0.00；主题映射 16 道（rag 10 / agent 3 / redis 3）+ **7 道无对应主题**（算法 5、计算机基础 2）；映射成功者中只有 9 道能被 `topics.py` 正则识别 → 不能直接进蓝图候选池，不因此改真实出题机制。
+
+**18 份回答**：9 对，GOOD/POOR 长度比 1.33–1.65，相似度 0.07–0.25，无标签泄漏，检查点各 ≥2；9 份 POOR 都能指认具体错误（Q09 RRF 相乘取对数、Q12 称 LangGraph 必须 Checkpointer、Q14 GET+SET 冒充原子、Q15 三定义互换、Q16 全 O(1)+每请求新线程）。标注文件显式 `is_human_gold=false`。
+
+**13 条 JD 候选**：11 条飞书/华为页为 **JS 外壳**（200 但正文由前端渲染，静态抓取为 0 字）；1 条麒麟软件官方列表页含 **20 个岗位全文**；1 条拼多多正文在**高校转载页**。去重：`JD_CAND_13` 华为 = 既有 `JD01`（同 `advertisementId=36390`）；正式库与快照库无重复。取麒麟 4 个方向岗位（AI研发/Python/后端 Go-Java/云原生）+ 拼多多 1 份（待官方复核），**一份都没导入业务表**（导入需 Research 流程，会产生模型调用）。
+
+**夹具与测试**：`data/sandbox_test_pkg_20261114/R29_面经扩充包_20261116/`（01 题 / 02 答案 / 03 非金标标注 / MANIFEST），字段层面拒绝被当成模型出题或官方题库；`test_r29_real_pack_contract.py` **9 passed / 0 failed**（0 HTTP / 0 DB）。
