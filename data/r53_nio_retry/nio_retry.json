@@ -1,0 +1,128 @@
+{
+ "generated_at": "2026-11-16T12:01:50.698362+00:00",
+ "environment": {
+  "database": "interview_agent_wb_jd_r31_20261116",
+  "routes": {
+   "public_research_extract": {
+    "provider": "modelscope",
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017"
+   },
+   "public_research_quality": {
+    "provider": "modelscope",
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017"
+   }
+  }
+ },
+ "budget": {
+  "max_http": 2,
+  "max_tokens": 8000,
+  "normal_http": 2
+ },
+ "mode": "nio-retry",
+ "page_literal": "校招-车端 AI Agent 与应用生态系统架构工程师",
+ "source_url": "https://nio.jobs.feishu.cn/campus/position/7673028675729656105/detail",
+ "body_chars": 1500,
+ "body_sha256": "aef49bb3a4d5fbdf3557f650076b92140f18e611a842d06ce2028344b3b18055",
+ "f1_selfcheck": {
+  "spans": [
+   [
+    0,
+    585
+   ],
+   [
+    585,
+    1161
+   ],
+   [
+    1161,
+    1500
+   ]
+  ],
+  "line17_holders": 1,
+  "line17_supported_by_one_span": true,
+  "f1_verified": true
+ },
+ "frozen_inputs_unchanged": true,
+ "tasks_before": [
+  {
+   "id": 2,
+   "status": "FAILED",
+   "revision_of": null,
+   "job_title": "车端AI Agent与应用生态系统架构工程师",
+   "content_sha256": "aef49bb3a4d5fbdf3557f650076b92140f18e611a842d06ce2028344b3b18055",
+   "error": "MANUAL_EXTRACTED_IDENTITY_MISMATCH: MANUAL_EXTRACTED_IDENTITY_MISMATCH"
+  },
+  {
+   "id": 4,
+   "status": "FAILED",
+   "revision_of": null,
+   "job_title": "校招-车端 AI Agent 与应用生态系统架构工程师",
+   "content_sha256": "aef49bb3a4d5fbdf3557f650076b92140f18e611a842d06ce2028344b3b18055",
+   "error": "EvidenceValidationError: Job metadata must be literal and cite exact evidence"
+  }
+ ],
+ "revision": {
+  "task_id": 4,
+  "revision_of": 2,
+  "status": "FAILED",
+  "reused": true,
+  "second_call_same_task": true,
+  "idempotent": true
+ },
+ "prep_ledger": {
+  "http": 0,
+  "tokens": 0,
+  "statuses": [
+   "SETTLED"
+  ],
+  "tokens_after": 46153,
+  "http_after": 18
+ },
+ "run": {
+  "refresh_task_id": 4,
+  "agent_run_id": 10,
+  "status": "FAILED",
+  "company_id": null,
+  "job_id": null,
+  "jd_version_id": null,
+  "publication_status": null,
+  "error": "EvidenceValidationError: Job metadata must be literal and cite exact evidence"
+ },
+ "ledger": {
+  "http": 2,
+  "tokens": 6075,
+  "statuses": [
+   "SETTLED"
+  ],
+  "tokens_after": 52228,
+  "http_after": 20
+ },
+ "budget_ok": true,
+ "repair_used": 0,
+ "steps": [
+  {
+   "step": "job_jd",
+   "status": "SUCCEEDED",
+   "prompt": "job_jd@1.0.1",
+   "structured_retry": 0,
+   "tokens": {
+    "input_tokens": 1810,
+    "output_tokens": 1420,
+    "total_tokens": 3230
+   },
+   "error": null
+  },
+  {
+   "step": "quality",
+   "status": "SUCCEEDED",
+   "prompt": "quality@1.0.0",
+   "structured_retry": 0,
+   "tokens": {
+    "input_tokens": 2677,
+    "output_tokens": 168,
+    "total_tokens": 2845
+   },
+   "error": null
+  }
+ ]
+}

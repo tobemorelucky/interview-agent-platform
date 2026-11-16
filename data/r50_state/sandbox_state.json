@@ -1,0 +1,267 @@
+{
+ "generated_at": "2026-11-16T12:05:49.800881+00:00",
+ "database": "interview_agent_wb_jd_r31_20261116",
+ "counts": {
+  "companies": 5,
+  "jobs": 7,
+  "job_description_versions": 7,
+  "job_requirements": 77,
+  "claims": 125,
+  "claim_evidence": 130,
+  "sources": 8,
+  "source_snapshots": 8,
+  "public_data_refresh_tasks": 9,
+  "experience_agent_runs": 10,
+  "experience_agent_step_runs": 20,
+  "model_admissions": 20,
+  "audit_logs": 6,
+  "users": 2
+ },
+ "publication_status": {
+  "PUBLISHED": 5,
+  "WAITING_REVIEW": 2
+ },
+ "jobs": [
+  {
+   "id": 1,
+   "canonical_name": "麒麟软件",
+   "canonical_title": "AI研发工程师",
+   "version_number": 1,
+   "publication_status": "PUBLISHED",
+   "content_fingerprint": "3b98d5df72d052a4bd98d03f1e58b27aaf327607d331f18951ba91d0be2469e0",
+   "reqs": 10
+  },
+  {
+   "id": 2,
+   "canonical_name": "沐瞳科技",
+   "canonical_title": "Agent开发工程师（平台）",
+   "version_number": 1,
+   "publication_status": "PUBLISHED",
+   "content_fingerprint": "a5320f305f7f2cbb9ea71abccb6a923e2c5b2a9f9c6b587b2d9d73c820cef86f",
+   "reqs": 12
+  },
+  {
+   "id": 3,
+   "canonical_name": "Unity中国",
+   "canonical_title": "AI Agent 算法研发工程师",
+   "version_number": 1,
+   "publication_status": "PUBLISHED",
+   "content_fingerprint": "31cf881c64c3033779f7f4f528fe4519b534d1d55e0a5d1d6b4a2d389b25ef16",
+   "reqs": 17
+  },
+  {
+   "id": 4,
+   "canonical_name": "面壁智能",
+   "canonical_title": "大模型算法工程师 - 智能体方向",
+   "version_number": 1,
+   "publication_status": "WAITING_REVIEW",
+   "content_fingerprint": "be2723fb27189869bbc34f832cf948ee24bff5b121182e778517efa85b1650ff",
+   "reqs": 6
+  },
+  {
+   "id": 5,
+   "canonical_name": "沐瞳科技",
+   "canonical_title": "【2027届秋招】后端开发工程师（AI向/数据平台）",
+   "version_number": 1,
+   "publication_status": "PUBLISHED",
+   "content_fingerprint": "b335a30244405c2eb7fbe1b11c1eec03e824dfb464da572d71b82532a7b82d3a",
+   "reqs": 10
+  },
+  {
+   "id": 6,
+   "canonical_name": "蔚来",
+   "canonical_title": "校招-AI推理引擎开发工程师",
+   "version_number": 1,
+   "publication_status": "WAITING_REVIEW",
+   "content_fingerprint": "969b9f9065cea8655a5d8d721b64aa79002077d12f6a61fb9457f9d513fab475",
+   "reqs": 13
+  },
+  {
+   "id": 7,
+   "canonical_name": "麒麟软件",
+   "canonical_title": "「2027校招」Linux内核研发工程师",
+   "version_number": 1,
+   "publication_status": "PUBLISHED",
+   "content_fingerprint": "886d1955d5fdc8fe7e31be9e1ec7ca45a315b1ca9b6ffe373fec8c1489441c62",
+   "reqs": 9
+  }
+ ],
+ "audit_logs": [
+  {
+   "id": 1,
+   "action": "public_career.jd.publish",
+   "actor_role": "ADMIN",
+   "resource_type": "JobDescriptionVersion",
+   "resource_id": "1",
+   "status": "SUCCESS",
+   "created_at": "2026-11-16 10:38:27.652766+00:00"
+  },
+  {
+   "id": 2,
+   "action": "public_career.jd.publish",
+   "actor_role": "ADMIN",
+   "resource_type": "JobDescriptionVersion",
+   "resource_id": "2",
+   "status": "SUCCESS",
+   "created_at": "2026-11-16 10:38:27.888416+00:00"
+  },
+  {
+   "id": 3,
+   "action": "public_career.jd.identity_revision",
+   "actor_role": "SYSTEM",
+   "resource_type": "PublicDataRefreshTask",
+   "resource_id": "4",
+   "status": "SUCCESS",
+   "created_at": "2026-11-16 11:01:30.144485+00:00"
+  },
+  {
+   "id": 4,
+   "action": "public_career.jd.publish",
+   "actor_role": "ADMIN",
+   "resource_type": "JobDescriptionVersion",
+   "resource_id": "3",
+   "status": "SUCCESS",
+   "created_at": "2026-11-16 11:04:48.281554+00:00"
+  },
+  {
+   "id": 5,
+   "action": "public_career.jd.publish",
+   "actor_role": "ADMIN",
+   "resource_type": "JobDescriptionVersion",
+   "resource_id": "5",
+   "status": "SUCCESS",
+   "created_at": "2026-11-16 11:04:48.451050+00:00"
+  },
+  {
+   "id": 6,
+   "action": "public_career.jd.publish",
+   "actor_role": "ADMIN",
+   "resource_type": "JobDescriptionVersion",
+   "resource_id": "7",
+   "status": "SUCCESS",
+   "created_at": "2026-11-16 11:04:48.587828+00:00"
+  }
+ ],
+ "ledger": {
+  "n": 20,
+  "tokens": 52228,
+  "models": [
+   "deepseek-ai/DeepSeek-V4.1-Flash-1017"
+  ],
+  "statuses": [
+   "SETTLED"
+  ]
+ },
+ "refresh_tasks": [
+  {
+   "id": 1,
+   "target_type": "JOB_JD",
+   "status": "COMPLETED",
+   "err": null
+  },
+  {
+   "id": 2,
+   "target_type": "JOB_JD",
+   "status": "FAILED",
+   "err": "MANUAL_EXTRACTED_IDENTITY_MISMATCH: MANUAL_EXTRACTED_IDENTITY_MISMATCH"
+  },
+  {
+   "id": 3,
+   "target_type": "JOB_JD",
+   "status": "COMPLETED",
+   "err": null
+  },
+  {
+   "id": 4,
+   "target_type": "JOB_JD",
+   "status": "FAILED",
+   "err": "EvidenceValidationError: Job metadata must be literal and cite exact evidence"
+  },
+  {
+   "id": 5,
+   "target_type": "JOB_JD",
+   "status": "COMPLETED",
+   "err": null
+  },
+  {
+   "id": 6,
+   "target_type": "JOB_JD",
+   "status": "COMPLETED",
+   "err": null
+  },
+  {
+   "id": 7,
+   "target_type": "JOB_JD",
+   "status": "COMPLETED",
+   "err": null
+  },
+  {
+   "id": 8,
+   "target_type": "JOB_JD",
+   "status": "COMPLETED",
+   "err": null
+  },
+  {
+   "id": 9,
+   "target_type": "JOB_JD",
+   "status": "COMPLETED",
+   "err": null
+  }
+ ],
+ "users": [
+  {
+   "id": 1,
+   "email": "r33.reviewer@example.com",
+   "role": "ADMIN",
+   "is_active": true
+  },
+  {
+   "id": 2,
+   "email": "synthetic.r34@example.com",
+   "role": "USER",
+   "is_active": true
+  }
+ ],
+ "snapshots": [
+  {
+   "id": 1,
+   "content_hash": "c7831bc72c7fdaf1cddc552fffc6648d8c19844b04be7f203a8ca8e0d4ddb9b0",
+   "chars": 1186
+  },
+  {
+   "id": 2,
+   "content_hash": "aef49bb3a4d5fbdf3557f650076b92140f18e611a842d06ce2028344b3b18055",
+   "chars": 1500
+  },
+  {
+   "id": 3,
+   "content_hash": "afaeb58e0926e4e420d88cf10c7f70ca81686e3d87322cd2c63d5217fd5b6223",
+   "chars": 1140
+  },
+  {
+   "id": 6,
+   "content_hash": "323ca105137b518c4f1a6204f140a980507cf616216c1a8b7f5460824aaca7a0",
+   "chars": 2447
+  },
+  {
+   "id": 7,
+   "content_hash": "d0f1aff56f326d07ff9a44a8489384db3f48e1a57758260e5cee514dbd3690bd",
+   "chars": 523
+  },
+  {
+   "id": 8,
+   "content_hash": "ec6f96246d8121f4d89c4bf26ccd475445eb4f00aac64cb808691d6b70010c74",
+   "chars": 870
+  },
+  {
+   "id": 9,
+   "content_hash": "11833428a5a897f3d9854cd8ac57bba707635d2d4385d2a785d8533dda280a3b",
+   "chars": 592
+  },
+  {
+   "id": 10,
+   "content_hash": "a9da15b907ba57de6535f064e976d75dc0b5fca7329dbddf170bb9948f5e39b5",
+   "chars": 548
+  }
+ ]
+}

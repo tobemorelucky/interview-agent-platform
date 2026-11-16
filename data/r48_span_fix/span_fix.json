@@ -1,0 +1,226 @@
+{
+ "generated_at": "2026-11-16T11:58:42.532080+00:00",
+ "model_http_calls": 0,
+ "f1_applied": true,
+ "span_chars": 600,
+ "note": "before = pre-F1 rule (control copy); after = shipped EvidenceCatalog",
+ "rows": [
+  {
+   "jd": "NIO_AIA_025",
+   "chars": 1462,
+   "before": {
+    "lines": 38,
+    "lines_held_by_one_chunk": 36,
+    "lines_cut": 2,
+    "cut_samples": [
+     "参与设计车端 AI Agent 应用平台架构，使车端大模型能够安全、可控、可审计地调用车辆能力、座舱能力、云端服务和第三",
+     "对“AI 如何成为下一代应用入口”有自己的判断，并愿意把判断落到车端平台设计中。"
+    ],
+    "chunks": 3
+   },
+   "after": {
+    "lines": 38,
+    "lines_held_by_one_chunk": 38,
+    "lines_cut": 0,
+    "cut_samples": [],
+    "chunks": 3
+   },
+   "chunk_lengths_before": [
+    262,
+    600
+   ],
+   "chunk_lengths_after": [
+    295,
+    569,
+    598
+   ],
+   "offsets_exact_after": true
+  },
+  {
+   "jd": "KYLINOS_SEC_5480b909",
+   "chars": 920,
+   "before": {
+    "lines": 19,
+    "lines_held_by_one_chunk": 18,
+    "lines_cut": 1,
+    "cut_samples": [
+     "3、熟悉操作系统原理（Windows/Linux），了解常见安全漏洞原理（如UAF、条件竞争、缓冲区溢出、OS提权漏洞等"
+    ],
+    "chunks": 2
+   },
+   "after": {
+    "lines": 19,
+    "lines_held_by_one_chunk": 19,
+    "lines_cut": 0,
+    "cut_samples": [],
+    "chunks": 2
+   },
+   "chunk_lengths_before": [
+    320,
+    600
+   ],
+   "chunk_lengths_after": [
+    340,
+    580
+   ],
+   "offsets_exact_after": true
+  },
+  {
+   "jd": "KYLINOS_EMB_cd3ac686",
+   "chars": 845,
+   "before": {
+    "lines": 17,
+    "lines_held_by_one_chunk": 16,
+    "lines_cut": 1,
+    "cut_samples": [
+     "4、熟悉芯片硬件架构原理及硬件虚拟化，熟悉Linux内核或主流RTOS（FreeRTOS、LiteOS、RT-Threa"
+    ],
+    "chunks": 2
+   },
+   "after": {
+    "lines": 17,
+    "lines_held_by_one_chunk": 17,
+    "lines_cut": 0,
+    "cut_samples": [],
+    "chunks": 2
+   },
+   "chunk_lengths_before": [
+    245,
+    600
+   ],
+   "chunk_lengths_after": [
+    297,
+    548
+   ],
+   "offsets_exact_after": true
+  },
+  {
+   "jd": "MOONTON_QA_008",
+   "chars": 1871,
+   "before": {
+    "lines": 50,
+    "lines_held_by_one_chunk": 47,
+    "lines_cut": 3,
+    "cut_samples": [
+     "1. 探索大模型及 Agent 在需求分析、测试设计、自动化生成、测试执行、缺陷分析等场景中的应用；",
+     "7. 能够接受从业务测试实践出发，逐步向测试工程、AI 测试及质量治理方向发展。",
+     "3. AI 测试 Agent 与 Harness；"
+    ],
+    "chunks": 4
+   },
+   "after": {
+    "lines": 50,
+    "lines_held_by_one_chunk": 50,
+    "lines_cut": 0,
+    "cut_samples": [],
+    "chunks": 4
+   },
+   "chunk_lengths_before": [
+    71,
+    600
+   ],
+   "chunk_lengths_after": [
+    101,
+    585,
+    588,
+    597
+   ],
+   "offsets_exact_after": true
+  },
+  {
+   "jd": "MOONTON_PM_013",
+   "chars": 899,
+   "before": {
+    "lines": 25,
+    "lines_held_by_one_chunk": 24,
+    "lines_cut": 1,
+    "cut_samples": [
+     "6.具备良好的沟通协调和项目推进能力，能够与研发、设计、测试及业务团队高效协作。"
+    ],
+    "chunks": 2
+   },
+   "after": {
+    "lines": 25,
+    "lines_held_by_one_chunk": 25,
+    "lines_cut": 0,
+    "cut_samples": [],
+    "chunks": 2
+   },
+   "chunk_lengths_before": [
+    299,
+    600
+   ],
+   "chunk_lengths_after": [
+    331,
+    568
+   ],
+   "offsets_exact_after": true
+  },
+  {
+   "jd": "NIO_CV_023",
+   "chars": 823,
+   "before": {
+    "lines": 28,
+    "lines_held_by_one_chunk": 27,
+    "lines_cut": 1,
+    "cut_samples": [
+     "4. 实践经验：有至少一个完整的视觉算法项目经验，包括模型训练、评估与结果分析"
+    ],
+    "chunks": 2
+   },
+   "after": {
+    "lines": 28,
+    "lines_held_by_one_chunk": 28,
+    "lines_cut": 0,
+    "cut_samples": [],
+    "chunks": 2
+   },
+   "chunk_lengths_before": [
+    223,
+    600
+   ],
+   "chunk_lengths_after": [
+    233,
+    590
+   ],
+   "offsets_exact_after": true
+  },
+  {
+   "jd": "NIO_SUPPLY_024",
+   "chars": 1699,
+   "before": {
+    "lines": 29,
+    "lines_held_by_one_chunk": 27,
+    "lines_cut": 2,
+    "cut_samples": [
+     "参与企业级 Agent Harness / Runtime 建设，包括 Tool / Skill 管理、Context ",
+     "不要求候选人覆盖全部技术方向。具备其中一个方向的深入项目经验，并对其他方向有基本理解即可。"
+    ],
+    "chunks": 3
+   },
+   "after": {
+    "lines": 29,
+    "lines_held_by_one_chunk": 29,
+    "lines_cut": 0,
+    "cut_samples": [],
+    "chunks": 3
+   },
+   "chunk_lengths_before": [
+    499,
+    600
+   ],
+   "chunk_lengths_after": [
+    511,
+    593,
+    595
+   ],
+   "offsets_exact_after": true
+  }
+ ],
+ "totals": {
+  "jds": 7,
+  "lines_before": 206,
+  "cut_before": 11,
+  "cut_after": 0
+ }
+}

@@ -1,0 +1,369 @@
+{
+ "generated_at": "2026-11-16T11:38:57.095716+00:00",
+ "database": "interview_agent_wb_jd_r31_20261116",
+ "tasks": [
+  {
+   "id": 2,
+   "target_type": "JOB_JD",
+   "target_ref": "MANUAL_SOURCE_IMPORT:2",
+   "reason": "{\"schema_version\": 1, \"acquisition_mode\": \"MANUAL_SOURCE_IMPORT\", \"source_snapshot_id\": 2, \"canonical_url\": \"https://nio.jobs.feishu.cn/campus/position/7673028675729656105/detail\", \"source_type\": \"official\", \"document_type\": \"job_jd\", \"company\": \"蔚来\", \"job_title\": \"车端AI Agent与应用生态系统架构工程师\", \"content_sha256\": \"aef49bb3a4d5fbdf3557f650076b92140f18e611a842d06ce2028344b3b18055\", \"content_fingerprint\": \"659037a900fe0f1747536f912089d60e37cb8b1fdbdf5632ea70c520bfdb64c6\", \"acquired_at\": \"2026-11-16T08:16:20.607986+00:00\", \"acquisition_timestamp_semantics\": \"LOCAL_BODY_SAVE_TIME\", \"file_name\": \"NIO_AIA_025.txt\"}",
+   "status": "FAILED",
+   "error_message": "MANUAL_EXTRACTED_IDENTITY_MISMATCH: MANUAL_EXTRACTED_IDENTITY_MISMATCH",
+   "idempotency_key": "manual:0d27076458d5a453fed498b5256592f698d0bedf22cd798034f9c5e2050ae6b1",
+   "requested_at": "2026-11-16T08:38:44.831078+00:00",
+   "started_at": "2026-11-16T08:38:44.855563+00:00",
+   "completed_at": "2026-11-16T08:38:52.895027+00:00",
+   "created_at": "2026-11-16T08:38:44.831078+00:00",
+   "updated_at": "2026-11-16T08:38:52.898495+00:00"
+  },
+  {
+   "id": 4,
+   "target_type": "JOB_JD",
+   "target_ref": "MANUAL_SOURCE_IMPORT:2",
+   "reason": "{\"schema_version\": 1, \"acquisition_mode\": \"MANUAL_SOURCE_IMPORT\", \"source_snapshot_id\": 2, \"canonical_url\": \"https://nio.jobs.feishu.cn/campus/position/7673028675729656105/detail\", \"source_type\": \"official\", \"document_type\": \"job_jd\", \"company\": \"蔚来\", \"job_title\": \"校招-车端 AI Agent 与应用生态系统架构工程师\", \"content_sha256\": \"aef49bb3a4d5fbdf3557f650076b92140f18e611a842d06ce2028344b3b18055\", \"content_fingerprint\": \"659037a900fe0f1747536f912089d60e37cb8b1fdbdf5632ea70c520bfdb64c6\", \"acquired_at\": \"2026-11-16T08:16:20.607986+00:00\", \"acquisition_timestamp_semantics\": \"LOCAL_BODY_SAVE_TIME\", \"file_name\": \"NIO_AIA_025.txt\", \"identity_revision\": {\"of_task_id\": 2, \"of_job_title\": \"车端AI Agent与应用生态系统架构工程师\", \"reason\": \"R34：官方字面标题为「校招-车端 AI Agent 与应用生态系统架构工程师」，R31 冻结的是去前缀展示名；按 R33 已验收的显式修订流程重建冻结输入，不改原任务与正文。\", \"authorized_by\": \"user:R34-approval\", \"authorized_at\": \"2026-11-16T11:01:30.151591+00:00\", \"previous_error\": \"MANUAL_EXTRACTED_IDENTITY_MISMATCH: MANUAL_EXTRACTED_IDENTITY_MISMATCH\", \"same_canonical_url\": true, \"same_content_sha256\": true, \"label_occurs_in_snapshot\": true}}",
+   "status": "FAILED",
+   "error_message": "EvidenceValidationError: Job metadata must be literal and cite exact evidence",
+   "idempotency_key": "manual-rev:83045450de0ce90571981f4b2ff3b4af04992ec7c4f9ec1571b86f2ccc4f1e46",
+   "requested_at": "2026-11-16T11:01:30.144485+00:00",
+   "started_at": "2026-11-16T11:01:30.151626+00:00",
+   "completed_at": "2026-11-16T11:01:54.917090+00:00",
+   "created_at": "2026-11-16T11:01:30.144485+00:00",
+   "updated_at": "2026-11-16T11:01:54.918637+00:00"
+  }
+ ],
+ "runs": [
+  {
+   "id": 2,
+   "refresh_task_id": 2,
+   "agent_role": "PublicDataResearchAgent",
+   "graph_name": "public_data_research",
+   "graph_version": "1.0.0",
+   "status": "FAILED",
+   "input_hash": null,
+   "output_json": null,
+   "error_message": "MANUAL_EXTRACTED_IDENTITY_MISMATCH: MANUAL_EXTRACTED_IDENTITY_MISMATCH",
+   "started_at": "2026-11-16T08:38:44.877074+00:00",
+   "finished_at": "2026-11-16T08:38:52.916794+00:00"
+  },
+  {
+   "id": 4,
+   "refresh_task_id": 4,
+   "agent_role": "PublicDataResearchAgent",
+   "graph_name": "public_data_research",
+   "graph_version": "1.0.0",
+   "status": "FAILED",
+   "input_hash": null,
+   "output_json": null,
+   "error_message": "EvidenceValidationError: Job metadata must be literal and cite exact evidence",
+   "started_at": "2026-11-16T11:01:45.433476+00:00",
+   "finished_at": "2026-11-16T11:01:54.927053+00:00"
+  }
+ ],
+ "steps": [
+  {
+   "id": 3,
+   "agent_run_id": 2,
+   "step_name": "job_jd",
+   "status": "SUCCEEDED",
+   "provider_name": "modelscope",
+   "model_name": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "prompt_name": "job_jd",
+   "prompt_version": "1.0.1",
+   "structured_retry": 0,
+   "token_usage_json": "{\"input_tokens\": 1811, \"output_tokens\": 1456, \"total_tokens\": 3267}",
+   "input_json": "{\"route\": \"public_research_extract\", \"prompt_hash\": \"d86cd5227e543edbd9791bd0b56b061c8f3adf441684d385f483b379788af751\", \"thinking_type\": \"disabled\"}",
+   "output_json": "{\"schema\": \"JobJDExtraction\", \"model_invocations\": [{\"provider\": \"modelscope\", \"model\": \"deepseek-ai/DeepSeek-V4.1-Flash-1017\", \"fallback_reason\": null, \"status\": \"SUCCEEDED\", \"usage\": {\"input_tokens\": 1811, \"output_tokens\": 1456, \"total_tokens\": 3267, \"reasoning_tokens\": null}, \"latency_ms\": 6263}], \"usage_complete\": true}",
+   "error_message": null,
+   "latency_ms": 6263
+  },
+  {
+   "id": 4,
+   "agent_run_id": 2,
+   "step_name": "quality",
+   "status": "SUCCEEDED",
+   "provider_name": "modelscope",
+   "model_name": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "prompt_name": "quality",
+   "prompt_version": "1.0.0",
+   "structured_retry": 0,
+   "token_usage_json": "{\"input_tokens\": 2676, \"output_tokens\": 104, \"total_tokens\": 2780}",
+   "input_json": "{\"route\": \"public_research_quality\", \"prompt_hash\": \"600c2b5f24f928f7e56ca5abf06f0e0468f12c71de80934df05e3ad770f0a220\", \"thinking_type\": \"disabled\"}",
+   "output_json": "{\"schema\": \"ResearchQuality\", \"model_invocations\": [{\"provider\": \"modelscope\", \"model\": \"deepseek-ai/DeepSeek-V4.1-Flash-1017\", \"fallback_reason\": null, \"status\": \"SUCCEEDED\", \"usage\": {\"input_tokens\": 2676, \"output_tokens\": 104, \"total_tokens\": 2780, \"reasoning_tokens\": null}, \"latency_ms\": 1671}], \"usage_complete\": true, \"risk_flags\": [\"education requirement is PhD-only, which sharply narrows the candidate pool\", \"JD text is split across multiple evidence excerpts; some requirement statements are consolidated from a single evidence ID covering a bulleted list\", \"several requirements are framed as 'at least one of' directions, so the extraction may overstate the breadth of mandatory skills\", \"no evidence of compensation, team size, or hiring timeline\", \"identity evidence is limited to a single source excerpt\"], \"suitable\": true}",
+   "error_message": null,
+   "latency_ms": 1671
+  },
+  {
+   "id": 7,
+   "agent_run_id": 4,
+   "step_name": "job_jd",
+   "status": "SUCCEEDED",
+   "provider_name": "modelscope",
+   "model_name": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "prompt_name": "job_jd",
+   "prompt_version": "1.0.1",
+   "structured_retry": 0,
+   "token_usage_json": "{\"input_tokens\": 1815, \"output_tokens\": 1459, \"total_tokens\": 3274}",
+   "input_json": "{\"route\": \"public_research_extract\", \"prompt_hash\": \"d86cd5227e543edbd9791bd0b56b061c8f3adf441684d385f483b379788af751\", \"thinking_type\": \"disabled\"}",
+   "output_json": "{\"schema\": \"JobJDExtraction\", \"model_invocations\": [{\"provider\": \"modelscope\", \"model\": \"deepseek-ai/DeepSeek-V4.1-Flash-1017\", \"fallback_reason\": null, \"status\": \"SUCCEEDED\", \"usage\": {\"input_tokens\": 1815, \"output_tokens\": 1459, \"total_tokens\": 3274, \"reasoning_tokens\": null}, \"latency_ms\": 6569}], \"usage_complete\": true}",
+   "error_message": null,
+   "latency_ms": 6575
+  },
+  {
+   "id": 8,
+   "agent_run_id": 4,
+   "step_name": "quality",
+   "status": "SUCCEEDED",
+   "provider_name": "modelscope",
+   "model_name": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "prompt_name": "quality",
+   "prompt_version": "1.0.0",
+   "structured_retry": 0,
+   "token_usage_json": "{\"input_tokens\": 2721, \"output_tokens\": 211, \"total_tokens\": 2932}",
+   "input_json": "{\"route\": \"public_research_quality\", \"prompt_hash\": \"600c2b5f24f928f7e56ca5abf06f0e0468f12c71de80934df05e3ad770f0a220\", \"thinking_type\": \"disabled\"}",
+   "output_json": "{\"schema\": \"ResearchQuality\", \"model_invocations\": [{\"provider\": \"modelscope\", \"model\": \"deepseek-ai/DeepSeek-V4.1-Flash-1017\", \"fallback_reason\": null, \"status\": \"SUCCEEDED\", \"usage\": {\"input_tokens\": 2721, \"output_tokens\": 211, \"total_tokens\": 2932, \"reasoning_tokens\": null}, \"latency_ms\": 2762}], \"usage_complete\": true, \"risk_flags\": [\"seniority_mismatch_risk: \\u5c97\\u4f4d\\u8981\\u6c42\\u535a\\u58eb\\u5b66\\u5386\\u4e14\\u9762\\u54112027\\u5c4a\\u6821\\u62db\\uff0c\\u4e0e\\u201c\\u67b6\\u6784\\u5de5\\u7a0b\\u5e08\\u201d\\u804c\\u8d23\\u53e0\\u52a0\\uff0c\\u5019\\u9009\\u4eba\\u6c60\\u53ef\\u80fd\\u6781\\u7a84\", \"requirement_scope_breadth: \\u8981\\u6c42\\u8986\\u76d6AI Agent\\u3001\\u6846\\u67b6\\u3001\\u8bb0\\u5fc6/RAG\\u3001\\u5b89\\u5168\\u6c99\\u7bb1\\u3001OS/SOA/\\u7aef\\u4e91\\u534f\\u540c\\u7b49\\u591a\\u4e2a\\u65b9\\u5411\\uff0c\\u867d\\u4e3a\\u201c\\u81f3\\u5c11\\u4e00\\u4e2a\\u65b9\\u5411\\u201d\\uff0c\\u4f46\\u6574\\u4f53\\u80fd\\u529b\\u9762\\u5f88\\u5bbd\", \"evidence_fragmentation: JD\\u8bc1\\u636e\\u6587\\u672c\\u5728\\u53e5\\u5b50\\u4e2d\\u95f4\\u88ab\\u622a\\u65ad\\uff08\\u5982\\u201c\\u53c2\\u4e0e\\u8bbe\\u8ba1\\u8f66\\u7aef AI Agent\\u201d\\u201c\\u5bf9\\u2018A\\u2019\\u201d\\u201cI \\u5982\\u4f55\\u6210\\u4e3a\\u2026\\u201d\\uff09\\uff0c\\u90e8\\u5206\\u8bed\\u53e5\\u8de8\\u8bc1\\u636e\\u62fc\\u63a5\\uff0c\\u9700\\u6838\\u5bf9\\u539f\\u6587\\u5b8c\\u6574\\u6027\", \"identity_evidence_limited: \\u516c\\u53f8\\u540d\\u4e0e\\u804c\\u4f4d\\u540d\\u4ec5\\u7531\\u5355\\u4e00\\u8bc1\\u636eID\\u652f\\u6301\\uff0c\\u4e14\\u8be5\\u8bc1\\u636e\\u4e3a\\u62db\\u8058\\u9875\\u9762\\u6587\\u672c\\uff0c\\u672a\\u63d0\\u4f9b\\u72ec\\u7acb\\u4ea4\\u53c9\\u9a8c\\u8bc1\", \"no_candidate_information: \\u8f93\\u5165\\u4ec5\\u4e3a\\u804c\\u4f4d\\u62bd\\u53d6\\uff0c\\u65e0\\u5019\\u9009\\u4eba\\u80cc\\u666f\\uff0c\\u65e0\\u6cd5\\u8bc4\\u4f30\\u4eba\\u5c97\\u5339\\u914d\\u5ea6\\uff0c\\u4ec5\\u80fd\\u8bc4\\u4f30\\u804c\\u4f4d\\u4fe1\\u606f\\u8d28\\u91cf\"], \"suitable\": true}",
+   "error_message": null,
+   "latency_ms": 2762
+  }
+ ],
+ "ledger": [
+  {
+   "call_key": "7f3a4076ea704b3986ffe0bc3517ac13",
+   "owner_key": "system:public-career",
+   "route": "public_research_extract",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "status": "SETTLED",
+   "reserved_tokens": 12804,
+   "charged_tokens": 2963,
+   "actual_tokens": 2963,
+   "created_at": "2026-11-16T08:38:33.390616+00:00",
+   "finished_at": "2026-11-16T08:38:40.809583+00:00"
+  },
+  {
+   "call_key": "2400aaac37b546b99b8df69b0923e807",
+   "owner_key": "system:public-career",
+   "route": "public_research_quality",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "status": "SETTLED",
+   "reserved_tokens": 15456,
+   "charged_tokens": 2528,
+   "actual_tokens": 2528,
+   "created_at": "2026-11-16T08:38:40.956320+00:00",
+   "finished_at": "2026-11-16T08:38:44.582875+00:00"
+  },
+  {
+   "call_key": "95abc49f7a2b4e748dafb8f0570ac4ee",
+   "owner_key": "system:public-career",
+   "route": "public_research_extract",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "status": "SETTLED",
+   "reserved_tokens": 13492,
+   "charged_tokens": 3267,
+   "actual_tokens": 3267,
+   "created_at": "2026-11-16T08:38:44.917386+00:00",
+   "finished_at": "2026-11-16T08:38:51.173697+00:00"
+  },
+  {
+   "call_key": "052bcc8240644c46b89ce1167ef524b5",
+   "owner_key": "system:public-career",
+   "route": "public_research_quality",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "status": "SETTLED",
+   "reserved_tokens": 16543,
+   "charged_tokens": 2780,
+   "actual_tokens": 2780,
+   "created_at": "2026-11-16T08:38:51.200588+00:00",
+   "finished_at": "2026-11-16T08:38:52.860208+00:00"
+  },
+  {
+   "call_key": "a69498b68d2440dbaa67e9f229acb170",
+   "owner_key": "system:public-career",
+   "route": "public_research_extract",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "status": "SETTLED",
+   "reserved_tokens": 12606,
+   "charged_tokens": 2916,
+   "actual_tokens": 2916,
+   "created_at": "2026-11-16T08:39:33.044652+00:00",
+   "finished_at": "2026-11-16T08:39:39.340312+00:00"
+  },
+  {
+   "call_key": "98dbf612fff24004a5e9b56f7e86ccc2",
+   "owner_key": "system:public-career",
+   "route": "public_research_quality",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "status": "SETTLED",
+   "reserved_tokens": 15173,
+   "charged_tokens": 2467,
+   "actual_tokens": 2467,
+   "created_at": "2026-11-16T08:39:39.366574+00:00",
+   "finished_at": "2026-11-16T08:39:41.652031+00:00"
+  },
+  {
+   "call_key": "02581bf469194f828a060b88a3dc1589",
+   "owner_key": "system:public-career",
+   "route": "public_research_extract",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "status": "SETTLED",
+   "reserved_tokens": 13501,
+   "charged_tokens": 3274,
+   "actual_tokens": 3274,
+   "created_at": "2026-11-16T11:01:45.545567+00:00",
+   "finished_at": "2026-11-16T11:01:52.107591+00:00"
+  },
+  {
+   "call_key": "b96934c18f864a439aec50a4cc53983b",
+   "owner_key": "system:public-career",
+   "route": "public_research_quality",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "status": "SETTLED",
+   "reserved_tokens": 16538,
+   "charged_tokens": 2932,
+   "actual_tokens": 2932,
+   "created_at": "2026-11-16T11:01:52.143889+00:00",
+   "finished_at": "2026-11-16T11:01:54.900492+00:00"
+  },
+  {
+   "call_key": "fd42cc819e2c4b729004f78a4d42d704",
+   "owner_key": "system:public-career",
+   "route": "public_research_extract",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "status": "SETTLED",
+   "reserved_tokens": 14700,
+   "charged_tokens": 4091,
+   "actual_tokens": 4091,
+   "created_at": "2026-11-16T11:02:26.515323+00:00",
+   "finished_at": "2026-11-16T11:02:33.895004+00:00"
+  },
+  {
+   "call_key": "22cd2a40c33b4a4d81b7f1077fa5a822",
+   "owner_key": "system:public-career",
+   "route": "public_research_quality",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "status": "SETTLED",
+   "reserved_tokens": 19486,
+   "charged_tokens": 3753,
+   "actual_tokens": 3753,
+   "created_at": "2026-11-16T11:02:33.926293+00:00",
+   "finished_at": "2026-11-16T11:02:35.930201+00:00"
+  },
+  {
+   "call_key": "f9f326bd247f4d8d89cd321a59737bbf",
+   "owner_key": "system:public-career",
+   "route": "public_research_extract",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "status": "SETTLED",
+   "reserved_tokens": 11095,
+   "charged_tokens": 1849,
+   "actual_tokens": 1849,
+   "created_at": "2026-11-16T11:02:36.172562+00:00",
+   "finished_at": "2026-11-16T11:02:39.465404+00:00"
+  },
+  {
+   "call_key": "5acfca8d1d6a40f09dc1ca148434e542",
+   "owner_key": "system:public-career",
+   "route": "public_research_quality",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "status": "SETTLED",
+   "reserved_tokens": 10821,
+   "charged_tokens": 1343,
+   "actual_tokens": 1343,
+   "created_at": "2026-11-16T11:02:39.488389+00:00",
+   "finished_at": "2026-11-16T11:02:41.504227+00:00"
+  },
+  {
+   "call_key": "b109bf62f3854802b7af4056e41d3edb",
+   "owner_key": "system:public-career",
+   "route": "public_research_extract",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "status": "SETTLED",
+   "reserved_tokens": 12204,
+   "charged_tokens": 2484,
+   "actual_tokens": 2484,
+   "created_at": "2026-11-16T11:02:41.613415+00:00",
+   "finished_at": "2026-11-16T11:02:46.330007+00:00"
+  },
+  {
+   "call_key": "d20ef1ae63c048bf9d0a6b43d09f968a",
+   "owner_key": "system:public-career",
+   "route": "public_research_quality",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "status": "SETTLED",
+   "reserved_tokens": 13556,
+   "charged_tokens": 2097,
+   "actual_tokens": 2097,
+   "created_at": "2026-11-16T11:02:46.354881+00:00",
+   "finished_at": "2026-11-16T11:02:49.421602+00:00"
+  },
+  {
+   "call_key": "79d9c98881404c679343246012398f87",
+   "owner_key": "system:public-career",
+   "route": "public_research_extract",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "status": "SETTLED",
+   "reserved_tokens": 11218,
+   "charged_tokens": 2108,
+   "actual_tokens": 2108,
+   "created_at": "2026-11-16T11:02:49.547177+00:00",
+   "finished_at": "2026-11-16T11:02:53.865616+00:00"
+  },
+  {
+   "call_key": "fee9ea81e51d46809c1a4b80591337d2",
+   "owner_key": "system:public-career",
+   "route": "public_research_quality",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "status": "SETTLED",
+   "reserved_tokens": 11905,
+   "charged_tokens": 1588,
+   "actual_tokens": 1588,
+   "created_at": "2026-11-16T11:02:53.891976+00:00",
+   "finished_at": "2026-11-16T11:02:56.081453+00:00"
+  },
+  {
+   "call_key": "05d7e7b51f6448b9b005b94a1fd0c388",
+   "owner_key": "system:public-career",
+   "route": "public_research_extract",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "status": "SETTLED",
+   "reserved_tokens": 11256,
+   "charged_tokens": 2100,
+   "actual_tokens": 2100,
+   "created_at": "2026-11-16T11:02:56.202421+00:00",
+   "finished_at": "2026-11-16T11:02:59.521950+00:00"
+  },
+  {
+   "call_key": "42a8381d6a0c4163a135164c2c59aaba",
+   "owner_key": "system:public-career",
+   "route": "public_research_quality",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "status": "SETTLED",
+   "reserved_tokens": 11873,
+   "charged_tokens": 1613,
+   "actual_tokens": 1613,
+   "created_at": "2026-11-16T11:02:59.541525+00:00",
+   "finished_at": "2026-11-16T11:03:01.355174+00:00"
+  }
+ ],
+ "snapshots_for_task_4": [],
+ "nio_entity_counts": {
+  "companies": 1,
+  "jobs": 1,
+  "jd_versions": 1
+ },
+ "plausible_attribute_columns": {
+  "source_snapshots": [
+   "metadata_json"
+  ],
+  "sources": [
+   "metadata_json"
+  ],
+  "tool_invocations": [
+   "response_json"
+  ],
+  "job_description_versions": [
+   "metadata_json"
+  ],
+  "audit_logs": [
+   "metadata_json"
+  ]
+ }
+}

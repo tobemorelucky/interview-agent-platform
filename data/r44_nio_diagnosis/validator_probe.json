@@ -1,0 +1,340 @@
+{
+ "generated_at": "2026-11-16T11:40:59.620057+00:00",
+ "database": "interview_agent_wb_jd_r31_20261116",
+ "snapshot_id": 2,
+ "snapshot_chars": 1500,
+ "snapshot_sha256": "aef49bb3a4d5fbdf3557f650076b92140f18e611a842d06ce2028344b3b18055",
+ "manifest_sha256": "aef49bb3a4d5fbdf3557f650076b92140f18e611a842d06ce2028344b3b18055",
+ "hashes_match": true,
+ "span_chars": 600,
+ "span_count": 3,
+ "span_lengths": [
+  300,
+  600
+ ],
+ "span_boundaries": [
+  0,
+  600,
+  1200,
+  1500
+ ],
+ "verbatim_lines": [
+  {
+   "line": 3,
+   "field": "LOCATION",
+   "text": "上海",
+   "start": 65,
+   "end": 67,
+   "spans_containing": [
+    "ev_fc81dc338f4391d8e1206d6e"
+   ],
+   "span_count": 1,
+   "spans_overlapping": [
+    "ev_fc81dc338f4391d8e1206d6e"
+   ],
+   "passes_single_span": true,
+   "passes_with_all_overlapping_spans": true,
+   "split_at_char": []
+  },
+  {
+   "line": 4,
+   "field": "PUBLISHED_AT?",
+   "text": "校招",
+   "start": 69,
+   "end": 71,
+   "spans_containing": [
+    "ev_fc81dc338f4391d8e1206d6e"
+   ],
+   "span_count": 1,
+   "spans_overlapping": [
+    "ev_fc81dc338f4391d8e1206d6e"
+   ],
+   "passes_single_span": true,
+   "passes_with_all_overlapping_spans": true,
+   "split_at_char": []
+  },
+  {
+   "line": 5,
+   "field": "PUBLISHED_AT?",
+   "text": "正式",
+   "start": 73,
+   "end": 75,
+   "spans_containing": [
+    "ev_fc81dc338f4391d8e1206d6e"
+   ],
+   "span_count": 1,
+   "spans_overlapping": [
+    "ev_fc81dc338f4391d8e1206d6e"
+   ],
+   "passes_single_span": true,
+   "passes_with_all_overlapping_spans": true,
+   "split_at_char": []
+  },
+  {
+   "line": 6,
+   "field": "PUBLISHED_AT?",
+   "text": "数字技术 - 软件研发",
+   "start": 77,
+   "end": 88,
+   "spans_containing": [
+    "ev_fc81dc338f4391d8e1206d6e"
+   ],
+   "span_count": 1,
+   "spans_overlapping": [
+    "ev_fc81dc338f4391d8e1206d6e"
+   ],
+   "passes_single_span": true,
+   "passes_with_all_overlapping_spans": true,
+   "split_at_char": []
+  },
+  {
+   "line": 7,
+   "field": "PUBLISHED_AT?",
+   "text": "博士及以上",
+   "start": 90,
+   "end": 95,
+   "spans_containing": [
+    "ev_fc81dc338f4391d8e1206d6e"
+   ],
+   "span_count": 1,
+   "spans_overlapping": [
+    "ev_fc81dc338f4391d8e1206d6e"
+   ],
+   "passes_single_span": true,
+   "passes_with_all_overlapping_spans": true,
+   "split_at_char": []
+  },
+  {
+   "line": 8,
+   "field": "PUBLISHED_AT?",
+   "text": "2027届校园招聘-正式批",
+   "start": 97,
+   "end": 110,
+   "spans_containing": [
+    "ev_fc81dc338f4391d8e1206d6e"
+   ],
+   "span_count": 1,
+   "spans_overlapping": [
+    "ev_fc81dc338f4391d8e1206d6e"
+   ],
+   "passes_single_span": true,
+   "passes_with_all_overlapping_spans": true,
+   "split_at_char": []
+  },
+  {
+   "line": 9,
+   "field": "JOB_NUMBER",
+   "text": "职位 ID：A25338A",
+   "start": 112,
+   "end": 125,
+   "spans_containing": [
+    "ev_fc81dc338f4391d8e1206d6e"
+   ],
+   "span_count": 1,
+   "spans_overlapping": [
+    "ev_fc81dc338f4391d8e1206d6e"
+   ],
+   "passes_single_span": true,
+   "passes_with_all_overlapping_spans": true,
+   "split_at_char": []
+  },
+  {
+   "line": 15,
+   "field": "RESPONSIBILITY",
+   "text": "跟踪 AI Agent、OpenClaw 类开放生态、MCP / tool calling、workflow、multi-agent、agent memory、local-first agent、权限治理和插件生态的发展趋势。",
+   "start": 389,
+   "end": 502,
+   "spans_containing": [
+    "ev_fc81dc338f4391d8e1206d6e"
+   ],
+   "span_count": 1,
+   "spans_overlapping": [
+    "ev_fc81dc338f4391d8e1206d6e"
+   ],
+   "passes_single_span": true,
+   "passes_with_all_overlapping_spans": true,
+   "split_at_char": []
+  },
+  {
+   "line": 16,
+   "field": "RESPONSIBILITY",
+   "text": "分析这些 AI Agent 能力进入车端后的系统架构需求，包括应用框架、工具注册、权限模型、上下文管理、长期记忆、用户确认机制、沙箱隔离、安全审计和异常回滚。",
+   "start": 504,
+   "end": 583,
+   "spans_containing": [
+    "ev_fc81dc338f4391d8e1206d6e"
+   ],
+   "span_count": 1,
+   "spans_overlapping": [
+    "ev_fc81dc338f4391d8e1206d6e"
+   ],
+   "passes_single_span": true,
+   "passes_with_all_overlapping_spans": true,
+   "split_at_char": []
+  },
+  {
+   "line": 17,
+   "field": "RESPONSIBILITY",
+   "text": "参与设计车端 AI Agent 应用平台架构，使车端大模型能够安全、可控、可审计地调用车辆能力、座舱能力、云端服务和第三方应用。",
+   "start": 585,
+   "end": 649,
+   "spans_containing": [],
+   "span_count": 0,
+   "spans_overlapping": [
+    "ev_fc81dc338f4391d8e1206d6e",
+    "ev_4b2536b83c7b521e6921fc89"
+   ],
+   "passes_single_span": false,
+   "passes_with_all_overlapping_spans": true,
+   "split_at_char": [
+    600
+   ]
+  },
+  {
+   "line": 18,
+   "field": "RESPONSIBILITY",
+   "text": "研究车端 AI 应用生态如何与 OS、SOA 服务、车辆信号、用户数据、账号体系、隐私安全、车云协同和开发者工具链结合。",
+   "start": 651,
+   "end": 711,
+   "spans_containing": [
+    "ev_4b2536b83c7b521e6921fc89"
+   ],
+   "span_count": 1,
+   "spans_overlapping": [
+    "ev_4b2536b83c7b521e6921fc89"
+   ],
+   "passes_single_span": true,
+   "passes_with_all_overlapping_spans": true,
+   "split_at_char": []
+  },
+  {
+   "line": 19,
+   "field": "RESPONSIBILITY",
+   "text": "推动车端 AI Agent 典型场景 POC，例如车内个人助手、跨应用任务执行、行程规划、车辆控制、安全确认、服务推荐、用户记忆和多 Agent 协同。",
+   "start": 713,
+   "end": 789,
+   "spans_containing": [
+    "ev_4b2536b83c7b521e6921fc89"
+   ],
+   "span_count": 1,
+   "spans_overlapping": [
+    "ev_4b2536b83c7b521e6921fc89"
+   ],
+   "passes_single_span": true,
+   "passes_with_all_overlapping_spans": true,
+   "split_at_char": []
+  },
+  {
+   "line": 20,
+   "field": "RESPONSIBILITY",
+   "text": "将 AI 应用生态需求转化为平台架构指标和工程需求，包括延迟、可靠性、权限边界、数据最小化、离线能力、端云分工、资源占用和安全风险。",
+   "start": 791,
+   "end": 857,
+   "spans_containing": [
+    "ev_4b2536b83c7b521e6921fc89"
+   ],
+   "span_count": 1,
+   "spans_overlapping": [
+    "ev_4b2536b83c7b521e6921fc89"
+   ],
+   "passes_single_span": true,
+   "passes_with_all_overlapping_spans": true,
+   "split_at_char": []
+  }
+ ],
+ "hypotheses": [
+  {
+   "field": "LOCATION",
+   "statement": "上海",
+   "note": "page line 3 is exactly 上海",
+   "spans_containing": [
+    "ev_fc81dc338f4391d8e1206d6e"
+   ],
+   "passes": true
+  },
+  {
+   "field": "LOCATION",
+   "statement": "上海市",
+   "note": "expanding city to municipality",
+   "spans_containing": [],
+   "passes": false
+  },
+  {
+   "field": "PUBLISHED_AT",
+   "statement": "2027届校园招聘-正式批",
+   "note": "page line 8 verbatim",
+   "spans_containing": [
+    "ev_fc81dc338f4391d8e1206d6e"
+   ],
+   "passes": true
+  },
+  {
+   "field": "PUBLISHED_AT",
+   "statement": "2027届校园招聘",
+   "note": "dropping the batch suffix",
+   "spans_containing": [
+    "ev_fc81dc338f4391d8e1206d6e"
+   ],
+   "passes": true
+  },
+  {
+   "field": "PUBLISHED_AT",
+   "statement": "校园招聘",
+   "note": "normalising 校招 to 校园招聘",
+   "spans_containing": [
+    "ev_fc81dc338f4391d8e1206d6e"
+   ],
+   "passes": true
+  },
+  {
+   "field": "PUBLISHED_AT",
+   "statement": "2027届",
+   "note": "keeping only the cohort year",
+   "spans_containing": [
+    "ev_fc81dc338f4391d8e1206d6e"
+   ],
+   "passes": true
+  },
+  {
+   "field": "PUBLISHED_AT",
+   "statement": "2026-11-16",
+   "note": "filling today as the publish date",
+   "spans_containing": [],
+   "passes": false
+  },
+  {
+   "field": "JOB_NUMBER",
+   "statement": "职位 ID：A25338A",
+   "note": "page line 9 verbatim",
+   "spans_containing": [
+    "ev_fc81dc338f4391d8e1206d6e"
+   ],
+   "passes": true
+  },
+  {
+   "field": "JOB_NUMBER",
+   "statement": "A25338A",
+   "note": "job id alone (still a substring)",
+   "spans_containing": [
+    "ev_fc81dc338f4391d8e1206d6e"
+   ],
+   "passes": true
+  },
+  {
+   "field": "JOB_NUMBER",
+   "statement": "A25338A ",
+   "note": "trailing space",
+   "spans_containing": [],
+   "passes": false
+  }
+ ],
+ "verdict": {
+  "verbatim_all_pass": false,
+  "any_verbatim_straddles": true,
+  "rejected_hypotheses": [
+   "上海市",
+   "2026-11-16",
+   "A25338A "
+  ]
+ }
+}

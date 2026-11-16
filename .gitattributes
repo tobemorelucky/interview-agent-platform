@@ -1,0 +1,6 @@
+# Projected JD bodies are imported byte-for-byte: `ManualDocument.content_hash`
+# and every manifest `text_sha256` are computed over the file bytes. Without this
+# rule `core.autocrlf` rewrites LF to CRLF on checkout and the recorded hashes stop
+# matching the working tree.
+data/r47_batch3/text/*.txt -text
+data/r55_batch4/text/*.txt -text

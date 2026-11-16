@@ -1,0 +1,554 @@
+{
+ "generated_at": "2026-11-16T11:58:29.983040+00:00",
+ "database": "interview_agent_wb_jd_r31_20261116",
+ "model_http_calls": 0,
+ "f1_applied": true,
+ "evidence_rows": 130,
+ "evidence_offset_failures": [],
+ "evidence_hash_failures": [],
+ "versions": [
+  {
+   "jd_version_id": 1,
+   "company": "麒麟软件",
+   "job_title": "AI研发工程师",
+   "publication_status": "PUBLISHED",
+   "snapshot_id": 1,
+   "snapshot_sha256": "c7831bc72c7fdaf1cddc552fffc6648d8c19844b04be7f203a8ca8e0d4ddb9b0",
+   "body_chars": 1186,
+   "requirements": 10,
+   "kind_counts": {
+    "VERBATIM": 10
+   },
+   "requirements_kinds": [
+    {
+     "requirement_id": 1,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 2,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 3,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 4,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 5,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 6,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 7,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 8,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 9,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 10,
+     "kind": "VERBATIM"
+    }
+   ],
+   "rebuilt_spans": 3,
+   "offsets_exact": true,
+   "covered_chars": 1186,
+   "line_cuts_legacy": 1,
+   "line_cuts_f1": 0,
+   "span_offsets": [
+    {
+     "start": 0,
+     "end": 540
+    },
+    {
+     "start": 540,
+     "end": 1093
+    },
+    {
+     "start": 1093,
+     "end": 1186
+    }
+   ],
+   "body_equals_raw_text": true
+  },
+  {
+   "jd_version_id": 2,
+   "company": "沐瞳科技",
+   "job_title": "Agent开发工程师（平台）",
+   "publication_status": "PUBLISHED",
+   "snapshot_id": 3,
+   "snapshot_sha256": "afaeb58e0926e4e420d88cf10c7f70ca81686e3d87322cd2c63d5217fd5b6223",
+   "body_chars": 1140,
+   "requirements": 12,
+   "kind_counts": {
+    "VERBATIM": 11,
+    "FORMAT_VARIANT": 1
+   },
+   "requirements_kinds": [
+    {
+     "requirement_id": 11,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 12,
+     "kind": "FORMAT_VARIANT"
+    },
+    {
+     "requirement_id": 13,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 14,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 15,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 16,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 17,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 18,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 19,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 20,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 21,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 22,
+     "kind": "VERBATIM"
+    }
+   ],
+   "rebuilt_spans": 2,
+   "offsets_exact": true,
+   "covered_chars": 1140,
+   "line_cuts_legacy": 1,
+   "line_cuts_f1": 0,
+   "span_offsets": [
+    {
+     "start": 0,
+     "end": 554
+    },
+    {
+     "start": 554,
+     "end": 1140
+    }
+   ],
+   "body_equals_raw_text": true
+  },
+  {
+   "jd_version_id": 3,
+   "company": "Unity中国",
+   "job_title": "AI Agent 算法研发工程师",
+   "publication_status": "PUBLISHED",
+   "snapshot_id": 6,
+   "snapshot_sha256": "323ca105137b518c4f1a6204f140a980507cf616216c1a8b7f5460824aaca7a0",
+   "body_chars": 2447,
+   "requirements": 17,
+   "kind_counts": {
+    "FORMAT_VARIANT": 2,
+    "VERBATIM": 7,
+    "HEADING_JOINED": 8
+   },
+   "requirements_kinds": [
+    {
+     "requirement_id": 23,
+     "kind": "FORMAT_VARIANT"
+    },
+    {
+     "requirement_id": 24,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 25,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 26,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 27,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 28,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 29,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 30,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 31,
+     "kind": "FORMAT_VARIANT"
+    },
+    {
+     "requirement_id": 32,
+     "kind": "HEADING_JOINED"
+    },
+    {
+     "requirement_id": 33,
+     "kind": "HEADING_JOINED"
+    },
+    {
+     "requirement_id": 34,
+     "kind": "HEADING_JOINED"
+    },
+    {
+     "requirement_id": 35,
+     "kind": "HEADING_JOINED"
+    },
+    {
+     "requirement_id": 36,
+     "kind": "HEADING_JOINED"
+    },
+    {
+     "requirement_id": 37,
+     "kind": "HEADING_JOINED"
+    },
+    {
+     "requirement_id": 38,
+     "kind": "HEADING_JOINED"
+    },
+    {
+     "requirement_id": 39,
+     "kind": "HEADING_JOINED"
+    }
+   ],
+   "rebuilt_spans": 5,
+   "offsets_exact": true,
+   "covered_chars": 2447,
+   "line_cuts_legacy": 3,
+   "line_cuts_f1": 0,
+   "span_offsets": [
+    {
+     "start": 0,
+     "end": 584
+    },
+    {
+     "start": 584,
+     "end": 1178
+    },
+    {
+     "start": 1178,
+     "end": 1718
+    },
+    {
+     "start": 1718,
+     "end": 2283
+    },
+    {
+     "start": 2283,
+     "end": 2447
+    }
+   ],
+   "body_equals_raw_text": true
+  },
+  {
+   "jd_version_id": 4,
+   "company": "面壁智能",
+   "job_title": "大模型算法工程师 - 智能体方向",
+   "publication_status": "WAITING_REVIEW",
+   "snapshot_id": 7,
+   "snapshot_sha256": "d0f1aff56f326d07ff9a44a8489384db3f48e1a57758260e5cee514dbd3690bd",
+   "body_chars": 523,
+   "requirements": 6,
+   "kind_counts": {
+    "PARAPHRASE": 1,
+    "VERBATIM": 5
+   },
+   "requirements_kinds": [
+    {
+     "requirement_id": 40,
+     "kind": "PARAPHRASE"
+    },
+    {
+     "requirement_id": 41,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 42,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 43,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 44,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 45,
+     "kind": "VERBATIM"
+    }
+   ],
+   "rebuilt_spans": 1,
+   "offsets_exact": true,
+   "covered_chars": 523,
+   "line_cuts_legacy": 0,
+   "line_cuts_f1": 0,
+   "span_offsets": [
+    {
+     "start": 0,
+     "end": 523
+    }
+   ],
+   "body_equals_raw_text": true
+  },
+  {
+   "jd_version_id": 5,
+   "company": "沐瞳科技",
+   "job_title": "【2027届秋招】后端开发工程师（AI向/数据平台）",
+   "publication_status": "PUBLISHED",
+   "snapshot_id": 8,
+   "snapshot_sha256": "ec6f96246d8121f4d89c4bf26ccd475445eb4f00aac64cb808691d6b70010c74",
+   "body_chars": 870,
+   "requirements": 10,
+   "kind_counts": {
+    "VERBATIM": 10
+   },
+   "requirements_kinds": [
+    {
+     "requirement_id": 46,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 47,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 48,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 49,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 50,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 51,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 52,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 53,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 54,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 55,
+     "kind": "VERBATIM"
+    }
+   ],
+   "rebuilt_spans": 2,
+   "offsets_exact": true,
+   "covered_chars": 870,
+   "line_cuts_legacy": 1,
+   "line_cuts_f1": 0,
+   "span_offsets": [
+    {
+     "start": 0,
+     "end": 536
+    },
+    {
+     "start": 536,
+     "end": 870
+    }
+   ],
+   "body_equals_raw_text": true
+  },
+  {
+   "jd_version_id": 6,
+   "company": "蔚来",
+   "job_title": "校招-AI推理引擎开发工程师",
+   "publication_status": "WAITING_REVIEW",
+   "snapshot_id": 9,
+   "snapshot_sha256": "11833428a5a897f3d9854cd8ac57bba707635d2d4385d2a785d8533dda280a3b",
+   "body_chars": 592,
+   "requirements": 13,
+   "kind_counts": {
+    "VERBATIM": 3,
+    "PARAPHRASE": 3,
+    "FORMAT_VARIANT": 7
+   },
+   "requirements_kinds": [
+    {
+     "requirement_id": 56,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 57,
+     "kind": "PARAPHRASE"
+    },
+    {
+     "requirement_id": 58,
+     "kind": "PARAPHRASE"
+    },
+    {
+     "requirement_id": 59,
+     "kind": "FORMAT_VARIANT"
+    },
+    {
+     "requirement_id": 60,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 61,
+     "kind": "FORMAT_VARIANT"
+    },
+    {
+     "requirement_id": 62,
+     "kind": "FORMAT_VARIANT"
+    },
+    {
+     "requirement_id": 63,
+     "kind": "PARAPHRASE"
+    },
+    {
+     "requirement_id": 64,
+     "kind": "FORMAT_VARIANT"
+    },
+    {
+     "requirement_id": 65,
+     "kind": "FORMAT_VARIANT"
+    },
+    {
+     "requirement_id": 66,
+     "kind": "FORMAT_VARIANT"
+    },
+    {
+     "requirement_id": 67,
+     "kind": "FORMAT_VARIANT"
+    },
+    {
+     "requirement_id": 68,
+     "kind": "VERBATIM"
+    }
+   ],
+   "rebuilt_spans": 1,
+   "offsets_exact": true,
+   "covered_chars": 592,
+   "line_cuts_legacy": 0,
+   "line_cuts_f1": 0,
+   "span_offsets": [
+    {
+     "start": 0,
+     "end": 592
+    }
+   ],
+   "body_equals_raw_text": true
+  },
+  {
+   "jd_version_id": 7,
+   "company": "麒麟软件",
+   "job_title": "「2027校招」Linux内核研发工程师",
+   "publication_status": "PUBLISHED",
+   "snapshot_id": 10,
+   "snapshot_sha256": "a9da15b907ba57de6535f064e976d75dc0b5fca7329dbddf170bb9948f5e39b5",
+   "body_chars": 548,
+   "requirements": 9,
+   "kind_counts": {
+    "VERBATIM": 9
+   },
+   "requirements_kinds": [
+    {
+     "requirement_id": 69,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 70,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 71,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 72,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 73,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 74,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 75,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 76,
+     "kind": "VERBATIM"
+    },
+    {
+     "requirement_id": 77,
+     "kind": "VERBATIM"
+    }
+   ],
+   "rebuilt_spans": 1,
+   "offsets_exact": true,
+   "covered_chars": 548,
+   "line_cuts_legacy": 0,
+   "line_cuts_f1": 0,
+   "span_offsets": [
+    {
+     "start": 0,
+     "end": 548
+    }
+   ],
+   "body_equals_raw_text": true
+  }
+ ],
+ "totals": {
+  "versions": 7,
+  "requirements": 77,
+  "line_cuts_legacy": 6,
+  "line_cuts_f1": 0,
+  "published": 5,
+  "waiting_review": 2
+ }
+}

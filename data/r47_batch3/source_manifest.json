@@ -1,0 +1,427 @@
+{
+ "generated_at": "2026-11-16T11:48:00.232944+00:00",
+ "model_http_calls": 0,
+ "database": "interview_agent_wb_jd_r31_20261116",
+ "batch": 3,
+ "records": [
+  {
+   "jd_key": "KYLINOS_SEC_5480b909",
+   "company": "麒麟软件",
+   "job_title": "「2027校招」安全研发工程师",
+   "display_title": "安全研发工程师",
+   "direction": "安全研发",
+   "selection_reason": "官方详情页；安全研发方向，与已发布的内核/AI研发不重叠",
+   "source_url": "https://kylinos.zhiye.com/campus/detail?jobAdId=5480b909-65bb-4dcb-ad99-039d254b48fc",
+   "job_id": "5480b909-65bb-4dcb-ad99-039d254b48fc",
+   "job_id_kind": "jobAdId",
+   "source_grade": "OFFICIAL_PAGE_CAPTURED",
+   "captured_at": "2026-11-16T07:39:47+00:00",
+   "dom_path": "data\\incoming_20261116c\\captured\\dom\\KYLINOS_5480b909.html",
+   "dom_sha256": "66a30875ff2bf5d3e30f2bd6cc64804e415e874ee8123d2893157bde2f2d226a",
+   "body_blocks_sha256": "041cbf7948c69d9245e0a93127f0ef3464967413a08bd4d92dd58f390ba0756a",
+   "text_path": "data\\r47_batch3\\text\\KYLINOS_SEC_5480b909.txt",
+   "text_sha256": "d76e5623acefc79af5d89251efedb6f10c95a5338adc979ce43d806ee8ec11a8",
+   "text_chars": 920,
+   "body_chars": 899,
+   "projection": {
+    "mode": "PAGE_IDENTITY_HEADER + BODY_BLOCKS",
+    "header_lines": [
+     "麒麟软件",
+     "「2027校招」安全研发工程师"
+    ],
+    "body_lines": 17,
+    "added_section_headings": 0,
+    "note": "两行身份取自页面自身（DOM 标题元素 + 站点企业名），正文块逐字未改，未补造小节标题"
+   },
+   "section_headers": {
+    "duty_heading": "工作职责",
+    "skill_heading": "任职资格"
+   },
+   "identity": {
+    "label_is_page_literal": true,
+    "literal_in_dom": true,
+    "literal_in_visible_text": true,
+    "company_in_page": true
+   },
+   "evidence_chunk_risk": {
+    "span_chars": 600,
+    "lines": 19,
+    "split_lines": 1,
+    "samples": [
+     {
+      "text": "3、熟悉操作系统原理（Windows/Linux），了解常见安全漏洞原理（如UAF、条件竞争、缓冲区溢出、OS提权漏洞等）；",
+      "start": 580,
+      "end": 642,
+      "cut_at": [
+       600
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "jd_key": "KYLINOS_EMB_cd3ac686",
+   "company": "麒麟软件",
+   "job_title": "「2027校招」嵌入式研发工程师",
+   "display_title": "嵌入式研发工程师",
+   "direction": "嵌入式",
+   "selection_reason": "官方详情页；嵌入式/板级方向，补操作系统生态侧的第二种岗位",
+   "source_url": "https://kylinos.zhiye.com/campus/detail?jobAdId=cd3ac686-922d-4445-a35c-f74cd6b582e5",
+   "job_id": "cd3ac686-922d-4445-a35c-f74cd6b582e5",
+   "job_id_kind": "jobAdId",
+   "source_grade": "OFFICIAL_PAGE_CAPTURED",
+   "captured_at": "2026-11-16T07:39:38+00:00",
+   "dom_path": "data\\incoming_20261116c\\captured\\dom\\KYLINOS_cd3ac686.html",
+   "dom_sha256": "ab3f82586e2cd5bee0904b105bdcb3746bf8677c577dda287d911c9cb27fc703",
+   "body_blocks_sha256": "fc0e4a0eaac53a24f568916e57c965b499f4014bed026584dae0de190868e53d",
+   "text_path": "data\\r47_batch3\\text\\KYLINOS_EMB_cd3ac686.txt",
+   "text_sha256": "a7b6415f8f939adf2ef0d0d57ea3bc7fc92ac3e40103dcaf00ebc3a5fca82f07",
+   "text_chars": 845,
+   "body_chars": 823,
+   "projection": {
+    "mode": "PAGE_IDENTITY_HEADER + BODY_BLOCKS",
+    "header_lines": [
+     "麒麟软件",
+     "「2027校招」嵌入式研发工程师"
+    ],
+    "body_lines": 15,
+    "added_section_headings": 0,
+    "note": "两行身份取自页面自身（DOM 标题元素 + 站点企业名），正文块逐字未改，未补造小节标题"
+   },
+   "section_headers": {
+    "duty_heading": "工作职责",
+    "skill_heading": "任职资格"
+   },
+   "identity": {
+    "label_is_page_literal": true,
+    "literal_in_dom": true,
+    "literal_in_visible_text": true,
+    "company_in_page": true
+   },
+   "evidence_chunk_risk": {
+    "span_chars": 600,
+    "lines": 17,
+    "split_lines": 1,
+    "samples": [
+     {
+      "text": "4、熟悉芯片硬件架构原理及硬件虚拟化，熟悉Linux内核或主流RTOS（FreeRTOS、LiteOS、RT-Thread、μC/OS、Ze",
+      "start": 548,
+      "end": 633,
+      "cut_at": [
+       600
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "jd_key": "MOONTON_QA_008",
+   "company": "沐瞳科技",
+   "job_title": "【2027届秋招】AI测试工程师（web平台）",
+   "display_title": "AI测试工程师（web平台）",
+   "direction": "测试/QA",
+   "selection_reason": "官方飞书页；AI 测试平台方向，首批 5 份没有测试岗",
+   "source_url": "https://moonton.jobs.feishu.cn/campus/m/position/7668238439854967049/detail",
+   "job_id": "7668238439854967049",
+   "job_id_kind": "position_path",
+   "source_grade": "OFFICIAL_PAGE_CAPTURED",
+   "captured_at": "2026-11-16T07:26:47+00:00",
+   "dom_path": "data\\incoming_20261116c\\captured\\dom\\OFFICIAL_CAND_008.html",
+   "dom_sha256": "f4471e5bd3f22b05574f84924cd6168b721a9caba184f29a338ca0a3b76a1835",
+   "body_blocks_sha256": "ca5e59271a63a580eecefda74b74e4a1f492199cb1daf9cfa2a8161cde4664bd",
+   "text_path": "data\\r47_batch3\\text\\MOONTON_QA_008.txt",
+   "text_sha256": "b8cde0b56f112a31a3cfcbcac80eebb67a1aed20481c017dac6e6f7bc564ad6d",
+   "text_chars": 1871,
+   "body_chars": 1842,
+   "projection": {
+    "mode": "PAGE_IDENTITY_HEADER + BODY_BLOCKS",
+    "header_lines": [
+     "沐瞳科技",
+     "【2027届秋招】AI测试工程师（web平台）"
+    ],
+    "body_lines": 48,
+    "added_section_headings": 0,
+    "note": "两行身份取自页面自身（DOM 标题元素 + 站点企业名），正文块逐字未改，未补造小节标题"
+   },
+   "section_headers": {
+    "duty_heading": "岗位职责：",
+    "skill_heading": null
+   },
+   "identity": {
+    "label_is_page_literal": true,
+    "literal_in_dom": true,
+    "literal_in_visible_text": true,
+    "company_in_page": true
+   },
+   "evidence_chunk_risk": {
+    "span_chars": 600,
+    "lines": 50,
+    "split_lines": 3,
+    "samples": [
+     {
+      "text": "1. 探索大模型及 Agent 在需求分析、测试设计、自动化生成、测试执行、缺陷分析等场景中的应用；",
+      "start": 585,
+      "end": 635,
+      "cut_at": [
+       600
+      ]
+     },
+     {
+      "text": "7. 能够接受从业务测试实践出发，逐步向测试工程、AI 测试及质量治理方向发展。",
+      "start": 1173,
+      "end": 1213,
+      "cut_at": [
+       1200
+      ]
+     },
+     {
+      "text": "3. AI 测试 Agent 与 Harness；",
+      "start": 1786,
+      "end": 1811,
+      "cut_at": [
+       1800
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "jd_key": "MOONTON_PM_013",
+   "company": "沐瞳科技",
+   "job_title": "【2027届秋招】AI Agent 产品经理（平台）",
+   "display_title": "AI Agent产品经理（平台）",
+   "direction": "AI 产品",
+   "selection_reason": "官方飞书页；AI Agent 产品经理，验证平台能否处理非研发岗",
+   "source_url": "https://moonton.jobs.feishu.cn/campus/position/7669735314894555411/detail",
+   "job_id": "7669735314894555411",
+   "job_id_kind": "position_path",
+   "source_grade": "OFFICIAL_PAGE_CAPTURED",
+   "captured_at": "2026-11-16T07:27:41+00:00",
+   "dom_path": "data\\incoming_20261116c\\captured\\dom\\OFFICIAL_CAND_013.html",
+   "dom_sha256": "d0c99dfeaf3764275704fffdff850a441f9d2a22470cf2d1f881eaa611a6a18f",
+   "body_blocks_sha256": "62e5c14f0d2069573e49ba4746443e19a1fd400243899947e1976340dc092748",
+   "text_path": "data\\r47_batch3\\text\\MOONTON_PM_013.txt",
+   "text_sha256": "8ea531f22a1bf7d0163222595f48bc6a47b38443a2467dd41df0d4c63e3f049a",
+   "text_chars": 899,
+   "body_chars": 867,
+   "projection": {
+    "mode": "PAGE_IDENTITY_HEADER + BODY_BLOCKS",
+    "header_lines": [
+     "沐瞳科技",
+     "【2027届秋招】AI Agent 产品经理（平台）"
+    ],
+    "body_lines": 23,
+    "added_section_headings": 0,
+    "note": "两行身份取自页面自身（DOM 标题元素 + 站点企业名），正文块逐字未改，未补造小节标题"
+   },
+   "section_headers": {
+    "duty_heading": "职位描述",
+    "skill_heading": "职位要求"
+   },
+   "identity": {
+    "label_is_page_literal": true,
+    "literal_in_dom": true,
+    "literal_in_visible_text": true,
+    "company_in_page": true
+   },
+   "evidence_chunk_risk": {
+    "span_chars": 600,
+    "lines": 25,
+    "split_lines": 1,
+    "samples": [
+     {
+      "text": "6.具备良好的沟通协调和项目推进能力，能够与研发、设计、测试及业务团队高效协作。",
+      "start": 568,
+      "end": 608,
+      "cut_at": [
+       600
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "jd_key": "NIO_CV_023",
+   "company": "蔚来",
+   "job_title": "校招-视觉算法工程师",
+   "display_title": "视觉算法工程师",
+   "direction": "视觉算法",
+   "selection_reason": "官方飞书页；CV 算法方向，与被扣下的推理引擎岗不同",
+   "source_url": "https://nio.jobs.feishu.cn/campus/position/7673027221096237363/detail",
+   "job_id": "7673027221096237363",
+   "job_id_kind": "position_path",
+   "source_grade": "OFFICIAL_PAGE_CAPTURED",
+   "captured_at": "2026-11-16T07:29:47+00:00",
+   "dom_path": "data\\incoming_20261116c\\captured\\dom\\OFFICIAL_CAND_023.html",
+   "dom_sha256": "f65292b3d7d04fc40d92c424a745e0175fdfa1cf178a590a66848f61473de6ea",
+   "body_blocks_sha256": "ec11217d42a8b355c81c7d72cb5b0f9e950da80973a12d67007078155d5e2e2d",
+   "text_path": "data\\r47_batch3\\text\\NIO_CV_023.txt",
+   "text_sha256": "445739b255b3647c09ec870342a88c1b658262bce8eaee357f500640ec3f7031",
+   "text_chars": 823,
+   "body_chars": 809,
+   "projection": {
+    "mode": "PAGE_IDENTITY_HEADER + BODY_BLOCKS",
+    "header_lines": [
+     "蔚来",
+     "校招-视觉算法工程师"
+    ],
+    "body_lines": 26,
+    "added_section_headings": 0,
+    "note": "两行身份取自页面自身（DOM 标题元素 + 站点企业名），正文块逐字未改，未补造小节标题"
+   },
+   "section_headers": {
+    "duty_heading": "工作职责：",
+    "skill_heading": null
+   },
+   "identity": {
+    "label_is_page_literal": true,
+    "literal_in_dom": true,
+    "literal_in_visible_text": true,
+    "company_in_page": true
+   },
+   "evidence_chunk_risk": {
+    "span_chars": 600,
+    "lines": 28,
+    "split_lines": 1,
+    "samples": [
+     {
+      "text": "4. 实践经验：有至少一个完整的视觉算法项目经验，包括模型训练、评估与结果分析",
+      "start": 590,
+      "end": 629,
+      "cut_at": [
+       600
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "jd_key": "NIO_SUPPLY_024",
+   "company": "蔚来",
+   "job_title": "校招-供应链算法工程师",
+   "display_title": "供应链算法工程师",
+   "direction": "供应链算法",
+   "selection_reason": "官方飞书页；运筹/供应链算法，非大模型方向，检验通用性",
+   "source_url": "https://nio.jobs.feishu.cn/campus/position/7673026521368004890/detail",
+   "job_id": "7673026521368004890",
+   "job_id_kind": "position_path",
+   "source_grade": "OFFICIAL_PAGE_CAPTURED",
+   "captured_at": "2026-11-16T07:30:00+00:00",
+   "dom_path": "data\\incoming_20261116c\\captured\\dom\\OFFICIAL_CAND_024.html",
+   "dom_sha256": "df272a8d5f7c72c108bea52c45da0c4b8a947cd9dd2450f341e897cc0cf68357",
+   "body_blocks_sha256": "a9a4bd8ceb2d9246994bc9633a7aa4aa585198e284be18208e1811687a5a59d1",
+   "text_path": "data\\r47_batch3\\text\\NIO_SUPPLY_024.txt",
+   "text_sha256": "9da9d30deca2315ae4a8dbd5c153573431d6a81cbe110d7da731df98fcb9a0ac",
+   "text_chars": 1699,
+   "body_chars": 1684,
+   "projection": {
+    "mode": "PAGE_IDENTITY_HEADER + BODY_BLOCKS",
+    "header_lines": [
+     "蔚来",
+     "校招-供应链算法工程师"
+    ],
+    "body_lines": 27,
+    "added_section_headings": 0,
+    "note": "两行身份取自页面自身（DOM 标题元素 + 站点企业名），正文块逐字未改，未补造小节标题"
+   },
+   "section_headers": {
+    "duty_heading": "岗位职责",
+    "skill_heading": "岗位要求"
+   },
+   "identity": {
+    "label_is_page_literal": true,
+    "literal_in_dom": true,
+    "literal_in_visible_text": true,
+    "company_in_page": true
+   },
+   "evidence_chunk_risk": {
+    "span_chars": 600,
+    "lines": 29,
+    "split_lines": 2,
+    "samples": [
+     {
+      "text": "参与企业级 Agent Harness / Runtime 建设，包括 Tool / Skill 管理、Context 管理、任务状态管理、",
+      "start": 511,
+      "end": 606,
+      "cut_at": [
+       600
+      ]
+     },
+     {
+      "text": "不要求候选人覆盖全部技术方向。具备其中一个方向的深入项目经验，并对其他方向有基本理解即可。",
+      "start": 1183,
+      "end": 1228,
+      "cut_at": [
+       1200
+      ]
+     }
+    ]
+   }
+  }
+ ],
+ "existing_sandbox": [
+  {
+   "id": 1,
+   "publication_status": "PUBLISHED",
+   "version_number": 1,
+   "content_fingerprint": "3b98d5df72d052a4bd98d03f1e58b27aaf327607d331f18951ba91d0be2469e0",
+   "canonical_title": "AI研发工程师",
+   "normalized_title": "ai研发工程师",
+   "canonical_name": "麒麟软件"
+  },
+  {
+   "id": 2,
+   "publication_status": "PUBLISHED",
+   "version_number": 1,
+   "content_fingerprint": "a5320f305f7f2cbb9ea71abccb6a923e2c5b2a9f9c6b587b2d9d73c820cef86f",
+   "canonical_title": "Agent开发工程师（平台）",
+   "normalized_title": "agent开发工程师(平台)",
+   "canonical_name": "沐瞳科技"
+  },
+  {
+   "id": 3,
+   "publication_status": "PUBLISHED",
+   "version_number": 1,
+   "content_fingerprint": "31cf881c64c3033779f7f4f528fe4519b534d1d55e0a5d1d6b4a2d389b25ef16",
+   "canonical_title": "AI Agent 算法研发工程师",
+   "normalized_title": "ai agent 算法研发工程师",
+   "canonical_name": "Unity中国"
+  },
+  {
+   "id": 4,
+   "publication_status": "WAITING_REVIEW",
+   "version_number": 1,
+   "content_fingerprint": "be2723fb27189869bbc34f832cf948ee24bff5b121182e778517efa85b1650ff",
+   "canonical_title": "大模型算法工程师 - 智能体方向",
+   "normalized_title": "大模型算法工程师 - 智能体方向",
+   "canonical_name": "面壁智能"
+  },
+  {
+   "id": 5,
+   "publication_status": "PUBLISHED",
+   "version_number": 1,
+   "content_fingerprint": "b335a30244405c2eb7fbe1b11c1eec03e824dfb464da572d71b82532a7b82d3a",
+   "canonical_title": "【2027届秋招】后端开发工程师（AI向/数据平台）",
+   "normalized_title": "【2027届秋招】后端开发工程师(ai向/数据平台)",
+   "canonical_name": "沐瞳科技"
+  },
+  {
+   "id": 6,
+   "publication_status": "WAITING_REVIEW",
+   "version_number": 1,
+   "content_fingerprint": "969b9f9065cea8655a5d8d721b64aa79002077d12f6a61fb9457f9d513fab475",
+   "canonical_title": "校招-AI推理引擎开发工程师",
+   "normalized_title": "校招-ai推理引擎开发工程师",
+   "canonical_name": "蔚来"
+  },
+  {
+   "id": 7,
+   "publication_status": "PUBLISHED",
+   "version_number": 1,
+   "content_fingerprint": "886d1955d5fdc8fe7e31be9e1ec7ca45a315b1ca9b6ffe373fec8c1489441c62",
+   "canonical_title": "「2027校招」Linux内核研发工程师",
+   "normalized_title": "「2027校招」linux内核研发工程师",
+   "canonical_name": "麒麟软件"
+  }
+ ]
+}

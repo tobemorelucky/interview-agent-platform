@@ -1,0 +1,478 @@
+{
+ "generated_at": "2026-11-16T11:42:22.079710+00:00",
+ "database": "interview_agent_wb_jd_r31_20261116",
+ "model_http_calls": 0,
+ "jd": {
+  "4": {
+   "company": "面壁智能",
+   "job_title": "大模型算法工程师 - 智能体方向",
+   "publication_status": "WAITING_REVIEW",
+   "fingerprint": "be2723fb27189869bbc34f832cf948ee24bff5b121182e778517efa85b1650ff",
+   "body_chars": 523,
+   "requirement_count": 6,
+   "kind_counts": {
+    "PARAPHRASE": 1,
+    "VERBATIM": 5
+   },
+   "requirements": [
+    {
+     "requirement_id": 40,
+     "claim_id": 75,
+     "statement": "2027届应届毕业生，计算机、人工智能或相关专业，本科及以上学历",
+     "importance": "REQUIRED",
+     "requirement_type": "UNKNOWN",
+     "kind": "PARAPHRASE",
+     "evidence_spans": [
+      {
+       "location": "{\"start_char\": 0, \"end_char\": 523, \"unit\": \"unicode_codepoint\"}",
+       "excerpt": "面壁智能\r\n大模型算法工程师 - 智能体方向\r\n招聘职位：\r\n- RAG/Agent算法工程师\r\n- 方向涵盖但不限于：大模型应用、搜索推荐系统、自然语言处理等。\r\n岗位职责：\r\n1.  构建和优化端到端智能系统，覆盖意图识别、多轮问答改写、知识检索、内容生成与用户偏好对齐，持续提升交互体验；\r\n2.  参与对话式AI产品的全流程研发，探索大模型在教育等垂直领域的创新应用，并推动技术落地；\r\n3.  针对具体业务场景，构建体系化知识库，并结合线上数据反馈，不断优化RAG和Agent系统的整体效果。\r\n1. 计算机、人工智能或相关专业的2027届应届毕业生，本科及以上学历；\r\n2.  编程基础扎实，熟悉至少一种主流语言（Java/Python/C++等）；具备LangChain、LlamaIndex等RAG/Agent开发框架的实战经验；\r\n3.  理解并掌握RAG架构、Agent工作机制、检索算法（如倒排索引、语义检索）、Prompt工程、微调与对齐技术等核心能力；\r\n4.  在ACL、EMNLP、ICLR等顶级学术会议或期刊上发表过相关论文者优先；\r\n5.  有大型大模型相关项目的参与经验，具备项目落地与迭代优化能力者优先；\r\n"
+      }
+     ],
+     "evidence_in_page_body": true,
+     "closest_source_line": "1. 计算机、人工智能或相关专业的2027届应届毕业生，本科及以上学历；",
+     "similarity": 0.6441,
+     "diff": {
+      "removed_from_model": [
+       "2027届应届毕业生，"
+      ],
+      "present_in_source_only": [
+       "1. ",
+       "的2027届应届毕业生",
+       "；"
+      ],
+      "ratio": 0.6176
+     }
+    },
+    {
+     "requirement_id": 41,
+     "claim_id": 76,
+     "statement": "编程基础扎实，熟悉至少一种主流语言（Java/Python/C++等）",
+     "importance": "REQUIRED",
+     "requirement_type": "SKILL",
+     "kind": "VERBATIM",
+     "evidence_spans": [
+      {
+       "location": "{\"start_char\": 0, \"end_char\": 523, \"unit\": \"unicode_codepoint\"}",
+       "excerpt": "面壁智能\r\n大模型算法工程师 - 智能体方向\r\n招聘职位：\r\n- RAG/Agent算法工程师\r\n- 方向涵盖但不限于：大模型应用、搜索推荐系统、自然语言处理等。\r\n岗位职责：\r\n1.  构建和优化端到端智能系统，覆盖意图识别、多轮问答改写、知识检索、内容生成与用户偏好对齐，持续提升交互体验；\r\n2.  参与对话式AI产品的全流程研发，探索大模型在教育等垂直领域的创新应用，并推动技术落地；\r\n3.  针对具体业务场景，构建体系化知识库，并结合线上数据反馈，不断优化RAG和Agent系统的整体效果。\r\n1. 计算机、人工智能或相关专业的2027届应届毕业生，本科及以上学历；\r\n2.  编程基础扎实，熟悉至少一种主流语言（Java/Python/C++等）；具备LangChain、LlamaIndex等RAG/Agent开发框架的实战经验；\r\n3.  理解并掌握RAG架构、Agent工作机制、检索算法（如倒排索引、语义检索）、Prompt工程、微调与对齐技术等核心能力；\r\n4.  在ACL、EMNLP、ICLR等顶级学术会议或期刊上发表过相关论文者优先；\r\n5.  有大型大模型相关项目的参与经验，具备项目落地与迭代优化能力者优先；\r\n"
+      }
+     ],
+     "evidence_in_page_body": true
+    },
+    {
+     "requirement_id": 42,
+     "claim_id": 77,
+     "statement": "具备LangChain、LlamaIndex等RAG/Agent开发框架的实战经验",
+     "importance": "REQUIRED",
+     "requirement_type": "EXPERIENCE",
+     "kind": "VERBATIM",
+     "evidence_spans": [
+      {
+       "location": "{\"start_char\": 0, \"end_char\": 523, \"unit\": \"unicode_codepoint\"}",
+       "excerpt": "面壁智能\r\n大模型算法工程师 - 智能体方向\r\n招聘职位：\r\n- RAG/Agent算法工程师\r\n- 方向涵盖但不限于：大模型应用、搜索推荐系统、自然语言处理等。\r\n岗位职责：\r\n1.  构建和优化端到端智能系统，覆盖意图识别、多轮问答改写、知识检索、内容生成与用户偏好对齐，持续提升交互体验；\r\n2.  参与对话式AI产品的全流程研发，探索大模型在教育等垂直领域的创新应用，并推动技术落地；\r\n3.  针对具体业务场景，构建体系化知识库，并结合线上数据反馈，不断优化RAG和Agent系统的整体效果。\r\n1. 计算机、人工智能或相关专业的2027届应届毕业生，本科及以上学历；\r\n2.  编程基础扎实，熟悉至少一种主流语言（Java/Python/C++等）；具备LangChain、LlamaIndex等RAG/Agent开发框架的实战经验；\r\n3.  理解并掌握RAG架构、Agent工作机制、检索算法（如倒排索引、语义检索）、Prompt工程、微调与对齐技术等核心能力；\r\n4.  在ACL、EMNLP、ICLR等顶级学术会议或期刊上发表过相关论文者优先；\r\n5.  有大型大模型相关项目的参与经验，具备项目落地与迭代优化能力者优先；\r\n"
+      }
+     ],
+     "evidence_in_page_body": true
+    },
+    {
+     "requirement_id": 43,
+     "claim_id": 78,
+     "statement": "理解并掌握RAG架构、Agent工作机制、检索算法（如倒排索引、语义检索）、Prompt工程、微调与对齐技术等核心能力",
+     "importance": "REQUIRED",
+     "requirement_type": "SKILL",
+     "kind": "VERBATIM",
+     "evidence_spans": [
+      {
+       "location": "{\"start_char\": 0, \"end_char\": 523, \"unit\": \"unicode_codepoint\"}",
+       "excerpt": "面壁智能\r\n大模型算法工程师 - 智能体方向\r\n招聘职位：\r\n- RAG/Agent算法工程师\r\n- 方向涵盖但不限于：大模型应用、搜索推荐系统、自然语言处理等。\r\n岗位职责：\r\n1.  构建和优化端到端智能系统，覆盖意图识别、多轮问答改写、知识检索、内容生成与用户偏好对齐，持续提升交互体验；\r\n2.  参与对话式AI产品的全流程研发，探索大模型在教育等垂直领域的创新应用，并推动技术落地；\r\n3.  针对具体业务场景，构建体系化知识库，并结合线上数据反馈，不断优化RAG和Agent系统的整体效果。\r\n1. 计算机、人工智能或相关专业的2027届应届毕业生，本科及以上学历；\r\n2.  编程基础扎实，熟悉至少一种主流语言（Java/Python/C++等）；具备LangChain、LlamaIndex等RAG/Agent开发框架的实战经验；\r\n3.  理解并掌握RAG架构、Agent工作机制、检索算法（如倒排索引、语义检索）、Prompt工程、微调与对齐技术等核心能力；\r\n4.  在ACL、EMNLP、ICLR等顶级学术会议或期刊上发表过相关论文者优先；\r\n5.  有大型大模型相关项目的参与经验，具备项目落地与迭代优化能力者优先；\r\n"
+      }
+     ],
+     "evidence_in_page_body": true
+    },
+    {
+     "requirement_id": 44,
+     "claim_id": 79,
+     "statement": "在ACL、EMNLP、ICLR等顶级学术会议或期刊上发表过相关论文者优先",
+     "importance": "PREFERRED",
+     "requirement_type": "UNKNOWN",
+     "kind": "VERBATIM",
+     "evidence_spans": [
+      {
+       "location": "{\"start_char\": 0, \"end_char\": 523, \"unit\": \"unicode_codepoint\"}",
+       "excerpt": "面壁智能\r\n大模型算法工程师 - 智能体方向\r\n招聘职位：\r\n- RAG/Agent算法工程师\r\n- 方向涵盖但不限于：大模型应用、搜索推荐系统、自然语言处理等。\r\n岗位职责：\r\n1.  构建和优化端到端智能系统，覆盖意图识别、多轮问答改写、知识检索、内容生成与用户偏好对齐，持续提升交互体验；\r\n2.  参与对话式AI产品的全流程研发，探索大模型在教育等垂直领域的创新应用，并推动技术落地；\r\n3.  针对具体业务场景，构建体系化知识库，并结合线上数据反馈，不断优化RAG和Agent系统的整体效果。\r\n1. 计算机、人工智能或相关专业的2027届应届毕业生，本科及以上学历；\r\n2.  编程基础扎实，熟悉至少一种主流语言（Java/Python/C++等）；具备LangChain、LlamaIndex等RAG/Agent开发框架的实战经验；\r\n3.  理解并掌握RAG架构、Agent工作机制、检索算法（如倒排索引、语义检索）、Prompt工程、微调与对齐技术等核心能力；\r\n4.  在ACL、EMNLP、ICLR等顶级学术会议或期刊上发表过相关论文者优先；\r\n5.  有大型大模型相关项目的参与经验，具备项目落地与迭代优化能力者优先；\r\n"
+      }
+     ],
+     "evidence_in_page_body": true
+    },
+    {
+     "requirement_id": 45,
+     "claim_id": 80,
+     "statement": "有大型大模型相关项目的参与经验，具备项目落地与迭代优化能力者优先",
+     "importance": "PREFERRED",
+     "requirement_type": "UNKNOWN",
+     "kind": "VERBATIM",
+     "evidence_spans": [
+      {
+       "location": "{\"start_char\": 0, \"end_char\": 523, \"unit\": \"unicode_codepoint\"}",
+       "excerpt": "面壁智能\r\n大模型算法工程师 - 智能体方向\r\n招聘职位：\r\n- RAG/Agent算法工程师\r\n- 方向涵盖但不限于：大模型应用、搜索推荐系统、自然语言处理等。\r\n岗位职责：\r\n1.  构建和优化端到端智能系统，覆盖意图识别、多轮问答改写、知识检索、内容生成与用户偏好对齐，持续提升交互体验；\r\n2.  参与对话式AI产品的全流程研发，探索大模型在教育等垂直领域的创新应用，并推动技术落地；\r\n3.  针对具体业务场景，构建体系化知识库，并结合线上数据反馈，不断优化RAG和Agent系统的整体效果。\r\n1. 计算机、人工智能或相关专业的2027届应届毕业生，本科及以上学历；\r\n2.  编程基础扎实，熟悉至少一种主流语言（Java/Python/C++等）；具备LangChain、LlamaIndex等RAG/Agent开发框架的实战经验；\r\n3.  理解并掌握RAG架构、Agent工作机制、检索算法（如倒排索引、语义检索）、Prompt工程、微调与对齐技术等核心能力；\r\n4.  在ACL、EMNLP、ICLR等顶级学术会议或期刊上发表过相关论文者优先；\r\n5.  有大型大模型相关项目的参与经验，具备项目落地与迭代优化能力者优先；\r\n"
+      }
+     ],
+     "evidence_in_page_body": true
+    }
+   ]
+  },
+  "6": {
+   "company": "蔚来",
+   "job_title": "校招-AI推理引擎开发工程师",
+   "publication_status": "WAITING_REVIEW",
+   "fingerprint": "969b9f9065cea8655a5d8d721b64aa79002077d12f6a61fb9457f9d513fab475",
+   "body_chars": 592,
+   "requirement_count": 13,
+   "kind_counts": {
+    "VERBATIM": 3,
+    "PARAPHRASE": 3,
+    "FORMAT_VARIANT": 7
+   },
+   "requirements": [
+    {
+     "requirement_id": 56,
+     "claim_id": 98,
+     "statement": "参与大模型推理引擎的设计和研发，支撑自研以及开源模型的快速部署和高性能推理",
+     "importance": null,
+     "requirement_type": "UNKNOWN",
+     "kind": "VERBATIM",
+     "evidence_spans": [
+      {
+       "location": "{\"start_char\": 0, \"end_char\": 592, \"unit\": \"unicode_codepoint\"}",
+       "excerpt": "蔚来\r\n校招-AI推理引擎开发工程师\r\n参与大模型推理引擎的设计和研发，支撑自研以及开源模型的快速部署和高性能推理；\r\n通过各种技术手段持续优化性能，降低推理成本，包括但不限于:算子/编译优化、异构推理、分布式并行等；\r\n学习并应用业界前沿的推理优化技术，KV Cache优化、模型量化(Quantization)、剪枝(Pruning)，跨机分布式推理优化等。\r\n对 Transformer 架构及主流大模型(如GPT、Llama、Qwen等)的推理特性有基本理解，了解大模型推理的基本流程和常见挑战(如延迟、吞吐、内存占用)；\r\n在资深工程师指导下，参与优化内存管理、计算资源分配与调度策略，提升模型推理速度和资源利用率。学习并使用性能分析工具(如Nvidia Nsight)进行瓶颈定位和优化；\r\n熟练掌握 C++ 和 Python 编程语言，具备扎实的数据结构、算法和操作系统基础熟悉至少一种主流的深度学习框架(如 PyTorch、TensorFlow)，了解其基本实现原理了解GPU编程(如 CUDA)或并行计算，有相关的课程项目或实验经验；\r\n有开源大模型推理框架(vllm/sglang/trt-llm)使用和优化经验者优先;\r\n有cuda或triton开发优化gpu算子经验者优先；\r\n有NVIDIA 等算力芯片优化经验者优先;\r\n有大模型推理相关从业经验者优先。\r\n"
+      }
+     ],
+     "evidence_in_page_body": true
+    },
+    {
+     "requirement_id": 57,
+     "claim_id": 99,
+     "statement": "通过各种技术手段持续优化性能，降低推理成本，包括算子/编译优化、异构推理、分布式并行等",
+     "importance": null,
+     "requirement_type": "UNKNOWN",
+     "kind": "PARAPHRASE",
+     "evidence_spans": [
+      {
+       "location": "{\"start_char\": 0, \"end_char\": 592, \"unit\": \"unicode_codepoint\"}",
+       "excerpt": "蔚来\r\n校招-AI推理引擎开发工程师\r\n参与大模型推理引擎的设计和研发，支撑自研以及开源模型的快速部署和高性能推理；\r\n通过各种技术手段持续优化性能，降低推理成本，包括但不限于:算子/编译优化、异构推理、分布式并行等；\r\n学习并应用业界前沿的推理优化技术，KV Cache优化、模型量化(Quantization)、剪枝(Pruning)，跨机分布式推理优化等。\r\n对 Transformer 架构及主流大模型(如GPT、Llama、Qwen等)的推理特性有基本理解，了解大模型推理的基本流程和常见挑战(如延迟、吞吐、内存占用)；\r\n在资深工程师指导下，参与优化内存管理、计算资源分配与调度策略，提升模型推理速度和资源利用率。学习并使用性能分析工具(如Nvidia Nsight)进行瓶颈定位和优化；\r\n熟练掌握 C++ 和 Python 编程语言，具备扎实的数据结构、算法和操作系统基础熟悉至少一种主流的深度学习框架(如 PyTorch、TensorFlow)，了解其基本实现原理了解GPU编程(如 CUDA)或并行计算，有相关的课程项目或实验经验；\r\n有开源大模型推理框架(vllm/sglang/trt-llm)使用和优化经验者优先;\r\n有cuda或triton开发优化gpu算子经验者优先；\r\n有NVIDIA 等算力芯片优化经验者优先;\r\n有大模型推理相关从业经验者优先。\r\n"
+      }
+     ],
+     "evidence_in_page_body": true,
+     "closest_source_line": "通过各种技术手段持续优化性能，降低推理成本，包括但不限于:算子/编译优化、异构推理、分布式并行等；",
+     "similarity": 0.9512,
+     "diff": {
+      "removed_from_model": [],
+      "present_in_source_only": [
+       "但不限于:",
+       "；"
+      ],
+      "ratio": 0.9348
+     }
+    },
+    {
+     "requirement_id": 58,
+     "claim_id": 100,
+     "statement": "学习并应用业界前沿的推理优化技术，包括KV Cache优化、模型量化、剪枝、跨机分布式推理优化等",
+     "importance": null,
+     "requirement_type": "UNKNOWN",
+     "kind": "PARAPHRASE",
+     "evidence_spans": [
+      {
+       "location": "{\"start_char\": 0, \"end_char\": 592, \"unit\": \"unicode_codepoint\"}",
+       "excerpt": "蔚来\r\n校招-AI推理引擎开发工程师\r\n参与大模型推理引擎的设计和研发，支撑自研以及开源模型的快速部署和高性能推理；\r\n通过各种技术手段持续优化性能，降低推理成本，包括但不限于:算子/编译优化、异构推理、分布式并行等；\r\n学习并应用业界前沿的推理优化技术，KV Cache优化、模型量化(Quantization)、剪枝(Pruning)，跨机分布式推理优化等。\r\n对 Transformer 架构及主流大模型(如GPT、Llama、Qwen等)的推理特性有基本理解，了解大模型推理的基本流程和常见挑战(如延迟、吞吐、内存占用)；\r\n在资深工程师指导下，参与优化内存管理、计算资源分配与调度策略，提升模型推理速度和资源利用率。学习并使用性能分析工具(如Nvidia Nsight)进行瓶颈定位和优化；\r\n熟练掌握 C++ 和 Python 编程语言，具备扎实的数据结构、算法和操作系统基础熟悉至少一种主流的深度学习框架(如 PyTorch、TensorFlow)，了解其基本实现原理了解GPU编程(如 CUDA)或并行计算，有相关的课程项目或实验经验；\r\n有开源大模型推理框架(vllm/sglang/trt-llm)使用和优化经验者优先;\r\n有cuda或triton开发优化gpu算子经验者优先；\r\n有NVIDIA 等算力芯片优化经验者优先;\r\n有大模型推理相关从业经验者优先。\r\n"
+      }
+     ],
+     "evidence_in_page_body": true,
+     "closest_source_line": "学习并应用业界前沿的推理优化技术，KV Cache优化、模型量化(Quantization)、剪枝(Pruning)，跨机分布式推理优化等。",
+     "similarity": 0.7961,
+     "diff": {
+      "removed_from_model": [
+       "包括",
+       "、"
+      ],
+      "present_in_source_only": [
+       "(Quantization)",
+       "(Pruning)，",
+       "。"
+      ],
+      "ratio": 0.7627
+     }
+    },
+    {
+     "requirement_id": 59,
+     "claim_id": 101,
+     "statement": "对Transformer架构及主流大模型（如GPT、Llama、Qwen等）的推理特性有基本理解，了解大模型推理的基本流程和常见挑战（如延迟、吞吐、内存占用）",
+     "importance": "REQUIRED",
+     "requirement_type": "UNKNOWN",
+     "kind": "FORMAT_VARIANT",
+     "evidence_spans": [
+      {
+       "location": "{\"start_char\": 0, \"end_char\": 592, \"unit\": \"unicode_codepoint\"}",
+       "excerpt": "蔚来\r\n校招-AI推理引擎开发工程师\r\n参与大模型推理引擎的设计和研发，支撑自研以及开源模型的快速部署和高性能推理；\r\n通过各种技术手段持续优化性能，降低推理成本，包括但不限于:算子/编译优化、异构推理、分布式并行等；\r\n学习并应用业界前沿的推理优化技术，KV Cache优化、模型量化(Quantization)、剪枝(Pruning)，跨机分布式推理优化等。\r\n对 Transformer 架构及主流大模型(如GPT、Llama、Qwen等)的推理特性有基本理解，了解大模型推理的基本流程和常见挑战(如延迟、吞吐、内存占用)；\r\n在资深工程师指导下，参与优化内存管理、计算资源分配与调度策略，提升模型推理速度和资源利用率。学习并使用性能分析工具(如Nvidia Nsight)进行瓶颈定位和优化；\r\n熟练掌握 C++ 和 Python 编程语言，具备扎实的数据结构、算法和操作系统基础熟悉至少一种主流的深度学习框架(如 PyTorch、TensorFlow)，了解其基本实现原理了解GPU编程(如 CUDA)或并行计算，有相关的课程项目或实验经验；\r\n有开源大模型推理框架(vllm/sglang/trt-llm)使用和优化经验者优先;\r\n有cuda或triton开发优化gpu算子经验者优先；\r\n有NVIDIA 等算力芯片优化经验者优先;\r\n有大模型推理相关从业经验者优先。\r\n"
+      }
+     ],
+     "evidence_in_page_body": true,
+     "closest_source_line": "对 Transformer 架构及主流大模型(如GPT、Llama、Qwen等)的推理特性有基本理解，了解大模型推理的基本流程和常见挑战(如延迟、吞吐、内存占用)；",
+     "similarity": 1.0,
+     "diff": {
+      "removed_from_model": [
+       "（",
+       "）",
+       "（",
+       "）"
+      ],
+      "present_in_source_only": [
+       " ",
+       " ",
+       "(",
+       ")",
+       "(",
+       ")；"
+      ],
+      "ratio": 0.9317
+     }
+    },
+    {
+     "requirement_id": 60,
+     "claim_id": 102,
+     "statement": "在资深工程师指导下，参与优化内存管理、计算资源分配与调度策略，提升模型推理速度和资源利用率",
+     "importance": null,
+     "requirement_type": "UNKNOWN",
+     "kind": "VERBATIM",
+     "evidence_spans": [
+      {
+       "location": "{\"start_char\": 0, \"end_char\": 592, \"unit\": \"unicode_codepoint\"}",
+       "excerpt": "蔚来\r\n校招-AI推理引擎开发工程师\r\n参与大模型推理引擎的设计和研发，支撑自研以及开源模型的快速部署和高性能推理；\r\n通过各种技术手段持续优化性能，降低推理成本，包括但不限于:算子/编译优化、异构推理、分布式并行等；\r\n学习并应用业界前沿的推理优化技术，KV Cache优化、模型量化(Quantization)、剪枝(Pruning)，跨机分布式推理优化等。\r\n对 Transformer 架构及主流大模型(如GPT、Llama、Qwen等)的推理特性有基本理解，了解大模型推理的基本流程和常见挑战(如延迟、吞吐、内存占用)；\r\n在资深工程师指导下，参与优化内存管理、计算资源分配与调度策略，提升模型推理速度和资源利用率。学习并使用性能分析工具(如Nvidia Nsight)进行瓶颈定位和优化；\r\n熟练掌握 C++ 和 Python 编程语言，具备扎实的数据结构、算法和操作系统基础熟悉至少一种主流的深度学习框架(如 PyTorch、TensorFlow)，了解其基本实现原理了解GPU编程(如 CUDA)或并行计算，有相关的课程项目或实验经验；\r\n有开源大模型推理框架(vllm/sglang/trt-llm)使用和优化经验者优先;\r\n有cuda或triton开发优化gpu算子经验者优先；\r\n有NVIDIA 等算力芯片优化经验者优先;\r\n有大模型推理相关从业经验者优先。\r\n"
+      }
+     ],
+     "evidence_in_page_body": true
+    },
+    {
+     "requirement_id": 61,
+     "claim_id": 103,
+     "statement": "学习并使用性能分析工具（如Nvidia Nsight）进行瓶颈定位和优化",
+     "importance": "REQUIRED",
+     "requirement_type": "SKILL",
+     "kind": "FORMAT_VARIANT",
+     "evidence_spans": [
+      {
+       "location": "{\"start_char\": 0, \"end_char\": 592, \"unit\": \"unicode_codepoint\"}",
+       "excerpt": "蔚来\r\n校招-AI推理引擎开发工程师\r\n参与大模型推理引擎的设计和研发，支撑自研以及开源模型的快速部署和高性能推理；\r\n通过各种技术手段持续优化性能，降低推理成本，包括但不限于:算子/编译优化、异构推理、分布式并行等；\r\n学习并应用业界前沿的推理优化技术，KV Cache优化、模型量化(Quantization)、剪枝(Pruning)，跨机分布式推理优化等。\r\n对 Transformer 架构及主流大模型(如GPT、Llama、Qwen等)的推理特性有基本理解，了解大模型推理的基本流程和常见挑战(如延迟、吞吐、内存占用)；\r\n在资深工程师指导下，参与优化内存管理、计算资源分配与调度策略，提升模型推理速度和资源利用率。学习并使用性能分析工具(如Nvidia Nsight)进行瓶颈定位和优化；\r\n熟练掌握 C++ 和 Python 编程语言，具备扎实的数据结构、算法和操作系统基础熟悉至少一种主流的深度学习框架(如 PyTorch、TensorFlow)，了解其基本实现原理了解GPU编程(如 CUDA)或并行计算，有相关的课程项目或实验经验；\r\n有开源大模型推理框架(vllm/sglang/trt-llm)使用和优化经验者优先;\r\n有cuda或triton开发优化gpu算子经验者优先；\r\n有NVIDIA 等算力芯片优化经验者优先;\r\n有大模型推理相关从业经验者优先。\r\n"
+      }
+     ],
+     "evidence_in_page_body": true,
+     "closest_source_line": "在资深工程师指导下，参与优化内存管理、计算资源分配与调度策略，提升模型推理速度和资源利用率。学习并使用性能分析工具(如Nvidia Nsight)进行瓶颈定位和优化；",
+     "similarity": 0.6111,
+     "diff": {
+      "removed_from_model": [
+       "（",
+       "）"
+      ],
+      "present_in_source_only": [
+       "在资深工程师指导下，参与优化内存管理、计算资源分配与调度策略，提升模型推理速度和资源利用率。",
+       "(",
+       ")",
+       "；"
+      ],
+      "ratio": 0.5714
+     }
+    },
+    {
+     "requirement_id": 62,
+     "claim_id": 104,
+     "statement": "熟练掌握C++和Python编程语言，具备扎实的数据结构、算法和操作系统基础",
+     "importance": "REQUIRED",
+     "requirement_type": "SKILL",
+     "kind": "FORMAT_VARIANT",
+     "evidence_spans": [
+      {
+       "location": "{\"start_char\": 0, \"end_char\": 592, \"unit\": \"unicode_codepoint\"}",
+       "excerpt": "蔚来\r\n校招-AI推理引擎开发工程师\r\n参与大模型推理引擎的设计和研发，支撑自研以及开源模型的快速部署和高性能推理；\r\n通过各种技术手段持续优化性能，降低推理成本，包括但不限于:算子/编译优化、异构推理、分布式并行等；\r\n学习并应用业界前沿的推理优化技术，KV Cache优化、模型量化(Quantization)、剪枝(Pruning)，跨机分布式推理优化等。\r\n对 Transformer 架构及主流大模型(如GPT、Llama、Qwen等)的推理特性有基本理解，了解大模型推理的基本流程和常见挑战(如延迟、吞吐、内存占用)；\r\n在资深工程师指导下，参与优化内存管理、计算资源分配与调度策略，提升模型推理速度和资源利用率。学习并使用性能分析工具(如Nvidia Nsight)进行瓶颈定位和优化；\r\n熟练掌握 C++ 和 Python 编程语言，具备扎实的数据结构、算法和操作系统基础熟悉至少一种主流的深度学习框架(如 PyTorch、TensorFlow)，了解其基本实现原理了解GPU编程(如 CUDA)或并行计算，有相关的课程项目或实验经验；\r\n有开源大模型推理框架(vllm/sglang/trt-llm)使用和优化经验者优先;\r\n有cuda或triton开发优化gpu算子经验者优先；\r\n有NVIDIA 等算力芯片优化经验者优先;\r\n有大模型推理相关从业经验者优先。\r\n"
+      }
+     ],
+     "evidence_in_page_body": true,
+     "closest_source_line": "熟练掌握 C++ 和 Python 编程语言，具备扎实的数据结构、算法和操作系统基础熟悉至少一种主流的深度学习框架(如 PyTorch、TensorFlow)，了解其基本实现原理了解GPU编程(如 CUDA)或并行计算，有相关的课程项目或实验经验；",
+     "similarity": 0.5,
+     "diff": {
+      "removed_from_model": [],
+      "present_in_source_only": [
+       " ",
+       " ",
+       " ",
+       " ",
+       "熟悉至少一种主流的深度学习框架(如 PyTorch、TensorFlow)，了解其基本实现原理了解GPU编程(如 CUDA)或并行计算，有相关的课程项目或实验经验；"
+      ],
+      "ratio": 0.4691
+     }
+    },
+    {
+     "requirement_id": 63,
+     "claim_id": 105,
+     "statement": "熟悉至少一种主流深度学习框架（如PyTorch、TensorFlow），了解其基本实现原理",
+     "importance": "REQUIRED",
+     "requirement_type": "SKILL",
+     "kind": "PARAPHRASE",
+     "evidence_spans": [
+      {
+       "location": "{\"start_char\": 0, \"end_char\": 592, \"unit\": \"unicode_codepoint\"}",
+       "excerpt": "蔚来\r\n校招-AI推理引擎开发工程师\r\n参与大模型推理引擎的设计和研发，支撑自研以及开源模型的快速部署和高性能推理；\r\n通过各种技术手段持续优化性能，降低推理成本，包括但不限于:算子/编译优化、异构推理、分布式并行等；\r\n学习并应用业界前沿的推理优化技术，KV Cache优化、模型量化(Quantization)、剪枝(Pruning)，跨机分布式推理优化等。\r\n对 Transformer 架构及主流大模型(如GPT、Llama、Qwen等)的推理特性有基本理解，了解大模型推理的基本流程和常见挑战(如延迟、吞吐、内存占用)；\r\n在资深工程师指导下，参与优化内存管理、计算资源分配与调度策略，提升模型推理速度和资源利用率。学习并使用性能分析工具(如Nvidia Nsight)进行瓶颈定位和优化；\r\n熟练掌握 C++ 和 Python 编程语言，具备扎实的数据结构、算法和操作系统基础熟悉至少一种主流的深度学习框架(如 PyTorch、TensorFlow)，了解其基本实现原理了解GPU编程(如 CUDA)或并行计算，有相关的课程项目或实验经验；\r\n有开源大模型推理框架(vllm/sglang/trt-llm)使用和优化经验者优先;\r\n有cuda或triton开发优化gpu算子经验者优先；\r\n有NVIDIA 等算力芯片优化经验者优先;\r\n有大模型推理相关从业经验者优先。\r\n"
+      }
+     ],
+     "evidence_in_page_body": true,
+     "closest_source_line": "熟练掌握 C++ 和 Python 编程语言，具备扎实的数据结构、算法和操作系统基础熟悉至少一种主流的深度学习框架(如 PyTorch、TensorFlow)，了解其基本实现原理了解GPU编程(如 CUDA)或并行计算，有相关的课程项目或实验经验；",
+     "similarity": 0.5503,
+     "diff": {
+      "removed_from_model": [
+       "（",
+       "）"
+      ],
+      "present_in_source_only": [
+       "熟练掌握 C++ 和 Python 编程语言，具备扎实的数据结构、算法和操作系统基础",
+       "的",
+       "(",
+       " ",
+       ")",
+       "了解GPU编程(如 CUDA)或并行计算，有相关的课程项目或实验经验；"
+      ],
+      "ratio": 0.5089
+     }
+    },
+    {
+     "requirement_id": 64,
+     "claim_id": 106,
+     "statement": "了解GPU编程（如CUDA）或并行计算，有相关的课程项目或实验经验",
+     "importance": "REQUIRED",
+     "requirement_type": "SKILL",
+     "kind": "FORMAT_VARIANT",
+     "evidence_spans": [
+      {
+       "location": "{\"start_char\": 0, \"end_char\": 592, \"unit\": \"unicode_codepoint\"}",
+       "excerpt": "蔚来\r\n校招-AI推理引擎开发工程师\r\n参与大模型推理引擎的设计和研发，支撑自研以及开源模型的快速部署和高性能推理；\r\n通过各种技术手段持续优化性能，降低推理成本，包括但不限于:算子/编译优化、异构推理、分布式并行等；\r\n学习并应用业界前沿的推理优化技术，KV Cache优化、模型量化(Quantization)、剪枝(Pruning)，跨机分布式推理优化等。\r\n对 Transformer 架构及主流大模型(如GPT、Llama、Qwen等)的推理特性有基本理解，了解大模型推理的基本流程和常见挑战(如延迟、吞吐、内存占用)；\r\n在资深工程师指导下，参与优化内存管理、计算资源分配与调度策略，提升模型推理速度和资源利用率。学习并使用性能分析工具(如Nvidia Nsight)进行瓶颈定位和优化；\r\n熟练掌握 C++ 和 Python 编程语言，具备扎实的数据结构、算法和操作系统基础熟悉至少一种主流的深度学习框架(如 PyTorch、TensorFlow)，了解其基本实现原理了解GPU编程(如 CUDA)或并行计算，有相关的课程项目或实验经验；\r\n有开源大模型推理框架(vllm/sglang/trt-llm)使用和优化经验者优先;\r\n有cuda或triton开发优化gpu算子经验者优先；\r\n有NVIDIA 等算力芯片优化经验者优先;\r\n有大模型推理相关从业经验者优先。\r\n"
+      }
+     ],
+     "evidence_in_page_body": true,
+     "closest_source_line": "熟练掌握 C++ 和 Python 编程语言，具备扎实的数据结构、算法和操作系统基础熟悉至少一种主流的深度学习框架(如 PyTorch、TensorFlow)，了解其基本实现原理了解GPU编程(如 CUDA)或并行计算，有相关的课程项目或实验经验；",
+     "similarity": 0.4348,
+     "diff": {
+      "removed_from_model": [
+       "（",
+       "）"
+      ],
+      "present_in_source_only": [
+       "熟练掌握 C++ 和 Python 编程语言，具备扎实的数据结构、算法和操作系统基础熟悉至少一种主流的深度学习框架(如 PyTorch、TensorFlow)，了解其基本实现原理",
+       "(",
+       " ",
+       ")",
+       "；"
+      ],
+      "ratio": 0.3949
+     }
+    },
+    {
+     "requirement_id": 65,
+     "claim_id": 107,
+     "statement": "有开源大模型推理框架（vllm/sglang/trt-llm）使用和优化经验者优先",
+     "importance": "PREFERRED",
+     "requirement_type": "EXPERIENCE",
+     "kind": "FORMAT_VARIANT",
+     "evidence_spans": [
+      {
+       "location": "{\"start_char\": 0, \"end_char\": 592, \"unit\": \"unicode_codepoint\"}",
+       "excerpt": "蔚来\r\n校招-AI推理引擎开发工程师\r\n参与大模型推理引擎的设计和研发，支撑自研以及开源模型的快速部署和高性能推理；\r\n通过各种技术手段持续优化性能，降低推理成本，包括但不限于:算子/编译优化、异构推理、分布式并行等；\r\n学习并应用业界前沿的推理优化技术，KV Cache优化、模型量化(Quantization)、剪枝(Pruning)，跨机分布式推理优化等。\r\n对 Transformer 架构及主流大模型(如GPT、Llama、Qwen等)的推理特性有基本理解，了解大模型推理的基本流程和常见挑战(如延迟、吞吐、内存占用)；\r\n在资深工程师指导下，参与优化内存管理、计算资源分配与调度策略，提升模型推理速度和资源利用率。学习并使用性能分析工具(如Nvidia Nsight)进行瓶颈定位和优化；\r\n熟练掌握 C++ 和 Python 编程语言，具备扎实的数据结构、算法和操作系统基础熟悉至少一种主流的深度学习框架(如 PyTorch、TensorFlow)，了解其基本实现原理了解GPU编程(如 CUDA)或并行计算，有相关的课程项目或实验经验；\r\n有开源大模型推理框架(vllm/sglang/trt-llm)使用和优化经验者优先;\r\n有cuda或triton开发优化gpu算子经验者优先；\r\n有NVIDIA 等算力芯片优化经验者优先;\r\n有大模型推理相关从业经验者优先。\r\n"
+      }
+     ],
+     "evidence_in_page_body": true,
+     "closest_source_line": "有开源大模型推理框架(vllm/sglang/trt-llm)使用和优化经验者优先;",
+     "similarity": 1.0,
+     "diff": {
+      "removed_from_model": [
+       "（",
+       "）"
+      ],
+      "present_in_source_only": [
+       "(",
+       ")",
+       ";"
+      ],
+      "ratio": 0.9398
+     }
+    },
+    {
+     "requirement_id": 66,
+     "claim_id": 108,
+     "statement": "有CUDA或Triton开发优化GPU算子经验者优先",
+     "importance": "PREFERRED",
+     "requirement_type": "EXPERIENCE",
+     "kind": "FORMAT_VARIANT",
+     "evidence_spans": [
+      {
+       "location": "{\"start_char\": 0, \"end_char\": 592, \"unit\": \"unicode_codepoint\"}",
+       "excerpt": "蔚来\r\n校招-AI推理引擎开发工程师\r\n参与大模型推理引擎的设计和研发，支撑自研以及开源模型的快速部署和高性能推理；\r\n通过各种技术手段持续优化性能，降低推理成本，包括但不限于:算子/编译优化、异构推理、分布式并行等；\r\n学习并应用业界前沿的推理优化技术，KV Cache优化、模型量化(Quantization)、剪枝(Pruning)，跨机分布式推理优化等。\r\n对 Transformer 架构及主流大模型(如GPT、Llama、Qwen等)的推理特性有基本理解，了解大模型推理的基本流程和常见挑战(如延迟、吞吐、内存占用)；\r\n在资深工程师指导下，参与优化内存管理、计算资源分配与调度策略，提升模型推理速度和资源利用率。学习并使用性能分析工具(如Nvidia Nsight)进行瓶颈定位和优化；\r\n熟练掌握 C++ 和 Python 编程语言，具备扎实的数据结构、算法和操作系统基础熟悉至少一种主流的深度学习框架(如 PyTorch、TensorFlow)，了解其基本实现原理了解GPU编程(如 CUDA)或并行计算，有相关的课程项目或实验经验；\r\n有开源大模型推理框架(vllm/sglang/trt-llm)使用和优化经验者优先;\r\n有cuda或triton开发优化gpu算子经验者优先；\r\n有NVIDIA 等算力芯片优化经验者优先;\r\n有大模型推理相关从业经验者优先。\r\n"
+      }
+     ],
+     "evidence_in_page_body": true,
+     "closest_source_line": "有cuda或triton开发优化gpu算子经验者优先；",
+     "similarity": 1.0,
+     "diff": {
+      "removed_from_model": [
+       "CUDA",
+       "T",
+       "GPU"
+      ],
+      "present_in_source_only": [
+       "cuda",
+       "t",
+       "gpu",
+       "；"
+      ],
+      "ratio": 0.6792
+     }
+    },
+    {
+     "requirement_id": 67,
+     "claim_id": 109,
+     "statement": "有NVIDIA等算力芯片优化经验者优先",
+     "importance": "PREFERRED",
+     "requirement_type": "EXPERIENCE",
+     "kind": "FORMAT_VARIANT",
+     "evidence_spans": [
+      {
+       "location": "{\"start_char\": 0, \"end_char\": 592, \"unit\": \"unicode_codepoint\"}",
+       "excerpt": "蔚来\r\n校招-AI推理引擎开发工程师\r\n参与大模型推理引擎的设计和研发，支撑自研以及开源模型的快速部署和高性能推理；\r\n通过各种技术手段持续优化性能，降低推理成本，包括但不限于:算子/编译优化、异构推理、分布式并行等；\r\n学习并应用业界前沿的推理优化技术，KV Cache优化、模型量化(Quantization)、剪枝(Pruning)，跨机分布式推理优化等。\r\n对 Transformer 架构及主流大模型(如GPT、Llama、Qwen等)的推理特性有基本理解，了解大模型推理的基本流程和常见挑战(如延迟、吞吐、内存占用)；\r\n在资深工程师指导下，参与优化内存管理、计算资源分配与调度策略，提升模型推理速度和资源利用率。学习并使用性能分析工具(如Nvidia Nsight)进行瓶颈定位和优化；\r\n熟练掌握 C++ 和 Python 编程语言，具备扎实的数据结构、算法和操作系统基础熟悉至少一种主流的深度学习框架(如 PyTorch、TensorFlow)，了解其基本实现原理了解GPU编程(如 CUDA)或并行计算，有相关的课程项目或实验经验；\r\n有开源大模型推理框架(vllm/sglang/trt-llm)使用和优化经验者优先;\r\n有cuda或triton开发优化gpu算子经验者优先；\r\n有NVIDIA 等算力芯片优化经验者优先;\r\n有大模型推理相关从业经验者优先。\r\n"
+      }
+     ],
+     "evidence_in_page_body": true,
+     "closest_source_line": "有NVIDIA 等算力芯片优化经验者优先;",
+     "similarity": 1.0,
+     "diff": {
+      "removed_from_model": [],
+      "present_in_source_only": [
+       " ",
+       ";"
+      ],
+      "ratio": 0.95
+     }
+    },
+    {
+     "requirement_id": 68,
+     "claim_id": 110,
+     "statement": "有大模型推理相关从业经验者优先",
+     "importance": "PREFERRED",
+     "requirement_type": "EXPERIENCE",
+     "kind": "VERBATIM",
+     "evidence_spans": [
+      {
+       "location": "{\"start_char\": 0, \"end_char\": 592, \"unit\": \"unicode_codepoint\"}",
+       "excerpt": "蔚来\r\n校招-AI推理引擎开发工程师\r\n参与大模型推理引擎的设计和研发，支撑自研以及开源模型的快速部署和高性能推理；\r\n通过各种技术手段持续优化性能，降低推理成本，包括但不限于:算子/编译优化、异构推理、分布式并行等；\r\n学习并应用业界前沿的推理优化技术，KV Cache优化、模型量化(Quantization)、剪枝(Pruning)，跨机分布式推理优化等。\r\n对 Transformer 架构及主流大模型(如GPT、Llama、Qwen等)的推理特性有基本理解，了解大模型推理的基本流程和常见挑战(如延迟、吞吐、内存占用)；\r\n在资深工程师指导下，参与优化内存管理、计算资源分配与调度策略，提升模型推理速度和资源利用率。学习并使用性能分析工具(如Nvidia Nsight)进行瓶颈定位和优化；\r\n熟练掌握 C++ 和 Python 编程语言，具备扎实的数据结构、算法和操作系统基础熟悉至少一种主流的深度学习框架(如 PyTorch、TensorFlow)，了解其基本实现原理了解GPU编程(如 CUDA)或并行计算，有相关的课程项目或实验经验；\r\n有开源大模型推理框架(vllm/sglang/trt-llm)使用和优化经验者优先;\r\n有cuda或triton开发优化gpu算子经验者优先；\r\n有NVIDIA 等算力芯片优化经验者优先;\r\n有大模型推理相关从业经验者优先。\r\n"
+      }
+     ],
+     "evidence_in_page_body": true
+    }
+   ]
+  }
+ }
+}

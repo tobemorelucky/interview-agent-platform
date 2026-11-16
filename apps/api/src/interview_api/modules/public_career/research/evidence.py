@@ -25,6 +25,43 @@ class EvidenceSpan:
         return {"start_char": self.start, "end_char": self.end, "unit": "unicode_codepoint"}
 
 
+def chunk_bounds(text: str, *, span_chars: int, limit: int) -> list[tuple[int, int]]:
+    """Evidence slice points that follow the document's own line breaks.
+
+    A fixed 600-character cut can bisect a page line, which makes a perfectly
+    verbatim sentence impossible to support with the chunk it starts in. The cut
+    is therefore nudged to the nearest line break: back a little when that loses
+    at most half a chunk, forward a little when the next break is within half a
+    chunk of slack. Nothing else changes — the slice still comes straight from
+    the stored body, so offsets stay exact and no text is rewritten.
+
+    A single line longer than `span_chars + span_chars // 2` cannot be kept whole;
+    it is cut at the hard boundary and can only be cited by adjacent chunks.
+    """
+    if span_chars < 1:
+        raise ValueError("Evidence span must be positive")
+    bounds: list[tuple[int, int]] = []
+    stop = max(0, min(limit, len(text)))
+    slack = span_chars // 2
+    position = 0
+    while position < stop:
+        hard = min(position + span_chars, stop)
+        end = hard
+        if hard < len(text):
+            before = text.rfind("\n", position, hard)
+            after = text.find("\n", hard)
+            if before > position and hard - (before + 1) <= slack:
+                end = before + 1
+            elif after != -1 and (after + 1 - position) <= span_chars + slack:
+                end = after + 1
+        end = min(end, stop)
+        if end <= position:  # defensive: a pathological boundary must still advance
+            end = hard
+        bounds.append((position, end))
+        position = end
+    return bounds
+
+
 class EvidenceCatalog:
     def __init__(self, snapshots: Iterable[SourceSnapshot], *, max_chars: int = 24000,
                  span_chars: int = 600):
@@ -36,16 +73,20 @@ class EvidenceCatalog:
         used = 0
         for snapshot in snapshots:
             text = snapshot.content_text or ""
-            for start in range(0, min(len(text), per_source_budget), span_chars):
-                excerpt = text[start:start + min(span_chars, max_chars - used, per_source_budget - start)]
+            for start, end in chunk_bounds(text, span_chars=span_chars,
+                                           limit=min(len(text), per_source_budget)):
                 if used >= max_chars:
                     break
+                # The total budget still wins over line alignment; it only bites
+                # on documents larger than `max_chars`.
+                end = min(end, start + (max_chars - used))
+                excerpt = text[start:end]
                 if not excerpt.strip():
                     continue
-                end = start + len(excerpt)
                 key = "ev_" + sha256(f"{snapshot.id}:{start}:{end}:{excerpt}".encode()).hexdigest()[:24]
                 self.spans[key] = EvidenceSpan(key, snapshot.id, snapshot.source_id, excerpt, start, end)
                 used += len(excerpt)
+
 
     def resolve(self, ids: list[str]) -> list[EvidenceSpan]:
         if not ids:

@@ -1,0 +1,747 @@
+{
+ "generated_at": "2026-11-16T11:44:54.429643+00:00",
+ "model_http_calls": 0,
+ "rule": "source integrity only; missing headings is not a blocker",
+ "flagged": 26,
+ "admitted": 16,
+ "rejected": 10,
+ "admitted_rows": [
+  {
+   "jd_id": "OFFICIAL_CAND_012",
+   "company": "沐瞳科技",
+   "title": "Unity客户端开发工程师（活动）-MOBA",
+   "direction": "客户端",
+   "chars": 1278,
+   "job_id": "7669704278038530345",
+   "job_id_kind": "position_path",
+   "review": [
+    "NO_SECTION_HEADERS"
+   ],
+   "other_flags": [],
+   "admitted": true,
+   "checks": {
+    "only_header_flag": true,
+    "dom_present": true,
+    "body_present": true,
+    "page_literal_provable": true,
+    "hash_matches": true,
+    "stable_job_id": true,
+    "body_long_enough": true,
+    "not_truncated": true,
+    "no_nav_markers": true,
+    "not_already_used": true
+   },
+   "blocked": []
+  },
+  {
+   "jd_id": "OFFICIAL_CAND_018",
+   "company": "蔚来",
+   "title": "座舱大模型后训练/Agentic算法工程师",
+   "direction": "AI Agent",
+   "chars": 996,
+   "job_id": "7673027279396768009",
+   "job_id_kind": "position_path",
+   "review": [
+    "NO_SECTION_HEADERS"
+   ],
+   "other_flags": [],
+   "admitted": true,
+   "checks": {
+    "only_header_flag": true,
+    "dom_present": true,
+    "body_present": true,
+    "page_literal_provable": true,
+    "hash_matches": true,
+    "stable_job_id": true,
+    "body_long_enough": true,
+    "not_truncated": true,
+    "no_nav_markers": true,
+    "not_already_used": true
+   },
+   "blocked": []
+  },
+  {
+   "jd_id": "OFFICIAL_CAND_014",
+   "company": "蔚来",
+   "title": "Agent应用开发工程师（销售运营）",
+   "direction": "AI Agent",
+   "chars": 992,
+   "job_id": "7673028737668417833",
+   "job_id_kind": "position_path",
+   "review": [
+    "NO_SECTION_HEADERS"
+   ],
+   "other_flags": [],
+   "admitted": true,
+   "checks": {
+    "only_header_flag": true,
+    "dom_present": true,
+    "body_present": true,
+    "page_literal_provable": true,
+    "hash_matches": true,
+    "stable_job_id": true,
+    "body_long_enough": true,
+    "not_truncated": true,
+    "no_nav_markers": true,
+    "not_already_used": true
+   },
+   "blocked": []
+  },
+  {
+   "jd_id": "OFFICIAL_CAND_011",
+   "company": "沐瞳科技",
+   "title": "AI客户端开发工程师-MOBA",
+   "direction": "客户端",
+   "chars": 834,
+   "job_id": "7669702553915443462",
+   "job_id_kind": "position_path",
+   "review": [
+    "NO_SECTION_HEADERS"
+   ],
+   "other_flags": [],
+   "admitted": true,
+   "checks": {
+    "only_header_flag": true,
+    "dom_present": true,
+    "body_present": true,
+    "page_literal_provable": true,
+    "hash_matches": true,
+    "stable_job_id": true,
+    "body_long_enough": true,
+    "not_truncated": true,
+    "no_nav_markers": true,
+    "not_already_used": true
+   },
+   "blocked": []
+  },
+  {
+   "jd_id": "OFFICIAL_CAND_017",
+   "company": "蔚来",
+   "title": "座舱Agent Harness算法工程师",
+   "direction": "AI Agent",
+   "chars": 831,
+   "job_id": "7673027279396161801",
+   "job_id_kind": "position_path",
+   "review": [
+    "NO_SECTION_HEADERS"
+   ],
+   "other_flags": [],
+   "admitted": true,
+   "checks": {
+    "only_header_flag": true,
+    "dom_present": true,
+    "body_present": true,
+    "page_literal_provable": true,
+    "hash_matches": true,
+    "stable_job_id": true,
+    "body_long_enough": true,
+    "not_truncated": true,
+    "no_nav_markers": true,
+    "not_already_used": true
+   },
+   "blocked": []
+  },
+  {
+   "jd_id": "OFFICIAL_CAND_006",
+   "company": "沐瞳科技",
+   "title": "后端开发工程师（IT信息化）",
+   "direction": "后端",
+   "chars": 781,
+   "job_id": "7668255125144176937",
+   "job_id_kind": "position_path",
+   "review": [
+    "NO_SECTION_HEADERS"
+   ],
+   "other_flags": [],
+   "admitted": true,
+   "checks": {
+    "only_header_flag": true,
+    "dom_present": true,
+    "body_present": true,
+    "page_literal_provable": true,
+    "hash_matches": true,
+    "stable_job_id": true,
+    "body_long_enough": true,
+    "not_truncated": true,
+    "no_nav_markers": true,
+    "not_already_used": true
+   },
+   "blocked": []
+  },
+  {
+   "jd_id": "OFFICIAL_CAND_020",
+   "company": "蔚来",
+   "title": "AI仿真与验证平台软件开发工程师",
+   "direction": "OTHER",
+   "chars": 726,
+   "job_id": "7678154599974439218",
+   "job_id_kind": "position_path",
+   "review": [
+    "NO_SECTION_HEADERS"
+   ],
+   "other_flags": [],
+   "admitted": true,
+   "checks": {
+    "only_header_flag": true,
+    "dom_present": true,
+    "body_present": true,
+    "page_literal_provable": true,
+    "hash_matches": true,
+    "stable_job_id": true,
+    "body_long_enough": true,
+    "not_truncated": true,
+    "no_nav_markers": true,
+    "not_already_used": true
+   },
+   "blocked": []
+  },
+  {
+   "jd_id": "OFFICIAL_CAND_022",
+   "company": "蔚来",
+   "title": "AI模型部署与性能优化工程师",
+   "direction": "OTHER",
+   "chars": 713,
+   "job_id": "7687434450226317604",
+   "job_id_kind": "position_path",
+   "review": [
+    "NO_SECTION_HEADERS"
+   ],
+   "other_flags": [],
+   "admitted": true,
+   "checks": {
+    "only_header_flag": true,
+    "dom_present": true,
+    "body_present": true,
+    "page_literal_provable": true,
+    "hash_matches": true,
+    "stable_job_id": true,
+    "body_long_enough": true,
+    "not_truncated": true,
+    "no_nav_markers": true,
+    "not_already_used": true
+   },
+   "blocked": []
+  },
+  {
+   "jd_id": "OFFICIAL_CAND_026",
+   "company": "蔚来",
+   "title": "BSP研发工程师",
+   "direction": "OTHER",
+   "chars": 662,
+   "job_id": "7673028704663374099",
+   "job_id_kind": "position_path",
+   "review": [
+    "NO_SECTION_HEADERS"
+   ],
+   "other_flags": [],
+   "admitted": true,
+   "checks": {
+    "only_header_flag": true,
+    "dom_present": true,
+    "body_present": true,
+    "page_literal_provable": true,
+    "hash_matches": true,
+    "stable_job_id": true,
+    "body_long_enough": true,
+    "not_truncated": true,
+    "no_nav_markers": true,
+    "not_already_used": true
+   },
+   "blocked": []
+  },
+  {
+   "jd_id": "OFFICIAL_CAND_027",
+   "company": "蔚来",
+   "title": "产品系统工程师（端到端特性）",
+   "direction": "OTHER",
+   "chars": 579,
+   "job_id": "7673027044377561354",
+   "job_id_kind": "position_path",
+   "review": [
+    "NO_SECTION_HEADERS"
+   ],
+   "other_flags": [],
+   "admitted": true,
+   "checks": {
+    "only_header_flag": true,
+    "dom_present": true,
+    "body_present": true,
+    "page_literal_provable": true,
+    "hash_matches": true,
+    "stable_job_id": true,
+    "body_long_enough": true,
+    "not_truncated": true,
+    "no_nav_markers": true,
+    "not_already_used": true
+   },
+   "blocked": []
+  },
+  {
+   "jd_id": "沐瞳科技_POS_7707222676368066835",
+   "company": "沐瞳科技",
+   "title": "人力成本分析专员",
+   "direction": "OTHER",
+   "chars": 509,
+   "job_id": "7707222676368066835",
+   "job_id_kind": "position_path",
+   "review": [
+    "NO_SECTION_HEADERS"
+   ],
+   "other_flags": [],
+   "admitted": true,
+   "checks": {
+    "only_header_flag": true,
+    "dom_present": true,
+    "body_present": true,
+    "page_literal_provable": true,
+    "hash_matches": true,
+    "stable_job_id": true,
+    "body_long_enough": true,
+    "not_truncated": true,
+    "no_nav_markers": true,
+    "not_already_used": true
+   },
+   "blocked": []
+  },
+  {
+   "jd_id": "OFFICIAL_CAND_010",
+   "company": "沐瞳科技",
+   "title": "全栈开发工程师",
+   "direction": "全栈",
+   "chars": 385,
+   "job_id": "7668257490513070378",
+   "job_id_kind": "position_path",
+   "review": [
+    "NO_SECTION_HEADERS"
+   ],
+   "other_flags": [],
+   "admitted": true,
+   "checks": {
+    "only_header_flag": true,
+    "dom_present": true,
+    "body_present": true,
+    "page_literal_provable": true,
+    "hash_matches": true,
+    "stable_job_id": true,
+    "body_long_enough": true,
+    "not_truncated": true,
+    "no_nav_markers": true,
+    "not_already_used": true
+   },
+   "blocked": []
+  },
+  {
+   "jd_id": "沐瞳科技_POS_7673712287361993003",
+   "company": "沐瞳科技",
+   "title": "资源运营-MOBA",
+   "direction": "OTHER",
+   "chars": 372,
+   "job_id": "7673712287361993003",
+   "job_id_kind": "position_path",
+   "review": [
+    "NO_SECTION_HEADERS"
+   ],
+   "other_flags": [],
+   "admitted": true,
+   "checks": {
+    "only_header_flag": true,
+    "dom_present": true,
+    "body_present": true,
+    "page_literal_provable": true,
+    "hash_matches": true,
+    "stable_job_id": true,
+    "body_long_enough": true,
+    "not_truncated": true,
+    "no_nav_markers": true,
+    "not_already_used": true
+   },
+   "blocked": []
+  },
+  {
+   "jd_id": "沐瞳科技_POS_7675314509786958107",
+   "company": "沐瞳科技",
+   "title": "C++服务器开发工程师（MOBA）",
+   "direction": "OTHER",
+   "chars": 370,
+   "job_id": "7675314509786958107",
+   "job_id_kind": "position_path",
+   "review": [
+    "NO_SECTION_HEADERS"
+   ],
+   "other_flags": [],
+   "admitted": true,
+   "checks": {
+    "only_header_flag": true,
+    "dom_present": true,
+    "body_present": true,
+    "page_literal_provable": true,
+    "hash_matches": true,
+    "stable_job_id": true,
+    "body_long_enough": true,
+    "not_truncated": true,
+    "no_nav_markers": true,
+    "not_already_used": true
+   },
+   "blocked": []
+  },
+  {
+   "jd_id": "沐瞳科技_POS_7704234740669352235",
+   "company": "沐瞳科技",
+   "title": "公共事务专员",
+   "direction": "OTHER",
+   "chars": 340,
+   "job_id": "7704234740669352235",
+   "job_id_kind": "position_path",
+   "review": [
+    "NO_SECTION_HEADERS"
+   ],
+   "other_flags": [],
+   "admitted": true,
+   "checks": {
+    "only_header_flag": true,
+    "dom_present": true,
+    "body_present": true,
+    "page_literal_provable": true,
+    "hash_matches": true,
+    "stable_job_id": true,
+    "body_long_enough": true,
+    "not_truncated": true,
+    "no_nav_markers": true,
+    "not_already_used": true
+   },
+   "blocked": []
+  },
+  {
+   "jd_id": "沐瞳科技_POS_7697147640467441930",
+   "company": "沐瞳科技",
+   "title": "分镜画师",
+   "direction": "OTHER",
+   "chars": 321,
+   "job_id": "7697147640467441930",
+   "job_id_kind": "position_path",
+   "review": [
+    "NO_SECTION_HEADERS"
+   ],
+   "other_flags": [],
+   "admitted": true,
+   "checks": {
+    "only_header_flag": true,
+    "dom_present": true,
+    "body_present": true,
+    "page_literal_provable": true,
+    "hash_matches": true,
+    "stable_job_id": true,
+    "body_long_enough": true,
+    "not_truncated": true,
+    "no_nav_markers": true,
+    "not_already_used": true
+   },
+   "blocked": []
+  }
+ ],
+ "rejected_rows": [
+  {
+   "jd_id": "OFFICIAL_CAND_029",
+   "company": "Unity中国",
+   "title": "AI Agent算法研发工程师",
+   "direction": "AI Agent",
+   "chars": 2383,
+   "job_id": "7686376033126385939",
+   "job_id_kind": "position_path",
+   "review": [
+    "NO_SECTION_HEADERS"
+   ],
+   "other_flags": [],
+   "admitted": false,
+   "checks": {
+    "only_header_flag": true,
+    "dom_present": true,
+    "body_present": true,
+    "page_literal_provable": true,
+    "hash_matches": true,
+    "stable_job_id": true,
+    "body_long_enough": true,
+    "not_truncated": true,
+    "no_nav_markers": true,
+    "not_already_used": false
+   },
+   "blocked": []
+  },
+  {
+   "jd_id": "NIO_POS_7707592102096718121",
+   "company": "蔚来",
+   "title": "-智能辅助驾驶端到端闭环仿真研发工程师",
+   "direction": "OTHER",
+   "chars": 1021,
+   "job_id": "7707592102096718121",
+   "job_id_kind": "position_path",
+   "review": [
+    "IDENTITY_LABEL_WORDING_DIFFERS",
+    "NO_SECTION_HEADERS",
+    "TITLE_LEADING_DASH"
+   ],
+   "other_flags": [
+    "IDENTITY_LABEL_WORDING_DIFFERS",
+    "TITLE_LEADING_DASH"
+   ],
+   "admitted": false,
+   "checks": {
+    "only_header_flag": false,
+    "dom_present": true,
+    "body_present": true,
+    "page_literal_provable": true,
+    "hash_matches": true,
+    "stable_job_id": true,
+    "body_long_enough": true,
+    "not_truncated": true,
+    "no_nav_markers": true,
+    "not_already_used": true
+   },
+   "blocked": []
+  },
+  {
+   "jd_id": "沐瞳科技_POS_7673023051731503402",
+   "company": "沐瞳科技",
+   "title": "后端开发工程师（AI向/数据平台）",
+   "direction": "后端",
+   "chars": 825,
+   "job_id": "7673023051731503402",
+   "job_id_kind": "position_path",
+   "review": [
+    "NO_SECTION_HEADERS"
+   ],
+   "other_flags": [],
+   "admitted": false,
+   "checks": {
+    "only_header_flag": true,
+    "dom_present": true,
+    "body_present": true,
+    "page_literal_provable": true,
+    "hash_matches": true,
+    "stable_job_id": true,
+    "body_long_enough": true,
+    "not_truncated": true,
+    "no_nav_markers": true,
+    "not_already_used": false
+   },
+   "blocked": []
+  },
+  {
+   "jd_id": "NIO_POS_7707568917389510955",
+   "company": "蔚来",
+   "title": "-数字化产品运营-业务运营管理",
+   "direction": "OTHER",
+   "chars": 647,
+   "job_id": "7707568917389510955",
+   "job_id_kind": "position_path",
+   "review": [
+    "IDENTITY_LABEL_WORDING_DIFFERS",
+    "NO_SECTION_HEADERS",
+    "TITLE_LEADING_DASH"
+   ],
+   "other_flags": [
+    "IDENTITY_LABEL_WORDING_DIFFERS",
+    "TITLE_LEADING_DASH"
+   ],
+   "admitted": false,
+   "checks": {
+    "only_header_flag": false,
+    "dom_present": true,
+    "body_present": true,
+    "page_literal_provable": true,
+    "hash_matches": true,
+    "stable_job_id": true,
+    "body_long_enough": true,
+    "not_truncated": true,
+    "no_nav_markers": true,
+    "not_already_used": true
+   },
+   "blocked": []
+  },
+  {
+   "jd_id": "OFFICIAL_CAND_021",
+   "company": "蔚来",
+   "title": "AI推理引擎开发工程师",
+   "direction": "OTHER",
+   "chars": 562,
+   "job_id": "7673027294877337866",
+   "job_id_kind": "position_path",
+   "review": [
+    "NO_SECTION_HEADERS"
+   ],
+   "other_flags": [],
+   "admitted": false,
+   "checks": {
+    "only_header_flag": true,
+    "dom_present": true,
+    "body_present": true,
+    "page_literal_provable": true,
+    "hash_matches": true,
+    "stable_job_id": true,
+    "body_long_enough": true,
+    "not_truncated": true,
+    "no_nav_markers": true,
+    "not_already_used": false
+   },
+   "blocked": []
+  },
+  {
+   "jd_id": "OFFICIAL_CAND_028",
+   "company": "蔚来",
+   "title": "智能辅助驾驶大模型算法工程师（业务闭环）",
+   "direction": "LLM/算法",
+   "chars": 491,
+   "job_id": "7687440922813073707",
+   "job_id_kind": "position_path",
+   "review": [
+    "IDENTITY_LABEL_WORDING_DIFFERS",
+    "NO_SECTION_HEADERS"
+   ],
+   "other_flags": [
+    "IDENTITY_LABEL_WORDING_DIFFERS"
+   ],
+   "admitted": false,
+   "checks": {
+    "only_header_flag": false,
+    "dom_present": true,
+    "body_present": true,
+    "page_literal_provable": true,
+    "hash_matches": true,
+    "stable_job_id": true,
+    "body_long_enough": true,
+    "not_truncated": true,
+    "no_nav_markers": true,
+    "not_already_used": true
+   },
+   "blocked": []
+  },
+  {
+   "jd_id": "NIO_POS_7706836903262423339",
+   "company": "蔚来",
+   "title": "-ONVO 内饰空间体验经理",
+   "direction": "OTHER",
+   "chars": 350,
+   "job_id": "7706836903262423339",
+   "job_id_kind": "position_path",
+   "review": [
+    "IDENTITY_LABEL_WORDING_DIFFERS",
+    "NO_SECTION_HEADERS",
+    "TITLE_LEADING_DASH"
+   ],
+   "other_flags": [
+    "IDENTITY_LABEL_WORDING_DIFFERS",
+    "TITLE_LEADING_DASH"
+   ],
+   "admitted": false,
+   "checks": {
+    "only_header_flag": false,
+    "dom_present": true,
+    "body_present": true,
+    "page_literal_provable": true,
+    "hash_matches": true,
+    "stable_job_id": true,
+    "body_long_enough": true,
+    "not_truncated": true,
+    "no_nav_markers": true,
+    "not_already_used": true
+   },
+   "blocked": []
+  },
+  {
+   "jd_id": "OFFICIAL_CAND_019",
+   "company": "蔚来",
+   "title": "AI Coding与效能平台开发工程师",
+   "direction": "OTHER",
+   "chars": 284,
+   "job_id": "7673028714306013494",
+   "job_id_kind": "position_path",
+   "review": [
+    "NO_SECTION_HEADERS",
+    "SHORT_BODY"
+   ],
+   "other_flags": [
+    "SHORT_BODY"
+   ],
+   "admitted": false,
+   "checks": {
+    "only_header_flag": false,
+    "dom_present": true,
+    "body_present": true,
+    "page_literal_provable": true,
+    "hash_matches": true,
+    "stable_job_id": true,
+    "body_long_enough": false,
+    "not_truncated": true,
+    "no_nav_markers": true,
+    "not_already_used": true
+   },
+   "blocked": []
+  },
+  {
+   "jd_id": "OFFICIAL_CAND_015",
+   "company": "蔚来",
+   "title": "Agent开发工程师-NOMI",
+   "direction": "AI Agent",
+   "chars": 281,
+   "job_id": "7673027287931570478",
+   "job_id_kind": "position_path",
+   "review": [
+    "NO_SECTION_HEADERS",
+    "SHORT_BODY"
+   ],
+   "other_flags": [
+    "SHORT_BODY"
+   ],
+   "admitted": false,
+   "checks": {
+    "only_header_flag": false,
+    "dom_present": true,
+    "body_present": true,
+    "page_literal_provable": true,
+    "hash_matches": true,
+    "stable_job_id": true,
+    "body_long_enough": false,
+    "not_truncated": true,
+    "no_nav_markers": true,
+    "not_already_used": true
+   },
+   "blocked": []
+  },
+  {
+   "jd_id": "MANUAL_JD03",
+   "company": "中国工商银行广东省分行",
+   "title": "科技菁英",
+   "direction": "OTHER",
+   "chars": 947,
+   "job_id": null,
+   "job_id_kind": "none",
+   "review": [
+    "COMMUNITY_SOURCE_NOT_OFFICIAL",
+    "NO_DOM_SNAPSHOT",
+    "NO_SECTION_HEADERS",
+    "PAGE_ID_NOT_POSTING_ID"
+   ],
+   "other_flags": [
+    "COMMUNITY_SOURCE_NOT_OFFICIAL",
+    "NO_DOM_SNAPSHOT",
+    "PAGE_ID_NOT_POSTING_ID"
+   ],
+   "admitted": false,
+   "checks": {
+    "only_header_flag": false,
+    "dom_present": false,
+    "body_present": false,
+    "page_literal_provable": false,
+    "hash_matches": true,
+    "stable_job_id": false,
+    "body_long_enough": true,
+    "not_truncated": true,
+    "no_nav_markers": true,
+    "not_already_used": true
+   },
+   "blocked": [
+    "NO_REQUIREMENT_CONTENT"
+   ]
+  }
+ ]
+}

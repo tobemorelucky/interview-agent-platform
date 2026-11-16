@@ -1,0 +1,152 @@
+{
+ "generated_at": "2026-11-16T12:03:58.045313+00:00",
+ "database": "interview_agent_wb_jd_r31_20261116",
+ "model_http_calls": 0,
+ "reviewer": {
+  "id": 1,
+  "email": "r33.reviewer@example.com"
+ },
+ "before": {
+  "versions": 7,
+  "requirements": 77,
+  "claims": 125,
+  "evidence": 130,
+  "audit": 6
+ },
+ "runs": [
+  {
+   "jd_version_id": 4,
+   "company": "面壁智能",
+   "label": "语序还原",
+   "expect": {
+    "requirement_id": 40,
+    "after": "计算机、人工智能或相关专业的2027届应届毕业生，本科及以上学历",
+    "why": "原文为「计算机、人工智能或相关专业的2027届应届毕业生，本科及以上学历；」，模型把修饰语换位；此处按原文顺序还原，语义不变，但文字回到原文"
+   },
+   "plan": [
+    {
+     "requirement_id": 40,
+     "before": "2027届应届毕业生，计算机、人工智能或相关专业，本科及以上学历",
+     "after": "计算机、人工智能或相关专业的2027届应届毕业生，本科及以上学历",
+     "before_supported": false,
+     "after_supported": true,
+     "importance": "REQUIRED",
+     "requirement_type": "UNKNOWN"
+    }
+   ],
+   "fingerprint": "b433fd25bb7af44652e3c54c7978f1520daddfc18baa5a529ed85f52b51aad10",
+   "applied": false,
+   "rolled_back": true,
+   "blocked_by": "SCHEMA_UNIQUE_FINGERPRINT",
+   "detail": "<class 'asyncpg.exceptions.UniqueViolationError'>: duplicate key value violates unique constraint \"uq_job_description_versions_job_fingerprint\"\nDETAIL:  Key (job_id, content_fingerprint)=(4, be2723fb27189869bbc34f832cf948ee24bff5b121182e778517efa85b1650ff) already exists.",
+   "version_number_would_be": null
+  },
+  {
+   "jd_version_id": 6,
+   "company": "蔚来",
+   "label": "限定词还原",
+   "expect": {
+    "requirement_id": 57,
+    "after": "通过各种技术手段持续优化性能，降低推理成本，包括但不限于:算子/编译优化、异构推理、分布式并行等",
+    "why": "原文有「包括但不限于:」；模型删掉后把开放清单收窄成封闭清单"
+   },
+   "plan": [
+    {
+     "requirement_id": 57,
+     "before": "通过各种技术手段持续优化性能，降低推理成本，包括算子/编译优化、异构推理、分布式并行等",
+     "after": "通过各种技术手段持续优化性能，降低推理成本，包括但不限于:算子/编译优化、异构推理、分布式并行等",
+     "before_supported": false,
+     "after_supported": true,
+     "importance": null,
+     "requirement_type": "UNKNOWN"
+    }
+   ],
+   "fingerprint": "4f2eafd909570a50aac5736f8c283ff614e14941ca47ceee4f81ec93f9183c70",
+   "applied": false,
+   "rolled_back": true,
+   "blocked_by": "SCHEMA_UNIQUE_FINGERPRINT",
+   "detail": "<class 'asyncpg.exceptions.UniqueViolationError'>: duplicate key value violates unique constraint \"uq_job_description_versions_job_fingerprint\"\nDETAIL:  Key (job_id, content_fingerprint)=(6, 969b9f9065cea8655a5d8d721b64aa79002077d12f6a61fb9457f9d513fab475) already exists.",
+   "version_number_would_be": null
+  },
+  {
+   "jd_version_id": 6,
+   "company": "蔚来",
+   "label": "英文注释与连接词还原",
+   "expect": {
+    "requirement_id": 58,
+    "after": "学习并应用业界前沿的推理优化技术，KV Cache优化、模型量化(Quantization)、剪枝(Pruning)，跨机分布式推理优化等。",
+    "why": "原文保留英文注释并用逗号分隔；模型加了「包括」、删了注释"
+   },
+   "plan": [
+    {
+     "requirement_id": 58,
+     "before": "学习并应用业界前沿的推理优化技术，包括KV Cache优化、模型量化、剪枝、跨机分布式推理优化等",
+     "after": "学习并应用业界前沿的推理优化技术，KV Cache优化、模型量化(Quantization)、剪枝(Pruning)，跨机分布式推理优化等。",
+     "before_supported": false,
+     "after_supported": true,
+     "importance": null,
+     "requirement_type": "UNKNOWN"
+    }
+   ],
+   "fingerprint": "299da07aedb2af87567173537a978a6740e13574091ea76886a901f0789518e5",
+   "applied": false,
+   "rolled_back": true,
+   "blocked_by": "SCHEMA_UNIQUE_FINGERPRINT",
+   "detail": "<class 'asyncpg.exceptions.UniqueViolationError'>: duplicate key value violates unique constraint \"uq_job_description_versions_job_fingerprint\"\nDETAIL:  Key (job_id, content_fingerprint)=(6, 969b9f9065cea8655a5d8d721b64aa79002077d12f6a61fb9457f9d513fab475) already exists.",
+   "version_number_would_be": null
+  },
+  {
+   "jd_version_id": 6,
+   "company": "蔚来",
+   "label": "虚词还原",
+   "expect": {
+    "requirement_id": 63,
+    "after": "熟悉至少一种主流的深度学习框架(如 PyTorch、TensorFlow)，了解其基本实现原理",
+    "why": "原文是「主流的深度学习框架」；模型删了一个「的」"
+   },
+   "plan": [
+    {
+     "requirement_id": 63,
+     "before": "熟悉至少一种主流深度学习框架（如PyTorch、TensorFlow），了解其基本实现原理",
+     "after": "熟悉至少一种主流的深度学习框架(如 PyTorch、TensorFlow)，了解其基本实现原理",
+     "before_supported": false,
+     "after_supported": true,
+     "importance": "REQUIRED",
+     "requirement_type": "SKILL"
+    }
+   ],
+   "fingerprint": "e1657508a6d7af8357896378f02a4a95a65a4890292fbb958177f7247a14283f",
+   "applied": false,
+   "rolled_back": true,
+   "blocked_by": "SCHEMA_UNIQUE_FINGERPRINT",
+   "detail": "<class 'asyncpg.exceptions.UniqueViolationError'>: duplicate key value violates unique constraint \"uq_job_description_versions_job_fingerprint\"\nDETAIL:  Key (job_id, content_fingerprint)=(6, 969b9f9065cea8655a5d8d721b64aa79002077d12f6a61fb9457f9d513fab475) already exists.",
+   "version_number_would_be": null
+  }
+ ],
+ "negative": {
+  "statement": "熟悉至少一种主流的深度学习框架，了解其编译器后端实现与算子融合",
+  "rejected": true,
+  "code": "CORRECTION_NOT_LITERAL",
+  "message": "修订文本不是引用证据的原文子串，拒绝"
+ },
+ "after": {
+  "versions": 7,
+  "requirements": 77,
+  "claims": 125,
+  "evidence": 130,
+  "audit": 6
+ },
+ "rows_written": {
+  "versions": 0,
+  "requirements": 0,
+  "claims": 0,
+  "evidence": 0,
+  "audit": 0
+ },
+ "literal_within_selfcheck": {
+  "supported": true,
+  "substring_still_supported": true,
+  "unsupported": false,
+  "gap_not_bridged": false
+ }
+}
