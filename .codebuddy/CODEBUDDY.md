@@ -1426,3 +1426,21 @@ L3 前置条件（purge_requests 表、清理顺序、audit_logs 脱敏、Celery
 **49 份预检**：PASS 13 / NEEDS_REVIEW 35 / REJECT 1（MANUAL_JD03 招聘公告无要求）。身份差异 49/49 都不是页面字面：36 仅渠道前缀、3 仅空格、6 措辞不同、4 无 DOM。42 份需确定性投影。26 份无小节标题。3 份需换详情页 URL。教训：初版检查器把"结尾无句号"当截断误判 10 份、列表页 `h4[title]` 取到别家岗位——两处都是检查器的错，已修。
 
 **资产**：生产库 5/38/19/41/5/4/0 未变；沙箱 2 公司/2 岗位/2 版本/22 要求/41 Claim/43 Evidence/6 账本/2 审计/1 沙箱审核员；库 249→250（+replay3）；MinIO 生产桶 48、隔离桶 0；Evaluation 2.3.4 `e7704357b5fc37ba` 未变；未删/未归档/未 push。测试 25 + 134 + 133 全 0 failed。
+
+---
+
+## 第三十八轮：R34 第二批真实入库（12 HTTP / 29,232 token，见 docs/117）
+
+**基线** `039feca`。授权 16 HTTP / 48,000；实耗 **12 / 29,232**，两子预算独立计量（增量口径），账本全 `SETTLED`，无 Repair/无回退/无重试。
+
+**蔚来**：零 HTTP 建修订任务 `#4`（`revision_of=2`，二次调用 `reused=true`，审计写 `public_career.jd.identity_revision`，旧 task#2 一字未改）→ 真实 2 HTTP / 6,206 token → **仍 FAILED**，但错误从 `IDENTITY_MISMATCH` 变为 `EvidenceValidationError: Job metadata must be literal`。该断言位于身份校验**之后**，证明身份问题已解；新阻断是模型把元数据写成非原文。预算用尽即停。
+
+**新增 5 份**（10 HTTP / 23,026）：Unity AI Agent(17条/7,844) · 面壁 LLM(6/3,192) · 沐瞳后端(10/4,581) · 蔚来推理(13/3,696) · 麒麟内核(9/3,713)。华为因**无 DOM 快照**被替换为麒麟内核岗（独立 jobAdId）。
+
+**逐字审核**（四档：VERBATIM/FORMAT_VARIANT/HEADING_JOINED/PARAPHRASE）：`#5` 10/10、`#7` 9/9 全逐字 → 发布；`#3` 7 逐字+2 格式+8 标题合并（`加分项` 确为页面独立行）→ 发布；`#4` 1 条换序、`#6` 3 条删"但不限于"/删"的" → **扣下留 WAITING_REVIEW**。规律：**有小节标题的 JD 逐字，无标题的会被模型"整理"**（26 份无标题候选需逐条查）。
+
+**发现并修复**：`effective_strength` 把 `null` 强度当 REQUIRED（`#6` 4 条）→ 改为保 `UNKNOWN`，消费口径 9R/4P → 5R/4P/4UNKNOWN；已发布 5 份无 null 行不受影响。
+
+**沙箱**：5 公司 / 7 岗位 / 7 版本（**5 PUBLISHED** + 2 WAITING_REVIEW）/ 77 要求 / 125 claim / 130 evidence / 18 账本 / 6 审计 / 2 用户（1 审核员 + 1 **明确标注合成**候选人）。targets 200 返回 5 岗；`build_context` 用合成画像跑通：10 条 7R/3P，0 模型调用。
+
+**剩余**：44 份 = PASS 12 / NEEDS_REVIEW 31（22 份仅缺小节标题）/ REJECT 1。下批 5 份 ≈10 HTTP / 28K。生产库未变（4 份 JD），库 250，MinIO 48/0，Evaluation 2.3.4 未改。测试 14 + 65 + 163 全 0 failed。
