@@ -1306,3 +1306,19 @@ L3 前置条件（purge_requests 表、清理顺序、audit_logs 脱敏、Celery
 **13 条 JD 候选**：11 条飞书/华为页为 **JS 外壳**（200 但正文由前端渲染，静态抓取为 0 字）；1 条麒麟软件官方列表页含 **20 个岗位全文**；1 条拼多多正文在**高校转载页**。去重：`JD_CAND_13` 华为 = 既有 `JD01`（同 `advertisementId=36390`）；正式库与快照库无重复。取麒麟 4 个方向岗位（AI研发/Python/后端 Go-Java/云原生）+ 拼多多 1 份（待官方复核），**一份都没导入业务表**（导入需 Research 流程，会产生模型调用）。
 
 **夹具与测试**：`data/sandbox_test_pkg_20261114/R29_面经扩充包_20261116/`（01 题 / 02 答案 / 03 非金标标注 / MANIFEST），字段层面拒绝被当成模型出题或官方题库；`test_r29_real_pack_contract.py` **9 passed / 0 failed**（0 HTTP / 0 DB）。
+
+---
+
+## 第三十一轮：《可入库纠正版》实际导入 147 行并离线验证（真实模型 HTTP=0，见 docs/110）
+
+**基线** `3237290`。包内 12 文件 sha256 全通过。新建独立沙箱 `interview_agent_wb_sandbox_pack_20261116`（0029/68 表），导入 **147 行**：`sbx_jds_sourced` 15、`sbx_jds_synthetic` 50、`sbx_interview_flows` 3、`sbx_interview_questions` 39、`sbx_answer_pairs` 40；读回校验 **0 条哈希不一致**，业务表 15 张**全 0 行**。库总量 245→246，正式库未变（5/38/19/41/4）。
+
+**为什么不用包内 08 脚本**：它依赖 `psycopg`（未安装），改用项目已有 `asyncpg` 复刻同样三道守卫（库名含 `_sandbox_`、`--confirm` 逐字相等、只写 `sbx_*`）。
+
+**真实性字段全部拒绝升级**：15 份改写 `full_verbatim_from_official=false` + `evidence_verified=false`；50 份合成 `is_real_job=false` + `source_url=null` + 公司名含「合成」；40 份回答 `is_human_gold=false` + PII=0。`provenance_problems` 为空数组（逐条判定）。
+
+**离线结果**：65 份 JD 无空正文、无缺职责/要求、无重复（1,390 对比对：指纹 + SequenceMatcher≥0.9）；`rule_extract` 解析 15/15 与 50/50 出要求（均 7.0 / 11.0 条），但仅 RULE 路径不代表模型质量；技能识别 15 份 → 9 RECOMMENDED/6 NO_APPLICABLE，50 份合成 → 6 RECOMMENDED/44 NO_APPLICABLE（合成岗位描述过通用，规则拒绝定档）；主题覆盖 65/65。
+
+**匹配合法性实测**：`JobMatchingService.create` 返回 **409 MATCH_PROFILE_REQUIRED**，0 行写入、0 HTTP → 本包不能当匹配输入（缺画像 + TEXT 主键非 JD 版本 ID + 缺 owner）。
+
+**结论**：正式业务链路可用数据 = **0**；真实原始 JD 仍 **8 份**（本包逐字原文 0，50 份合成不计），距 50 缺 **42**。测试 `test_r30_importable_pack_contract.py` **11 passed**，与 R29 合并 20 passed。
