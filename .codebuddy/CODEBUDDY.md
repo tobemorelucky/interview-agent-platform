@@ -1322,3 +1322,18 @@ L3 前置条件（purge_requests 表、清理顺序、audit_logs 脱敏、Celery
 **匹配合法性实测**：`JobMatchingService.create` 返回 **409 MATCH_PROFILE_REQUIRED**，0 行写入、0 HTTP → 本包不能当匹配输入（缺画像 + TEXT 主键非 JD 版本 ID + 缺 owner）。
 
 **结论**：正式业务链路可用数据 = **0**；真实原始 JD 仍 **8 份**（本包逐字原文 0，50 份合成不计），距 50 缺 **42**。测试 `test_r30_importable_pack_contract.py` **11 passed**，与 R29 合并 20 passed。
+
+---
+
+## 第三十二轮：真实简历 × 真实 JD 零 HTTP 预检（简历未到达，真实模型 HTTP=0，见 docs/111）
+
+**基线** `1431747`。本轮**没有收到简历文件**：消息无附件，`Downloads`/`Desktop`/项目目录均无新增 PDF/DOCX（最新仍是 12:45 的两个数据包）→ 不构造、不脑补，第 1/3/5 项只做到「路径已验、候选已定」。
+
+**格式与抽取（已用同一代码路径验证）**：支持 `pdf`/`docx`（`.doc` 不支持），`pypdf 6.12.0` + `python-docx` 可用，**无 OCR**（扫描版 PDF 直接失败），大小限 10MB，上传即写 MinIO `resumes/{user}/{uuid}.{ext}` + `resumes` 行。字段映射以 `CandidateEvidenceSelection` 为准：教育/实习/工作/项目/技能**每条事实必须带 `evidence_ids`（简历原文片段）**，缺的进 `unknowns`，没有原文依据的事实不入库。
+**解析探针**（`.runtime/r31_parser_probe/PARSER_PROBE_NOT_A_RESUME.docx`，非简历）：196 字、5 段命中、PII 0、判 `TEXT_TOO_SHORT` → 抽取链路与阈值均生效。
+
+**JD 选择**：主选**麒麟软件 AI研发工程师**（官方页逐字，1,279 字，`jobAdId=70b44d1d…`，7 个主题含 `agent`+`rag_retrieval`，Agent×2/工具调用×3/记忆×1/RAG×3，11 条要求，`RECOMMENDED→ai_agent_application`）；备选华为 AI应用工程师（Agent×0/RAG×1，偏「AI应用」）。最终按简历实际栈定。
+
+**预检结果**（沙箱 `interview_agent_wb_r26_alt_20261115`）：0029/68 表/业务表全 0；Provider `modelscope`+`DeepSeek-V4.1-Flash-1017`；三闸 OFF；进程库=账本库=沙箱；MinIO 48 对象；冻结 Prompt 2.3.4 / 7,452 字符 / `e7704357b5fc37ba` 与 docs/108 一致；**唯一阻断 `RESUME_NOT_PROVIDED`**。
+
+**3 题预算**：10 HTTP / 63.1K–66.6K（简历抽取 1 + 画像 1 + JD 解析 1 + 出题 3 + 评价 3 + Coach 1），硬上限 13 HTTP / 90,000 token / 25 min；8 条阻断已列（简历缺失、`.env` 仍指正式库、`resume_report` 用全局 factory、缺少 `source_snapshots`、正式 Requirement 需 1 次解析、金标未复核、covered_points 过度给分、真实 JD 仍缺 42）。
