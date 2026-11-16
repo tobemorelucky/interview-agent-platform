@@ -202,3 +202,13 @@ def test_snapshot_projection_keeps_both_provenance_layers_distinct():
     assert rows[0]["topic"] == "linux" and rows[0]["source"] == "USER"
     assert rows[1]["importance"] == "UNKNOWN"
     assert all(len(row["fingerprint"]) == 64 for row in rows)
+
+
+def test_null_recorded_strength_is_not_promoted_to_required():
+    """Round 34: a provider returning null must not manufacture a hard filter."""
+    from interview_api.modules.public_career.requirement_vocabulary import effective_strength
+    assert effective_strength("参与大模型推理引擎的设计和研发", None).value == "UNKNOWN"
+    assert effective_strength("参与大模型推理引擎的设计和研发", "").value == "UNKNOWN"
+    # An explicit value still wins, and a mixed sentence is still REQUIRED.
+    assert effective_strength("熟悉C++", "REQUIRED").value == "REQUIRED"
+    assert effective_strength("熟悉Linux，有CUDA经验者优先", None).value == "REQUIRED"

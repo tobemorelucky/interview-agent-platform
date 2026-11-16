@@ -259,9 +259,11 @@ def effective_strength(statement: str, stored: object) -> RequirementStrength:
         if strengths == {RequirementStrength.PREFERRED}:
             return RequirementStrength.PREFERRED
         if strengths == {RequirementStrength.REQUIRED}:
-            # A plain sentence with no marker: fall back to what was recorded.
-            recorded = normalize_strength(stored)
-            return recorded if recorded is not RequirementStrength.UNKNOWN else RequirementStrength.REQUIRED
+            # A plain sentence carries no marker of its own, so the recorded value
+            # decides. A provider that returned null did not claim the employer
+            # made this mandatory; inventing REQUIRED here would manufacture a hard
+            # filter (observed on round 34's 蔚来 JD: 4 of 13 rows came back null).
+            return normalize_strength(stored)
         return normalize_strength(stored)
     # mixed
     return RequirementStrength.REQUIRED
