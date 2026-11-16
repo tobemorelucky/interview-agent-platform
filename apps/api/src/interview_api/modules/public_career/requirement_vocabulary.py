@@ -285,3 +285,19 @@ def describe(statement: str, stored_type: object, stored_strength: object) -> di
         "compound_mixed": is_compound_mixed(statement),
         "clauses": [{"text": c.text, "strength": c.strength.value} for c in split_strength_clauses(statement)],
     }
+
+
+def consumer_strength(statement: str, stored: object) -> RequirementStrength:
+    """Strength for a row whose recorded value may legitimately be UNKNOWN.
+
+    User-supplied targets record UNKNOWN when a qualification is only *listed*
+    under 任职要求; promoting that to REQUIRED would invent a hard filter the
+    employer never wrote. Only two transitions are allowed here:
+
+      PREFERRED + compound mixed -> REQUIRED   (the mandatory clause still applies)
+      anything else             -> unchanged
+    """
+    recorded = normalize_strength(stored)
+    if recorded is RequirementStrength.PREFERRED and is_compound_mixed(statement):
+        return RequirementStrength.REQUIRED
+    return recorded

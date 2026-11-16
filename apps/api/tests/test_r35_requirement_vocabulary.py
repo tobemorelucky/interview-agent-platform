@@ -175,3 +175,30 @@ def test_schema_coerces_on_ingestion_and_keeps_unknown_distinct():
                                      importance="必须")
     assert unmapped.requirement_type == "UNKNOWN"
     assert unmapped.importance == "REQUIRED"
+
+
+# ── Recorded-UNKNOWN consumers (user targets) ───────────────────────────────
+
+def test_consumer_strength_never_invents_a_hard_filter():
+    from interview_api.modules.public_career.requirement_vocabulary import consumer_strength
+    # Listed but not stated as mandatory: leave it alone.
+    assert consumer_strength("本科及以上学历", "UNKNOWN").value == "UNKNOWN"
+    # Wholly optional stays optional.
+    assert consumer_strength("持有PMP证书者优先", "PREFERRED").value == "PREFERRED"
+    # Mixed: the mandatory clause still applies.
+    assert consumer_strength("熟悉Linux，有CUDA经验者优先", "PREFERRED").value == "REQUIRED"
+    # Already required: unchanged.
+    assert consumer_strength("熟悉Python", "REQUIRED").value == "REQUIRED"
+
+
+def test_snapshot_projection_keeps_both_provenance_layers_distinct():
+    from interview_api.modules.interview.context import project_requirements
+    rows = project_requirements([
+        {"id": 1, "statement": "熟悉Linux，有CUDA经验者优先", "importance": "PREFERRED",
+         "topic": "linux", "source": "USER"},
+        {"id": 2, "statement": "本科及以上学历", "importance": "UNKNOWN"},
+    ])
+    assert rows[0]["importance"] == "REQUIRED"
+    assert rows[0]["topic"] == "linux" and rows[0]["source"] == "USER"
+    assert rows[1]["importance"] == "UNKNOWN"
+    assert all(len(row["fingerprint"]) == 64 for row in rows)

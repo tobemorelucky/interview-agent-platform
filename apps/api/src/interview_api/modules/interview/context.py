@@ -9,7 +9,7 @@ from interview_api.modules.candidate_profile.models import CandidateProfileVersi
 from interview_api.modules.resume.models import Resume
 from interview_api.modules.public_career.models import Company, Job, JobDescriptionVersion, JobRequirement, Source, SourceSnapshot
 from interview_api.modules.public_career.fingerprints import compute_content_fingerprint, compute_question_fingerprint
-from interview_api.modules.public_career.requirement_vocabulary import effective_strength
+from interview_api.modules.public_career.requirement_vocabulary import consumer_strength, effective_strength
 from interview_api.modules.candidate_profile.evidence import digest
 from interview_api.modules.experience.models import InterviewQuestion, InterviewExperience
 from interview_api.modules.memory.snapshot import build_memory_snapshot
@@ -45,6 +45,32 @@ async def private_target(db, user_id, request):
     if target.parse_status != CONFIRMED or not target.requirements_json:
         raise AppError("JOB_TARGET_NOT_CONFIRMED", "请先解析并确认岗位要求，再开始面试", 409)
     return target
+
+
+def project_requirements(requirements) -> list[dict]:
+    """Requirements as the frozen snapshot records them.
+
+    Two provenance layers share this shape: user-supplied targets (dicts) and
+    public published JD rows (ORM). The public layer keeps the provider's raw
+    strength in the database, but a compound sentence ending in 优先 still holds
+    a mandatory clause, so the recorded case is never taken at face value here.
+    Kept as one function so the projection can be exercised with real rows
+    without building a whole session (which needs a candidate profile).
+    """
+    rows = []
+    for r in requirements:
+        if isinstance(r, dict):
+            # User targets may record UNKNOWN on purpose: a qualification that is
+            # only listed is not a hard filter. Only a mixed sentence is lifted.
+            rows.append(dict(id=r["id"], statement=r["statement"],
+                             importance=consumer_strength(r["statement"], r["importance"]).value,
+                             fingerprint=compute_content_fingerprint(r["statement"]),
+                             topic=r.get("topic"), source=r.get("source")))
+        else:
+            rows.append(dict(id=r.id, statement=r.statement,
+                             importance=effective_strength(r.statement, r.importance).value,
+                             fingerprint=compute_content_fingerprint(r.statement)))
+    return rows
 
 
 def target_requirements(target) -> list[dict]:
@@ -147,15 +173,7 @@ async def build_context(db, user_id, request):
         jd_version_number=jd.version_number if jd else None,
         profile_producer=version.producer,
         jd_fingerprint=jd.content_fingerprint if jd else target.content_fingerprint,
-        requirements=[dict(id=r["id"], statement=r["statement"], importance=r["importance"],
-                           fingerprint=compute_content_fingerprint(r["statement"]),
-                           topic=r.get("topic"), source=r.get("source")) if isinstance(r, dict)
-                      # Public JD requirements keep the provider's raw strength;
-                      # a compound sentence ending in 优先 still has a mandatory
-                      # clause, so the recorded case is never taken at face value.
-                      else dict(id=r.id, statement=r.statement,
-                                importance=effective_strength(r.statement, r.importance).value,
-                                fingerprint=compute_content_fingerprint(r.statement)) for r in requirements],
+        requirements=project_requirements(requirements),
         public_questions=[dict(id=q.id, question=q.question, expected_points=(q.standard_answer or q.original_answer or "").splitlines(),
                                dimension=q.category or "综合", difficulty=q.difficulty,
                                fingerprint=compute_question_fingerprint(q.question), experience_id=q.experience_id) for q in questions],
