@@ -1,0 +1,44 @@
+{
+  "fixture_version": "R29_PACK_20261116_V1",
+  "annotation_author": "ASSISTANT_REVIEW",
+  "is_human_gold": false,
+  "semantics": "逐条列出 POOR 答案中可指认的技术错误，仅用于人工复核对照；不是评分金标，不参与自动打分",
+  "pairs": [
+    {
+      "question_id": "FH20260609_Q01",
+      "poor_answer_errors": "检索与生成顺序颠倒（先编答案再找证据）；无命中时凭常识作答；引用可自动生成"
+    },
+    {
+      "question_id": "FH20260609_Q03",
+      "poor_answer_errors": "固定 100 字不重叠切块；表格按字符拆；称标题无用；称切得越短越准"
+    },
+    {
+      "question_id": "FH20260609_Q07",
+      "poor_answer_errors": "删除否定词与时间词；改写得越长越好；不保留原问题"
+    },
+    {
+      "question_id": "FH20260609_Q08",
+      "poor_answer_errors": "把阈值设成负无穷强行出结果；自动编造文档引用"
+    },
+    {
+      "question_id": "FH20260609_Q09",
+      "poor_answer_errors": "称 BM25 与向量得分同量纲且在 0–1；把 RRF 说成得分相乘取对数"
+    },
+    {
+      "question_id": "FH20260609_Q12",
+      "poor_answer_errors": "所有步骤塞进一个节点、状态只存最后答案；异常无限递归；断言 LangGraph 必须配 Checkpointer"
+    },
+    {
+      "question_id": "FH20260609_Q14",
+      "poor_answer_errors": "用 GET 加 SET 冒充原子；DEL 不校验持有者；称锁过期不会引发并发写入"
+    },
+    {
+      "question_id": "FH20260609_Q15",
+      "poor_answer_errors": "穿透/雪崩/击穿三者定义互换；主张所有 key 统一 TTL"
+    },
+    {
+      "question_id": "FH20260609_Q16",
+      "poor_answer_errors": "称所有命令 O(1)、每请求新建线程；称大 key 不会阻塞"
+    }
+  ]
+}
