@@ -154,6 +154,98 @@ class ManualImportService:
                     status=task.status, reused=reused, acquisition_mode=ACQUISITION_MODE,
                     source_type=document.source_type, content_sha256=document.content_hash)
 
+    async def prepare_identity_revision(self, document, *, predecessor_task_id, reason, authorized_by):
+        """Explicitly authorised identity revision of a FAILED task.
+
+        A failed extraction freezes a manifest whose printed label turned out not
+        to be the page's own wording. Editing that manifest would rewrite history,
+        and changing the URL or body hash to dodge the idempotency key would fake a
+        new acquisition. Instead this creates a *new* task:
+
+          * same canonical URL, same content hash, same document type (asserted),
+          * a label that occurs verbatim in the stored snapshot,
+          * a label that still contains the old one once whitespace is ignored,
+            so a channel prefix may be added but the posting may not be swapped,
+          * a deterministic key derived from the predecessor, so a second submit
+            returns the same revision instead of a pile of near-copies.
+
+        The predecessor keeps its FAILED status, its frozen manifest and its audit
+        trail; the revision points back at it.
+        """
+        from interview_api.modules.audit.models import AuditLog
+
+        async with self.factory() as db:
+            async with db.begin():
+                predecessor = await db.scalar(select(PublicDataRefreshTask).where(
+                    PublicDataRefreshTask.id == predecessor_task_id).with_for_update())
+                if predecessor is None:
+                    raise ManualImportError("MANUAL_REVISION_PREDECESSOR_NOT_FOUND")
+                if predecessor.status != "FAILED":
+                    raise ManualImportError("MANUAL_REVISION_PREDECESSOR_NOT_FAILED")
+                old = manual_manifest(predecessor)
+                if not old:
+                    raise ManualImportError("INVALID_MANUAL_SOURCE_MANIFEST")
+                if (old["canonical_url"] != document.canonical_url
+                        or old["content_sha256"] != document.content_hash
+                        or old["document_type"] != document.document_type):
+                    raise ManualImportError("MANUAL_REVISION_SOURCE_CHANGED")
+                if normalize_text(old["company"]) != normalize_text(document.company):
+                    raise ManualImportError("MANUAL_REVISION_COMPANY_CHANGED")
+                if normalize_text(old["job_title"]) == normalize_text(document.job_title):
+                    raise ManualImportError("MANUAL_REVISION_LABEL_UNCHANGED")
+                snapshot = await db.get(SourceSnapshot, old["source_snapshot_id"])
+                body = (snapshot.content_text if snapshot else "") or ""
+                if document.content_hash != sha256(body.encode()).hexdigest():
+                    raise ManualImportError("MANUAL_SNAPSHOT_PROVENANCE_MISMATCH")
+                if not _occurs_in_text(document.job_title, body):
+                    # The new label must be quoted from the page, not invented.
+                    raise ManualImportError("MANUAL_REVISION_LABEL_NOT_IN_SNAPSHOT")
+                if _compact(old["job_title"]) not in _compact(document.job_title):
+                    raise ManualImportError("MANUAL_REVISION_LABEL_UNRELATED")
+
+                key = "manual-rev:%s" % sha256(json.dumps([
+                    predecessor.id, document.canonical_url, document.content_hash,
+                    document.document_type, normalize_text(document.job_title)]).encode()).hexdigest()
+                task = await db.scalar(select(PublicDataRefreshTask).where(
+                    PublicDataRefreshTask.idempotency_key == key))
+                reused = task is not None
+                if task:
+                    if task.id == predecessor.id:
+                        raise ManualImportError("MANUAL_REVISION_KEY_COLLISION")
+                    return dict(refresh_task_id=task.id, status=task.status, reused=True,
+                                revision_of=predecessor.id, source_snapshot_id=old["source_snapshot_id"],
+                                job_title=document.job_title, content_sha256=document.content_hash)
+
+                manifest = dict(old, job_title=document.job_title, identity_revision=dict(
+                    of_task_id=predecessor.id, of_job_title=old["job_title"], reason=reason,
+                    authorized_by=authorized_by, authorized_at=datetime.now(timezone.utc).isoformat(),
+                    previous_error=(predecessor.error_message or "")[:500],
+                    same_canonical_url=True, same_content_sha256=True,
+                    label_occurs_in_snapshot=True))
+                task = PublicDataRefreshTask(
+                    target_type=predecessor.target_type, target_ref=predecessor.target_ref,
+                    reason=json.dumps(manifest, ensure_ascii=False), idempotency_key=key,
+                    status="READY_FOR_EXTRACTION", started_at=datetime.now(timezone.utc))
+                db.add(task)
+                await db.flush()
+                metadata = dict(snapshot.metadata_json)
+                metadata["manual_source_imports"] = {
+                    **metadata.get("manual_source_imports", {}), str(task.id): manifest}
+                snapshot.metadata_json = metadata
+                db.add(AuditLog(actor_user_id=None, actor_role="SYSTEM",
+                                action="public_career.jd.identity_revision",
+                                resource_type="PublicDataRefreshTask", resource_id=str(task.id),
+                                before_json={"task_id": predecessor.id, "job_title": old["job_title"],
+                                             "status": predecessor.status},
+                                after_json={"task_id": task.id, "job_title": document.job_title,
+                                            "status": task.status},
+                                metadata_json={"reason": reason, "authorized_by": authorized_by},
+                                status="SUCCESS"))
+                await db.flush()
+                return dict(refresh_task_id=task.id, status=task.status, reused=False,
+                            revision_of=predecessor.id, source_snapshot_id=old["source_snapshot_id"],
+                            job_title=document.job_title, content_sha256=document.content_hash)
+
     async def execute(self, prepared, *, router):
         """Completed/failed/busy tasks never automatically trigger another model run."""
         if prepared["status"] != "READY_FOR_EXTRACTION":
@@ -171,6 +263,20 @@ def require_live_router(router):
             raise ManualImportError("MANUAL_CLI_REQUIRES_LIVE_MODEL")
     if any(not isinstance(provider, CompatibleModelProvider) for provider in router.fallback_routes.values()):
         raise ManualImportError("MANUAL_CLI_REQUIRES_LIVE_MODEL")
+
+
+def _compact(value: str) -> str:
+    """Whitespace-free skeleton, used only to relate two labels of one posting."""
+    return "".join(normalize_text(value or "").split())
+
+
+def _occurs_in_text(label: str, body: str) -> bool:
+    """True when the label is quoted from the body, allowing line wrapping only."""
+    if not label or not body:
+        return False
+    if label in body:
+        return True
+    return _compact(label) in _compact(body)
 
 
 def validate_expected_identity(manifest, company, job_title):

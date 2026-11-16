@@ -1,0 +1,167 @@
+{
+ "generated_at": "2026-11-16T10:42:40.351207+00:00",
+ "model_http_calls": 0,
+ "database": "interview_agent_wb_jd_replay3_r33_20261116",
+ "labels": {
+  "display_frozen_in_round31": "车端AI Agent与应用生态系统架构工程师",
+  "page_literal": "校招-车端 AI Agent 与应用生态系统架构工程师"
+ },
+ "cases": {
+  "fixture_identity": {
+   "company": "蔚来",
+   "job_title": "校招-车端 AI Agent 与应用生态系统架构工程师"
+  },
+  "original_failure": {
+   "task": 1,
+   "result": {
+    "refresh_task_id": 1,
+    "agent_run_id": 1,
+    "status": "FAILED",
+    "error": "MANUAL_EXTRACTED_IDENTITY_MISMATCH: MANUAL_EXTRACTED_IDENTITY_MISMATCH"
+   },
+   "state": {
+    "id": 1,
+    "status": "FAILED",
+    "error": "MANUAL_EXTRACTED_IDENTITY_MISMATCH: MANUAL_EXTRACTED_IDENTITY_MISMATCH",
+    "job_title": "车端AI Agent与应用生态系统架构工程师",
+    "revision": null
+   }
+  },
+  "revision_created": {
+   "refresh_task_id": 2,
+   "status": "READY_FOR_EXTRACTION",
+   "reused": false,
+   "revision_of": 1,
+   "source_snapshot_id": 1,
+   "job_title": "校招-车端 AI Agent 与应用生态系统架构工程师",
+   "content_sha256": "aef49bb3a4d5fbdf3557f650076b92140f18e611a842d06ce2028344b3b18055"
+  },
+  "revision_resubmitted": {
+   "refresh_task_id": 2,
+   "status": "READY_FOR_EXTRACTION",
+   "reused": true,
+   "revision_of": 1,
+   "source_snapshot_id": 1,
+   "job_title": "校招-车端 AI Agent 与应用生态系统架构工程师",
+   "content_sha256": "aef49bb3a4d5fbdf3557f650076b92140f18e611a842d06ce2028344b3b18055"
+  },
+  "revision_idempotent": true,
+  "wrong_company": {
+   "refused": true,
+   "error": "MANUAL_REVISION_COMPANY_CHANGED",
+   "expected": "MANUAL_REVISION_COMPANY_CHANGED",
+   "match": true
+  },
+  "other_posting_title": {
+   "refused": true,
+   "error": "MANUAL_REVISION_LABEL_NOT_IN_SNAPSHOT",
+   "expected": "MANUAL_REVISION_LABEL_NOT_IN_SNAPSHOT",
+   "match": true
+  },
+  "over_short_label": {
+   "refused": true,
+   "error": "MANUAL_REVISION_LABEL_UNRELATED",
+   "expected": "MANUAL_REVISION_LABEL_UNRELATED",
+   "match": true
+  },
+  "unchanged_label": {
+   "refused": true,
+   "error": "MANUAL_REVISION_LABEL_UNCHANGED",
+   "expected": "MANUAL_REVISION_LABEL_UNCHANGED",
+   "match": true
+  },
+  "predecessor_not_failed": {
+   "refused": true,
+   "error": "MANUAL_REVISION_PREDECESSOR_NOT_FAILED",
+   "expected": "MANUAL_REVISION_PREDECESSOR_NOT_FAILED",
+   "match": true
+  },
+  "revision_run": {
+   "result": {
+    "refresh_task_id": 2,
+    "agent_run_id": 2,
+    "status": "COMPLETED",
+    "target": "JOB_JD",
+    "company_id": 1,
+    "job_id": 1,
+    "manual_publication_decision": "WAITING_REVIEW",
+    "manual_source_type": "official",
+    "jd_version_id": 1,
+    "publication_status": "WAITING_REVIEW",
+    "independent_content_count": 1,
+    "occurrence_count": 1,
+    "multi_source": false,
+    "source_count": 1,
+    "acquisition_mode": "MANUAL_SOURCE_IMPORT",
+    "manual_source": {
+     "schema_version": 1,
+     "acquisition_mode": "MANUAL_SOURCE_IMPORT",
+     "source_snapshot_id": 1,
+     "canonical_url": "https://nio.jobs.feishu.cn/campus/position/7673028675729656105/detail",
+     "source_type": "official",
+     "document_type": "job_jd",
+     "company": "蔚来",
+     "job_title": "校招-车端 AI Agent 与应用生态系统架构工程师",
+     "content_sha256": "aef49bb3a4d5fbdf3557f650076b92140f18e611a842d06ce2028344b3b18055",
+     "content_fingerprint": "659037a900fe0f1747536f912089d60e37cb8b1fdbdf5632ea70c520bfdb64c6",
+     "acquired_at": "2026-11-16T08:16:20.607986+00:00",
+     "acquisition_timestamp_semantics": "LOCAL_BODY_SAVE_TIME",
+     "file_name": "NIO_AIA_025.txt",
+     "identity_revision": {
+      "of_task_id": 1,
+      "of_job_title": "车端AI Agent与应用生态系统架构工程师",
+      "reason": "R33: 官网页面字面标题为「校招-车端 AI Agent 与应用生态系统架构工程师」，R31 冻结的是去前缀展示名，需显式修订后重跑，不改旧任务与正文。",
+      "authorized_by": "user:R33-approval",
+      "authorized_at": "2026-11-16T10:42:40.590844+00:00",
+      "previous_error": "MANUAL_EXTRACTED_IDENTITY_MISMATCH: MANUAL_EXTRACTED_IDENTITY_MISMATCH",
+      "same_canonical_url": true,
+      "same_content_sha256": true,
+      "label_occurs_in_snapshot": true
+     }
+    }
+   },
+   "state": {
+    "id": 2,
+    "status": "COMPLETED",
+    "error": "",
+    "job_title": "校招-车端 AI Agent 与应用生态系统架构工程师",
+    "revision": {
+     "of_task_id": 1,
+     "of_job_title": "车端AI Agent与应用生态系统架构工程师",
+     "reason": "R33: 官网页面字面标题为「校招-车端 AI Agent 与应用生态系统架构工程师」，R31 冻结的是去前缀展示名，需显式修订后重跑，不改旧任务与正文。",
+     "authorized_by": "user:R33-approval",
+     "authorized_at": "2026-11-16T10:42:40.590844+00:00",
+     "previous_error": "MANUAL_EXTRACTED_IDENTITY_MISMATCH: MANUAL_EXTRACTED_IDENTITY_MISMATCH",
+     "same_canonical_url": true,
+     "same_content_sha256": true,
+     "label_occurs_in_snapshot": true
+    }
+   }
+  },
+  "original_task_untouched": {
+   "id": 1,
+   "status": "FAILED",
+   "error": "MANUAL_EXTRACTED_IDENTITY_MISMATCH: MANUAL_EXTRACTED_IDENTITY_MISMATCH",
+   "job_title": "车端AI Agent与应用生态系统架构工程师",
+   "revision": null
+  }
+ },
+ "counts_before": {
+  "tasks": 0,
+  "snapshots": 0,
+  "companies": 0,
+  "jobs": 0,
+  "jd_versions": 0,
+  "requirements": 0,
+  "claims": 0
+ },
+ "counts_after": {
+  "tasks": 2,
+  "snapshots": 1,
+  "companies": 1,
+  "jobs": 1,
+  "jd_versions": 1,
+  "requirements": 15,
+  "claims": 22
+ }
+}
