@@ -90,6 +90,18 @@
 
 **结论**：一条「1 JD → 1 简历 → 3 题 → 评价 → 报告」的闭环，**必须真实的模型调用只有 6 个环节、10 次**；其中 Skill 识别、记忆、训练都可完全离线复算。
 
+### 3.1 合法数据映射（哪份材料能进哪个字段，以及不能怎么用）
+
+| 材料 | 合法落点 | 明确禁止 |
+|---|---|---|
+| 公开 JD 原文（9 份原件） | `job_description_versions.raw_text`（`PUBLISHED`）→ `job_requirements.statement`（逐字 evidence） | 把原文没有的要求补写进 `statement`；把 `READY` 当成「岗位仍开放」 |
+| 面经原件（5 份） | `interview_experiences.content_text`、`interview_questions.question`（`APPROVED`） | 当成候选人的真实经历或真实回答 |
+| 脱敏真实简历 | `resumes.raw_text` → `resume_reports.summary_json` → `candidate_profile_versions.snapshot_json` | 把模型推断的「掌握程度」写成 `fact`；保留姓名/电话/邮箱/证件号 |
+| 真实逐字回答 | `interview_answers.content`（原样） | 先改写再评分（会直接污染 `covered_points` 判定） |
+| 人工参考答案 / 金标 | 只在离线文件里，作事后对照 | 进入 `blind_context`、写入 Prompt、写进数据库 |
+| 合成 V2 / V3 样本 | 只作评测输入与回归夹具 | 标记为「真实样本」、计入真实样本量 |
+
+
 ---
 
 ## 4. 零 HTTP 预检
