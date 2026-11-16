@@ -136,3 +136,84 @@ def test_budget_matches_the_real_call_chain(precheck):
     assert budget["normal_breakdown"] == {"job_jd_extraction": 3, "quality_assessment": 3}
     assert budget["hard_stop_http"] == 10
     assert budget["repair_http_allowance"] == 2
+
+
+# ── Real-model run (R31 formal) ─────────────────────────────────────────────
+
+REAL = DATA / "real_run"
+
+
+@pytest.fixture(scope="module")
+def real_run():
+    return json.loads((REAL / "real_run_report.json").read_text(encoding="utf-8"))
+
+
+@pytest.fixture(scope="module")
+def audit():
+    return json.loads((REAL / "audit.json").read_text(encoding="utf-8"))
+
+
+@pytest.fixture(scope="module")
+def capture():
+    return json.loads((REAL / "capture_replay.json").read_text(encoding="utf-8"))
+
+
+def test_real_run_stayed_inside_the_authorised_budget(real_run, capture):
+    ledger = real_run["ledger_total"]
+    assert ledger["http_attempts"] <= real_run["limits"]["max_http"] == 10
+    assert ledger["tokens"] <= real_run["limits"]["max_tokens"] == 30000
+    assert ledger["statuses"] == ["SETTLED"], "no UNKNOWN or unpaid admission"
+    assert capture["totals"]["repairs"] == 0
+    assert {step["model"] for step in capture["steps"]} == {"deepseek-ai/DeepSeek-V4.1-Flash-1017"}
+    assert {step["provider"] for step in capture["steps"]} == {"modelscope"}
+
+
+def test_every_step_has_a_prompt_version_and_usage(capture):
+    assert capture["steps"]
+    for step in capture["steps"]:
+        assert step["prompt"] in {"job_jd@1.0.1", "quality@1.0.0"}
+        assert step["status"] == "SUCCEEDED"
+        assert step["usage"]["total_tokens"] > 0
+
+
+def test_completed_jds_are_waiting_review_with_full_evidence(audit):
+    assert audit["jd_versions"], "at least one JD imported"
+    for key, row in audit["jds"].items():
+        assert row["publication_status"] == "WAITING_REVIEW"
+        assert row["raw_text_equals_snapshot"] is True
+        assert row["snapshot_sha256_ok"] is True
+        assert row["counts"]["missing_claim"] == 0
+        assert row["counts"]["offsets_bad"] == 0
+        assert row["counts"]["literal_bad"] == 0
+        # every requirement must be a literal substring of the JD body too
+        assert all(item["literal_in_raw_text"] for item in row["requirements"])
+
+
+def test_publish_readiness_is_true_but_nothing_is_published(audit):
+    for key, row in audit["readiness"].items():
+        assert row["publishable"] is True
+        assert row["problems"] == []
+    assert audit["audit_logs"] == 0, "no Admin publication happened"
+    for row in audit["jds"].values():
+        assert row["publication_status"] != "PUBLISHED"
+
+
+def test_failed_task_left_no_entity_and_no_retry(real_run, audit):
+    failed = [task for task in audit["tasks"] if task["status"] == "FAILED"]
+    for task in failed:
+        assert "MANUAL_EXTRACTED_IDENTITY_MISMATCH" in task["error"]
+    companies = {row["company"] for row in audit["jds"].values()}
+    assert len(audit["jd_versions"]) == len(companies) == len(audit["tasks"]) - len(failed)
+
+
+def test_repeat_import_reused_the_completed_task(audit):
+    assert audit["idempotency"]["reused"] is True
+    assert audit["idempotency"]["prepare_status"] == "COMPLETED"
+
+
+def test_capture_bundle_is_redacted(capture):
+    # The bundle declares what it excludes; that declaration is not a secret.
+    payload = {key: value for key, value in capture.items() if key != "redaction"}
+    blob = json.dumps(payload, ensure_ascii=False).lower()
+    for secret in ("api_key", "authorization:", "bearer ", "sk-", "password"):
+        assert secret not in blob
