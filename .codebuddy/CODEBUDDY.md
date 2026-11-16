@@ -1392,3 +1392,19 @@ L3 前置条件（purge_requests 表、清理顺序、audit_logs 脱敏、Celery
 **发布**：两岗均 `WAITING_REVIEW`，`publishable=true`（22/22 有 Claim、偏移 100% 精确），`audit_logs=0`（未发布）。建议沐瞳先归一词表再发布。幂等已验证（重复 prepare 复用 task #1）。
 
 **扩展**：剩余 49 份 ≈98 HTTP / 276K token（实测 5,640 token/份）；开跑前必须先修「身份字面标签」与「词表受控」。生产库未变（4 份 JD）；沙箱 2 份不计入生产。
+
+---
+
+## 第三十六轮：质量修复 + 蔚来身份阻断（真实模型 HTTP=0，见 docs/115）
+
+**基线** `619a237`。本轮**未新增任何模型调用**：原 6 HTTP / 16,921 token 不变。
+
+**蔚来为什么没重试**：零 HTTP 核验发现重试在现行代码下不可能成功。① 官方字面身份是 `data-test="jobTitle"` = `校招-车端 AI Agent 与应用生态系统架构工程师`（正文另有职位 ID `A25338A`），manifest 写的是去掉前缀与空格的展示名；② 证据校验能过（模型没抽错岗位），挂在 `validate_expected_identity` 的逐字相等；③ 用修正标签重新 `prepare` → **`MANUAL_IMPORT_IDENTITY_CONFLICT`**，因为幂等键不含身份、task 里冻结了旧 manifest，`force=True` 只会拿旧标签再赌一次。**结论：修正标签后无法重试是流程缺口，不是模型问题。** 2 次 HTTP 一次未用。方案 A（1 行：让 `validate_expected_identity` 与 `EvidenceCatalog.validate_identity` 一样忽略空白）待批准。
+
+**词表归一化**：新增 `public_career/requirement_vocabulary.py`（13 类 + 3 强度枚举、中英显式同义词、三态 KNOWN/AMBIGUOUS/UNKNOWN、`can_be_technical`）。接入 Schema 校验、`job_matching/policy.py`（硬资格与未知值均 → NOT_APPLICABLE，未知值带「需人工确认」消息）、`interview/context.py`、`library.py`、`retrieval.py`。**模型 JSON Schema 与 Prompt 未变**，历史已发布 JD 的 `structured_data_json` 未动。测试 `test_r35_requirement_vocabulary.py` **62 passed**。
+
+**尾部优先污染**：`split_strength_clauses` 只认强度标记（无技术关键词），`effective_strength` 把混合句判为 REQUIRED。麒麟实测存储 5R/5P → 实际 **9R/1P**（4 条混合句纠正，第 9 条整句优先保持 PREFERRED）。未改写存储值、未生成派生 Requirement 行（需单独批准）。
+
+**发布前审核**：麒麟、沐瞳**无阻断项**，均 `WAITING_REVIEW`、`publishable`；蔚来无版本。`audit_logs=0`（未发布）。沐瞳 `学历/专业` 判 AMBIGUOUS（不误算技术缺口）。Skill 预览均 `RECOMMENDED → ai_agent_application`（`recommend_jobs` 只读 ACTIVE+PUBLISHED，发布前为空，故用同一规则直接算只读预览）。
+
+**49 份共性阻断**：① 身份标签必须取页面字面（失败率 33%）；② 修正后无法重试（`IDENTITY_CONFLICT`）；③ 类型歧义需人工映射；④ 混合句强度（已投影修复）；⑤ 失败时抽取身份不落库。回归 152/41/119 三次运行全 0 failed。
