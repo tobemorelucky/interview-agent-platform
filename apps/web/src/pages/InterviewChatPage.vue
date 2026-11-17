@@ -980,13 +980,13 @@ getInterviewTargets().then(async data => {
               <small>Skill {{ activeInterviewer.skill.version }} / 策略 {{ activeInterviewer.style.version }}；后续配置更新不改变本场。</small>
             </details>
             <span v-else>原有通用面试策略</span>
-            <details v-if="profileContext?.adaptive_policy" class="session-context-detail"><summary>自适应考察范围（本场固定）</summary>
+            <details v-if="profileContext?.adaptive_policy && interviewFinished" class="session-context-detail"><summary>自适应考察范围（本场固定）</summary>
               <p>{{ profileContext.adaptive_blueprint?.targets.map(t => t.label).join('、') }}</p>
               <p>依据本轮回答调整追问；表现观察不等于稳定技能事实，跨场次推断可在成长记录中查看和更正。</p>
             </details>
             <span class="round-progress">第 {{ Math.min(questionList.find(q => q.id === activeQuestionId)?.question_index != null ? questionList.find(q => q.id === activeQuestionId)!.question_index + 1 : questionList.length || 1, questionBudget) }} / {{ questionBudget }} 轮</span>
-            <span v-if="activeQuestionId">当前题型：{{ displayLabel(questionList.find(q => q.id === activeQuestionId)?.dimension, '技术 / 项目') }} · 难度：{{ displayLabel(questionList.find(q => q.id === activeQuestionId)?.difficulty) }}</span>
-            <span v-if="questionList.find(q => q.id === activeQuestionId)?.assessment_topic">考察主题：{{ questionList.find(q => q.id === activeQuestionId)?.assessment_topic }}</span>
+            <span v-if="activeQuestionId && interviewFinished">当前题型：{{ displayLabel(questionList.find(q => q.id === activeQuestionId)?.dimension, '技术 / 项目') }} · 难度：{{ displayLabel(questionList.find(q => q.id === activeQuestionId)?.difficulty) }}</span>
+            <span v-if="activeQuestionId && interviewFinished && questionList.find(q => q.id === activeQuestionId)?.assessment_topic">考察主题：{{ questionList.find(q => q.id === activeQuestionId)?.assessment_topic }}</span>
             <details class="session-context-detail"><summary>本场资料详情</summary><p>画像第 {{ profileContext?.profile_version_number }} 版 / {{ jdVersionLabel }}（本场固定）</p><p v-if="profileContext?.coverage_insufficient">题库覆盖有限，本场会结合真实项目和岗位要求出题。</p></details>
             <span v-if="isReplay || completion?.mode === 'replay'">DEMO · Replay 回放模式（不是 Live 模型验收）</span>
             <button v-if="activeSession()?.status === 'READY'" :disabled="generationStage !== 'idle'" @click="handleStart">开始 / 重试首题</button>
