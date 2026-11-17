@@ -78,6 +78,11 @@ async def main() -> int:
     parser.add_argument("--confirm", required=True)
     parser.add_argument("--jd-ids", required=True, help="comma separated jd_version ids")
     parser.add_argument("--publish", action="store_true", help="publish the approved ones")
+    # Reusable for later batches: the audit rules stay identical, only the source
+    # manifest and the report destination move.
+    parser.add_argument("--manifest", default=str(BATCH))
+    parser.add_argument("--report", default=str(REPORT))
+    parser.add_argument("--label", default="R34")
     args = parser.parse_args()
     if args.database != r33.SANDBOX or args.confirm != r33.SANDBOX:
         raise SystemExit("REFUSED: sandbox mismatch")
@@ -97,7 +102,7 @@ async def main() -> int:
     finally:
         await conn.close()
 
-    manifest = {row["jd_key"]: row for row in json.loads(BATCH.read_text(encoding="utf-8"))["records"]}
+    manifest = {row["jd_key"]: row for row in json.loads(Path(args.manifest).read_text(encoding="utf-8"))["records"]}
     by_title = {row["job_title"]: row for row in manifest.values()}
 
     report = {"generated_at": datetime.now(timezone.utc).isoformat(), "environment": env,
@@ -135,9 +140,9 @@ async def main() -> int:
     if not args.publish:
         for jd_id, gate in report["gate"].items():
             print(jd_id, "approved" if gate["approved"] else "BLOCKED", gate["reasons"])
-        REPORT.parent.mkdir(parents=True, exist_ok=True)
-        REPORT.write_text(json.dumps(report, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
-        print("written", REPORT)
+        Path(args.report).parent.mkdir(parents=True, exist_ok=True)
+        Path(args.report).write_text(json.dumps(report, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
+        print("written", args.report)
         return 0
 
     for audit in audits:
@@ -147,7 +152,7 @@ async def main() -> int:
             continue
         record = by_title.get(audit["job_title"], {})
         reason = (
-            f"人工审核通过（R34 沙箱）。来源：{audit['company']} 官方招聘页 {record.get('source_url', '')}"
+            f"人工审核通过（{args.label} 沙箱）。来源：{audit['company']} 官方招聘页 {record.get('source_url', '')}"
             f"（岗位 ID {record.get('job_id', '')}）。正文 {audit['body_chars']} 字，与快照逐字一致（SHA-256 已核）；"
             f"{audit['counts']['requirements']} 条要求均有 Claim/Evidence 且偏移精确；"
             f"强度存储 {audit['counts']['stored_strength']}、消费口径 {audit['counts']['effective_strength']}；"
@@ -205,14 +210,14 @@ async def main() -> int:
                      for s in ("REQUIRED", "PREFERRED", "UNKNOWN")}
             for k, v in details.items()},
     }
-    REPORT.parent.mkdir(parents=True, exist_ok=True)
-    REPORT.write_text(json.dumps(report, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
+    Path(args.report).parent.mkdir(parents=True, exist_ok=True)
+    Path(args.report).write_text(json.dumps(report, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
     print(json.dumps({"gate": report["gate"], "decisions": report["decisions"],
                       "counts": counts, "selectable": selectable,
                       "targets": [(j["company_name"], j["job_title"]) for j in (targets["body"].get("data") or [])],
                       "detail_strength": report["post"]["detail_requirement_strength"]},
                      ensure_ascii=False, indent=1, default=str))
-    print("written", REPORT)
+    print("written", args.report)
     return 0
 
 

@@ -189,6 +189,12 @@ _CLAUSE_SEPARATORS = re.compile(r"[；;。\n]")
 _SUB_SEPARATORS = re.compile(r"[，,]")
 # A bare qualifier is not a requirement of its own; it belongs to what follows.
 _QUALIFIER_ONLY = re.compile(r"^(在?同等条件下?|条件优秀者|表现优秀者|特别优秀者)$")
+# "A，或B者优先" is one list of alternatives, not a mandatory clause followed by
+# a preferred one. The trailing 优先 governs the whole "或" chain.
+_OR_CONTINUATION = re.compile(r"^(或|或者|或是)")
+# A clause that explicitly states a hard condition is not absorbed into an
+# alternative chain: "必须熟悉 Linux，或有 Go 经验者优先" stays mixed.
+_REQUIRED_MARKER = re.compile(r"^(必须|至少|需|要求|须|应具备|需要|强制)")
 
 
 @dataclass(frozen=True)
@@ -216,7 +222,11 @@ def split_strength_clauses(statement: str) -> list[StrengthClause]:
         parts = _SUB_SEPARATORS.split(segment)
         merged: list[str] = []
         for part in parts:
-            if merged and _QUALIFIER_ONLY.match(merged[-1].strip()):
+            or_continuation = bool(merged and _OR_CONTINUATION.match(part.strip())
+                                   and not _REQUIRED_MARKER.match(merged[-1].strip()))
+            if merged and (_QUALIFIER_ONLY.match(merged[-1].strip()) or or_continuation):
+                # Keep the comma in the clause text: strength markers are read
+                # from the end of the complete alternative expression.
                 merged[-1] = merged[-1] + "，" + part
             else:
                 merged.append(part)

@@ -43,6 +43,8 @@ test*.py
 # Local browser QA artifacts (not product data)
 .playwright-cli/
 output/playwright/
+# Headless Chrome user-data-dir holds session cookies/cache, never product data.
+data/**/chrome/
 
 # Private/local delivery artifacts
 *.dump
