@@ -33,7 +33,7 @@ def test_catalog_and_demand_loading():
         reads.append(str(path))
         return original(path, *args, **kwargs)
     with patch.object(Path, "read_text", read):
-        assert len(SkillRegistry().options()["skills"]) == 3
+        assert len(SkillRegistry().options()["skills"]) == 10
         assert not any(path.endswith("SKILL.md") for path in reads)
         value = SkillRegistry().freeze("java_backend", "technical_screen", "standard")
     assert value["skill"]["id"] == "java_backend"
@@ -226,7 +226,7 @@ def test_skill_options_api_authentication_and_actual_freeze(database_url):
                 with patch.object(routes, "build_core", return_value=core):
                     response = await client.get("/api/v1/interview/interviewer-options")
                     assert response.status_code == 200
-                    assert len(response.json()["data"]["skills"]) == 3
+                    assert len(response.json()["data"]["skills"]) == 10
                     response = await client.post("/api/v1/interview/sessions", json=dict(company_id=ctx["company_id"],
                         job_id=ctx["job_id"], interviewer_skill_id="bank_it", interview_round="technical_screen", interviewer_style="gentle"))
                     assert response.status_code == 201

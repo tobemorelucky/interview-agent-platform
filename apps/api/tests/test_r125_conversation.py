@@ -280,7 +280,7 @@ def test_new_session_freezes_the_conversational_prompt_and_old_ones_keep_theirs(
             job_id=job["job_id"], interviewer_skill_id="ai_agent_application",
             adaptive_interview=True, question_count=6))
         policy = session["context_snapshot"]["adaptive_policy"]
-        assert policy["prompts"]["interview_main"]["version"] == "2.5.0"
+        assert policy["prompts"]["interview_main"]["version"] == "2.6.0"
         # The grading contract is deliberately untouched by this round.
         assert policy["prompts"]["answer_evaluation"]["version"] == "2.3.4"
         assert policy["fingerprint"] if "fingerprint" in policy else True

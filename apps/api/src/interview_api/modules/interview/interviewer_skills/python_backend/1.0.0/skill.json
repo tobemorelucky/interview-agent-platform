@@ -1,0 +1,38 @@
+{
+  "id": "python_backend",
+  "version": "1.0.0",
+  "label": "Python 后端开发",
+  "priority_topics": [
+ "python",
+ "mysql_consistency",
+ "redis",
+ "kafka_reliability",
+ "system_design",
+ "data_security"
+],
+  "domains": [
+ "Python 异步与并发模型",
+ "Web 框架与接口设计",
+ "数据访问与事务边界",
+ "服务可靠性：超时、重试与降级"
+],
+  "key_capabilities": [
+ "解释 GIL/协程/线程的真实边界",
+ "说明接口契约与错误处理",
+ "讲清数据库事务与缓存一致性",
+ "处理超时、重试与幂等"
+],
+  "project_strategy": [
+ "只追问简历证据或本轮回答建立的项目",
+ "沿一个接口或任务链路选一个实现细节",
+ "不把框架名当作掌握原理的证明"
+],
+  "level_probes": {"introductory": "说明输入输出和基本流程", "intermediate": "解释一个实际机制及选择理由", "advanced": "讨论失败边界、替代方案及验证方法"},
+  "evaluation_anchors": {
+ "technical_correctness": "机制与术语是否准确，是否区分语言、框架与运行时责任",
+ "coverage": "是否覆盖当前问题要求的链路与关键步骤",
+ "depth": "是否说明设计理由、失败边界与验证依据",
+ "relevance": "是否针对实际问题和已建立的项目背景",
+ "communication": "是否清晰表达流程、因果与取舍"
+}
+}

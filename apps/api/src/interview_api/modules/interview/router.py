@@ -112,9 +112,9 @@ async def delete_session(session_id: int, current_user=Depends(get_current_user)
 
 
 @router.post("/sessions/{session_id}/start")
-async def start_interview(session_id: int, opening: str = "MODEL", current_user=Depends(get_current_user), _limit=Depends(interview_chat_limit)):
-    if opening not in ("MODEL", "REQUIREMENT"):
-        raise HTTPException(status_code=422, detail="opening must be MODEL or REQUIREMENT")
+async def start_interview(session_id: int, opening: str = "INTRODUCTION", current_user=Depends(get_current_user), _limit=Depends(interview_chat_limit)):
+    if opening not in ("MODEL", "REQUIREMENT", "INTRODUCTION"):
+        raise HTTPException(status_code=422, detail="opening must be MODEL, REQUIREMENT or INTRODUCTION")
     return success(data=await build_core().start(session_id, current_user.id, opening=opening))
 
 
@@ -122,6 +122,12 @@ async def start_interview(session_id: int, opening: str = "MODEL", current_user=
 async def send_message_stream(session_id: int, body: SendMessageRequest, _limit=Depends(interview_chat_limit), current_user=Depends(get_current_user)):
     return StreamingResponse(build_core().stream(session_id, current_user.id, body), media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "Connection": "keep-alive", "X-Accel-Buffering": "no"})
+
+
+@router.post("/sessions/{session_id}/end")
+async def end_interview(session_id: int, current_user=Depends(get_current_user)):
+    """User-owned end. Idempotent; repeats return the committed summary."""
+    return success(data=await build_core().end(session_id, current_user.id))
 
 
 @router.get("/sessions/{session_id}/questions")

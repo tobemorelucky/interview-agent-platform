@@ -101,8 +101,12 @@ def test_scores_are_integer_rule_points_not_confidence():
 
 def test_only_registered_skills_can_be_recommended():
     result = recommend(job(AI_TITLE, AI_REQUIREMENTS))
-    assert {item["skill_id"] for item in result["ranking"]} == {
-        "ai_agent_application", "bank_it", "java_backend"}
+    # Exactly the shipped registry — the ranking is a projection of discovery,
+    # so it must grow with the registry, never with unregistered ids.
+    from interview_api.modules.interview.skill_registry import ROOT, discover
+    shipped = set(discover(ROOT)[0])
+    assert shipped >= {"ai_agent_application", "bank_it", "java_backend"}
+    assert {item["skill_id"] for item in result["ranking"]} <= shipped
     assert all(item["version"] for item in result["ranking"])
 
 

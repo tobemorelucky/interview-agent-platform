@@ -24,6 +24,15 @@ TOPICS = {
     "java": r"\bjava\b|\bjvm\b|\bspring\b|线程|垃圾回收",
     "python": r"\bpython\b|\bgil\b|协程",
     "system_design": r"系统设计|故障|排查|限流|熔断|可用性|部署|docker|监控",
+    # R126: ground the seven new Skills can legally test. Specific phrases only —
+    # a bare "网络"/"测试" would swallow unrelated questions, and "排序" belongs to
+    # both recommendation and algorithms, so neither pattern may use it alone.
+    "frontend": r"\bvue\b|\breact\b|\btypescript\b|\bjavascript\b|前端|浏览器|组件库|首屏",
+    "testing": r"测试用例|自动化测试|单元测试|接口测试|性能测试|回归测试|压力测试|测试开发|质量保障|\bselenium\b|\bpytest\b|\bjmeter\b",
+    "data_engineering": r"数仓|数据仓库|\betl\b|\bspark\b|\bflink\b|\bhive\b|数据建模|数据管道|实时计算|离线任务|数据治理",
+    "recommendation": r"推荐系统|推荐算法|协同过滤|召回策略|\bctr\b|特征工程|排序模型|机器学习|深度学习",
+    "network_os": r"三次握手|四次挥手|\btcp\b|\budp\b|操作系统|进程|线程池|内存管理|文件系统|\blinux\b|内核|虚拟内存|网络协议",
+    "algorithm": r"动态规划|二叉树|链表|哈希表|时间复杂度|空间复杂度|排序算法|数据结构|算法题",
 }
 # The literal words the NEXT-question gate actually accepts, per topic. They are
 # published to the interviewer model so "explicitly name the topic" is a
@@ -39,6 +48,12 @@ TOPIC_TERMS = {
     "java": ["Java", "JVM", "Spring", "线程", "垃圾回收"],
     "python": ["Python", "GIL", "协程"],
     "system_design": ["系统设计", "故障", "排查", "限流", "熔断", "可用性", "监控"],
+    "frontend": ["前端", "Vue", "React", "TypeScript", "浏览器"],
+    "testing": ["测试用例", "自动化测试", "接口测试", "性能测试", "质量保障"],
+    "data_engineering": ["数仓", "ETL", "Spark", "Flink", "数据建模"],
+    "recommendation": ["推荐系统", "协同过滤", "特征工程", "排序模型", "机器学习"],
+    "network_os": ["操作系统", "TCP", "进程", "线程池", "内存管理"],
+    "algorithm": ["数据结构", "动态规划", "时间复杂度", "哈希表"],
 }
 BACKGROUND = {
     "education": r"学历|学校|毕业院校|哪所大学|本科|硕士|博士|研究生|教育背景|专业背景|什么专业|就读|所学专业",
@@ -121,6 +136,17 @@ def requirement_opening_question(statement, label):
     """
     return (f"岗位要求里有一条：「{(statement or '').strip()}」。请结合你做过的一个项目，"
             f"讲讲你在{label}方面的具体做法，并说明遇到过一次什么问题、最后怎么解决的。")
+
+
+# The scripted self-introduction opening. Server-authored, zero-model, and
+# explicitly not a scored technical question: it exists so a real interview
+# starts with "who are you" instead of a JD line, and it is excluded from
+# technical aggregates by the same mechanism as end requests.
+INTRODUCTION_QUESTION = "你好，我们先简单认识一下。请做一个简单的自我介绍，可以重点讲讲你做过哪些项目或实习。"
+
+
+def introduction_opening_question():
+    return INTRODUCTION_QUESTION
 
 
 def topic_diagnostic(question, target_topic):

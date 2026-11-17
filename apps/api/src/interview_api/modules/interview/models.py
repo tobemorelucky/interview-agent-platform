@@ -112,6 +112,10 @@ class InterviewSessionQuestion(Base):
     status: Mapped[str] = mapped_column(
         String(20), nullable=False, default="PENDING", server_default="PENDING"
     )
+    # Explicit, reversible-by-record exclusion. A question is never deleted; its
+    # reason says why it is out of every technical aggregate. NULL = counted.
+    excluded_reason: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    excluded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -189,6 +193,10 @@ class InterviewEvaluation(Base):
     structured_retry: Mapped[int] = mapped_column(Integer)
     token_usage_json: Mapped[dict] = mapped_column(JSON)
     agent_run_id: Mapped[int] = mapped_column(ForeignKey("experience_agent_runs.id", ondelete="RESTRICT"))
+    # A stored evaluation can be excluded from technical statistics without
+    # rewriting its scores or the model artifact that produced them.
+    excluded_reason: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    excluded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     __table_args__ = tuple(CheckConstraint(f"{key} BETWEEN 1 AND 5", name=f"ck_interview_eval_{key}") for key in ("technical_correctness", "coverage", "depth", "relevance", "communication"))
 

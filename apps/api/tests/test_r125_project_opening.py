@@ -16,8 +16,10 @@ from interview_api.modules.interview.adaptive import is_project_opening
 from interview_api.modules.interview.topics import validate_topic
 
 
-def payload(question=None, facts=None):
-    return dict(current_question=question,
+def payload(question=None, facts=None, *, opening_slot=True):
+    # R126: the opening slot lives in adaptive.opening_slot, computed by the
+    # real planning_payload (true until one scored technical question exists).
+    return dict(current_question=question, adaptive=dict(opening_slot=opening_slot),
                 snapshot=dict(candidate_facts=facts if facts is not None else [
                     dict(id=11, field_path="projects.0", statement="订单秒杀系统：用 Redis 做库存扣减")]))
 
@@ -45,7 +47,7 @@ def test_everything_else_stays_rejected(case):
     text = "先聊聊你简历里那个订单项目，你负责哪部分？"
     args = dict(payload=payload(), source=source(), artifact=artifact(text))
     if case == "second_question":
-        args["payload"] = payload(question=dict(question_id=1, question="上一题"))
+        args["payload"] = payload(question=dict(question_id=1, question="上一题"), opening_slot=False)
     if case == "education_fact":
         args["payload"] = payload(facts=[dict(id=11, field_path="education.0", statement="示例大学 本科")])
     if case == "job_requirement_source":

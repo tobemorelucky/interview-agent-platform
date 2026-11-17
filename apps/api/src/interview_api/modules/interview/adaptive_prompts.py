@@ -230,6 +230,34 @@ MAIN_CONVERSATIONAL = PromptDefinition(
     "interview_main", "2.5.0", MAIN_GAP_SCOPED.system + CONVERSATION_CONTRACT)
 
 
+# R126: two more real-interview rules on top of 2.5.0. Follow-ups are a safety
+# cap, not a quota to spend, and the interviewer may leave the resume for
+# general computer-science ground the job's Skill actually covers.
+PACING_CONTRACT = """
+OPENING. Unless the session already asked its introduction, do not re-open with
+a technical question. After the candidate's self-introduction, your first
+technical question should come from one real project they actually mentioned,
+or from the job's Skill when the introduction gives you nothing specific.
+FOLLOW-UPS ARE NOT A QUOTA. The per-question follow-up cap is a safety limit,
+not a number of questions you owe. One answer may earn zero follow-ups: if it
+was specific and sufficient, acknowledge it and switch to a new target. Ask a
+follow-up only when this exact answer left one specific thing unresolved that
+is worth one more turn. Never ask two follow-ups just to fill the cap, and
+never rebuild an answer into "background, approach, difficulty, solution".
+BEYOND THE RESUME. When the resume's projects no longer need probing, you may
+and should ask about general ground the job's Skill covers: language basics,
+operating systems and networks, databases and Redis, message queues, RAG/Agent
+and LLM mechanics, algorithms and data structures, or a small scenario. Such a
+question is still a NEXT with a legal frozen target; do not wander outside the
+frozen targets or invent company-specific facts.
+ONE QUESTION PER TURN. One main question; at most one short clarifying
+sub-question inside it. Never stack three or four sub-questions in one turn.
+"""
+
+MAIN_CONVERSATIONAL_V2 = PromptDefinition(
+    "interview_main", "2.6.0", MAIN_GAP_SCOPED.system + CONVERSATION_CONTRACT + PACING_CONTRACT)
+
+
 MAIN_HARNESS = PromptDefinition("interview_main", "2.4.0-harness.1", MAIN_MEMORY_REFS.system.replace(
     "Return AdaptiveSelection JSON", "Use the supplied action JSON schema"
 ) + """
@@ -270,7 +298,7 @@ def freeze_prompts(contract=None, *, memory_guided=False, context_projection=Fal
         if gap_scope:
             evaluation = EVALUATION_BOUNDARIES_PROMPT if evaluation_boundaries else EVALUATION_GAP_SCOPED
             return {p.name: dict(version=p.version, system=p.system, fingerprint=p.content_hash)
-                    for p in (MAIN_CONVERSATIONAL, evaluation)}
+                    for p in (MAIN_CONVERSATIONAL_V2, evaluation)}
         return {p.name: dict(version=p.version, system=p.system, fingerprint=p.content_hash)
             for p in (MAIN_PROJECTED, EVALUATION_SCOPED if evaluation_context else EVALUATION_PROJECTED)}
     main = MAIN_MEMORY_REFS if memory_guided else MAIN_PAIRS_REFS if contract == "TARGET_SOURCE_PAIR_V1" else MAIN

@@ -15,6 +15,11 @@ async def interview_records(db, session_id):
         .where(InterviewEvaluation.session_id == session_id, InterviewAnswer.session_id == session_id,
                InterviewSessionQuestion.session_id == session_id, InterviewMessage.session_id == session_id,
                InterviewAnswer.status == "COMPLETED", InterviewSessionQuestion.status == "COMPLETED",
+               # An explicitly excluded turn (an end request, a self-introduction)
+               # stays in the transcript and in the database, but never enters a
+               # technical average.
+               InterviewEvaluation.excluded_reason.is_(None),
+               InterviewSessionQuestion.excluded_reason.is_(None),
                InterviewAnswer.session_question_id == InterviewEvaluation.session_question_id)
         .order_by(InterviewEvaluation.id))).all()
     evaluations = [dict(id=e.id, evidence_ref=f"evaluation:{e.id}", session_question_id=q.id, question_id=q.id,
@@ -37,6 +42,10 @@ def deterministic_statistics(questions, evaluations):
     means = {key: round(sum(e["scores"][key] for e in evaluations) / count, 4) if count else None for key in DIMENSIONS}
     return dict(answered_count=len({e["session_question_id"] for e in evaluations}), evaluated_count=count,
         skipped_count=sum(q.status == "SKIPPED" for q in questions),
+        # Excluded turns are reported, never silently dropped: an end request is
+        # visible in the report as "not counted", not as a failed question.
+        excluded_count=sum(bool(getattr(q, "excluded_reason", None)) for q in questions),
+        excluded_reasons=sorted({getattr(q, "excluded_reason", None) for q in questions if getattr(q, "excluded_reason", None)}),
         follow_up_count=sum(q.question_kind == "FOLLOW_UP" for q in questions),
         deep_dive_count=sum(q.question_kind == "DEEP_DIVE" for q in questions),
         dynamic_question_count=sum(q.is_dynamic for q in questions), dimension_averages=means,

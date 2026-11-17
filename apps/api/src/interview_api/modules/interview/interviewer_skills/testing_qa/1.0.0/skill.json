@@ -1,0 +1,37 @@
+{
+  "id": "testing_qa",
+  "version": "1.0.0",
+  "label": "测试开发",
+  "priority_topics": [
+ "testing",
+ "python",
+ "mysql_consistency",
+ "network_os",
+ "system_design"
+],
+  "domains": [
+ "用例设计与覆盖",
+ "自动化框架与稳定性",
+ "接口与性能测试",
+ "质量度量与效能工具"
+],
+  "key_capabilities": [
+ "解释用例设计与覆盖的真实边界",
+ "定位不稳定用例的原因",
+ "讲清分层测试与投入取舍",
+ "用数据说明质量状态"
+],
+  "project_strategy": [
+ "只追问简历证据或本轮回答建立的项目",
+ "沿用例、框架、执行、度量链路选一个实现细节",
+ "不把工具名当作掌握方法的证明"
+],
+  "level_probes": {"introductory": "说明输入输出和基本流程", "intermediate": "解释一个实际机制及选择理由", "advanced": "讨论失败边界、替代方案及验证方法"},
+  "evaluation_anchors": {
+ "technical_correctness": "机制和方法是否准确，是否区分测试方法与工具使用",
+ "coverage": "是否覆盖当前问题要求的链路与关键步骤",
+ "depth": "是否说明设计理由、失败边界和验证依据",
+ "relevance": "是否针对实际问题和已建立的项目背景",
+ "communication": "是否清晰表达流程、因果和取舍"
+}
+}

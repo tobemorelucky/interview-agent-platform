@@ -6,6 +6,10 @@ export interface InterviewReportStatistics {
   answered_count: number
   evaluated_count: number
   skipped_count: number
+  // Excluded turns (end requests, the self-introduction) stay in the
+  // transcript but are out of every technical average.
+  excluded_count?: number
+  excluded_reasons?: string[]
   follow_up_count: number
   deep_dive_count: number
   dynamic_question_count: number
@@ -69,6 +73,17 @@ export interface FinalInterviewReport {
   mode?: string
 }
 
+export interface ReportSessionCompletion {
+  completion_reason?: string
+  early_terminated?: boolean
+  ended_by?: string
+  answered_count?: number
+  evaluated_count?: number
+  skipped_count?: number
+  excluded_question_count?: number
+  question_budget?: number
+}
+
 export interface ReportSessionInfo {
   id: number
   title?: string | null
@@ -81,6 +96,7 @@ export interface ReportSessionInfo {
   job_target_version?: number | null
   job_id?: number | null
   company_id?: number | null
+  completion?: ReportSessionCompletion
 }
 
 export interface SuggestedTraining {

@@ -49,3 +49,30 @@ class MatchRecommendationArtifact(StrictModel):
 class MatchArtifact(StrictModel):
     ordered_candidate_job_ids: list[JobRef] = Field(min_length=1, max_length=50)
     recommendations: list[MatchRecommendationArtifact] = Field(min_length=1, max_length=50)
+
+
+SupportRef = Annotated[str, Field(pattern=r"^support:[0-9a-f]{12}$")]
+
+
+class SupportSelection(StrictModel):
+    """One association, referenced — never re-typed.
+
+    The server owns the fact, the requirement, the evidence keys and the exact
+    explanation. The model only chooses which association supports this job.
+    """
+    support_ref: SupportRef
+
+
+class MatchRecommendationV2(StrictModel):
+    job_id: JobRef
+    fit_band: Literal["STRONG_MATCH", "GOOD_MATCH", "EXPLORATORY", "UNCERTAIN"]
+    matched_strengths: list[SupportSelection] = Field(max_length=3)
+    alignment_reasons: list[SupportSelection] = Field(max_length=3)
+    current_evidence_gaps: list[AlignmentRef] = Field(max_length=100)
+    preparation_focus: list[AlignmentRef] = Field(max_length=100)
+    unknowns_to_confirm: list[str] = Field(max_length=30)
+
+
+class MatchArtifactV2(StrictModel):
+    ordered_candidate_job_ids: list[JobRef] = Field(min_length=1, max_length=50)
+    recommendations: list[MatchRecommendationV2] = Field(min_length=1, max_length=50)

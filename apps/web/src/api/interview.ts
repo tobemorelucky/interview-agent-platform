@@ -110,6 +110,19 @@ export async function skipQuestion(
   return response;
 }
 
+export interface EndInterviewResult {
+  already_completed: boolean;
+  session_id: number;
+  completion: { completion_reason?: string; early_terminated?: boolean; answered_count?: number; [key: string]: unknown };
+  excluded: { question_id: number; answer_id: number; evaluation_id: number | null; reason: string }[];
+}
+
+/** User-owned, idempotent end. Repeats return the committed summary. */
+export async function endInterview(sessionId: number): Promise<EndInterviewResult> {
+  const response = await client.post(`/interview/sessions/${sessionId}/end`);
+  return response as unknown as EndInterviewResult;
+}
+
 export async function consolidateInterviewMemory(
   sessionId: number,
   force = false

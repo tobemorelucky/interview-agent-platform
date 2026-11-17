@@ -209,10 +209,15 @@ class InterviewReportService:
                 completion_fact = dict(
                     completion_reason=completion.get("completion_reason"),
                     completion_detail=completion.get("completion_detail"),
+                    ended_by=completion.get("ended_by"),
                     question_budget=budget,
                     answered_count=completion.get("answered_count"),
                     evaluated_count=completion.get("evaluated_count"),
-                    early_terminated=bool(budget) and evaluated < budget,
+                    # A user-ended interview is early-terminated by definition, not
+                    # only because the counts happen to differ.
+                    early_terminated=bool(completion.get("early_terminated")) or
+                        (completion.get("completion_reason") == "USER_ENDED") or
+                        (bool(budget) and evaluated < budget),
                     semantics="CONTROLLER_TERMINATION_FACT_NOT_PERFORMANCE_EVIDENCE")
             review = None
             if snapshot.context_json.get("adaptive_policy"):
@@ -368,7 +373,8 @@ class InterviewReportService:
         return dict(session=dict(id=session.id, title=session.title, status=session.status,
             company_name=context["company_name"], job_title=context["job_title"], context_snapshot_id=snapshot.id,
             job_target_id=target.get("id"), job_target_version=target.get("version"),
-            job_id=context.get("job_id"), company_id=context.get("company_id")),
+            job_id=context.get("job_id"), company_id=context.get("company_id"),
+            completion=deepcopy(session.completion_json or {})),
             statistics=report["statistics"] if report else deterministic_statistics(questions, evaluations),
             current_report=current, report=report, history=history, evaluations=evaluations,
             design_trace=deepcopy(session.planner_trace_json or {}) if context.get("system_design") else None,

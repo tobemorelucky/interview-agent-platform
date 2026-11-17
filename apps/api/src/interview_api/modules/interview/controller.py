@@ -12,7 +12,7 @@ from interview_api.modules.interview.models import (
 from interview_api.modules.experience.models import ExperienceAgentStepRun, ExperienceAgentRun
 from interview_api.modules.interview.artifacts import DIMENSIONS
 from interview_api.modules.interview.context import build_context, question_policy, validate_question
-from interview_api.modules.interview.topics import coverage, classify, POLICY_VERSION, mentioned_topics, TOPICS
+from interview_api.modules.interview.topics import coverage, classify, POLICY_VERSION, mentioned_topics, TOPICS, introduction_opening_question
 from interview_api.modules.interview.skill_engine import style_recommendation
 
 
@@ -284,6 +284,86 @@ class SessionController:
         await self._message(session, "QUESTION", q.question, data)
         return data
 
+    async def start_introduction(self, session_id, user_id, expected_version):
+        """Zero-model scripted self-introduction as the first turn.
+
+        A real interview opens with "who are you", not with a JD line. This is
+        server-authored (nothing here is presented as model output), it is the
+        only question allowed to classify as BACKGROUND at index 0, and the
+        answer is explicitly not a scored technical answer: the question is
+        created with an INTRODUCTION exclusion so no aggregate can count it.
+        """
+        session = await self.owned(session_id, user_id, lock=True)
+        if session.state_version != expected_version or session.status != "READY":
+            raise conflict()
+        q = InterviewSessionQuestion(session_id=session.id, question_index=0,
+            question=introduction_opening_question(), question_kind="INTRODUCTION", source="INTRODUCTION",
+            dimension="自我介绍", difficulty="EASY",
+            candidate_refs_json=dict(topic_policy=dict(category="BACKGROUND", topic="introduction",
+                policy_version=POLICY_VERSION)),
+            parent_question_id=None, is_dynamic=False, status="PENDING")
+        self.db.add(q)
+        await self.db.flush()
+        q.status = "ASKED"
+        q.excluded_reason, q.excluded_at = "INTRODUCTION", datetime.now(timezone.utc)
+        session.status, session.started_at = "IN_PROGRESS", datetime.now(timezone.utc)
+        session.active_question_id, session.current_question_index = q.id, q.question_index
+        session.state_version += 1
+        data = question_data(q, session.question_count)
+        data["mode"] = "system"
+        await self._message(session, "QUESTION", q.question, data)
+        return data
+
+    async def commit_introduction(self, session_id, user_id, answer_id, expected_version, main, policy):
+        """Turn the self-introduction answer into the first technical question.
+
+        No evaluation is created: an introduction has no rubric to score and no
+        technical target to grade. The main agent still makes a fully validated
+        NEXT decision from the real answer, and the question it picks is created
+        through the same provenance checks as any other question.
+        """
+        session = await self.owned(session_id, user_id, lock=True)
+        answer = await self.db.get(InterviewAnswer, answer_id)
+        if session.state_version != expected_version or answer.status != "RUNNING" or \
+                session.active_question_id != answer.session_question_id:
+            raise conflict()
+        q = await self.db.get(InterviewSessionQuestion, answer.session_question_id)
+        if q.question_kind != "INTRODUCTION":
+            raise AppError("NOT_AN_INTRODUCTION", "该题不是自我介绍开场", 422)
+        _, context, questions, active, _ = await self.state(session_id, user_id)
+        message = await self.db.get(InterviewMessage, answer.message_id)
+        from interview_api.modules.interview.adaptive import planning_payload, validate_decision
+        payload = planning_payload(context, questions, active, session.interview_plan_json,
+            answer=message.content, answer_id=answer_id)
+        checked_policy = validate_decision(main.artifact, payload)
+        if checked_policy != policy:
+            raise conflict("开场后决策空间已变化，未覆盖原策略")
+        if main.artifact.strategy != "NEXT" or not main.artifact.question:
+            raise AppError("INVALID_MAIN_ARTIFACT", "自我介绍后只能切入一个技术目标", 422)
+        q.status = "COMPLETED"
+        q.answer_summary = message.content[:400]
+        next_q = await self._new_question(session, context, questions, main.artifact.question, checked_policy)
+        next_q.candidate_refs_json = {**next_q.candidate_refs_json, "adaptive_decision": main.artifact.model_dump(),
+            'main_agent_run_id': main.run_id}
+        next_q.candidate_refs_json["topic_policy"]["topic"] = main.artifact.target_knowledge_id.rsplit(":", 1)[-1]
+        trace = deepcopy(session.planner_trace_json or {})
+        trace.setdefault("adaptive_decisions", []).append(dict(
+            answer_id=answer_id, evaluation_id=None, agent_run_id=main.run_id,
+            decision=main.artifact.model_dump(), executed_action="NEXT", verdict="ACCEPTED",
+            kind="INTRODUCTION_OPENING", state_version=expected_version))
+        session.planner_trace_json = trace
+        data = question_data(next_q, session.question_count)
+        data["mode"] = "replay" if main.provider == "replay" else "live"
+        events = [["question", data]]
+        await self._message(session, "QUESTION", next_q.question, data)
+        session.state_version += 1
+        events.append(["done", dict(message_id=answer.message_id, turn_index=session.turn_count,
+                                    action="NEXT", state_version=session.state_version)])
+        answer.status, answer.result_events = "COMPLETED", events
+        session.interview_plan_json = {**(session.interview_plan_json or {}), "answer_processing": None}
+        await self.db.flush()
+        return events
+
     async def prepare_answer(self, session_id, user_id, question_id, key, content, *, allow_unknown_retry=False):
         session = await self.owned(session_id, user_id, lock=True)
         answer = await self.db.scalar(select(InterviewAnswer).where(InterviewAnswer.session_id == session_id, InterviewAnswer.idempotency_key == key))
@@ -494,12 +574,21 @@ class SessionController:
         await self.db.flush()
         return events
 
-    async def complete(self, session):
-        # Called only after deterministic budget exhaustion (or explicit user skip reaches it).
-        rows = list((await self.db.scalars(select(InterviewEvaluation).where(InterviewEvaluation.session_id == session.id))).all())
+    async def complete(self, session, *, reason=None, detail=None, ended_by=None):
+        """Close the session. Never invents an answer for a question nobody took.
+
+        ``reason`` is only supplied by a path that knows why it ended (the
+        Controller's own stop test already writes its own). Every aggregate here
+        reads persisted rows, so an excluded evaluation (an end request, a
+        self-introduction) can never leak into an average.
+        """
+        rows = list((await self.db.scalars(select(InterviewEvaluation).where(
+            InterviewEvaluation.session_id == session.id,
+            InterviewEvaluation.excluded_reason.is_(None)))).all())
         questions = list((await self.db.scalars(select(InterviewSessionQuestion).where(InterviewSessionQuestion.session_id == session.id))).all())
         for q in questions:
             if q.status in ("PENDING", "ASKED"):
+                # Skipped, not answered: a question nobody answered has no score.
                 q.status = "SKIPPED"
         averages = {key: round(sum(getattr(e, key) for e in rows) / len(rows), 4) if rows else None for key in DIMENSIONS}
         providers = set((await self.db.scalars(select(ExperienceAgentStepRun.provider_name).join(
@@ -507,14 +596,21 @@ class SessionController:
             .where(InterviewAgentCall.session_id == session.id))).all())
         summary = dict(answered_count=len({e.session_question_id for e in rows}), evaluated_count=len(rows),
             skipped_count=sum(q.status == "SKIPPED" for q in questions),
+            excluded_question_count=sum(bool(q.excluded_reason) for q in questions),
             follow_up_count=sum(q.question_kind == "FOLLOW_UP" for q in questions),
             dynamic_question_count=sum(q.is_dynamic for q in questions),
             dimension_averages=averages, overall_average=round(sum(sum(getattr(e, key) for key in DIMENSIONS) for e in rows) / (len(rows) * len(DIMENSIONS)), 4) if rows else None,
             total_questions=len(questions), question_budget=session.question_count,
             mode="replay" if providers == {"replay"} else "live" if providers and "replay" not in providers else "mixed" if providers else "not_run")
         summary["avg_score"] = summary["overall_average"]
+        if reason:
+            summary.update(completion_reason=reason, ended_by=ended_by,
+                early_terminated=summary["answered_count"] < session.question_count)
+            if detail:
+                summary["completion_detail"] = detail
         session.status, session.active_question_id = "COMPLETED", None
-        session.completed_at, session.completion_json = datetime.now(timezone.utc), summary
+        session.completed_at = datetime.now(timezone.utc)
+        session.completion_json = deepcopy(summary)
         await self.db.flush()
         snapshot = await self.db.get(InterviewContextSnapshot, session.context_snapshot_id) if session.context_snapshot_id else None
         if snapshot and snapshot.context_json.get("memory_guided_plan"):
@@ -526,6 +622,63 @@ class SessionController:
             summary = {**summary, 'training_feedback': feedback}
             session.completion_json = summary
         return summary
+
+    async def reconcile_end_requests(self, session):
+        """Exclude stored end requests from technical statistics, without erasing them.
+
+        Only rows that the narrow detector already recognises are touched, they
+        keep their scores and their model artifact, and the reason is recorded on
+        both the question and its evaluation. Repeating the call is a no-op.
+        """
+        from interview_api.modules.interview.end_intent import end_intent
+        rows = (await self.db.execute(select(InterviewAnswer, InterviewMessage, InterviewSessionQuestion,
+                InterviewEvaluation).join(InterviewMessage, InterviewMessage.id == InterviewAnswer.message_id)
+            .join(InterviewSessionQuestion, InterviewSessionQuestion.id == InterviewAnswer.session_question_id)
+            .outerjoin(InterviewEvaluation, InterviewEvaluation.answer_id == InterviewAnswer.id)
+            .where(InterviewAnswer.session_id == session.id).order_by(InterviewAnswer.id))).all()
+        excluded, now = [], datetime.now(timezone.utc)
+        for answer, message, question, evaluation in rows:
+            if question.excluded_reason or not end_intent(message.content):
+                continue
+            question.excluded_reason, question.excluded_at = "END_REQUEST", now
+            if evaluation is not None and not evaluation.excluded_reason:
+                evaluation.excluded_reason, evaluation.excluded_at = "END_REQUEST", now
+            excluded.append(dict(question_id=question.id, answer_id=answer.id, message_id=message.id,
+                                 evaluation_id=evaluation.id if evaluation is not None else None,
+                                 reason="END_REQUEST"))
+        return excluded
+
+    async def end_session(self, session_id, user_id, *, ended_by="USER"):
+        """Idempotent, permission-checked end of the interview by its owner.
+
+        Concurrency: the row is locked, an answer still being evaluated is a
+        conflict instead of a race, and a second call returns the committed
+        summary. Nothing here can score, charge or generate a question.
+        """
+        session = await self.owned(session_id, user_id, lock=True)
+        if session.status == "COMPLETED":
+            return dict(already_completed=True, completion=deepcopy(session.completion_json or {}),
+                        excluded=[], session_id=session.id)
+        if session.status not in ("IN_PROGRESS", "READY"):
+            raise AppError("INTERVIEW_NOT_STARTED", "该面试尚未开始，无需结束", 409)
+        processing = (session.interview_plan_json or {}).get("answer_processing") or {}
+        if processing:
+            from datetime import timedelta as _timedelta
+            expires = (datetime.fromisoformat(processing["expires_at"]) if processing.get("expires_at")
+                       else datetime.now(timezone.utc) + _timedelta(seconds=settings.interview_model_timeout_seconds))
+            if expires > datetime.now(timezone.utc):
+                # Never end while a paid answer is mid-flight: the result would be
+                # a half-written evaluation the report could not explain.
+                raise AppError("INTERVIEW_ANSWER_RUNNING",
+                    "当前回答正在评价或生成追问，请等待几秒后再结束；本次请求未改变任何状态", 409)
+        excluded = await self.reconcile_end_requests(session)
+        detail = "USER_ENDED_BEFORE_FIRST_QUESTION" if session.status == "READY" else "USER_ENDED_DURING_INTERVIEW"
+        summary = await self.complete(session, reason="USER_ENDED", detail=detail, ended_by=ended_by)
+        session.state_version += 1
+        await self._message(session, "INTERVIEW_COMPLETE", "面试已结束", {
+            **summary, "ended_by": ended_by, "excluded": excluded})
+        return dict(already_completed=False, completion=summary, excluded=excluded, session_id=session.id,
+                    state_version=session.state_version)
 
     async def skip(self, session_id, user_id, question_id, expected_version, main, policy):
         session = await self.owned(session_id, user_id, lock=True)

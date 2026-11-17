@@ -1,0 +1,38 @@
+{
+  "id": "recommendation_ml",
+  "version": "1.0.0",
+  "label": "推荐系统与机器学习",
+  "priority_topics": [
+ "recommendation",
+ "algorithm",
+ "python",
+ "mysql_consistency",
+ "system_design",
+ "llm"
+],
+  "domains": [
+ "召回与排序链路",
+ "特征与样本工程",
+ "离线评估与在线实验",
+ "工程一致性：训练-服务偏差"
+],
+  "key_capabilities": [
+ "解释召回多路融合与排序目标",
+ "说明特征泄漏与离线在线不一致",
+ "讲清实验设计与指标取舍",
+ "区分模型能力与工程实现"
+],
+  "project_strategy": [
+ "只追问简历证据或本轮回答建立的项目",
+ "沿样本、特征、模型、评估链路选一个实现细节",
+ "不把调包经历当作掌握原理的证明"
+],
+  "level_probes": {"introductory": "说明输入输出和基本流程", "intermediate": "解释一个实际机制及选择理由", "advanced": "讨论失败边界、替代方案及验证方法"},
+  "evaluation_anchors": {
+ "technical_correctness": "机制和术语是否准确，是否区分模型假设与工程实现",
+ "coverage": "是否覆盖当前问题要求的链路与关键步骤",
+ "depth": "是否说明设计理由、失败边界和验证依据",
+ "relevance": "是否针对实际问题和已建立的项目背景",
+ "communication": "是否清晰表达流程、因果和取舍"
+}
+}

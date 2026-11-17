@@ -97,7 +97,10 @@ def test_a_new_requirement_is_projected_as_user_added_and_changes_the_input_key(
         target_id = await parsed_target(factory, user_id)
         async with factory() as db:
             before = await JobTargetService(db).skill_recommendations(user_id, target_id)
-        assert before["status"] == "RECOMMENDED"
+        # R126 shipped a dedicated rag_retrieval Skill, so this multi-direction JD
+        # can now end in an honest AMBIGUOUS (manual choice) instead of one winner.
+        # What this test actually pins is the fingerprint/evidence behaviour below.
+        assert before["status"] in ("RECOMMENDED", "AMBIGUOUS")
 
         async with factory() as db, db.begin():
             await JobTargetService(db).update_requirements(user_id, target_id, [

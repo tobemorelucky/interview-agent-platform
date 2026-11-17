@@ -9,8 +9,8 @@ from interview_api.modules.experience.models import ExperienceAgentRun, Experien
 from interview_api.modules.public_career.research.audit import ResearchModelCalls, finish_research_run
 from interview_api.modules.job_matching.models import JobMatchAttempt
 from interview_api.modules.job_matching.prompts import MATCH_PROMPT, MatchPromptRegistry
-from interview_api.modules.job_matching.schemas import MatchArtifact
-from interview_api.modules.job_matching.resolver import resolve_artifact
+from interview_api.modules.job_matching.schemas import MatchArtifact, MatchArtifactV2
+from interview_api.modules.job_matching.resolver import resolve_artifact, resolve_artifact_v2
 from interview_api.modules.job_matching.context import model_context
 
 
@@ -31,13 +31,19 @@ class JobMatchingAgent:
         try:
             prompts = MatchPromptRegistry(payload['prompt_version'])
             prompt = prompts.get(MATCH_PROMPT.name)
+            # V1.1.0 changed the output contract (support refs instead of copied
+            # evidence/explanation text), so the schema and resolver follow the
+            # frozen prompt version; an old run keeps its own contract.
+            v2 = tuple(map(int, prompt.version.split("."))) >= (1, 1, 0)
+            schema = MatchArtifactV2 if v2 else MatchArtifact
+            resolve = resolve_artifact_v2 if v2 else resolve_artifact
             context = model_context(payload)
-            envelope = dict(input=context, schema=MatchArtifact.model_json_schema(), system=prompt.system)
+            envelope = dict(input=context, schema=schema.model_json_schema(), system=prompt.system)
             if len(json.dumps(envelope, ensure_ascii=False).encode()) > settings.job_matching_max_input_bytes:
                 raise AppError("MATCH_INPUT_BUDGET", "匹配材料超过输入预算，未静默删除证据", 422)
             artifact = await ResearchModelCalls(self.factory, self.router, run_id, prompts=prompts,
-                timeout_seconds=settings.job_matching_timeout_seconds).call(MATCH_PROMPT.name, JOB_MATCHING_ROUTE, context, MatchArtifact)
-            resolved = resolve_artifact(artifact, payload["candidates"], payload["profile"])
+                timeout_seconds=settings.job_matching_timeout_seconds).call(MATCH_PROMPT.name, JOB_MATCHING_ROUTE, context, schema)
+            resolved = resolve(artifact, payload["candidates"], payload["profile"])
             await finish_research_run(self.factory, run_id, status="SUCCEEDED", output={"schema": "MatchArtifact"})
             async with self.factory() as db:
                 step = await db.scalar(select(ExperienceAgentStepRun).where(ExperienceAgentStepRun.agent_run_id == run_id))

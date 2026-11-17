@@ -16,6 +16,7 @@ from interview_api.modules.interview.agents import InterviewMainAgent, AnswerEva
 from interview_api.modules.interview.controller import SessionController, question_data
 from interview_api.modules.interview.context import question_policy, model_context
 from interview_api.modules.interview.topics import coverage, requirement_opening_question
+from interview_api.modules.interview.end_intent import end_intent, end_intent_detail
 from interview_api.modules.interview.models import InterviewSession, InterviewMessage, InterviewSessionQuestion, InterviewAnswer, InterviewContextSnapshot, InterviewEvaluation
 
 logger = logging.getLogger(__name__)
@@ -283,6 +284,13 @@ class MockInterviewService:
             return question_data(active, session.question_count)
         if session.status != "READY":
             raise AppError("INTERVIEW_NOT_READY", "面试无法开始", 409)
+        if opening == "INTRODUCTION":
+            # The default real-interview opening: a scripted, zero-model
+            # self-introduction. Its answer is never scored as a technical one.
+            async with self.factory() as db:
+                data = await SessionController(db).start_introduction(session_id, user_id, session.state_version)
+                await db.commit()
+            return data
         if context.get("adaptive_policy"):
             from interview_api.modules.interview.adaptive import planning_payload, validate_decision
             payload = planning_payload(context, questions, None, session.interview_plan_json)
@@ -325,9 +333,32 @@ class MockInterviewService:
             await db.commit()
         return data
 
+    async def end(self, session_id, user_id, *, ended_by="USER"):
+        """User-initiated end. One transaction, no model, no question generation."""
+        from interview_api.modules.audit.models import AuditLog
+        async with self.factory() as db:
+            result = await SessionController(db).end_session(session_id, user_id, ended_by=ended_by)
+            db.add(AuditLog(actor_user_id=user_id, actor_role="USER", action="INTERVIEW_USER_ENDED",
+                            resource_type="interview_session", resource_id=str(session_id),
+                            metadata_json=dict(already_completed=result["already_completed"],
+                                               completion_reason=(result["completion"] or {}).get("completion_reason"),
+                                               early_terminated=(result["completion"] or {}).get("early_terminated"),
+                                               answered_count=(result["completion"] or {}).get("answered_count"),
+                                               excluded=result["excluded"]),
+                            status="SUCCEEDED"))
+            await db.commit()
+            return result
+
     async def answer(self, session_id, user_id, question_id, key, content, on_stage=None, design_plan=None,
                      allow_unknown_retry=False):
         _, initial_context, _, _, _ = await self.read_state(session_id, user_id)
+        if end_intent(content):
+            # Never becomes an answer: no message row, no evaluation, no charge.
+            # The UI turns this into a confirmation and calls /sessions/{id}/end.
+            error = AppError("INTERVIEW_END_INTENT",
+                "这看起来是想结束面试。确认后会保留已完成的回答并生成报告，不再出新的技术问题。", 409)
+            error.end_intent = end_intent_detail(content)
+            raise error
         if bool(initial_context.get("system_design")) != (design_plan is not None):
             raise AppError("DESIGN_PLAN_REQUIRED", "系统设计面试须同时提交结构化方案；普通面试不接收方案", 422)
         # Retrying the same key resumes one persisted Answer, not a new user message.
@@ -342,6 +373,8 @@ class MockInterviewService:
             return old_events
         try:
             session, context, questions, active, _ = await self.read_state(session_id, user_id)
+            if active is not None and active.question_kind == "INTRODUCTION":
+                return await self.introduction_answer(session_id, user_id, answer_id, expected, content, on_stage)
             if context.get("adaptive_policy"):
                 return await self.adaptive_answer(session_id, user_id, answer_id, expected, content, on_stage)
             tool_payload = {}
@@ -394,6 +427,34 @@ class MockInterviewService:
                 await SessionController(db).failed_answer(session_id, user_id, answer_id, expected, code)
                 await db.commit()
             raise
+
+    async def introduction_answer(self, sid, uid, aid, expected, content, on_stage):
+        """Self-introduction answer: no evaluation, straight to the first target.
+
+        Grading an introduction would either inflate failure statistics or fake
+        technical evidence for a question that has none. The main agent still
+        makes a fully validated NEXT decision, so provenance and topic legality
+        are unchanged; there is simply no answer_evaluation call for this turn.
+        """
+        from interview_api.modules.interview.adaptive import planning_payload, validate_decision
+        session, context, questions, active, _ = await self.read_state(sid, uid)
+        payload = planning_payload(context, questions, active, session.interview_plan_json,
+            answer=content, answer_id=aid)
+        if on_stage: on_stage("generating_next_question")
+        main = await self.call_agent(self.main.adaptive(payload), sid, uid, expected, payload, answer_id=aid)
+        if main is None:
+            raise AppError("INTERVIEW_BUDGET_EXHAUSTED", "开场后的第一题预算不足，回答已保存，未推进", 409)
+        policy = validate_decision(main.artifact, payload)
+        try:
+            async with self.factory() as db:
+                events = await SessionController(db).commit_introduction(sid, uid, aid, expected, main, policy)
+                await db.commit()
+        except AppError as exc:
+            if context.get('training') or context["adaptive_policy"].get("main_harness_version"):
+                from interview_api.modules.interview.training import controller_rejection
+                await controller_rejection(self.factory, main.run_id, exc.code)
+            raise
+        return events
 
     async def adaptive_answer(self, sid, uid, aid, expected, content, on_stage):
         from interview_api.modules.interview.adaptive import planning_payload, validate_decision, all_goals_demonstrated
@@ -472,8 +533,9 @@ class MockInterviewService:
                 exc.status_code == 404 or exc.code in TERMINAL_CODES)
             yield sse("error", {"code": getattr(exc, "code", "INTERVIEW_MODEL_FAILED"),
                 "message": exc.message if isinstance(exc, AppError) else "模型处理失败，未评分或推进面试；请使用同一回答重试",
-                "retryable": not terminal,
-                "requires_confirmation": getattr(exc, "code", "") == "INTERVIEW_OUTCOME_UNKNOWN",
+                "retryable": not terminal and getattr(exc, "code", "") != "INTERVIEW_END_INTENT",
+                "requires_confirmation": getattr(exc, "code", "") in ("INTERVIEW_OUTCOME_UNKNOWN", "INTERVIEW_END_INTENT"),
+                "end_intent": getattr(exc, "end_intent", None),
                 "idempotency_key": request.idempotency_key})
         finally:
             if not task.done():

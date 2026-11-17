@@ -23,6 +23,7 @@ import {
   getInterviewTargets,
   getInterviewerOptions,
   startInterview,
+  endInterview,
   type InterviewTarget,
 } from "../api/interview"
 import { uploadResume, getResume as apiGetResume } from "../api/resume"
@@ -389,6 +390,38 @@ async function recoverWithRequirement() {
   } finally { generationStage.value = "idle" }
 }
 
+const endConfirmVisible = ref(false)
+const ending = ref(false)
+const endResult = ref<{ answered: number; excluded: number } | null>(null)
+
+function requestEnd() {
+  // Always available during a live interview; the dialog is the confirmation.
+  if (activeSession()?.status !== 'IN_PROGRESS') return
+  endConfirmVisible.value = true
+}
+
+async function confirmEnd() {
+  if (!activeSessionId.value || ending.value) return
+  ending.value = true
+  try {
+    const result = await endInterview(activeSessionId.value)
+    endResult.value = {
+      answered: result.completion?.answered_count ?? 0,
+      excluded: result.excluded?.length ?? 0,
+    }
+    endConfirmVisible.value = false
+    await loadSessions()
+    await selectSession(activeSessionId.value, true)
+  } catch (e) {
+    endConfirmVisible.value = false
+    alert(e instanceof ApiError ? e.message : "结束面试失败，请稍后重试；本次请求未改变任何状态")
+  } finally { ending.value = false }
+}
+
+function goReport() {
+  if (activeSessionId.value) router.push(`/interview/reports?session=${activeSessionId.value}`)
+}
+
 async function handleDeleteSession(id: number) {
   if (!confirm("确定要删除这个面试会话吗？")) return
   try {
@@ -582,6 +615,19 @@ async function handleSend() {
     },
     // onError
     (code, message) => {
+      if (code === 'INTERVIEW_END_INTENT') {
+        // The text was never persisted or evaluated; turn it into the confirm.
+        pageError.value = ""
+        streamErrorCode.value = ""
+        inputText.value = ""
+        generationStage.value = "idle"
+        streamingContent.value = ""
+        streaming.value = false
+        sending.value = false
+        abortController = null
+        endConfirmVisible.value = true
+        return
+      }
       pageError.value = userError(code, message)
       generationStage.value = "idle"
       streamErrorCode.value = code
@@ -965,6 +1011,22 @@ getInterviewTargets().then(async data => {
         <p>选择一个面试会话或新建一个开始模拟面试</p>
       </div>
 
+      <!-- End-interview confirmation. Also opened by a natural-language end request. -->
+      <div v-if="endConfirmVisible" class="end-confirm-mask" role="dialog" aria-modal="true" aria-label="确认结束面试">
+        <div class="end-confirm">
+          <h3>现在结束并生成已完成部分的面试报告？</h3>
+          <p>结束后不再出新的技术问题；已回答的题目会正常评分，未回答的题目不计入任何能力统计。</p>
+          <div class="end-actions">
+            <button class="btn-ghost" :disabled="ending" @click="endConfirmVisible = false">继续面试</button>
+            <button class="btn-danger" :disabled="ending" @click="confirmEnd">{{ ending ? '正在结束…' : '确认结束' }}</button>
+          </div>
+        </div>
+      </div>
+      <div v-if="endResult" class="resume-bar end-result">
+        面试已结束（你主动提前结束）：已回答 {{ endResult.answered }} 题，{{ endResult.excluded > 0 ? `${endResult.excluded} 轮结束请求/自我介绍未计入统计；` : '' }}可以查看报告与成长记录。
+        <button class="btn-ghost" @click="goReport">查看面试报告</button>
+      </div>
+
       <!-- Session active -->
       <template v-else>
         <!-- Resume status bar -->
@@ -990,6 +1052,7 @@ getInterviewTargets().then(async data => {
             <details class="session-context-detail"><summary>本场资料详情</summary><p>画像第 {{ profileContext?.profile_version_number }} 版 / {{ jdVersionLabel }}（本场固定）</p><p v-if="profileContext?.coverage_insufficient">题库覆盖有限，本场会结合真实项目和岗位要求出题。</p></details>
             <span v-if="isReplay || completion?.mode === 'replay'">DEMO · Replay 回放模式（不是 Live 模型验收）</span>
             <button v-if="activeSession()?.status === 'READY'" :disabled="generationStage !== 'idle'" @click="handleStart">开始 / 重试首题</button>
+            <button v-if="activeSession()?.status === 'IN_PROGRESS'" class="btn-end" :disabled="ending || generationStage !== 'idle'" @click="requestEnd">结束面试</button>
           </template>
           <template v-else><span>历史会话只读，不猜测关联画像或岗位</span></template>
           <template v-if="false">
@@ -1083,7 +1146,7 @@ getInterviewTargets().then(async data => {
                 <div class="q-body">{{ item.content }}</div>
                 <p v-if="item.interviewer_guidance && interviewFinished" class="q-dimension">表达提示：{{ item.interviewer_guidance }}</p>
                 <div v-if="item.question_kind === 'DEEP_DIVE' && interviewFinished" class="q-dimension">技术深挖</div>
-                <details v-if="canReview(item) && item.evidence?.evidence?.length">
+                <details v-if="canReview(item) && interviewFinished && item.evidence?.evidence?.length">
                   <summary>查看候选人依据</summary>
                   <div v-for="e in item.evidence.evidence" :key="e.key">
                     {{ displayLabel(e.kind) }} · {{ displayLabel(e.section) }}
@@ -1613,8 +1676,7 @@ getInterviewTargets().then(async data => {
 }
 
 /* ── Evidence ── */
-.evidence-section {
-  margin-top: 8px;
+.evidence-section {  margin-top: 8px;
   font-size: 12px;
 }
 
@@ -1861,6 +1923,16 @@ getInterviewTargets().then(async data => {
 .btn-primary { background: #315be5; color: #fff; border: 0; border-radius: 8px; padding: 10px 18px; cursor: pointer; }
 .btn-primary:disabled { opacity: .5; cursor: default; }
 .btn-ghost { background: #fff; border: 1px solid #d0d5dd; border-radius: 8px; padding: 9px 16px; cursor: pointer; color: #344054; }
+.btn-end { background: #fff; border: 1px solid #f0a9a9; border-radius: 8px; padding: 8px 14px; cursor: pointer; color: #b42318; }
+.btn-end:disabled { opacity: .5; cursor: not-allowed; }
+.btn-danger { background: #b42318; border: none; border-radius: 8px; padding: 9px 18px; cursor: pointer; color: #fff; }
+.btn-danger:disabled { opacity: .6; cursor: not-allowed; }
+.end-confirm-mask { position: fixed; inset: 0; background: rgba(16,24,40,.45); display: flex; align-items: center; justify-content: center; z-index: 60; }
+.end-confirm { background: #fff; border-radius: 12px; padding: 24px 28px; max-width: 420px; box-shadow: 0 12px 40px rgba(16,24,40,.2); }
+.end-confirm h3 { margin: 0 0 10px; font-size: 16px; color: #101828; }
+.end-confirm p { margin: 0 0 18px; font-size: 13px; color: #475467; line-height: 1.6; }
+.end-actions { display: flex; gap: 10px; justify-content: flex-end; }
+.end-result { color: #067647; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 @media (max-width: 700px) {
   .interview-page { flex-direction: column; height: auto; }
   .session-sidebar { width: 100%; min-width: 0; max-height: 320px; flex-shrink: 0; }

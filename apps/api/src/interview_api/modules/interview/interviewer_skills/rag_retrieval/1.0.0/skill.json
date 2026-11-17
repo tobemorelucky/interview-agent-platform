@@ -1,0 +1,38 @@
+{
+  "id": "rag_retrieval",
+  "version": "1.0.0",
+  "label": "RAG 与检索工程",
+  "priority_topics": [
+ "rag_retrieval",
+ "agent",
+ "llm",
+ "python",
+ "system_design",
+ "data_security"
+],
+  "domains": [
+ "文档切分与索引设计",
+ "多路召回与融合排序",
+ "证据约束与答案可信度",
+ "检索质量评估与失败排查"
+],
+  "key_capabilities": [
+ "解释召回-融合-重排链路与 k 的作用",
+ "区分模型生成与检索证据",
+ "说明坏检索如何变成坏答案",
+ "给出检索质量的评估方式"
+],
+  "project_strategy": [
+ "只追问简历证据或本轮回答建立的项目",
+ "沿索引、召回、融合、验证链路选一个实现细节",
+ "不把框架名当作掌握原理的证明"
+],
+  "level_probes": {"introductory": "说明输入输出和基本流程", "intermediate": "解释一个实际机制及选择理由", "advanced": "讨论失败边界、替代方案及验证方法"},
+  "evaluation_anchors": {
+ "technical_correctness": "机制和术语是否准确，是否区分检索证据与模型生成",
+ "coverage": "是否覆盖当前问题要求的链路与关键步骤",
+ "depth": "是否说明设计理由、失败边界和验证依据",
+ "relevance": "是否针对实际问题和已建立的项目背景",
+ "communication": "是否清晰表达流程、因果和取舍"
+}
+}

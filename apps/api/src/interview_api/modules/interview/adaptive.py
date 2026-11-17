@@ -15,7 +15,9 @@ from interview_api.modules.interview.topics import (
 VERSION = "2.1.0"
 LABELS = dict(java="Java 与并发", mysql_consistency="数据库事务与一致性", redis="缓存工程",
     kafka_reliability="消息可靠性", system_design="系统设计与异常处理", rag_retrieval="检索与 RAG",
-    agent="Agent 工具与状态管理", llm="大模型应用", python="Python 工程", data_security="数据安全与权限")
+    agent="Agent 工具与状态管理", llm="大模型应用", python="Python 工程", data_security="数据安全与权限",
+    frontend="前端工程", testing="测试开发与质量保障", data_engineering="数据工程与数仓", recommendation="推荐与机器学习",
+    network_os="操作系统与网络协议", algorithm="算法与数据结构")
 STATES = Literal["INSUFFICIENT_EVIDENCE", "PARTIALLY_DEMONSTRATED", "DEMONSTRATED_IN_SESSION", "NEEDS_CLARIFICATION"]
 ShortText = Annotated[str, Field(min_length=1, max_length=400)]
 
@@ -348,6 +350,11 @@ def planning_payload(context, questions, active, plan, *, answer=None, answer_id
     active_id = ((active.candidate_refs_json or {}).get("adaptive_decision") or {}).get("target_knowledge_id") if active else None
     adaptive = dict(version=VERSION, active_knowledge_id=active_id, knowledge_state=state,
         topic_coverage=coverage(questions, context["budgets"]["question_count"]))
+    # The opening slot lasts until one scored technical question exists. A
+    # scripted self-introduction does not consume it: the first technical
+    # question may still open from the candidate's own project.
+    adaptive["opening_slot"] = not any(
+        (q.candidate_refs_json or {}).get("adaptive_decision") for q in questions)
     snapshot = model_context(context)
     sources = [s for t in context["adaptive_blueprint"]["targets"] for s in t["sources"]]
     refs = {s["ref"] for s in sources}
@@ -393,14 +400,15 @@ def planning_payload(context, questions, active, plan, *, answer=None, answer_id
 
 
 def is_project_opening(payload, source, artifact):
-    """A natural first question taken from the candidate's own real project.
+    """A natural technical question taken from the candidate's own real project.
 
-    This relaxes ONLY the "name the topic literally" wording check, and only for
-    the opening question whose source is a frozen project/work fact that already
-    binds the selected target. Provenance, target legality and evidence binding
-    are all still enforced by the caller and by ``validate_question``.
+    This relaxes ONLY the "name the topic literally" wording check, and only in
+    the session's opening slot — before any scored technical question exists,
+    i.e. a fresh session or one whose only prior question was the scripted
+    self-introduction. Provenance, target legality and evidence binding are all
+    still enforced by the caller and by ``validate_question``.
     """
-    if artifact.strategy != "NEXT" or payload.get("current_question"):
+    if artifact.strategy != "NEXT" or not payload["adaptive"].get("opening_slot"):
         return False
     if (source or {}).get("source_type") != "CANDIDATE_PROFILE":
         return False

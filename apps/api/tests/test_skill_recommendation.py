@@ -57,18 +57,18 @@ def test_sparse_and_ambiguous_are_manual_not_forced():
 
 
 def python_skill(root):
-    directory = root / "python_backend" / "1.0.0"
+    directory = root / "py_probe_skill" / "1.0.0"
     shutil.copytree(ROOT / "java_backend" / "1.0.0", directory)
     path = directory / "manifest.json"
     meta = json.loads(path.read_text(encoding="utf-8"))
-    meta.update(id="python_backend", label="Python 后端开发", professional_category="python_backend",
+    meta.update(id="py_probe_skill", label="Python 后端开发", professional_category="py_probe_skill",
         applicable_roles=["Python后端工程师"], capability_tags=["Python", "FastAPI"])
-    meta["matching"] = dict(categories=["python_backend"], title_aliases=["Python后端"],
-        responsibility_terms=["FastAPI", "Python服务端"], capability_groups=[["Python"], ["FastAPI", "Django"]], exclusions=[])
+    meta["matching"] = dict(categories=["py_probe_skill"], title_aliases=["特殊探针岗位"],
+        responsibility_terms=["特殊探针技术", "探针服务端"], capability_groups=[["特殊探针技术"], ["探针服务端"]], exclusions=[])
     path.write_text(json.dumps(meta), encoding="utf-8")
     path = directory / "skill.json"
     body = json.loads(path.read_text(encoding="utf-8"))
-    body.update(id="python_backend", label="Python 后端开发", priority_topics=["python"])
+    body.update(id="py_probe_skill", label="探针工程", priority_topics=["python"])
     path.write_text(json.dumps(body), encoding="utf-8")
     return directory
 
@@ -84,13 +84,13 @@ def test_new_skill_discovered_recommended_and_in_api_catalog_without_code_change
         reads.append(str(path))
         return original(path, *args, **kwargs)
     with patch.object(Path, "read_text", read):
-        result = recommend(job("Python后端工程师", ["FastAPI服务端开发"]), root=root)
+        result = recommend(job("特殊探针岗位工程师", ["特殊探针技术的服务端实现"]), root=root)
         options = SkillRegistry(root).options()
-    assert result["recommended_skill_id"] == "python_backend"
-    assert "python_backend" in [s["id"] for s in options["skills"]]
+    assert result["recommended_skill_id"] == "py_probe_skill"
+    assert "py_probe_skill" in [s["id"] for s in options["skills"]]
     assert not any(p.endswith(("SKILL.md", "skill.json")) for p in reads)
-    pinned = SkillRegistry(root).freeze("python_backend", "technical_screen", "standard")
-    assert pinned["skill"]["id"] == "python_backend"
+    pinned = SkillRegistry(root).freeze("py_probe_skill", "technical_screen", "standard")
+    assert pinned["skill"]["id"] == "py_probe_skill"
     # Actual catalog endpoint serves the discovered entry, no frontend ID list.
     import asyncio
     import httpx
@@ -98,7 +98,7 @@ def test_new_skill_discovered_recommended_and_in_api_catalog_without_code_change
     from interview_api.main import app
     from interview_api.api.deps import get_current_user
     from interview_api.modules.interview.schemas import CreateSessionRequest
-    assert CreateSessionRequest(company_id=1, job_id=1, interviewer_skill_id="python_backend").interviewer_skill_id == "python_backend"
+    assert CreateSessionRequest(company_id=1, job_id=1, interviewer_skill_id="py_probe_skill").interviewer_skill_id == "py_probe_skill"
     async def request():
         app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=1)
         try:
@@ -106,7 +106,7 @@ def test_new_skill_discovered_recommended_and_in_api_catalog_without_code_change
                 with patch("interview_api.modules.interview.skill_engine.SkillRegistry", return_value=SkillRegistry(root)):
                     response = await client.get("/api/v1/interview/interviewer-options")
                 assert response.status_code == 200
-                assert "python_backend" in [s["id"] for s in response.json()["data"]["skills"]]
+                assert "py_probe_skill" in [s["id"] for s in response.json()["data"]["skills"]]
         finally:
             app.dependency_overrides.clear()
     asyncio.run(request())
@@ -121,8 +121,9 @@ def test_invalid_manifest_and_unapproved_tool_are_quarantined(tmp_path):
     for change in (dict(id="java_backend"), dict(instructions_path="../../../../outside.md"), dict(required_tools=["shell"])):
         path.write_text(json.dumps({**data, **change}), encoding="utf-8")
         entries, errors = discover(root, refresh=True)
-        assert "python_backend" not in entries and errors
-        assert len(SkillRegistry(root).options()["skills"]) == 3
+        assert "py_probe_skill" not in entries and errors
+        # The quarantined probe is out; the shipped catalog (10 Skills) is intact.
+        assert len(SkillRegistry(root).options()["skills"]) == 10
         assert SkillRegistry(root).freeze("java_backend", "technical_screen", "standard")
 
 

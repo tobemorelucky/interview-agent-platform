@@ -102,6 +102,9 @@ export const errorLabels: Record<string, string> = {
   JOB_NOT_AVAILABLE: '该岗位当前不可用，请选择其他岗位。', JOB_UNAVAILABLE: '该岗位当前不可用，请选择其他岗位。',
   COVERAGE_INSUFFICIENT: '当前公开岗位数据不足，暂时无法生成可靠推荐。',
   MATCH_INPUT_BUDGET: '这轮岗位材料超过了单次解读的输入上限，所以没有调用模型；下面的基础排序是规则算出来的，完整可用，也没有产生模型费用。',
+  model_output_truncated: '模型这一轮的解读输出被截断（未达到有效格式），基础排序仍然完整可用；不会自动重试，也没有重复扣费。',
+  model_refusal: '模型拒绝了这次解读请求，基础排序仍然完整可用；可以稍后手动重试。',
+  model_timeout: '模型处理超时，已保存的数据不会丢失，请安全重试。',
   MATCH_COVERAGE_INSUFFICIENT: '当前岗位库里没有可以和画像对照的岗位，这一轮没有调用模型。',
   MATCH_RUNNING: '这次匹配正在生成，稍后刷新即可查看，重复点击不会重复扣费。',
   MATCH_NOT_FOUND: '这条匹配记录不存在或已不可用，请在历史推荐里选择其他记录。',
@@ -115,7 +118,6 @@ export const errorLabels: Record<string, string> = {
   RESUME_REFERENCED: '该简历已作为画像依据保留，不能删除。',
   SESSION_HAS_REPORT: '该面试已有报告，为保留复盘依据不能删除。',
   COACH_COMPUTED_NUMBER: '报告分析混入了应由程序计算的统计，请安全重试；本场评分与完成状态已保留。',
-  model_timeout: '模型处理超时，已保存的数据不会丢失，请安全重试。',
 }
 export function userError(code: string, raw = ''): string {
   if (errorLabels[code]) return errorLabels[code]

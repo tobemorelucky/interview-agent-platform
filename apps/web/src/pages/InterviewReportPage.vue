@@ -219,6 +219,14 @@ watch(() => route.fullPath, () => { notice.value = ""; load() }, { immediate: tr
           <article class="card"><h2>{{ publicName(detail.session.company_name) }} · {{ publicName(detail.session.job_title) }}</h2>
             <p v-if="privateTarget" class="provenance" role="note">本场岗位来自你自己提供的 JD（第 {{ privateTarget.version }} 版）：用户提供、未经企业核实。公司名与岗位名按你粘贴的原文记录，不代表真实雇主或已发布的岗位。</p>
             <p>{{ displayLabel(detail.session.status) }} · {{ detail.session.title ? publicName(detail.session.title) : '模拟面试' }}</p>
+            <p v-if="detail.session.completion?.completion_reason === 'USER_ENDED'" class="ended-note" role="note">
+              本场由你主动提前结束（未答满 {{ detail.session.completion?.question_budget ?? '计划' }} 题）：
+              已回答的 {{ detail.session.completion?.answered_count ?? '—' }} 题正常计分；
+              结束请求与未回答的题目均未计入任何能力统计。
+            </p>
+            <p v-if="detail.statistics?.excluded_count" class="ended-note" role="note">
+              {{ detail.statistics.excluded_count }} 轮被排除（{{ (detail.statistics.excluded_reasons || []).join('、') || '排除' }}），不计入平均分；原始记录仍保留。
+            </p>
             <p v-if="reportModeLabel(selectedReport, detail.statistics)" class="mode">{{ reportModeLabel(selectedReport, detail.statistics) }}</p>
             <p v-if="reportId && selectedReport?.id !== detail.current_report?.id">历史版本 只读；生成新报告会保留历史与审计。</p>
             <div class="actions" v-if="detail.session.status === 'COMPLETED'">

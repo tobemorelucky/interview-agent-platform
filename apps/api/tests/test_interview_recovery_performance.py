@@ -135,7 +135,9 @@ def test_matching_projection_preserves_all_evidence_and_exact_reuse_identity():
     value = dict(request={'request_key': 'one', 'filters': {}}, profile={'facts': [{'id': 1}],
         'evidence': [{'key': 'real', 'kind': 'RESUME', 'excerpt': 'actual', 'start_offset': 10}]},
         approved_preferences={'items': [{'id': 1, 'content': 'confirmed'}]},
-        candidates=[{'jd_id': 2, 'status': 'ACTIVE', 'evidence_matrix': [{'supports': [{'evidence_ids': ['real']}]}]}])
+        candidates=[{'jd_id': 2, 'status': 'ACTIVE',
+                     'evidence_matrix': [{'id': 'alignment:3',
+                                          'supports': [{'fact_ref': 'fact:1', 'evidence_ids': ['real']}]}]}])
     pinned = deepcopy(value); projected = model_context(value)
     assert value == pinned and projected['profile']['facts'] == value['profile']['facts']
     assert projected['profile']['evidence'][0]['excerpt'] == 'actual'
