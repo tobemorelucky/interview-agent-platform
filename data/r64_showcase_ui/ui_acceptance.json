@@ -1,0 +1,153 @@
+{
+ "round": "R121-2",
+ "browser": "Chrome headless via CDP",
+ "mode": "UI REPLAY / 0 model HTTP",
+ "started_at": "2026-11-16T13:42:26.582817+00:00",
+ "steps": [
+  {
+   "step": "登录测试用户",
+   "at": "2026-11-16T13:42:26.582831+00:00",
+   "ok": true,
+   "detail": {
+    "path": "/dashboard",
+    "shot": "data\\r64_showcase_ui\\01_login.png",
+    "token": true
+   }
+  },
+  {
+   "step": "Dashboard 正常显示",
+   "at": "2026-11-16T13:42:29.349610+00:00",
+   "ok": true,
+   "detail": {
+    "has_workflow": true,
+    "shot": "data\\r64_showcase_ui\\02_dashboard.png",
+    "chars": 658
+   }
+  },
+  {
+   "step": "公共职业页显示已发布 JD 与来源",
+   "at": "2026-11-16T13:42:29.398704+00:00",
+   "ok": true,
+   "detail": {
+    "job_cards": 9,
+    "detail_clicked": true,
+    "has_requirements": true,
+    "source_note": true,
+    "shot": "data\\r64_showcase_ui\\03_public_career_detail.png"
+   }
+  },
+  {
+   "step": "简历与候选人画像页显示",
+   "at": "2026-11-16T13:42:32.084358+00:00",
+   "ok": true,
+   "detail": {
+    "synthetic_resume_visible": true,
+    "profile_visible": true,
+    "shots": [
+     "data\\r64_showcase_ui\\04_resumes.png",
+     "data\\r64_showcase_ui\\05_profile.png"
+    ]
+   }
+  },
+  {
+   "step": "选择 AI Agent 岗位与匹配 Skill",
+   "at": "2026-11-16T13:42:35.202474+00:00",
+   "ok": true,
+   "detail": {
+    "job": "沐瞳科技 · Agent开发工程师（平台）",
+    "recommendation_visible": true,
+    "skill_visible": true,
+    "shot": "data\\r64_showcase_ui\\06_interview_setup.png"
+   }
+  },
+  {
+   "step": "FULL 自适应面试三题逐题作答与评价",
+   "at": "2026-11-16T13:42:37.873754+00:00",
+   "ok": true,
+   "detail": {
+    "new_clicked": true,
+    "start_clicked": false,
+    "sessions": [
+     "沐瞳科技 · Agent开发工程师（平台）\n进行中0 轮\n×",
+     "Unity中国 · AI Agent 算法研发工程师\n进行中0 轮\n×",
+     "沐瞳科技 · Agent开发工程师（平台）\n已完成3 轮\n×"
+    ],
+    "questions": [
+     "面试官\n 第 1 / 3 轮 \n检索与 RAG\n适中\nDEMO 第1轮：接下来聊 检索与 RAG，你会怎样解释其中的关键机制和一个异常边界？",
+     "面试官\n 第 2 / 3 轮 \n大模型应用\n适中\nDEMO 第2轮：接下来聊 大模型应用，你会怎样解释其中的关键机制和一个异常边界？",
+     "面试官\n 第 3 / 3 轮 \nPython 工程\n适中\nDEMO 第3轮：接下来聊 Python 工程，你会怎样解释其中的关键机制和一个异常边界？"
+    ],
+    "completed_visible": true,
+    "evaluation_visible": true,
+    "followup_visible": true,
+    "replay_badge": true,
+    "session_info": "沐瞳科技 · Agent开发工程师（平台）\n已完成3 轮\n×",
+    "session_id_in_url": 11,
+    "shot": "data\\r64_showcase_ui\\08_interview_completed.png"
+   }
+  },
+  {
+   "step": "报告页生成并展示 Coach 分析",
+   "at": "2026-11-16T13:42:48.435659+00:00",
+   "ok": true,
+   "detail": {
+    "session_id": 11,
+    "generate_clicked": true,
+    "statistics_visible": true,
+    "coach_visible": true,
+    "proposal_visible": true,
+    "shot": "data\\r64_showcase_ui\\09_report_coach.png"
+   }
+  },
+  {
+   "step": "记忆提案批准与成长记录",
+   "at": "2026-11-16T13:42:53.509361+00:00",
+   "ok": true,
+   "detail": {
+    "proposal_found": true,
+    "approve_clicked": true,
+    "confirm_clicked": true,
+    "saved_visible": true,
+    "shot": "data\\r64_showcase_ui\\10_memory_approved.png"
+   }
+  },
+  {
+   "step": "WEAKNESS 训练引用上一场记录",
+   "at": "2026-11-16T13:42:57.362754+00:00",
+   "ok": true,
+   "detail": {
+    "weakness_button_visible": false,
+    "picked": false,
+    "started": true,
+    "history_referenced": true,
+    "shot": "data\\r64_showcase_ui\\11_weakness_training.png"
+   }
+  },
+  {
+   "step": "报告跳转、刷新恢复与历史记录",
+   "at": "2026-11-16T13:43:02.639993+00:00",
+   "ok": true,
+   "detail": {
+    "list_visible": true,
+    "refresh_recovered": true,
+    "error_banner_visible": false,
+    "shot": "data\\r64_showcase_ui\\12_refresh_history.png"
+   }
+  },
+  {
+   "step": "Replay / 私人 JD / 合成简历标识",
+   "at": "2026-11-16T13:43:06.449282+00:00",
+   "ok": true,
+   "detail": {
+    "session_selected": true,
+    "replay_labelled": true,
+    "private_jd_separated": true,
+    "no_fake_live_claim": true,
+    "shot": "data\\r64_showcase_ui\\13_label_audit.png"
+   }
+  }
+ ],
+ "finished_at": "2026-11-16T13:43:09.535090+00:00",
+ "passed": true,
+ "session_id_created": 11
+}

@@ -1,0 +1,29 @@
+{
+ "created_new_database": false,
+ "target_database": "interview_agent_showcase_r1_20261116",
+ "source_database": "interview_agent_wb_jd_r31_20261116",
+ "alembic_version": "0029",
+ "copied_rows": {
+  "sources": 14,
+  "source_snapshots": 14,
+  "companies": 5,
+  "company_aliases": 0,
+  "jobs": 12,
+  "job_tags": 0,
+  "claims": 210,
+  "claim_evidence": 215,
+  "job_description_versions": 12,
+  "job_requirements": 140
+ },
+ "checks": {
+  "published_versions": 9,
+  "waiting_versions": 3,
+  "selectable_jobs": 9,
+  "requirements": 140,
+  "claim_evidence": 215,
+  "evidence_offset_ok": 215
+ },
+ "generated_at": "2026-11-16T13:18:26.968571+00:00",
+ "model_http_calls": 0,
+ "alembic_stdout_tail": ""
+}

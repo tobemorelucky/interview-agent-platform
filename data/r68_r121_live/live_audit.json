@@ -1,0 +1,221 @@
+{
+ "session_id": 14,
+ "http_calls_to_model": 0,
+ "evaluations": [
+  {
+   "question_id": 29,
+   "question": "先从 Agent 的工具调用说起：模型返回一个工具调用请求后，你的程序是怎么判断该不该执行、执行完结果又怎么回填给模型的？中间如果工具报错或超时，你会怎么处理？",
+   "answer_id": 27,
+   "answer_chars": 98,
+   "evaluation_id": 27,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 2,
+    "depth": 3,
+    "relevance": 3,
+    "communication": 4
+   },
+   "covered_points": [
+    "设置最大步数与超时，避免无限循环",
+    "失败时记录节点级检查点，重试只读幂等工具",
+    "写操作用业务唯一键去重，防止重复副作用"
+   ],
+   "covered_point_tokens": [
+    {
+     "point": "设置最大步数与超时，避免无限循环",
+     "literal_overlap": false
+    },
+    {
+     "point": "失败时记录节点级检查点，重试只读幂等工具",
+     "literal_overlap": true
+    },
+    {
+     "point": "写操作用业务唯一键去重，防止重复副作用",
+     "literal_overlap": true
+    }
+   ],
+   "quotes": [
+    {
+     "quote": "失败时记录节点级检查点，重试只读幂等工具，写操作用业务唯一键去重",
+     "in_answer": true
+    },
+    {
+     "quote": "再为每轮调用固定最大步数和超时",
+     "in_answer": true
+    }
+   ],
+   "observation_states": [
+    "PARTIALLY_DEMONSTRATED"
+   ],
+   "next_action": "FOLLOW_UP"
+  },
+  {
+   "question_id": 30,
+   "question": "你提到每轮固定最大步数和超时，那模型返回一个工具调用请求后，程序侧具体做哪些校验才决定真正执行？执行完的结果又以什么结构回填、怎么触发下一轮模型调用？",
+   "answer_id": 28,
+   "answer_chars": 88,
+   "evaluation_id": 28,
+   "scores": {
+    "technical_correctness": 3,
+    "coverage": 1,
+    "depth": 2,
+    "relevance": 1,
+    "communication": 3
+   },
+   "covered_points": [],
+   "covered_point_tokens": [],
+   "quotes": [
+    {
+     "quote": "我用 RAG 时会先按文档结构切片并保留来源 ID",
+     "in_answer": true
+    }
+   ],
+   "observation_states": [
+    "INSUFFICIENT_EVIDENCE"
+   ],
+   "next_action": "FOLLOW_UP"
+  },
+  {
+   "question_id": 31,
+   "question": "刚才你讲的是检索链路，我们回到工具调用这块：模型返回一个工具调用请求后，你的程序在真正执行前会做哪些校验和权限判断？执行完的结果又以什么结构回填、怎么触发下一轮模型调用？",
+   "answer_id": 29,
+   "answer_chars": 111,
+   "evaluation_id": 29,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 2,
+    "depth": 2,
+    "relevance": 3,
+    "communication": 3
+   },
+   "covered_points": [
+    "工具 schema 写窄、参数校验放在服务端，体现程序侧而非模型侧做校验",
+    "出错时返回可恢复的结构化错误，让模型改正或换工具"
+   ],
+   "covered_point_tokens": [
+    {
+     "point": "工具 schema 写窄、参数校验放在服务端，体现程序侧而非模型侧做校验",
+     "literal_overlap": true
+    },
+    {
+     "point": "出错时返回可恢复的结构化错误，让模型改正或换工具",
+     "literal_overlap": true
+    }
+   ],
+   "quotes": [
+    {
+     "quote": "参数校验放在服务端",
+     "in_answer": true
+    },
+    {
+     "quote": "出错时返回可恢复的结构化错误，让模型能改正或换工具",
+     "in_answer": true
+    }
+   ],
+   "observation_states": [
+    "PARTIALLY_DEMONSTRATED"
+   ],
+   "next_action": "FOLLOW_UP"
+  }
+ ],
+ "all_quotes_from_answer": true,
+ "report": [
+  {
+   "id": 9,
+   "generation_status": "COMPLETED",
+   "producer": "SUMMARY_COACH_AGENT",
+   "prompt_version": "1.0.3",
+   "statistics_json": {
+    "answered_count": 3,
+    "evaluated_count": 3,
+    "skipped_count": 0,
+    "follow_up_count": 2,
+    "deep_dive_count": 0,
+    "dynamic_question_count": 1,
+    "dimension_averages": {
+     "technical_correctness": 3.6667,
+     "coverage": 1.6667,
+     "depth": 2.3333,
+     "relevance": 2.3333,
+     "communication": 3.3333
+    },
+    "technical_correctness_average": 3.6667,
+    "coverage_average": 1.6667,
+    "depth_average": 2.3333,
+    "relevance_average": 2.3333,
+    "communication_average": 3.3333,
+    "overall_average": 2.6667,
+    "total_questions": 3,
+    "provenance": "PERSISTED_VALID_INTERVIEW_EVALUATIONS"
+   },
+   "evaluation_fingerprint": "faa50bbc3d968b81c63ff4b8b9bbf5c6145d7e86be95fb396413daed7dab1e0f"
+  }
+ ],
+ "steps": [
+  {
+   "id": 70,
+   "step_name": "interview_main",
+   "status": "SUCCEEDED",
+   "prompt_name": "interview_main",
+   "prompt_version": "2.3.3",
+   "model_name": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "token_usage_json": "{\"input_tokens\": 4329, \"output_tokens\": 229, \"total_tokens\": 4558}"
+  },
+  {
+   "id": 71,
+   "step_name": "answer_evaluation",
+   "status": "SUCCEEDED",
+   "prompt_name": "answer_evaluation",
+   "prompt_version": "2.3.4",
+   "model_name": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "token_usage_json": "{\"input_tokens\": 3867, \"output_tokens\": 1083, \"total_tokens\": 4950}"
+  },
+  {
+   "id": 72,
+   "step_name": "interview_main",
+   "status": "SUCCEEDED",
+   "prompt_name": "interview_main",
+   "prompt_version": "2.3.3",
+   "model_name": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "token_usage_json": "{\"input_tokens\": 6335, \"output_tokens\": 254, \"total_tokens\": 6589}"
+  },
+  {
+   "id": 73,
+   "step_name": "answer_evaluation",
+   "status": "SUCCEEDED",
+   "prompt_name": "answer_evaluation",
+   "prompt_version": "2.3.4",
+   "model_name": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "token_usage_json": "{\"input_tokens\": 4412, \"output_tokens\": 986, \"total_tokens\": 5398}"
+  },
+  {
+   "id": 74,
+   "step_name": "interview_main",
+   "status": "SUCCEEDED",
+   "prompt_name": "interview_main",
+   "prompt_version": "2.3.3",
+   "model_name": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "token_usage_json": "{\"input_tokens\": 6773, \"output_tokens\": 287, \"total_tokens\": 7060}"
+  },
+  {
+   "id": 75,
+   "step_name": "answer_evaluation",
+   "status": "SUCCEEDED",
+   "prompt_name": "answer_evaluation",
+   "prompt_version": "2.3.4",
+   "model_name": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "token_usage_json": "{\"input_tokens\": 4735, \"output_tokens\": 989, \"total_tokens\": 5724}"
+  }
+ ],
+ "admission_total": 8,
+ "admission_tokens": 42614,
+ "routes": [
+  "answer_evaluation",
+  "interview_coach",
+  "interview_main",
+  "resume_profile"
+ ],
+ "models": [
+  "deepseek-ai/DeepSeek-V4.1-Flash-1017"
+ ]
+}

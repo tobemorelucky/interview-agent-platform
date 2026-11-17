@@ -1,25 +1,25 @@
 {
- "generated_at": "2026-11-16T12:05:49.800881+00:00",
+ "generated_at": "2026-11-16T13:11:24.193083+00:00",
  "database": "interview_agent_wb_jd_r31_20261116",
  "counts": {
   "companies": 5,
-  "jobs": 7,
-  "job_description_versions": 7,
-  "job_requirements": 77,
-  "claims": 125,
-  "claim_evidence": 130,
-  "sources": 8,
-  "source_snapshots": 8,
-  "public_data_refresh_tasks": 9,
-  "experience_agent_runs": 10,
-  "experience_agent_step_runs": 20,
-  "model_admissions": 20,
-  "audit_logs": 6,
+  "jobs": 12,
+  "job_description_versions": 12,
+  "job_requirements": 140,
+  "claims": 210,
+  "claim_evidence": 215,
+  "sources": 14,
+  "source_snapshots": 14,
+  "public_data_refresh_tasks": 15,
+  "experience_agent_runs": 16,
+  "experience_agent_step_runs": 32,
+  "model_admissions": 32,
+  "audit_logs": 10,
   "users": 2
  },
  "publication_status": {
-  "PUBLISHED": 5,
-  "WAITING_REVIEW": 2
+  "PUBLISHED": 9,
+  "WAITING_REVIEW": 3
  },
  "jobs": [
   {
@@ -84,6 +84,51 @@
    "publication_status": "PUBLISHED",
    "content_fingerprint": "886d1955d5fdc8fe7e31be9e1ec7ca45a315b1ca9b6ffe373fec8c1489441c62",
    "reqs": 9
+  },
+  {
+   "id": 16,
+   "canonical_name": "麒麟软件",
+   "canonical_title": "「2027校招」安全研发工程师",
+   "version_number": 1,
+   "publication_status": "PUBLISHED",
+   "content_fingerprint": "54758c98135f42948a23c1dbffee847cb7f045011f7282b2c5f81b62537ce69e",
+   "reqs": 9
+  },
+  {
+   "id": 17,
+   "canonical_name": "麒麟软件",
+   "canonical_title": "「2027校招」嵌入式研发工程师",
+   "version_number": 1,
+   "publication_status": "PUBLISHED",
+   "content_fingerprint": "4466c45a5ac271a6de6fd89bed951192c91391caafdc5da95c43be4c10ffb00e",
+   "reqs": 12
+  },
+  {
+   "id": 18,
+   "canonical_name": "沐瞳科技",
+   "canonical_title": "【2027届秋招】AI测试工程师（web平台）",
+   "version_number": 1,
+   "publication_status": "PUBLISHED",
+   "content_fingerprint": "948e7c89ea3ea75b4c3551cf95e4bbd521a052c8cd845f9ad14326808f241ab0",
+   "reqs": 13
+  },
+  {
+   "id": 19,
+   "canonical_name": "蔚来",
+   "canonical_title": "校招-座舱大模型后训练/Agentic 算法工程师",
+   "version_number": 1,
+   "publication_status": "PUBLISHED",
+   "content_fingerprint": "39af92e68566e1ca977837c00f849f06d2bbe9e816977e25266a17c06114072c",
+   "reqs": 8
+  },
+  {
+   "id": 20,
+   "canonical_name": "沐瞳科技",
+   "canonical_title": "【2027届秋招】Unity客户端开发工程师（活动）-MOBA",
+   "version_number": 1,
+   "publication_status": "WAITING_REVIEW",
+   "content_fingerprint": "e8ccae934359fab7814322f6f83b07459fc3c5d4a5afec111af993643fc61bea",
+   "reqs": 21
   }
  ],
  "audit_logs": [
@@ -140,11 +185,47 @@
    "resource_id": "7",
    "status": "SUCCESS",
    "created_at": "2026-11-16 11:04:48.587828+00:00"
+  },
+  {
+   "id": 7,
+   "action": "public_career.jd.publish",
+   "actor_role": "ADMIN",
+   "resource_type": "JobDescriptionVersion",
+   "resource_id": "16",
+   "status": "SUCCESS",
+   "created_at": "2026-11-16 13:10:33.996400+00:00"
+  },
+  {
+   "id": 8,
+   "action": "public_career.jd.publish",
+   "actor_role": "ADMIN",
+   "resource_type": "JobDescriptionVersion",
+   "resource_id": "17",
+   "status": "SUCCESS",
+   "created_at": "2026-11-16 13:10:34.163572+00:00"
+  },
+  {
+   "id": 9,
+   "action": "public_career.jd.publish",
+   "actor_role": "ADMIN",
+   "resource_type": "JobDescriptionVersion",
+   "resource_id": "18",
+   "status": "SUCCESS",
+   "created_at": "2026-11-16 13:10:34.326974+00:00"
+  },
+  {
+   "id": 10,
+   "action": "public_career.jd.publish",
+   "actor_role": "ADMIN",
+   "resource_type": "JobDescriptionVersion",
+   "resource_id": "19",
+   "status": "SUCCESS",
+   "created_at": "2026-11-16 13:10:34.490497+00:00"
   }
  ],
  "ledger": {
-  "n": 20,
-  "tokens": 52228,
+  "n": 32,
+  "tokens": 81458,
   "models": [
    "deepseek-ai/DeepSeek-V4.1-Flash-1017"
   ],
@@ -206,6 +287,42 @@
    "target_type": "JOB_JD",
    "status": "COMPLETED",
    "err": null
+  },
+  {
+   "id": 10,
+   "target_type": "JOB_JD",
+   "status": "COMPLETED",
+   "err": null
+  },
+  {
+   "id": 11,
+   "target_type": "JOB_JD",
+   "status": "COMPLETED",
+   "err": null
+  },
+  {
+   "id": 12,
+   "target_type": "JOB_JD",
+   "status": "COMPLETED",
+   "err": null
+  },
+  {
+   "id": 13,
+   "target_type": "JOB_JD",
+   "status": "FAILED",
+   "err": "EvidenceValidationError: Job metadata must be literal and cite exact evidence"
+  },
+  {
+   "id": 14,
+   "target_type": "JOB_JD",
+   "status": "COMPLETED",
+   "err": null
+  },
+  {
+   "id": 15,
+   "target_type": "JOB_JD",
+   "status": "COMPLETED",
+   "err": null
   }
  ],
  "users": [
@@ -262,6 +379,36 @@
    "id": 10,
    "content_hash": "a9da15b907ba57de6535f064e976d75dc0b5fca7329dbddf170bb9948f5e39b5",
    "chars": 548
+  },
+  {
+   "id": 11,
+   "content_hash": "d76e5623acefc79af5d89251efedb6f10c95a5338adc979ce43d806ee8ec11a8",
+   "chars": 920
+  },
+  {
+   "id": 12,
+   "content_hash": "a7b6415f8f939adf2ef0d0d57ea3bc7fc92ac3e40103dcaf00ebc3a5fca82f07",
+   "chars": 845
+  },
+  {
+   "id": 13,
+   "content_hash": "b8cde0b56f112a31a3cfcbcac80eebb67a1aed20481c017dac6e6f7bc564ad6d",
+   "chars": 1871
+  },
+  {
+   "id": 14,
+   "content_hash": "445739b255b3647c09ec870342a88c1b658262bce8eaee357f500640ec3f7031",
+   "chars": 823
+  },
+  {
+   "id": 15,
+   "content_hash": "3bb68550b706a32740116be70373ed338aed82ca32a7334836556827a894ae38",
+   "chars": 1025
+  },
+  {
+   "id": 16,
+   "content_hash": "381c0f8c6519112fbf6e70f08ef92d631adbdd0b1b7581c53972b024d2cf24b7",
+   "chars": 1315
   }
  ]
 }

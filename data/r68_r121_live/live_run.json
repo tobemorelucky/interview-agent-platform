@@ -1,0 +1,725 @@
+{
+ "round": "R121-3",
+ "mode": "FIRST LIVE / real governed model",
+ "environment": {
+  "database": "interview_agent_showcase_r1_20261116",
+  "routes": {
+   "interview_main": {
+    "provider": "modelscope",
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "governed": true
+   },
+   "answer_evaluation": {
+    "provider": "modelscope",
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "governed": true
+   }
+  },
+  "coach_harness": false,
+  "main_harness": false,
+  "evaluation_frozen": "2.3.4"
+ },
+ "started_at": "2026-11-16T13:46:09.026771+00:00",
+ "budget": {
+  "max_http": 13,
+  "max_tokens": 90000
+ },
+ "jd_version": 2,
+ "steps": [
+  {
+   "step": "复用已结算的合成用户与简历",
+   "ok": true,
+   "detail": {
+    "user_id": 9,
+    "resume_id": 7,
+    "model_http": 0,
+    "note": "the first profile extraction was already settled in this same Live run"
+   }
+  },
+  {
+   "step": "真实 Controller 创建 FULL 自适应会话",
+   "ok": true,
+   "detail": {
+    "session_id": 14,
+    "jd_version": 2,
+    "fingerprint": "8ff9d2acae50dc52c9c0b8ed0e0e57507acc970caa9b0faa3b8dcb2a6e18e8c7"
+   }
+  },
+  {
+   "step": "真实模型首题",
+   "ok": true,
+   "detail": {
+    "question_id": 29,
+    "question": "先从 Agent 的工具调用说起：模型返回一个工具调用请求后，你的程序是怎么判断该不该执行、执行完结果又怎么回填给模型的？中间如果工具报错或超时，你会怎么处理？"
+   }
+  },
+  {
+   "step": "第1题作答与评价落库",
+   "ok": true,
+   "detail": {
+    "events": [
+     "evaluation",
+     "follow_up",
+     "done"
+    ],
+    "answer_id": 27
+   }
+  },
+  {
+   "step": "第2题作答与评价落库",
+   "ok": true,
+   "detail": {
+    "events": [
+     "evaluation",
+     "follow_up",
+     "done"
+    ],
+    "answer_id": 28
+   }
+  },
+  {
+   "step": "第3题作答与评价落库",
+   "ok": true,
+   "detail": {
+    "events": [
+     "evaluation",
+     "complete",
+     "done"
+    ],
+    "answer_id": 29
+   }
+  },
+  {
+   "step": "会话真实 COMPLETED 且三题均评价",
+   "ok": true,
+   "detail": {
+    "status": "COMPLETED",
+    "evaluated": 3,
+    "questions": 3
+   }
+  },
+  {
+   "step": "评价引用来自本题回答",
+   "ok": false,
+   "detail": [
+    {
+     "evaluation_id": 27,
+     "answer_id": 27,
+     "covered_points": [
+      "设置最大步数与超时，避免无限循环",
+      "失败时记录节点级检查点，重试只读幂等工具",
+      "写操作用业务唯一键去重，防止重复副作用"
+     ],
+     "quotes": [
+      "失败时记录节点级检查点，重试只读幂等工具，写操作用业务唯一键去重",
+      "再为每轮调用固定最大步数和超时"
+     ],
+     "quote_from_answer": null,
+     "observation_states": [
+      "PARTIALLY_DEMONSTRATED"
+     ]
+    },
+    {
+     "evaluation_id": 28,
+     "answer_id": 28,
+     "covered_points": [],
+     "quotes": [
+      "我用 RAG 时会先按文档结构切片并保留来源 ID"
+     ],
+     "quote_from_answer": null,
+     "observation_states": [
+      "INSUFFICIENT_EVIDENCE"
+     ]
+    }
+   ]
+  },
+  {
+   "step": "真实模型 Coach 报告",
+   "ok": true,
+   "detail": {
+    "id": 9,
+    "generation_status": "COMPLETED",
+    "producer": "SUMMARY_COACH_AGENT",
+    "prompt_version": "1.0.3",
+    "statistics": null
+   }
+  },
+  {
+   "step": "能力观察产生",
+   "ok": true,
+   "detail": [
+    {
+     "topic": "agent",
+     "state": "PRACTICING"
+    }
+   ]
+  },
+  {
+   "step": "下一场 MemoryGuidedPlan 引用本场真实评价",
+   "ok": true,
+   "detail": {
+    "linked": 1,
+    "recommendations": [
+     {
+      "knowledge_id": "ai_agent_application:agent",
+      "label": "Agent 工具与状态管理",
+      "state": "PRACTICING",
+      "intent": "INDEPENDENT_VERIFICATION",
+      "priority": 5,
+      "needs_recheck": false,
+      "reason_tags": [
+       "RECENT_MISSING_EVIDENCE"
+      ],
+      "memory_revision": 1,
+      "observation_refs": [
+       "evaluation:27",
+       "evaluation:28",
+       "evaluation:29"
+      ],
+      "history_summary": "历史待核对：执行前对工具调用做参数校验与权限/白名单判断，区分模型建议与程序实际执行；工具结果以结构化形式回填上下文并进入下一轮模型调用的机制；工具超时/报错后的降级路径与错误反馈给模型的方式。此前经过提示或追问的回答不算独立掌握，本次建议换场景独立验证。"
+     }
+    ]
+   }
+  }
+ ],
+ "stopped": null,
+ "ledger_baseline": {
+  "http": 1,
+  "tokens": 1550
+ },
+ "evaluation_audit": [
+  {
+   "evaluation_id": 27,
+   "answer_id": 27,
+   "covered_points": [
+    "设置最大步数与超时，避免无限循环",
+    "失败时记录节点级检查点，重试只读幂等工具",
+    "写操作用业务唯一键去重，防止重复副作用"
+   ],
+   "quotes": [
+    "失败时记录节点级检查点，重试只读幂等工具，写操作用业务唯一键去重",
+    "再为每轮调用固定最大步数和超时"
+   ],
+   "quote_from_answer": null,
+   "observation_states": [
+    "PARTIALLY_DEMONSTRATED"
+   ]
+  },
+  {
+   "evaluation_id": 28,
+   "answer_id": 28,
+   "covered_points": [],
+   "quotes": [
+    "我用 RAG 时会先按文档结构切片并保留来源 ID"
+   ],
+   "quote_from_answer": null,
+   "observation_states": [
+    "INSUFFICIENT_EVIDENCE"
+   ]
+  },
+  {
+   "evaluation_id": 29,
+   "answer_id": 29,
+   "covered_points": [
+    "工具 schema 写窄、参数校验放在服务端，体现程序侧而非模型侧做校验",
+    "出错时返回可恢复的结构化错误，让模型改正或换工具"
+   ],
+   "quotes": [
+    "参数校验放在服务端",
+    "出错时返回可恢复的结构化错误，让模型能改正或换工具"
+   ],
+   "quote_from_answer": null,
+   "observation_states": [
+    "PARTIALLY_DEMONSTRATED"
+   ]
+  }
+ ],
+ "next_plan": {
+  "targets": 5,
+  "recommendations": [
+   {
+    "knowledge_id": "ai_agent_application:agent",
+    "label": "Agent 工具与状态管理",
+    "state": "PRACTICING",
+    "intent": "INDEPENDENT_VERIFICATION",
+    "priority": 5,
+    "needs_recheck": false,
+    "reason_tags": [
+     "RECENT_MISSING_EVIDENCE"
+    ],
+    "memory_revision": 1,
+    "observation_refs": [
+     "evaluation:27",
+     "evaluation:28",
+     "evaluation:29"
+    ],
+    "history_summary": "历史待核对：执行前对工具调用做参数校验与权限/白名单判断，区分模型建议与程序实际执行；工具结果以结构化形式回填上下文并进入下一轮模型调用的机制；工具超时/报错后的降级路径与错误反馈给模型的方式。此前经过提示或追问的回答不算独立掌握，本次建议换场景独立验证。"
+   }
+  ]
+ },
+ "actual": {
+  "http": 7,
+  "tokens": 41064
+ },
+ "budget_ok": true,
+ "ledger_rows": [
+  {
+   "call_key": "460060e5d4b1467bbcf26df7d25b114a",
+   "route": "interview_main",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "status": "SETTLED",
+   "reserved": 19344,
+   "charged": 4558,
+   "actual": 4558
+  },
+  {
+   "call_key": "67d525ccbbe6498f82546e15aabe1a7f",
+   "route": "answer_evaluation",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "status": "SETTLED",
+   "reserved": 18840,
+   "charged": 4950,
+   "actual": 4950
+  },
+  {
+   "call_key": "c202cb3e9e2d45d7a0f42b85db619f91",
+   "route": "interview_main",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "status": "SETTLED",
+   "reserved": 27573,
+   "charged": 6589,
+   "actual": 6589
+  },
+  {
+   "call_key": "adf6b85971c745ef9077b7a734896fda",
+   "route": "answer_evaluation",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "status": "SETTLED",
+   "reserved": 20671,
+   "charged": 5398,
+   "actual": 5398
+  },
+  {
+   "call_key": "f3762e935449475288b7c6dc3d1517c5",
+   "route": "interview_main",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "status": "SETTLED",
+   "reserved": 29120,
+   "charged": 7060,
+   "actual": 7060
+  },
+  {
+   "call_key": "c9fb1648a5e444a9af9d50fb6d20b221",
+   "route": "answer_evaluation",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "status": "SETTLED",
+   "reserved": 21785,
+   "charged": 5724,
+   "actual": 5724
+  },
+  {
+   "call_key": "9ac7b9884d574dadb830d336a1c0dcd7",
+   "route": "interview_coach",
+   "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+   "status": "SETTLED",
+   "reserved": 28180,
+   "charged": 6785,
+   "actual": 6785
+  }
+ ],
+ "step_audit": [
+  {
+   "id": 47,
+   "step": "interview_main",
+   "prompt": "interview_main",
+   "version": "2.3.3",
+   "status": "SUCCEEDED",
+   "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "total_tokens": 0
+   },
+   "error": ""
+  },
+  {
+   "id": 48,
+   "step": "answer_evaluation",
+   "prompt": "answer_evaluation",
+   "version": "2.3.4",
+   "status": "SUCCEEDED",
+   "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "total_tokens": 0
+   },
+   "error": ""
+  },
+  {
+   "id": 49,
+   "step": "interview_coach",
+   "prompt": "interview_coach",
+   "version": "1.0.3",
+   "status": "SUCCEEDED",
+   "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "total_tokens": 0
+   },
+   "error": ""
+  },
+  {
+   "id": 50,
+   "step": "interview_main",
+   "prompt": "interview_main",
+   "version": "2.3.3",
+   "status": "SUCCEEDED",
+   "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "total_tokens": 0
+   },
+   "error": ""
+  },
+  {
+   "id": 51,
+   "step": "answer_evaluation",
+   "prompt": "answer_evaluation",
+   "version": "2.3.4",
+   "status": "SUCCEEDED",
+   "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "total_tokens": 0
+   },
+   "error": ""
+  },
+  {
+   "id": 52,
+   "step": "interview_coach",
+   "prompt": "interview_coach",
+   "version": "1.0.3",
+   "status": "SUCCEEDED",
+   "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "total_tokens": 0
+   },
+   "error": ""
+  },
+  {
+   "id": 53,
+   "step": "interview_main",
+   "prompt": "interview_main",
+   "version": "2.3.3",
+   "status": "SUCCEEDED",
+   "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "total_tokens": 0
+   },
+   "error": ""
+  },
+  {
+   "id": 54,
+   "step": "answer_evaluation",
+   "prompt": "answer_evaluation",
+   "version": "2.3.4",
+   "status": "SUCCEEDED",
+   "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "total_tokens": 0
+   },
+   "error": ""
+  },
+  {
+   "id": 55,
+   "step": "interview_main",
+   "prompt": "interview_main",
+   "version": "2.3.3",
+   "status": "SUCCEEDED",
+   "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "total_tokens": 0
+   },
+   "error": ""
+  },
+  {
+   "id": 56,
+   "step": "answer_evaluation",
+   "prompt": "answer_evaluation",
+   "version": "2.3.4",
+   "status": "SUCCEEDED",
+   "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "total_tokens": 0
+   },
+   "error": ""
+  },
+  {
+   "id": 57,
+   "step": "interview_main",
+   "prompt": "interview_main",
+   "version": "2.3.3",
+   "status": "SUCCEEDED",
+   "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "total_tokens": 0
+   },
+   "error": ""
+  },
+  {
+   "id": 58,
+   "step": "answer_evaluation",
+   "prompt": "answer_evaluation",
+   "version": "2.3.4",
+   "status": "SUCCEEDED",
+   "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "total_tokens": 0
+   },
+   "error": ""
+  },
+  {
+   "id": 59,
+   "step": "interview_coach",
+   "prompt": "interview_coach",
+   "version": "1.0.3",
+   "status": "SUCCEEDED",
+   "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "total_tokens": 0
+   },
+   "error": ""
+  },
+  {
+   "id": 60,
+   "step": "interview_main",
+   "prompt": "interview_main",
+   "version": "2.3.3",
+   "status": "SUCCEEDED",
+   "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "total_tokens": 0
+   },
+   "error": ""
+  },
+  {
+   "id": 61,
+   "step": "interview_main",
+   "prompt": "interview_main",
+   "version": "2.3.3",
+   "status": "SUCCEEDED",
+   "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "total_tokens": 0
+   },
+   "error": ""
+  },
+  {
+   "id": 62,
+   "step": "answer_evaluation",
+   "prompt": "answer_evaluation",
+   "version": "2.3.4",
+   "status": "SUCCEEDED",
+   "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "total_tokens": 0
+   },
+   "error": ""
+  },
+  {
+   "id": 63,
+   "step": "interview_main",
+   "prompt": "interview_main",
+   "version": "2.3.3",
+   "status": "SUCCEEDED",
+   "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "total_tokens": 0
+   },
+   "error": ""
+  },
+  {
+   "id": 64,
+   "step": "answer_evaluation",
+   "prompt": "answer_evaluation",
+   "version": "2.3.4",
+   "status": "SUCCEEDED",
+   "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "total_tokens": 0
+   },
+   "error": ""
+  },
+  {
+   "id": 65,
+   "step": "interview_main",
+   "prompt": "interview_main",
+   "version": "2.3.3",
+   "status": "SUCCEEDED",
+   "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "total_tokens": 0
+   },
+   "error": ""
+  },
+  {
+   "id": 66,
+   "step": "answer_evaluation",
+   "prompt": "answer_evaluation",
+   "version": "2.3.4",
+   "status": "SUCCEEDED",
+   "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "total_tokens": 0
+   },
+   "error": ""
+  },
+  {
+   "id": 67,
+   "step": "interview_coach",
+   "prompt": "interview_coach",
+   "version": "1.0.3",
+   "status": "SUCCEEDED",
+   "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "total_tokens": 0
+   },
+   "error": ""
+  },
+  {
+   "id": 68,
+   "step": "interview_main",
+   "prompt": "interview_main",
+   "version": "2.3.3",
+   "status": "SUCCEEDED",
+   "usage": {
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "total_tokens": 0
+   },
+   "error": ""
+  },
+  {
+   "id": 69,
+   "step": "resume_profile",
+   "prompt": "resume_profile",
+   "version": "1.0.5",
+   "status": "SUCCEEDED",
+   "usage": {
+    "input_tokens": 1381,
+    "output_tokens": 169,
+    "total_tokens": 1550
+   },
+   "error": ""
+  },
+  {
+   "id": 70,
+   "step": "interview_main",
+   "prompt": "interview_main",
+   "version": "2.3.3",
+   "status": "SUCCEEDED",
+   "usage": {
+    "input_tokens": 4329,
+    "output_tokens": 229,
+    "total_tokens": 4558
+   },
+   "error": ""
+  },
+  {
+   "id": 71,
+   "step": "answer_evaluation",
+   "prompt": "answer_evaluation",
+   "version": "2.3.4",
+   "status": "SUCCEEDED",
+   "usage": {
+    "input_tokens": 3867,
+    "output_tokens": 1083,
+    "total_tokens": 4950
+   },
+   "error": ""
+  },
+  {
+   "id": 72,
+   "step": "interview_main",
+   "prompt": "interview_main",
+   "version": "2.3.3",
+   "status": "SUCCEEDED",
+   "usage": {
+    "input_tokens": 6335,
+    "output_tokens": 254,
+    "total_tokens": 6589
+   },
+   "error": ""
+  },
+  {
+   "id": 73,
+   "step": "answer_evaluation",
+   "prompt": "answer_evaluation",
+   "version": "2.3.4",
+   "status": "SUCCEEDED",
+   "usage": {
+    "input_tokens": 4412,
+    "output_tokens": 986,
+    "total_tokens": 5398
+   },
+   "error": ""
+  },
+  {
+   "id": 74,
+   "step": "interview_main",
+   "prompt": "interview_main",
+   "version": "2.3.3",
+   "status": "SUCCEEDED",
+   "usage": {
+    "input_tokens": 6773,
+    "output_tokens": 287,
+    "total_tokens": 7060
+   },
+   "error": ""
+  },
+  {
+   "id": 75,
+   "step": "answer_evaluation",
+   "prompt": "answer_evaluation",
+   "version": "2.3.4",
+   "status": "SUCCEEDED",
+   "usage": {
+    "input_tokens": 4735,
+    "output_tokens": 989,
+    "total_tokens": 5724
+   },
+   "error": ""
+  },
+  {
+   "id": 76,
+   "step": "interview_coach",
+   "prompt": "interview_coach",
+   "version": "1.0.3",
+   "status": "SUCCEEDED",
+   "usage": {
+    "input_tokens": 5479,
+    "output_tokens": 1306,
+    "total_tokens": 6785
+   },
+   "error": ""
+  }
+ ],
+ "user_id": 9,
+ "session_id": 14,
+ "finished_at": "2026-11-16T13:46:43.875483+00:00"
+}

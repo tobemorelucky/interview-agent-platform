@@ -1,0 +1,1488 @@
+{
+ "model_http_calls": 0,
+ "dataset_identity": {
+  "provenance": [
+   "PUBLIC_USER_REPORTED_INTERVIEW"
+  ],
+  "independently_verified_event": [
+   false
+  ],
+  "question_wording": [
+   "PARAPHRASED_BY_ASSISTANT"
+  ],
+  "complete_original_transcript": [
+   false
+  ],
+  "is_actual_human_answer": [
+   false
+  ],
+  "is_human_gold": [
+   false
+  ],
+  "is_model_generated_interview_record": [
+   false
+  ]
+ },
+ "counts": {
+  "flows": 6,
+  "question_leads": 59,
+  "selected_question_count_sum": 59,
+  "per_flow": {
+   "BYTEDANCE_20260923": 15,
+   "BYTEDANCE_20260921": 11,
+   "ALIBABA_20260426": 11,
+   "MEITUAN_20260511": 9,
+   "MEITUAN_20260604": 7,
+   "BYTEDANCE_20260810": 6
+  },
+  "unique_source_urls": 5,
+  "shared_urls": {
+   "https://www.nowcoder.com/discuss/940040254214389760": [
+    "BYTEDANCE_20260923",
+    "BYTEDANCE_20260921"
+   ]
+  },
+  "duplicate_question_groups": 0,
+  "topics": {
+   "Agent/RAG": 16,
+   "项目/行为": 7,
+   "算法/ML": 5,
+   "LLM/大模型": 3,
+   "质量/工程实践": 2,
+   "检索/向量": 15,
+   "网络/协议": 6,
+   "系统设计": 1,
+   "后端/工程": 22
+  },
+  "companies": {
+   "字节跳动": 32,
+   "阿里巴巴": 11,
+   "美团": 16
+  }
+ },
+ "context_legality": {
+  "scope_rule": "build_context(): (job_id == selected.job_id OR (job_id IS NULL AND company_id == selected.company_id)) AND (company_id IS NULL OR company_id == selected.company_id)",
+  "adaptive_rule": "adaptive V2 additionally requires q.job_id == selected.job_id and source_anchor.kind != REPORTED_TOPIC",
+  "review_rule": "ExperienceReviewService.approve requires ADMIN; questions need review_status=APPROVED and should_index=TRUE",
+  "flow_companies": [
+   "字节跳动",
+   "美团",
+   "阿里巴巴"
+  ],
+  "sandbox_companies": [
+   "Unity中国",
+   "沐瞳科技",
+   "蔚来",
+   "面壁智能",
+   "麒麟软件"
+  ],
+  "companies_without_any_sandbox_job": [
+   "字节跳动",
+   "美团",
+   "阿里巴巴"
+  ],
+  "can_bind_to_published_showcase_jobs": false,
+  "reason": "字节/阿里/美团 在 JD 沙箱没有 company/job 行；强行关联麒麟、沐瞳、蔚来岗位会违反精确外键 scope 与自适应 V2 的 job_id 约束",
+  "sandbox_experience_rows": 0,
+  "sandbox_question_rows": 0
+ },
+ "buckets": {
+  "IMPORTABLE": [],
+  "REFERENCE_ONLY": [
+   "ALIBABA_20260426_01",
+   "ALIBABA_20260426_02",
+   "ALIBABA_20260426_03",
+   "ALIBABA_20260426_04",
+   "ALIBABA_20260426_05",
+   "ALIBABA_20260426_06",
+   "ALIBABA_20260426_07",
+   "ALIBABA_20260426_08",
+   "ALIBABA_20260426_09",
+   "ALIBABA_20260426_10",
+   "ALIBABA_20260426_11",
+   "MEITUAN_20260511_01",
+   "MEITUAN_20260511_02",
+   "MEITUAN_20260511_03",
+   "MEITUAN_20260511_04",
+   "MEITUAN_20260511_05",
+   "MEITUAN_20260511_06",
+   "MEITUAN_20260511_07",
+   "MEITUAN_20260511_08",
+   "MEITUAN_20260511_09",
+   "MEITUAN_20260604_01",
+   "MEITUAN_20260604_02",
+   "MEITUAN_20260604_03",
+   "MEITUAN_20260604_04",
+   "MEITUAN_20260604_05",
+   "MEITUAN_20260604_06",
+   "MEITUAN_20260604_07",
+   "BYTEDANCE_20260810_01",
+   "BYTEDANCE_20260810_02",
+   "BYTEDANCE_20260810_03",
+   "BYTEDANCE_20260810_04",
+   "BYTEDANCE_20260810_05",
+   "BYTEDANCE_20260810_06"
+  ],
+  "NEED_ORIGINAL": [
+   "BYTEDANCE_20260923_01",
+   "BYTEDANCE_20260923_02",
+   "BYTEDANCE_20260923_03",
+   "BYTEDANCE_20260923_04",
+   "BYTEDANCE_20260923_05",
+   "BYTEDANCE_20260923_06",
+   "BYTEDANCE_20260923_07",
+   "BYTEDANCE_20260923_08",
+   "BYTEDANCE_20260923_09",
+   "BYTEDANCE_20260923_10",
+   "BYTEDANCE_20260923_11",
+   "BYTEDANCE_20260923_12",
+   "BYTEDANCE_20260923_13",
+   "BYTEDANCE_20260923_14",
+   "BYTEDANCE_20260923_15",
+   "BYTEDANCE_20260921_01",
+   "BYTEDANCE_20260921_02",
+   "BYTEDANCE_20260921_03",
+   "BYTEDANCE_20260921_04",
+   "BYTEDANCE_20260921_05",
+   "BYTEDANCE_20260921_06",
+   "BYTEDANCE_20260921_07",
+   "BYTEDANCE_20260921_08",
+   "BYTEDANCE_20260921_09",
+   "BYTEDANCE_20260921_10",
+   "BYTEDANCE_20260921_11"
+  ],
+  "REJECT": []
+ },
+ "leads": [
+  {
+   "id": "BYTEDANCE_20260923_01",
+   "flow_id": "BYTEDANCE_20260923",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "question": "为什么在项目里选用 LangGraph，整体流程如何组织？",
+   "topics": [
+    "Agent/RAG",
+    "项目/行为"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/940040254214389760",
+   "shared_across_flows": true,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "NEED_ORIGINAL",
+   "reasons": [
+    "ONE_POST_USED_FOR_TWO_FLOWS"
+   ]
+  },
+  {
+   "id": "BYTEDANCE_20260923_02",
+   "flow_id": "BYTEDANCE_20260923",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "question": "如何设计 Agent 的评测数据集？",
+   "topics": [
+    "Agent/RAG",
+    "算法/ML"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/940040254214389760",
+   "shared_across_flows": true,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "NEED_ORIGINAL",
+   "reasons": [
+    "ONE_POST_USED_FOR_TWO_FLOWS"
+   ]
+  },
+  {
+   "id": "BYTEDANCE_20260923_03",
+   "flow_id": "BYTEDANCE_20260923",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "question": "如果部分测试数据由模型生成，如何验证质量和覆盖面？",
+   "topics": [
+    "LLM/大模型",
+    "质量/工程实践"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/940040254214389760",
+   "shared_across_flows": true,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "NEED_ORIGINAL",
+   "reasons": [
+    "ONE_POST_USED_FOR_TWO_FLOWS"
+   ]
+  },
+  {
+   "id": "BYTEDANCE_20260923_04",
+   "flow_id": "BYTEDANCE_20260923",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "question": "用户口语化、含错别字、意图不清时如何处理？",
+   "topics": [
+    "Agent/RAG"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/940040254214389760",
+   "shared_across_flows": true,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "NEED_ORIGINAL",
+   "reasons": [
+    "ONE_POST_USED_FOR_TWO_FLOWS"
+   ]
+  },
+  {
+   "id": "BYTEDANCE_20260923_05",
+   "flow_id": "BYTEDANCE_20260923",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "question": "知识库从数据接收到检索是怎样构建的？",
+   "topics": [
+    "检索/向量"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/940040254214389760",
+   "shared_across_flows": true,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "NEED_ORIGINAL",
+   "reasons": [
+    "ONE_POST_USED_FOR_TWO_FLOWS"
+   ]
+  },
+  {
+   "id": "BYTEDANCE_20260923_06",
+   "flow_id": "BYTEDANCE_20260923",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "question": "Markdown、TXT、PDF 三种格式如何分别分块？",
+   "topics": [
+    "检索/向量"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/940040254214389760",
+   "shared_across_flows": true,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "NEED_ORIGINAL",
+   "reasons": [
+    "ONE_POST_USED_FOR_TWO_FLOWS"
+   ]
+  },
+  {
+   "id": "BYTEDANCE_20260923_07",
+   "flow_id": "BYTEDANCE_20260923",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "question": "为什么同时采用关键词召回与向量召回？",
+   "topics": [
+    "检索/向量",
+    "项目/行为"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/940040254214389760",
+   "shared_across_flows": true,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "NEED_ORIGINAL",
+   "reasons": [
+    "ONE_POST_USED_FOR_TWO_FLOWS"
+   ]
+  },
+  {
+   "id": "BYTEDANCE_20260923_08",
+   "flow_id": "BYTEDANCE_20260923",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "question": "两类检索分别在哪些查询上占优势？",
+   "topics": [
+    "检索/向量"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/940040254214389760",
+   "shared_across_flows": true,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "NEED_ORIGINAL",
+   "reasons": [
+    "ONE_POST_USED_FOR_TWO_FLOWS"
+   ]
+  },
+  {
+   "id": "BYTEDANCE_20260923_09",
+   "flow_id": "BYTEDANCE_20260923",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "question": "怎样融合两路检索结果？",
+   "topics": [
+    "检索/向量"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/940040254214389760",
+   "shared_across_flows": true,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "NEED_ORIGINAL",
+   "reasons": [
+    "ONE_POST_USED_FOR_TWO_FLOWS"
+   ]
+  },
+  {
+   "id": "BYTEDANCE_20260923_10",
+   "flow_id": "BYTEDANCE_20260923",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "question": "解释 RRF 的核心计算原理。",
+   "topics": [
+    "检索/向量"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/940040254214389760",
+   "shared_across_flows": true,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "NEED_ORIGINAL",
+   "reasons": [
+    "ONE_POST_USED_FOR_TWO_FLOWS"
+   ]
+  },
+  {
+   "id": "BYTEDANCE_20260923_11",
+   "flow_id": "BYTEDANCE_20260923",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "question": "为什么不能直接把 BM25 与向量相似度分数相加？",
+   "topics": [
+    "检索/向量",
+    "项目/行为"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/940040254214389760",
+   "shared_across_flows": true,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "NEED_ORIGINAL",
+   "reasons": [
+    "ONE_POST_USED_FOR_TWO_FLOWS"
+   ]
+  },
+  {
+   "id": "BYTEDANCE_20260923_12",
+   "flow_id": "BYTEDANCE_20260923",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "question": "粗排后使用 Cross-Encoder 的价值是什么？",
+   "topics": [
+    "检索/向量",
+    "网络/协议"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/940040254214389760",
+   "shared_across_flows": true,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "NEED_ORIGINAL",
+   "reasons": [
+    "ONE_POST_USED_FOR_TWO_FLOWS"
+   ]
+  },
+  {
+   "id": "BYTEDANCE_20260923_13",
+   "flow_id": "BYTEDANCE_20260923",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "question": "为什么重排器可能比独立向量相似度更准确？",
+   "topics": [
+    "检索/向量",
+    "项目/行为"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/940040254214389760",
+   "shared_across_flows": true,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "NEED_ORIGINAL",
+   "reasons": [
+    "ONE_POST_USED_FOR_TWO_FLOWS"
+   ]
+  },
+  {
+   "id": "BYTEDANCE_20260923_14",
+   "flow_id": "BYTEDANCE_20260923",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "question": "业务场景与预训练重排器不同，如何确认实际有效？",
+   "topics": [
+    "LLM/大模型",
+    "检索/向量"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/940040254214389760",
+   "shared_across_flows": true,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "NEED_ORIGINAL",
+   "reasons": [
+    "ONE_POST_USED_FOR_TWO_FLOWS"
+   ]
+  },
+  {
+   "id": "BYTEDANCE_20260923_15",
+   "flow_id": "BYTEDANCE_20260923",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "question": "怎样挑选最能代表系统目标的评估指标？",
+   "topics": [
+    "算法/ML"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/940040254214389760",
+   "shared_across_flows": true,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "NEED_ORIGINAL",
+   "reasons": [
+    "ONE_POST_USED_FOR_TWO_FLOWS"
+   ]
+  },
+  {
+   "id": "BYTEDANCE_20260921_01",
+   "flow_id": "BYTEDANCE_20260921",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "question": "介绍实习项目中本人承担的部分与成果。",
+   "topics": [
+    "项目/行为"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/940040254214389760",
+   "shared_across_flows": true,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "NEED_ORIGINAL",
+   "reasons": [
+    "ONE_POST_USED_FOR_TWO_FLOWS"
+   ]
+  },
+  {
+   "id": "BYTEDANCE_20260921_02",
+   "flow_id": "BYTEDANCE_20260921",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "question": "通用智能体平台需要哪些主要功能？",
+   "topics": [
+    "Agent/RAG",
+    "系统设计"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/940040254214389760",
+   "shared_across_flows": true,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "NEED_ORIGINAL",
+   "reasons": [
+    "ONE_POST_USED_FOR_TWO_FLOWS"
+   ]
+  },
+  {
+   "id": "BYTEDANCE_20260921_03",
+   "flow_id": "BYTEDANCE_20260921",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "question": "从客户端到服务端的 HTTPS 连接经历哪些关键环节？",
+   "topics": [
+    "后端/工程",
+    "网络/协议"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/940040254214389760",
+   "shared_across_flows": true,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "NEED_ORIGINAL",
+   "reasons": [
+    "ONE_POST_USED_FOR_TWO_FLOWS"
+   ]
+  },
+  {
+   "id": "BYTEDANCE_20260921_04",
+   "flow_id": "BYTEDANCE_20260921",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "question": "二叉树右视图如何实现？",
+   "topics": [
+    "算法/ML"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/940040254214389760",
+   "shared_across_flows": true,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "NEED_ORIGINAL",
+   "reasons": [
+    "ONE_POST_USED_FOR_TWO_FLOWS"
+   ]
+  },
+  {
+   "id": "BYTEDANCE_20260921_05",
+   "flow_id": "BYTEDANCE_20260921",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "question": "如何设计前缀树，适合哪些业务？",
+   "topics": [
+    "算法/ML"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/940040254214389760",
+   "shared_across_flows": true,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "NEED_ORIGINAL",
+   "reasons": [
+    "ONE_POST_USED_FOR_TWO_FLOWS"
+   ]
+  },
+  {
+   "id": "BYTEDANCE_20260921_06",
+   "flow_id": "BYTEDANCE_20260921",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "question": "应用层与传输层分别负责什么？",
+   "topics": [
+    "网络/协议"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/940040254214389760",
+   "shared_across_flows": true,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "NEED_ORIGINAL",
+   "reasons": [
+    "ONE_POST_USED_FOR_TWO_FLOWS"
+   ]
+  },
+  {
+   "id": "BYTEDANCE_20260921_07",
+   "flow_id": "BYTEDANCE_20260921",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "question": "浏览器发起请求后网络链路如何运转？",
+   "topics": [
+    "网络/协议"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/940040254214389760",
+   "shared_across_flows": true,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "NEED_ORIGINAL",
+   "reasons": [
+    "ONE_POST_USED_FOR_TWO_FLOWS"
+   ]
+  },
+  {
+   "id": "BYTEDANCE_20260921_08",
+   "flow_id": "BYTEDANCE_20260921",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "question": "什么能力适合封装成 Skill，什么适合 Tool？",
+   "topics": [
+    "Agent/RAG"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/940040254214389760",
+   "shared_across_flows": true,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "NEED_ORIGINAL",
+   "reasons": [
+    "ONE_POST_USED_FOR_TWO_FLOWS"
+   ]
+  },
+  {
+   "id": "BYTEDANCE_20260921_09",
+   "flow_id": "BYTEDANCE_20260921",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "question": "LangChain 与 LangGraph 的适用边界是什么？",
+   "topics": [
+    "Agent/RAG",
+    "后端/工程"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/940040254214389760",
+   "shared_across_flows": true,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "NEED_ORIGINAL",
+   "reasons": [
+    "ONE_POST_USED_FOR_TWO_FLOWS"
+   ]
+  },
+  {
+   "id": "BYTEDANCE_20260921_10",
+   "flow_id": "BYTEDANCE_20260921",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "question": "除了 ReAct 还可采用什么智能体编排范式？",
+   "topics": [
+    "Agent/RAG"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/940040254214389760",
+   "shared_across_flows": true,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "NEED_ORIGINAL",
+   "reasons": [
+    "ONE_POST_USED_FOR_TWO_FLOWS"
+   ]
+  },
+  {
+   "id": "BYTEDANCE_20260921_11",
+   "flow_id": "BYTEDANCE_20260921",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "question": "SSE 在协议层如何实现并处理断线？",
+   "topics": [
+    "网络/协议"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/940040254214389760",
+   "shared_across_flows": true,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "NEED_ORIGINAL",
+   "reasons": [
+    "ONE_POST_USED_FOR_TWO_FLOWS"
+   ]
+  },
+  {
+   "id": "ALIBABA_20260426_01",
+   "flow_id": "ALIBABA_20260426",
+   "company": "阿里巴巴",
+   "role": "AI应用开发",
+   "question": "RAG 文档切片策略如何确定？",
+   "topics": [
+    "Agent/RAG",
+    "检索/向量"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/923740158455730176",
+   "shared_across_flows": false,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "REFERENCE_ONLY",
+   "reasons": []
+  },
+  {
+   "id": "ALIBABA_20260426_02",
+   "flow_id": "ALIBABA_20260426",
+   "company": "阿里巴巴",
+   "role": "AI应用开发",
+   "question": "如何发现召回结果导致的幻觉，并改进？",
+   "topics": [
+    "LLM/大模型",
+    "检索/向量"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/923740158455730176",
+   "shared_across_flows": false,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "REFERENCE_ONLY",
+   "reasons": []
+  },
+  {
+   "id": "ALIBABA_20260426_03",
+   "flow_id": "ALIBABA_20260426",
+   "company": "阿里巴巴",
+   "role": "AI应用开发",
+   "question": "向量数据库如何选型？",
+   "topics": [
+    "检索/向量",
+    "后端/工程"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/923740158455730176",
+   "shared_across_flows": false,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "REFERENCE_ONLY",
+   "reasons": []
+  },
+  {
+   "id": "ALIBABA_20260426_04",
+   "flow_id": "ALIBABA_20260426",
+   "company": "阿里巴巴",
+   "role": "AI应用开发",
+   "question": "LangGraph 状态怎样保存及转移？",
+   "topics": [
+    "Agent/RAG"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/923740158455730176",
+   "shared_across_flows": false,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "REFERENCE_ONLY",
+   "reasons": []
+  },
+  {
+   "id": "ALIBABA_20260426_05",
+   "flow_id": "ALIBABA_20260426",
+   "company": "阿里巴巴",
+   "role": "AI应用开发",
+   "question": "LangChain 与 LangGraph 有哪些差异？",
+   "topics": [
+    "Agent/RAG",
+    "后端/工程"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/923740158455730176",
+   "shared_across_flows": false,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "REFERENCE_ONLY",
+   "reasons": []
+  },
+  {
+   "id": "ALIBABA_20260426_06",
+   "flow_id": "ALIBABA_20260426",
+   "company": "阿里巴巴",
+   "role": "AI应用开发",
+   "question": "Kafka 消息积压如何定位与治理？",
+   "topics": [
+    "后端/工程"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/923740158455730176",
+   "shared_across_flows": false,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "REFERENCE_ONLY",
+   "reasons": []
+  },
+  {
+   "id": "ALIBABA_20260426_07",
+   "flow_id": "ALIBABA_20260426",
+   "company": "阿里巴巴",
+   "role": "AI应用开发",
+   "question": "如何区分生产激增和消费能力不足？",
+   "topics": [
+    "后端/工程"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/923740158455730176",
+   "shared_across_flows": false,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "REFERENCE_ONLY",
+   "reasons": []
+  },
+  {
+   "id": "ALIBABA_20260426_08",
+   "flow_id": "ALIBABA_20260426",
+   "company": "阿里巴巴",
+   "role": "AI应用开发",
+   "question": "遥测消息是否一定要求严格顺序？",
+   "topics": [
+    "后端/工程"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/923740158455730176",
+   "shared_across_flows": false,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "REFERENCE_ONLY",
+   "reasons": []
+  },
+  {
+   "id": "ALIBABA_20260426_09",
+   "flow_id": "ALIBABA_20260426",
+   "company": "阿里巴巴",
+   "role": "AI应用开发",
+   "question": "Text-to-SQL 适合处理什么问题？",
+   "topics": [
+    "后端/工程"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/923740158455730176",
+   "shared_across_flows": false,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "REFERENCE_ONLY",
+   "reasons": []
+  },
+  {
+   "id": "ALIBABA_20260426_10",
+   "flow_id": "ALIBABA_20260426",
+   "company": "阿里巴巴",
+   "role": "AI应用开发",
+   "question": "用户自然语言含糊时怎样澄清意图？",
+   "topics": [
+    "Agent/RAG"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/923740158455730176",
+   "shared_across_flows": false,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "REFERENCE_ONLY",
+   "reasons": []
+  },
+  {
+   "id": "ALIBABA_20260426_11",
+   "flow_id": "ALIBABA_20260426",
+   "company": "阿里巴巴",
+   "role": "AI应用开发",
+   "question": "日常如何使用 AI 工具支持研发？",
+   "topics": [
+    "质量/工程实践"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/923740158455730176",
+   "shared_across_flows": false,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "REFERENCE_ONLY",
+   "reasons": []
+  },
+  {
+   "id": "MEITUAN_20260511_01",
+   "flow_id": "MEITUAN_20260511",
+   "company": "美团",
+   "role": "AI应用/后端开发",
+   "question": "使用 AI Coding 时怎样发现和修复生成代码的问题？",
+   "topics": [
+    "后端/工程"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/928067497637478400",
+   "shared_across_flows": false,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "REFERENCE_ONLY",
+   "reasons": []
+  },
+  {
+   "id": "MEITUAN_20260511_02",
+   "flow_id": "MEITUAN_20260511",
+   "company": "美团",
+   "role": "AI应用/后端开发",
+   "question": "OSI 网络分层的作用是什么？",
+   "topics": [
+    "网络/协议"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/928067497637478400",
+   "shared_across_flows": false,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "REFERENCE_ONLY",
+   "reasons": []
+  },
+  {
+   "id": "MEITUAN_20260511_03",
+   "flow_id": "MEITUAN_20260511",
+   "company": "美团",
+   "role": "AI应用/后端开发",
+   "question": "数组和链表的复杂度及使用场景如何比较？",
+   "topics": [
+    "算法/ML"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/928067497637478400",
+   "shared_across_flows": false,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "REFERENCE_ONLY",
+   "reasons": []
+  },
+  {
+   "id": "MEITUAN_20260511_04",
+   "flow_id": "MEITUAN_20260511",
+   "company": "美团",
+   "role": "AI应用/后端开发",
+   "question": "JVM 的垃圾回收做什么？有哪些主要回收策略？",
+   "topics": [
+    "后端/工程"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/928067497637478400",
+   "shared_across_flows": false,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "REFERENCE_ONLY",
+   "reasons": []
+  },
+  {
+   "id": "MEITUAN_20260511_05",
+   "flow_id": "MEITUAN_20260511",
+   "company": "美团",
+   "role": "AI应用/后端开发",
+   "question": "频繁 Full GC 怎么调查？",
+   "topics": [
+    "后端/工程"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/928067497637478400",
+   "shared_across_flows": false,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "REFERENCE_ONLY",
+   "reasons": []
+  },
+  {
+   "id": "MEITUAN_20260511_06",
+   "flow_id": "MEITUAN_20260511",
+   "company": "美团",
+   "role": "AI应用/后端开发",
+   "question": "如何定位慢 SQL 并分析 EXPLAIN 结果？",
+   "topics": [
+    "后端/工程"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/928067497637478400",
+   "shared_across_flows": false,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "REFERENCE_ONLY",
+   "reasons": []
+  },
+  {
+   "id": "MEITUAN_20260511_07",
+   "flow_id": "MEITUAN_20260511",
+   "company": "美团",
+   "role": "AI应用/后端开发",
+   "question": "联合索引的列顺序如何设计？",
+   "topics": [
+    "检索/向量",
+    "后端/工程"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/928067497637478400",
+   "shared_across_flows": false,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "REFERENCE_ONLY",
+   "reasons": []
+  },
+  {
+   "id": "MEITUAN_20260511_08",
+   "flow_id": "MEITUAN_20260511",
+   "company": "美团",
+   "role": "AI应用/后端开发",
+   "question": "缓存系统的读写路径怎么设计？",
+   "topics": [
+    "后端/工程"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/928067497637478400",
+   "shared_across_flows": false,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "REFERENCE_ONLY",
+   "reasons": []
+  },
+  {
+   "id": "MEITUAN_20260511_09",
+   "flow_id": "MEITUAN_20260511",
+   "company": "美团",
+   "role": "AI应用/后端开发",
+   "question": "更新数据库后删除缓存的并发问题如何解决？",
+   "topics": [
+    "后端/工程"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/928067497637478400",
+   "shared_across_flows": false,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "REFERENCE_ONLY",
+   "reasons": []
+  },
+  {
+   "id": "MEITUAN_20260604_01",
+   "flow_id": "MEITUAN_20260604",
+   "company": "美团",
+   "role": "后端开发",
+   "question": "实习业务流程和本人贡献是什么？",
+   "topics": [
+    "项目/行为"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/927390266342871040",
+   "shared_across_flows": false,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "REFERENCE_ONLY",
+   "reasons": []
+  },
+  {
+   "id": "MEITUAN_20260604_02",
+   "flow_id": "MEITUAN_20260604",
+   "company": "美团",
+   "role": "后端开发",
+   "question": "数据库治理和索引优化如何落地？",
+   "topics": [
+    "检索/向量",
+    "后端/工程"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/927390266342871040",
+   "shared_across_flows": false,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "REFERENCE_ONLY",
+   "reasons": []
+  },
+  {
+   "id": "MEITUAN_20260604_03",
+   "flow_id": "MEITUAN_20260604",
+   "company": "美团",
+   "role": "后端开发",
+   "question": "分库分表后跨库查询怎样处理？",
+   "topics": [
+    "后端/工程"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/927390266342871040",
+   "shared_across_flows": false,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "REFERENCE_ONLY",
+   "reasons": []
+  },
+  {
+   "id": "MEITUAN_20260604_04",
+   "flow_id": "MEITUAN_20260604",
+   "company": "美团",
+   "role": "后端开发",
+   "question": "RabbitMQ 与 Kafka 的可靠性和适用场景如何比较？",
+   "topics": [
+    "后端/工程"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/927390266342871040",
+   "shared_across_flows": false,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "REFERENCE_ONLY",
+   "reasons": []
+  },
+  {
+   "id": "MEITUAN_20260604_05",
+   "flow_id": "MEITUAN_20260604",
+   "company": "美团",
+   "role": "后端开发",
+   "question": "消费者 ACK 超时如何处理重复消费和幂等？",
+   "topics": [
+    "后端/工程"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/927390266342871040",
+   "shared_across_flows": false,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "REFERENCE_ONLY",
+   "reasons": []
+  },
+  {
+   "id": "MEITUAN_20260604_06",
+   "flow_id": "MEITUAN_20260604",
+   "company": "美团",
+   "role": "后端开发",
+   "question": "突发消息洪峰时线程池和消费队列如何调整？",
+   "topics": [
+    "后端/工程"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/927390266342871040",
+   "shared_across_flows": false,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "REFERENCE_ONLY",
+   "reasons": []
+  },
+  {
+   "id": "MEITUAN_20260604_07",
+   "flow_id": "MEITUAN_20260604",
+   "company": "美团",
+   "role": "后端开发",
+   "question": "在集群里部分 JVM 节点频繁 STW 会产生什么后果？",
+   "topics": [
+    "后端/工程"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/927390266342871040",
+   "shared_across_flows": false,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "REFERENCE_ONLY",
+   "reasons": []
+  },
+  {
+   "id": "BYTEDANCE_20260810_01",
+   "flow_id": "BYTEDANCE_20260810",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "question": "选择 AI 应用开发方向的动机是什么？",
+   "topics": [
+    "项目/行为"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/922659809084571648",
+   "shared_across_flows": false,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "REFERENCE_ONLY",
+   "reasons": []
+  },
+  {
+   "id": "BYTEDANCE_20260810_02",
+   "flow_id": "BYTEDANCE_20260810",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "question": "如何持续学习 Agent 技术？",
+   "topics": [
+    "Agent/RAG"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/922659809084571648",
+   "shared_across_flows": false,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "REFERENCE_ONLY",
+   "reasons": []
+  },
+  {
+   "id": "BYTEDANCE_20260810_03",
+   "flow_id": "BYTEDANCE_20260810",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "question": "你如何定义 Agent 系统？",
+   "topics": [
+    "Agent/RAG"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/922659809084571648",
+   "shared_across_flows": false,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "REFERENCE_ONLY",
+   "reasons": []
+  },
+  {
+   "id": "BYTEDANCE_20260810_04",
+   "flow_id": "BYTEDANCE_20260810",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "question": "Tool 的接口、边界和安全原则有哪些？",
+   "topics": [
+    "Agent/RAG",
+    "后端/工程"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/922659809084571648",
+   "shared_across_flows": false,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "REFERENCE_ONLY",
+   "reasons": []
+  },
+  {
+   "id": "BYTEDANCE_20260810_05",
+   "flow_id": "BYTEDANCE_20260810",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "question": "短期记忆与长期记忆怎样划分？",
+   "topics": [
+    "Agent/RAG"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/922659809084571648",
+   "shared_across_flows": false,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "REFERENCE_ONLY",
+   "reasons": []
+  },
+  {
+   "id": "BYTEDANCE_20260810_06",
+   "flow_id": "BYTEDANCE_20260810",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "question": "ReAct 和 Plan-Execute 各适合什么任务？",
+   "topics": [
+    "Agent/RAG"
+   ],
+   "source_url": "https://www.nowcoder.com/discuss/922659809084571648",
+   "shared_across_flows": false,
+   "duplicate_group": [],
+   "flags": {
+    "is_model_generated_interview_record": false,
+    "is_actual_human_answer": false,
+    "is_human_gold": false
+   },
+   "verdict": "REFERENCE_ONLY",
+   "reasons": []
+  }
+ ],
+ "flows": [
+  {
+   "flow_id": "BYTEDANCE_20260923",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "interview_date_reported": "2026-09-23",
+   "report_url": "https://www.nowcoder.com/discuss/940040254214389760",
+   "provenance": "PUBLIC_USER_REPORTED_INTERVIEW",
+   "independently_verified_event": false,
+   "question_wording": "PARAPHRASED_BY_ASSISTANT",
+   "complete_original_transcript": false,
+   "selected_question_count": 15,
+   "note": "此为公开帖子自述的面试经历，保留主题/选择题的顺序；并非录音逐字稿，未对事件真实性作独立保证。"
+  },
+  {
+   "flow_id": "BYTEDANCE_20260921",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "interview_date_reported": "2026-09-21",
+   "report_url": "https://www.nowcoder.com/discuss/940040254214389760",
+   "provenance": "PUBLIC_USER_REPORTED_INTERVIEW",
+   "independently_verified_event": false,
+   "question_wording": "PARAPHRASED_BY_ASSISTANT",
+   "complete_original_transcript": false,
+   "selected_question_count": 11,
+   "note": "此为公开帖子自述的面试经历，保留主题/选择题的顺序；并非录音逐字稿，未对事件真实性作独立保证。"
+  },
+  {
+   "flow_id": "ALIBABA_20260426",
+   "company": "阿里巴巴",
+   "role": "AI应用开发",
+   "interview_date_reported": "2026-04-26",
+   "report_url": "https://www.nowcoder.com/discuss/923740158455730176",
+   "provenance": "PUBLIC_USER_REPORTED_INTERVIEW",
+   "independently_verified_event": false,
+   "question_wording": "PARAPHRASED_BY_ASSISTANT",
+   "complete_original_transcript": false,
+   "selected_question_count": 11,
+   "note": "此为公开帖子自述的面试经历，保留主题/选择题的顺序；并非录音逐字稿，未对事件真实性作独立保证。"
+  },
+  {
+   "flow_id": "MEITUAN_20260511",
+   "company": "美团",
+   "role": "AI应用/后端开发",
+   "interview_date_reported": "2026-05-11",
+   "report_url": "https://www.nowcoder.com/discuss/928067497637478400",
+   "provenance": "PUBLIC_USER_REPORTED_INTERVIEW",
+   "independently_verified_event": false,
+   "question_wording": "PARAPHRASED_BY_ASSISTANT",
+   "complete_original_transcript": false,
+   "selected_question_count": 9,
+   "note": "此为公开帖子自述的面试经历，保留主题/选择题的顺序；并非录音逐字稿，未对事件真实性作独立保证。"
+  },
+  {
+   "flow_id": "MEITUAN_20260604",
+   "company": "美团",
+   "role": "后端开发",
+   "interview_date_reported": "2026-06-04",
+   "report_url": "https://www.nowcoder.com/discuss/927390266342871040",
+   "provenance": "PUBLIC_USER_REPORTED_INTERVIEW",
+   "independently_verified_event": false,
+   "question_wording": "PARAPHRASED_BY_ASSISTANT",
+   "complete_original_transcript": false,
+   "selected_question_count": 7,
+   "note": "此为公开帖子自述的面试经历，保留主题/选择题的顺序；并非录音逐字稿，未对事件真实性作独立保证。"
+  },
+  {
+   "flow_id": "BYTEDANCE_20260810",
+   "company": "字节跳动",
+   "role": "AI Agent开发岗",
+   "interview_date_reported": "2026-08-10",
+   "report_url": "https://www.nowcoder.com/discuss/922659809084571648",
+   "provenance": "PUBLIC_USER_REPORTED_INTERVIEW",
+   "independently_verified_event": false,
+   "question_wording": "PARAPHRASED_BY_ASSISTANT",
+   "complete_original_transcript": false,
+   "selected_question_count": 6,
+   "note": "此为公开帖子自述的面试经历，保留主题/选择题的顺序；并非录音逐字稿，未对事件真实性作独立保证。"
+  }
+ ]
+}

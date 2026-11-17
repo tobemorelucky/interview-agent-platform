@@ -1470,3 +1470,25 @@ L3 前置条件（purge_requests 表、清理顺序、audit_logs 脱敏、Celery
 **M1**（`public_career/corrections.py`）：前驱只读、新 claim 照抄 evidence、同 `literal_within` 语义、after 不为 True 即 422、audit before/after、指纹幂等。演练 4 条：面壁 r40 与蔚来 r57/r58/r63 **before 全 False / after 全 True**；负向探针 `CORRECTION_NOT_LITERAL` 拒绝。**写库被 `uq_job_description_versions_job_fingerprint` 拒绝**（正文不许改 → 指纹必然相同）→ savepoint 回滚 **0 行**。要落库须迁移 `0030`（该唯一索引加 `WHERE publication_status='PUBLISHED'`），未执行 DDL，两份仍 WAITING_REVIEW。
 
 **下批 6 份（最终）**：麒麟安全 / 麒麟嵌入式 / 沐瞳 AI测试 / 蔚来视觉 / 蔚来后训练 `018` / 沐瞳 Unity `012`（替换 R35 的产品经理与供应链岗）；2/2/2 企业分布已是语料上限（仅 3 家有 DOM）。预算 12 HTTP / 30K，上限 16 / 45K；`018`/`012` 无小节标题须逐条查逐字。沙箱 5 PUBLISHED / 2 WAITING / 7 版本 / 130 证据 / 20 账本 52,228 token；生产库、MinIO 48、250 库、Evaluation 2.3.4 未动。
+
+---
+
+## 第四十一轮：SHOWCASE-R1 展示版第一轮（12 HTTP / 29,230 token，见 docs/120）
+
+**52 份 JD 全量清单** TECH 40 / OTHER 8 / 未分类 4；4 份策展件无 DOM，如实标注。6 份候选零 HTTP 复核 6/6 通过（哈希口径：正文 LF 归一化、DOM 用 `read_text(errors='ignore')`）。
+
+**真实导入** 12 HTTP / 29,230 token，5 COMPLETED + 蔚来视觉 FAILED（同类 metadata 逐字错误、未 Repair）。逐条审核后 **4 发布（16–19）/ 1 扣留（20 沐瞳 Unity：8 条"加分项"注入 + 强度 UNKNOWN）**。D1：3 条"或…者优先"存储 PREFERRED 但 consumer 投影 REQUIRED，需单独授权才能改规则。发布后 targets/public 9、详情 9/9 200。
+
+**面经 59 题**：身份保持（自述/未核实/改写/无回答/无金标）；5 唯一 URL、2 场共用一帖→26 需原文；0 重复题；清单 0 可导入 / 33 参考 / 26 需原文 / 0 拒绝。context 精确 FK + adaptive V2 job_id 约束 → 不得绑到已发布的三家岗位。
+
+**展示沙箱**（新库 0029）三场 Replay 全通过：A/B FULL 各 3 题、C 同用户 WEAKNESS 1 题且计划引用 A 场 `evaluation:14`、能力 PRACTICING→VERIFIED；0 模型账本行。前端 API/Vite 起过但被用户取消，按指令未重启 → **无截图、UI 验收缺失**，第五部分真实面试按前置条件阻断、0 HTTP。测试 161 passed，HEAD 1d87a0b 未提交/未 push。
+
+---
+
+## 第四十二轮：R121 UI 验收 + 首场 Live + D1（8 HTTP / 42,614 token，见 docs/121）
+
+**UI**：FastAPI（Replay fixture、外呼被拒）+ Vite + Chrome CDP 真实操作 11/11 通过，15 张截图、186 条 API 200/201、0 错误、0 账本。唯一改动是验收夹具让 Coach 引用真实评价以产生合法提案；产品 Prompt/Evaluation 未动。
+
+**Live**：jd2 沐瞳 Agent 平台；合成简历显式标注。画像 1 HTTP/1550 + 续跑 7 HTTP/41064。3 题 3 评价、COMPLETED、Coach 真实生成（`SUMMARY_COACH_AGENT`, 1.0.3）、能力 PRACTICING、下一场计划引用本场评价。评价引用 6/6 来自对应回答；运行中一次 FAIL 是脚本用 question_id 映射的假阴性，已零 HTTP 更正。Prompt：main 2.3.3、eval 2.3.4。
+
+**D1**：`split_strength_clauses` 把"A，或B者优先"误拆成强制+优先。加 `_OR_CONTINUATION`/`_REQUIRED_MARKER`：以"或"开头且前段无显式硬条件则并成一条 PREFERRED；显式"必须/至少/需"不并。83/84 修复为 PREFERRED，117 是真 mixed 保持 REQUIRED。71+229 测试通过。HEAD 1d87a0b 未提交/未 push。

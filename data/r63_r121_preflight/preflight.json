@@ -1,0 +1,206 @@
+{
+ "stage": "R121-1",
+ "http_calls_to_model": 0,
+ "git_head": "1d87a0b (preflight does not modify the worktree)",
+ "jd_sandbox": {
+  "database": "interview_agent_wb_jd_r31_20261116",
+  "alembic": "0029",
+  "published": [
+   {
+    "id": 1,
+    "company": "麒麟软件",
+    "title": "AI研发工程师",
+    "version_number": 1
+   },
+   {
+    "id": 2,
+    "company": "沐瞳科技",
+    "title": "Agent开发工程师（平台）",
+    "version_number": 1
+   },
+   {
+    "id": 3,
+    "company": "Unity中国",
+    "title": "AI Agent 算法研发工程师",
+    "version_number": 1
+   },
+   {
+    "id": 5,
+    "company": "沐瞳科技",
+    "title": "【2027届秋招】后端开发工程师（AI向/数据平台）",
+    "version_number": 1
+   },
+   {
+    "id": 7,
+    "company": "麒麟软件",
+    "title": "「2027校招」Linux内核研发工程师",
+    "version_number": 1
+   },
+   {
+    "id": 16,
+    "company": "麒麟软件",
+    "title": "「2027校招」安全研发工程师",
+    "version_number": 1
+   },
+   {
+    "id": 17,
+    "company": "麒麟软件",
+    "title": "「2027校招」嵌入式研发工程师",
+    "version_number": 1
+   },
+   {
+    "id": 18,
+    "company": "沐瞳科技",
+    "title": "【2027届秋招】AI测试工程师（web平台）",
+    "version_number": 1
+   },
+   {
+    "id": 19,
+    "company": "蔚来",
+    "title": "校招-座舱大模型后训练/Agentic 算法工程师",
+    "version_number": 1
+   }
+  ],
+  "waiting": 3,
+  "sessions": 0,
+  "evaluations": 0,
+  "reports": 0,
+  "admissions": 32,
+  "tokens": 81458
+ },
+ "showcase_sandbox": {
+  "database": "interview_agent_showcase_r1_20261116",
+  "alembic": "0029",
+  "published": [
+   {
+    "id": 1,
+    "company": "麒麟软件",
+    "title": "AI研发工程师",
+    "version_number": 1
+   },
+   {
+    "id": 2,
+    "company": "沐瞳科技",
+    "title": "Agent开发工程师（平台）",
+    "version_number": 1
+   },
+   {
+    "id": 3,
+    "company": "Unity中国",
+    "title": "AI Agent 算法研发工程师",
+    "version_number": 1
+   },
+   {
+    "id": 5,
+    "company": "沐瞳科技",
+    "title": "【2027届秋招】后端开发工程师（AI向/数据平台）",
+    "version_number": 1
+   },
+   {
+    "id": 7,
+    "company": "麒麟软件",
+    "title": "「2027校招」Linux内核研发工程师",
+    "version_number": 1
+   },
+   {
+    "id": 16,
+    "company": "麒麟软件",
+    "title": "「2027校招」安全研发工程师",
+    "version_number": 1
+   },
+   {
+    "id": 17,
+    "company": "麒麟软件",
+    "title": "「2027校招」嵌入式研发工程师",
+    "version_number": 1
+   },
+   {
+    "id": 18,
+    "company": "沐瞳科技",
+    "title": "【2027届秋招】AI测试工程师（web平台）",
+    "version_number": 1
+   },
+   {
+    "id": 19,
+    "company": "蔚来",
+    "title": "校招-座舱大模型后训练/Agentic 算法工程师",
+    "version_number": 1
+   }
+  ],
+  "waiting": 3,
+  "sessions": 8,
+  "evaluations": 20,
+  "reports": 6,
+  "admissions": 0,
+  "tokens": 0,
+  "r120_marker_users": [
+   {
+    "id": 1,
+    "email": "showcase-r1-synthetic-a@example.com"
+   },
+   {
+    "id": 2,
+    "email": "showcase-r1-synthetic-b@example.com"
+   },
+   {
+    "id": 3,
+    "email": "showcase-r1-synthetic-a-be6eb073@example.com"
+   },
+   {
+    "id": 4,
+    "email": "showcase-r1-synthetic-b-be6eb073@example.com"
+   },
+   {
+    "id": 5,
+    "email": "showcase-r1-synthetic-a-531e1846@example.com"
+   },
+   {
+    "id": 6,
+    "email": "showcase-r1-synthetic-b-531e1846@example.com"
+   },
+   {
+    "id": 7,
+    "email": "showcase-r1-synthetic-a-e6600748@example.com"
+   },
+   {
+    "id": 8,
+    "email": "showcase-r1-synthetic-b-e6600748@example.com"
+   }
+  ],
+  "r120_final_sessions": [
+   {
+    "id": 6,
+    "status": "COMPLETED",
+    "user_id": 7,
+    "evaluated": "3"
+   },
+   {
+    "id": 7,
+    "status": "COMPLETED",
+    "user_id": 8,
+    "evaluated": "3"
+   },
+   {
+    "id": 8,
+    "status": "COMPLETED",
+    "user_id": 7,
+    "evaluated": "1"
+   }
+  ]
+ },
+ "environment": {
+  "DATABASE_URL": "postgresql+asyncpg://***:***@localhost:5432/interview_agent_showcase_r1_20261116",
+  "MODEL_LEDGER_DATABASE": "interview_agent_showcase_r1_20261116",
+  "llm_provider": "modelscope",
+  "harness_enabled": false
+ },
+ "application_connection": {
+  "settings_database_url": "postgresql+asyncpg://***:***@localhost:5432/***_showcase_r1_20261116",
+  "application_sees_marker_users": 8,
+  "application_sees_sessions": 8,
+  "application_sees_admissions": 0
+ },
+ "same_published_set": true,
+ "r120_sessions_preserved": true,
+ "decision": "PASS"
+}

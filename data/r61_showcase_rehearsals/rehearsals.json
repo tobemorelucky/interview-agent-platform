@@ -1,0 +1,717 @@
+{
+ "round": "SHOWCASE-R1 part4",
+ "mode": "REPLAY / 0 real HTTP",
+ "environment": {
+  "database": "interview_agent_showcase_r1_20261116",
+  "coach_harness": false,
+  "main_harness": false,
+  "provider": "replay",
+  "live_http": 0
+ },
+ "database": "interview_agent_showcase_r1_20261116",
+ "started_at": "2026-11-16T13:23:20.608265+00:00",
+ "flows": {
+  "A": {
+   "flow": "A",
+   "steps": [
+    {
+     "step": "注册 / 登录 / me",
+     "ok": true,
+     "detail": {
+      "register_status": 201,
+      "user_id": 7,
+      "login_status": 200,
+      "token_present": true,
+      "me_status": 200,
+      "me_email": "showcase-r1-synthetic-a-e6600748@example.com",
+      "email": "showcase-r1-synthetic-a-e6600748@example.com"
+     }
+    },
+    {
+     "step": "合成简历解析与落库",
+     "ok": true,
+     "detail": {
+      "resume_id": 5,
+      "parser_sections": null,
+      "raw_chars": 166,
+      "label": "SYNTHETIC_TEST_MATERIAL"
+     }
+    },
+    {
+     "step": "候选人画像（Replay）",
+     "ok": true,
+     "detail": {
+      "status": "COMPLETED",
+      "version_id": 5,
+      "replay_calls": 1,
+      "producer": "REPLAY_FIXTURE"
+     }
+    },
+    {
+     "step": "公开岗位列表可选中",
+     "ok": true,
+     "detail": {
+      "target_status": 200,
+      "matched": 1,
+      "job": {
+       "company_id": 2,
+       "canonical_name": "沐瞳科技",
+       "job_id": 2,
+       "canonical_title": "Agent开发工程师（平台）",
+       "jd_version_id": 2
+      }
+     }
+    },
+    {
+     "step": "冻结面试快照",
+     "ok": true,
+     "detail": {
+      "session_id": 6,
+      "jd_version_id": 2,
+      "training": "FULL",
+      "memory_guided_plan_items": 0
+     }
+    },
+    {
+     "step": "选择已发布 JD",
+     "ok": true,
+     "detail": {
+      "company": "沐瞳科技",
+      "job": "Agent开发工程师（平台）"
+     }
+    },
+    {
+     "step": "Main 出题（首题）",
+     "ok": true,
+     "detail": {
+      "question": "DEMO 第1轮：接下来聊 Agent 工具与状态管理，你会怎样解释其中的关键机制和一个异常边界？"
+     }
+    },
+    {
+     "step": "作答与追问 第1轮",
+     "ok": true,
+     "detail": {
+      "events": [
+       "evaluation",
+       "question",
+       "done"
+      ],
+      "answer_chars": 27
+     }
+    },
+    {
+     "step": "作答与追问 第2轮",
+     "ok": true,
+     "detail": {
+      "events": [
+       "evaluation",
+       "follow_up",
+       "done"
+      ],
+      "answer_chars": 24
+     }
+    },
+    {
+     "step": "作答与追问 第3轮",
+     "ok": true,
+     "detail": {
+      "events": [
+       "evaluation",
+       "complete",
+       "done"
+      ],
+      "answer_chars": 31
+     }
+    },
+    {
+     "step": "会话 COMPLETED 且 >=3 题",
+     "ok": true,
+     "detail": {
+      "status": "COMPLETED",
+      "evaluated_count": 3,
+      "questions": 3
+     }
+    },
+    {
+     "step": "快照未被改写",
+     "ok": true,
+     "detail": null
+    },
+    {
+     "step": "Coach 报告生成",
+     "ok": true,
+     "detail": {
+      "report_id": 4,
+      "statistics": {},
+      "supporting_evaluation_ids": [
+       14,
+       15,
+       16
+      ]
+     }
+    },
+    {
+     "step": "能力状态由持久化评价产生",
+     "ok": true,
+     "detail": {
+      "states": [
+       {
+        "topic": "agent",
+        "state": "PRACTICING",
+        "revision": 1
+       },
+       {
+        "topic": "rag_retrieval",
+        "state": "PRACTICING",
+        "revision": 1
+       }
+      ]
+     }
+    }
+   ],
+   "failure_step": null,
+   "completed": true,
+   "user_id": 7,
+   "job": {
+    "company_id": 2,
+    "canonical_name": "沐瞳科技",
+    "job_id": 2,
+    "canonical_title": "Agent开发工程师（平台）",
+    "jd_version_id": 2
+   },
+   "auth": {
+    "register_status": 201,
+    "user_id": 7,
+    "login_status": 200,
+    "token_present": true,
+    "me_status": 200,
+    "me_email": "showcase-r1-synthetic-a-e6600748@example.com",
+    "email": "showcase-r1-synthetic-a-e6600748@example.com"
+   },
+   "resume": {
+    "resume_id": 5,
+    "parser_sections": null,
+    "raw_chars": 166,
+    "label": "SYNTHETIC_TEST_MATERIAL"
+   },
+   "profile": {
+    "status": "COMPLETED",
+    "version_id": 5,
+    "replay_calls": 1,
+    "producer": "REPLAY_FIXTURE"
+   },
+   "session": {
+    "session_id": 6,
+    "final_status": "COMPLETED",
+    "evaluated_count": 3,
+    "evaluation_ids": [
+     14,
+     15,
+     16
+    ],
+    "report": {
+     "id": 4,
+     "status": "COMPLETED",
+     "statistics": null,
+     "referenced_evaluations": [
+      14,
+      15,
+      16
+     ]
+    },
+    "capability_states": [
+     {
+      "topic": "agent",
+      "state": "PRACTICING"
+     },
+     {
+      "topic": "rag_retrieval",
+      "state": "PRACTICING"
+     }
+    ],
+    "replay_model_calls": 6,
+    "context_snapshot_keys": [
+     "adaptive_blueprint",
+     "adaptive_policy",
+     "approved_memory_context",
+     "budgets",
+     "candidate_evidence",
+     "candidate_facts",
+     "candidate_profile_version_id",
+     "company_id",
+     "company_name",
+     "coverage_insufficient",
+     "interview_experiences",
+     "interviewer_config",
+     "interviewer_selection",
+     "jd_fingerprint",
+     "jd_version_number",
+     "job_description_version_id",
+     "job_id",
+     "job_target",
+     "job_title",
+     "memory_guided_plan",
+     "normalized",
+     "profile",
+     "profile_producer",
+     "profile_version_number",
+     "public_questions",
+     "recent_performance_observations",
+     "requirements",
+     "training"
+    ]
+   }
+  },
+  "B": {
+   "flow": "B",
+   "steps": [
+    {
+     "step": "注册 / 登录 / me",
+     "ok": true,
+     "detail": {
+      "register_status": 201,
+      "user_id": 8,
+      "login_status": 200,
+      "token_present": true,
+      "me_status": 200,
+      "me_email": "showcase-r1-synthetic-b-e6600748@example.com",
+      "email": "showcase-r1-synthetic-b-e6600748@example.com"
+     }
+    },
+    {
+     "step": "合成简历解析与落库",
+     "ok": true,
+     "detail": {
+      "resume_id": 6,
+      "parser_sections": null,
+      "raw_chars": 166,
+      "label": "SYNTHETIC_TEST_MATERIAL"
+     }
+    },
+    {
+     "step": "候选人画像（Replay）",
+     "ok": true,
+     "detail": {
+      "status": "COMPLETED",
+      "version_id": 6,
+      "replay_calls": 1,
+      "producer": "REPLAY_FIXTURE"
+     }
+    },
+    {
+     "step": "公开岗位列表可选中",
+     "ok": true,
+     "detail": {
+      "target_status": 200,
+      "matched": 1,
+      "job": {
+       "company_id": 2,
+       "canonical_name": "沐瞳科技",
+       "job_id": 5,
+       "canonical_title": "【2027届秋招】后端开发工程师（AI向/数据平台）",
+       "jd_version_id": 5
+      }
+     }
+    },
+    {
+     "step": "冻结面试快照",
+     "ok": true,
+     "detail": {
+      "session_id": 7,
+      "jd_version_id": 5,
+      "training": "FULL",
+      "memory_guided_plan_items": 0
+     }
+    },
+    {
+     "step": "选择已发布 JD",
+     "ok": true,
+     "detail": {
+      "company": "沐瞳科技",
+      "job": "【2027届秋招】后端开发工程师（AI向/数据平台）"
+     }
+    },
+    {
+     "step": "Main 出题（首题）",
+     "ok": true,
+     "detail": {
+      "question": "DEMO 第1轮：接下来聊 缓存工程，你会怎样解释其中的关键机制和一个异常边界？"
+     }
+    },
+    {
+     "step": "作答与追问 第1轮",
+     "ok": true,
+     "detail": {
+      "events": [
+       "evaluation",
+       "question",
+       "done"
+      ],
+      "answer_chars": 27
+     }
+    },
+    {
+     "step": "作答与追问 第2轮",
+     "ok": true,
+     "detail": {
+      "events": [
+       "evaluation",
+       "follow_up",
+       "done"
+      ],
+      "answer_chars": 24
+     }
+    },
+    {
+     "step": "作答与追问 第3轮",
+     "ok": true,
+     "detail": {
+      "events": [
+       "evaluation",
+       "complete",
+       "done"
+      ],
+      "answer_chars": 31
+     }
+    },
+    {
+     "step": "会话 COMPLETED 且 >=3 题",
+     "ok": true,
+     "detail": {
+      "status": "COMPLETED",
+      "evaluated_count": 3,
+      "questions": 3
+     }
+    },
+    {
+     "step": "快照未被改写",
+     "ok": true,
+     "detail": null
+    },
+    {
+     "step": "Coach 报告生成",
+     "ok": true,
+     "detail": {
+      "report_id": 5,
+      "statistics": {},
+      "supporting_evaluation_ids": [
+       17,
+       18,
+       19
+      ]
+     }
+    },
+    {
+     "step": "能力状态由持久化评价产生",
+     "ok": true,
+     "detail": {
+      "states": [
+       {
+        "topic": "java",
+        "state": "PRACTICING",
+        "revision": 1
+       },
+       {
+        "topic": "redis",
+        "state": "PRACTICING",
+        "revision": 1
+       }
+      ]
+     }
+    }
+   ],
+   "failure_step": null,
+   "completed": true,
+   "user_id": 8,
+   "job": {
+    "company_id": 2,
+    "canonical_name": "沐瞳科技",
+    "job_id": 5,
+    "canonical_title": "【2027届秋招】后端开发工程师（AI向/数据平台）",
+    "jd_version_id": 5
+   },
+   "auth": {
+    "register_status": 201,
+    "user_id": 8,
+    "login_status": 200,
+    "token_present": true,
+    "me_status": 200,
+    "me_email": "showcase-r1-synthetic-b-e6600748@example.com",
+    "email": "showcase-r1-synthetic-b-e6600748@example.com"
+   },
+   "resume": {
+    "resume_id": 6,
+    "parser_sections": null,
+    "raw_chars": 166,
+    "label": "SYNTHETIC_TEST_MATERIAL"
+   },
+   "profile": {
+    "status": "COMPLETED",
+    "version_id": 6,
+    "replay_calls": 1,
+    "producer": "REPLAY_FIXTURE"
+   },
+   "session": {
+    "session_id": 7,
+    "final_status": "COMPLETED",
+    "evaluated_count": 3,
+    "evaluation_ids": [
+     17,
+     18,
+     19
+    ],
+    "report": {
+     "id": 5,
+     "status": "COMPLETED",
+     "statistics": null,
+     "referenced_evaluations": [
+      17,
+      18,
+      19
+     ]
+    },
+    "capability_states": [
+     {
+      "topic": "java",
+      "state": "PRACTICING"
+     },
+     {
+      "topic": "redis",
+      "state": "PRACTICING"
+     }
+    ],
+    "replay_model_calls": 6,
+    "context_snapshot_keys": [
+     "adaptive_blueprint",
+     "adaptive_policy",
+     "approved_memory_context",
+     "budgets",
+     "candidate_evidence",
+     "candidate_facts",
+     "candidate_profile_version_id",
+     "company_id",
+     "company_name",
+     "coverage_insufficient",
+     "interview_experiences",
+     "interviewer_config",
+     "interviewer_selection",
+     "jd_fingerprint",
+     "jd_version_number",
+     "job_description_version_id",
+     "job_id",
+     "job_target",
+     "job_title",
+     "memory_guided_plan",
+     "normalized",
+     "profile",
+     "profile_producer",
+     "profile_version_number",
+     "public_questions",
+     "recent_performance_observations",
+     "requirements",
+     "training"
+    ]
+   }
+  },
+  "C": {
+   "flow": "C",
+   "steps": [
+    {
+     "step": "同一测试用户再次登录",
+     "ok": true,
+     "detail": {
+      "login_status": 200
+     }
+    },
+    {
+     "step": "训练工作台出现合法 WEAKNESS/RECHECK 目标",
+     "ok": true,
+     "detail": {
+      "target_count": 5,
+      "legal": [
+       {
+        "id": "ai_agent_application:agent",
+        "state": "PRACTICING",
+        "modes": [
+         "FULL",
+         "WEAKNESS"
+        ]
+       },
+       {
+        "id": "ai_agent_application:rag_retrieval",
+        "state": "PRACTICING",
+        "modes": [
+         "FULL",
+         "WEAKNESS"
+        ]
+       }
+      ],
+      "recommendations": 2
+     }
+    },
+    {
+     "step": "冻结面试快照",
+     "ok": true,
+     "detail": {
+      "session_id": 8,
+      "jd_version_id": 2,
+      "training": "WEAKNESS",
+      "memory_guided_plan_items": 1
+     }
+    },
+    {
+     "step": "选择已发布 JD",
+     "ok": true,
+     "detail": {
+      "company": "沐瞳科技",
+      "job": "Agent开发工程师（平台）"
+     }
+    },
+    {
+     "step": "Main 出题（首题）",
+     "ok": true,
+     "detail": {
+      "question": "DEMO 第1轮：接下来聊 Agent 工具与状态管理，你会怎样解释其中的关键机制和一个异常边界？"
+     }
+    },
+    {
+     "step": "作答与追问 第1轮",
+     "ok": true,
+     "detail": {
+      "events": [
+       "evaluation",
+       "complete",
+       "done"
+      ],
+      "answer_chars": 27
+     }
+    },
+    {
+     "step": "会话 COMPLETED 且 >=1 题",
+     "ok": true,
+     "detail": {
+      "status": "COMPLETED",
+      "evaluated_count": 1,
+      "questions": 1
+     }
+    },
+    {
+     "step": "快照未被改写",
+     "ok": true,
+     "detail": null
+    },
+    {
+     "step": "Coach 报告生成",
+     "ok": true,
+     "detail": {
+      "report_id": 6,
+      "statistics": {},
+      "supporting_evaluation_ids": [
+       20
+      ]
+     }
+    },
+    {
+     "step": "能力状态由持久化评价产生",
+     "ok": true,
+     "detail": {
+      "states": [
+       {
+        "topic": "agent",
+        "state": "VERIFIED",
+        "revision": 2
+       },
+       {
+        "topic": "rag_retrieval",
+        "state": "PRACTICING",
+        "revision": 1
+       }
+      ]
+     }
+    },
+    {
+     "step": "跨场次 MemoryGuidedPlan 已冻结",
+     "ok": true,
+     "detail": {
+      "training_mode": "WEAKNESS",
+      "knowledge_id": "ai_agent_application:agent",
+      "snapshot_keys_count": 28
+     }
+    }
+   ],
+   "failure_step": null,
+   "completed": true,
+   "user_id": 7,
+   "job": {
+    "company_id": 2,
+    "canonical_name": "沐瞳科技",
+    "job_id": 2,
+    "canonical_title": "Agent开发工程师（平台）",
+    "jd_version_id": 2
+   },
+   "training_mode": "WEAKNESS",
+   "knowledge_id": "ai_agent_application:agent",
+   "prior_session_id": 6,
+   "session": {
+    "session_id": 8,
+    "final_status": "COMPLETED",
+    "evaluated_count": 1,
+    "evaluation_ids": [
+     20
+    ],
+    "report": {
+     "id": 6,
+     "status": "COMPLETED",
+     "statistics": null,
+     "referenced_evaluations": [
+      20
+     ]
+    },
+    "capability_states": [
+     {
+      "topic": "agent",
+      "state": "VERIFIED"
+     },
+     {
+      "topic": "rag_retrieval",
+      "state": "PRACTICING"
+     }
+    ],
+    "replay_model_calls": 2,
+    "context_snapshot_keys": [
+     "adaptive_blueprint",
+     "adaptive_policy",
+     "approved_memory_context",
+     "budgets",
+     "candidate_evidence",
+     "candidate_facts",
+     "candidate_profile_version_id",
+     "company_id",
+     "company_name",
+     "coverage_insufficient",
+     "interview_experiences",
+     "interviewer_config",
+     "interviewer_selection",
+     "jd_fingerprint",
+     "jd_version_number",
+     "job_description_version_id",
+     "job_id",
+     "job_target",
+     "job_title",
+     "memory_guided_plan",
+     "normalized",
+     "profile",
+     "profile_producer",
+     "profile_version_number",
+     "public_questions",
+     "recent_performance_observations",
+     "requirements",
+     "training"
+    ]
+   }
+  }
+ },
+ "step_rows_delta": 19,
+ "model_admissions_total": 0,
+ "finished_at": "2026-11-16T13:23:24.798296+00:00"
+}

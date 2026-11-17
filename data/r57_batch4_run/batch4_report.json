@@ -1,0 +1,395 @@
+{
+ "round": "SHOWCASE-R1",
+ "database": "interview_agent_wb_jd_r31_20261116",
+ "environment": {
+  "database": "interview_agent_wb_jd_r31_20261116",
+  "routes": {
+   "public_research_extract": {
+    "provider": "modelscope",
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "timeout": 60.0
+   },
+   "public_research_quality": {
+    "provider": "modelscope",
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "timeout": 60.0
+   }
+  },
+  "modelscope": true
+ },
+ "started_at": "2026-11-16T13:08:32.146711+00:00",
+ "budget": {
+  "normal_http": 12,
+  "max_http": 16,
+  "normal_tokens": 30000,
+  "max_tokens": 45000,
+  "max_consecutive_failures": 2
+ },
+ "jds": {
+  "KYLINOS_SEC_5480b909": {
+   "company": "麒麟软件",
+   "job_title": "「2027校招」安全研发工程师",
+   "direction": "安全研发",
+   "job_id": "5480b909-65bb-4dcb-ad99-039d254b48fc",
+   "source_url": "https://kylinos.zhiye.com/campus/detail?jobAdId=5480b909-65bb-4dcb-ad99-039d254b48fc",
+   "text_chars": 920,
+   "text_sha256": "d76e5623acefc79af5d89251efedb6f10c95a5338adc979ce43d806ee8ec11a8",
+   "prepared": {
+    "refresh_task_id": 10,
+    "source_snapshot_id": 11,
+    "status": "READY_FOR_EXTRACTION",
+    "reused": true
+   },
+   "agent": {
+    "status": "COMPLETED",
+    "company_id": 1,
+    "job_id": 8,
+    "jd_version_id": 16,
+    "publication_status": "WAITING_REVIEW",
+    "error": null
+   },
+   "ledger": {
+    "http": 2,
+    "tokens": 3746,
+    "new_steps": 2
+   },
+   "steps": [
+    {
+     "id": 21,
+     "run": 11,
+     "step": "job_jd",
+     "status": "SUCCEEDED",
+     "usage": {
+      "input_tokens": 1474,
+      "output_tokens": 627,
+      "total_tokens": 2101
+     },
+     "structured_retry": 0,
+     "error": ""
+    },
+    {
+     "id": 22,
+     "run": 11,
+     "step": "quality",
+     "status": "SUCCEEDED",
+     "usage": {
+      "input_tokens": 1492,
+      "output_tokens": 153,
+      "total_tokens": 1645
+     },
+     "structured_retry": 0,
+     "error": ""
+    }
+   ]
+  },
+  "KYLINOS_EMB_cd3ac686": {
+   "company": "麒麟软件",
+   "job_title": "「2027校招」嵌入式研发工程师",
+   "direction": "嵌入式",
+   "job_id": "cd3ac686-922d-4445-a35c-f74cd6b582e5",
+   "source_url": "https://kylinos.zhiye.com/campus/detail?jobAdId=cd3ac686-922d-4445-a35c-f74cd6b582e5",
+   "text_chars": 845,
+   "text_sha256": "a7b6415f8f939adf2ef0d0d57ea3bc7fc92ac3e40103dcaf00ebc3a5fca82f07",
+   "prepared": {
+    "refresh_task_id": 11,
+    "source_snapshot_id": 12,
+    "status": "READY_FOR_EXTRACTION",
+    "reused": true
+   },
+   "agent": {
+    "status": "COMPLETED",
+    "company_id": 1,
+    "job_id": 9,
+    "jd_version_id": 17,
+    "publication_status": "WAITING_REVIEW",
+    "error": null
+   },
+   "ledger": {
+    "http": 2,
+    "tokens": 4761,
+    "new_steps": 2
+   },
+   "steps": [
+    {
+     "id": 23,
+     "run": 12,
+     "step": "job_jd",
+     "status": "SUCCEEDED",
+     "usage": {
+      "input_tokens": 1449,
+      "output_tokens": 1154,
+      "total_tokens": 2603
+     },
+     "structured_retry": 0,
+     "error": ""
+    },
+    {
+     "id": 24,
+     "run": 12,
+     "step": "quality",
+     "status": "SUCCEEDED",
+     "usage": {
+      "input_tokens": 2035,
+      "output_tokens": 123,
+      "total_tokens": 2158
+     },
+     "structured_retry": 0,
+     "error": ""
+    }
+   ]
+  },
+  "MOONTON_QA_008": {
+   "company": "沐瞳科技",
+   "job_title": "【2027届秋招】AI测试工程师（web平台）",
+   "direction": "测试/QA",
+   "job_id": "7668238439854967049",
+   "source_url": "https://moonton.jobs.feishu.cn/campus/m/position/7668238439854967049/detail",
+   "text_chars": 1871,
+   "text_sha256": "b8cde0b56f112a31a3cfcbcac80eebb67a1aed20481c017dac6e6f7bc564ad6d",
+   "prepared": {
+    "refresh_task_id": 12,
+    "source_snapshot_id": 13,
+    "status": "READY_FOR_EXTRACTION",
+    "reused": true
+   },
+   "agent": {
+    "status": "COMPLETED",
+    "company_id": 2,
+    "job_id": 10,
+    "jd_version_id": 18,
+    "publication_status": "WAITING_REVIEW",
+    "error": null
+   },
+   "ledger": {
+    "http": 2,
+    "tokens": 6359,
+    "new_steps": 2
+   },
+   "steps": [
+    {
+     "id": 25,
+     "run": 13,
+     "step": "job_jd",
+     "status": "SUCCEEDED",
+     "usage": {
+      "input_tokens": 2130,
+      "output_tokens": 1252,
+      "total_tokens": 3382
+     },
+     "structured_retry": 0,
+     "error": ""
+    },
+    {
+     "id": 26,
+     "run": 13,
+     "step": "quality",
+     "status": "SUCCEEDED",
+     "usage": {
+      "input_tokens": 2817,
+      "output_tokens": 160,
+      "total_tokens": 2977
+     },
+     "structured_retry": 0,
+     "error": ""
+    }
+   ]
+  },
+  "NIO_CV_023": {
+   "company": "蔚来",
+   "job_title": "校招-视觉算法工程师",
+   "direction": "视觉算法",
+   "job_id": "7673027221096237363",
+   "source_url": "https://nio.jobs.feishu.cn/campus/position/7673027221096237363/detail",
+   "text_chars": 823,
+   "text_sha256": "445739b255b3647c09ec870342a88c1b658262bce8eaee357f500640ec3f7031",
+   "prepared": {
+    "refresh_task_id": 13,
+    "source_snapshot_id": 14,
+    "status": "READY_FOR_EXTRACTION",
+    "reused": true
+   },
+   "agent": {
+    "status": "FAILED",
+    "company_id": null,
+    "job_id": null,
+    "jd_version_id": null,
+    "publication_status": null,
+    "error": "EvidenceValidationError: Job metadata must be literal and cite exact evidence"
+   },
+   "ledger": {
+    "http": 2,
+    "tokens": 4487,
+    "new_steps": 2
+   },
+   "steps": [
+    {
+     "id": 27,
+     "run": 14,
+     "step": "job_jd",
+     "status": "SUCCEEDED",
+     "usage": {
+      "input_tokens": 1432,
+      "output_tokens": 1000,
+      "total_tokens": 2432
+     },
+     "structured_retry": 0,
+     "error": ""
+    },
+    {
+     "id": 28,
+     "run": 14,
+     "step": "quality",
+     "status": "SUCCEEDED",
+     "usage": {
+      "input_tokens": 1860,
+      "output_tokens": 195,
+      "total_tokens": 2055
+     },
+     "structured_retry": 0,
+     "error": ""
+    }
+   ]
+  },
+  "NIO_POSTTRAIN_018": {
+   "company": "蔚来",
+   "job_title": "校招-座舱大模型后训练/Agentic 算法工程师",
+   "direction": "大模型后训练",
+   "job_id": "7673027279396768009",
+   "source_url": "https://nio.jobs.feishu.cn/campus/position/7673027279396768009/detail",
+   "text_chars": 1025,
+   "text_sha256": "3bb68550b706a32740116be70373ed338aed82ca32a7334836556827a894ae38",
+   "prepared": {
+    "refresh_task_id": 14,
+    "source_snapshot_id": 15,
+    "status": "READY_FOR_EXTRACTION",
+    "reused": true
+   },
+   "agent": {
+    "status": "COMPLETED",
+    "company_id": 5,
+    "job_id": 11,
+    "jd_version_id": 19,
+    "publication_status": "WAITING_REVIEW",
+    "error": null
+   },
+   "ledger": {
+    "http": 2,
+    "tokens": 3556,
+    "new_steps": 2
+   },
+   "steps": [
+    {
+     "id": 29,
+     "run": 15,
+     "step": "job_jd",
+     "status": "SUCCEEDED",
+     "usage": {
+      "input_tokens": 1466,
+      "output_tokens": 593,
+      "total_tokens": 2059
+     },
+     "structured_retry": 0,
+     "error": ""
+    },
+    {
+     "id": 30,
+     "run": 15,
+     "step": "quality",
+     "status": "SUCCEEDED",
+     "usage": {
+      "input_tokens": 1435,
+      "output_tokens": 62,
+      "total_tokens": 1497
+     },
+     "structured_retry": 0,
+     "error": ""
+    }
+   ]
+  },
+  "MOONTON_UNITY_012": {
+   "company": "沐瞳科技",
+   "job_title": "【2027届秋招】Unity客户端开发工程师（活动）-MOBA",
+   "direction": "游戏客户端",
+   "job_id": "7669704278038530345",
+   "source_url": "https://moonton.jobs.feishu.cn/campus/m/position/7669704278038530345/detail",
+   "text_chars": 1315,
+   "text_sha256": "381c0f8c6519112fbf6e70f08ef92d631adbdd0b1b7581c53972b024d2cf24b7",
+   "prepared": {
+    "refresh_task_id": 15,
+    "source_snapshot_id": 16,
+    "status": "READY_FOR_EXTRACTION",
+    "reused": true
+   },
+   "agent": {
+    "status": "COMPLETED",
+    "company_id": 2,
+    "job_id": 12,
+    "jd_version_id": 20,
+    "publication_status": "WAITING_REVIEW",
+    "error": null
+   },
+   "ledger": {
+    "http": 2,
+    "tokens": 6321,
+    "new_steps": 2
+   },
+   "steps": [
+    {
+     "id": 31,
+     "run": 16,
+     "step": "job_jd",
+     "status": "SUCCEEDED",
+     "usage": {
+      "input_tokens": 1730,
+      "output_tokens": 1620,
+      "total_tokens": 3350
+     },
+     "structured_retry": 0,
+     "error": ""
+    },
+    {
+     "id": 32,
+     "run": 16,
+     "step": "quality",
+     "status": "SUCCEEDED",
+     "usage": {
+      "input_tokens": 2833,
+      "output_tokens": 138,
+      "total_tokens": 2971
+     },
+     "structured_retry": 0,
+     "error": ""
+    }
+   ]
+  }
+ },
+ "failures": [
+  {
+   "jd_key": "NIO_CV_023",
+   "error": "EvidenceValidationError: Job metadata must be literal and cite exact evidence"
+  }
+ ],
+ "stopped": null,
+ "ledger_baseline": {
+  "http": 20,
+  "tokens": 52228
+ },
+ "spent": {
+  "http": 12,
+  "tokens": 29230,
+  "normal_http": 12,
+  "max_http": 16,
+  "max_tokens": 45000
+ },
+ "ledger_total": {
+  "http_attempts": 32,
+  "tokens": 81458,
+  "statuses": [
+   "SETTLED"
+  ],
+  "models": [
+   "deepseek-ai/DeepSeek-V4.1-Flash-1017"
+  ]
+ },
+ "finished_at": "2026-11-16T13:09:17.793237+00:00"
+}

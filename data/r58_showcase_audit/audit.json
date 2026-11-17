@@ -1,0 +1,2526 @@
+{
+ "generated_at": "2026-11-16T13:09:30.290077+00:00",
+ "environment": {
+  "database_url": "postgresql+asyncpg://***:***@localhost:5432/***_wb_jd_r31_20261116",
+  "model_ledger_database": "interview_agent_wb_jd_r31_20261116"
+ },
+ "model_http_calls": 0,
+ "audits": {
+  "16": {
+   "jd_id": 16,
+   "job_id": 8,
+   "company": "麒麟软件",
+   "job_title": "「2027校招」安全研发工程师",
+   "version": 1,
+   "publication_status": "WAITING_REVIEW",
+   "job_status": "WAITING_REVIEW",
+   "company_status": "ACTIVE",
+   "body_chars": 920,
+   "body_equals_snapshot": true,
+   "snapshot_hash_ok": true,
+   "identity": {
+    "claim_id": 126,
+    "category": "JOB_JD",
+    "statement": "麒麟软件: 「2027校招」安全研发工程师",
+    "evidence": 1,
+    "excerpts": [
+     "麒麟软件\n「2027校招」安全研发工程师\n工作职责\n1、负责公司安全体系建设，推动安全能力融入研发流程，开展安全风险发现"
+    ],
+    "company_literal_in_body": true,
+    "title_literal_in_body": true
+   },
+   "requirements": [
+    {
+     "id": 78,
+     "statement": "计算机、信息安全、软件工程、网络工程、电子信息等相关专业，2027届本/硕/博毕业生均可投递",
+     "stored_strength": "REQUIRED",
+     "type": "EDUCATION",
+     "claim_id": 127,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "EDUCATION",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": true,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "计算机、信息安全、软件工程、网络工程、电子信息等相关专业",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "2027届本/硕/博毕业生均可投递",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 79,
+     "statement": "熟悉C、C++、Python、Java等至少一种编程语言",
+     "stored_strength": "REQUIRED",
+     "type": "SKILL",
+     "claim_id": 128,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "熟悉C、C++、Python、Java等至少一种编程语言",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 80,
+     "statement": "熟悉操作系统原理（Windows/Linux），了解常见安全漏洞原理（如UAF、条件竞争、缓冲区溢出、OS提权漏洞等）",
+     "stored_strength": "REQUIRED",
+     "type": "UNKNOWN",
+     "claim_id": 129,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "UNKNOWN",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "熟悉操作系统原理（Windows/Linux）",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "了解常见安全漏洞原理（如UAF、条件竞争、缓冲区溢出、OS提权漏洞等）",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 81,
+     "statement": "具备代码审计、逆向分析基础，能使用IDA、Ghidra、Burp Suite等安全工具",
+     "stored_strength": "REQUIRED",
+     "type": "SKILL",
+     "claim_id": 130,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "具备代码审计、逆向分析基础",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "能使用IDA、Ghidra、Burp Suite等安全工具",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 82,
+     "statement": "精通C语言、熟悉汇编（x86/ARM64）者优先",
+     "stored_strength": "PREFERRED",
+     "type": "SKILL",
+     "claim_id": 131,
+     "effective_strength": "PREFERRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "精通C语言、熟悉汇编（x86/ARM64）者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 83,
+     "statement": "有漏洞挖掘、CTF竞赛经验，或安卓系统安全开发经验者优先",
+     "stored_strength": "PREFERRED",
+     "type": "EXPERIENCE",
+     "claim_id": 132,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "EXPERIENCE",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": true,
+     "clauses": [
+      {
+       "text": "有漏洞挖掘、CTF竞赛经验",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "或安卓系统安全开发经验者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1,
+     "mandatory_clauses_not_in_body": []
+    },
+    {
+     "id": 84,
+     "statement": "有Linux内核漏洞挖掘经验（提交过CVE或给上游提交过修复补丁者优先），或具备Syzkaller、Trinity等Fuzzing工具二次开发经验者优先",
+     "stored_strength": "PREFERRED",
+     "type": "EXPERIENCE",
+     "claim_id": 133,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "EXPERIENCE",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": true,
+     "clauses": [
+      {
+       "text": "有Linux内核漏洞挖掘经验（提交过CVE或给上游提交过修复补丁者优先）",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "或具备Syzkaller、Trinity等Fuzzing工具二次开发经验者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1,
+     "mandatory_clauses_not_in_body": []
+    },
+    {
+     "id": 85,
+     "statement": "了解TCP/IP协议，关注安全行业动态，对操作系统内核、虚拟化、系统安全等领域有探索热情",
+     "stored_strength": "REQUIRED",
+     "type": "UNKNOWN",
+     "claim_id": 134,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "UNKNOWN",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "了解TCP/IP协议",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "关注安全行业动态",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "对操作系统内核、虚拟化、系统安全等领域有探索热情",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 86,
+     "statement": "思维敏捷、逻辑能力强，有较好的沟通表达能力与团队协作意识，有高度的责任感与学习能力",
+     "stored_strength": "REQUIRED",
+     "type": "SOFT_SKILL",
+     "claim_id": 135,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SOFT_SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "思维敏捷、逻辑能力强",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "有较好的沟通表达能力与团队协作意识",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "有高度的责任感与学习能力",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    }
+   ],
+   "counts": {
+    "requirements": 9,
+    "evidence_problems": 0,
+    "stored_strength": {
+     "REQUIRED": 6,
+     "PREFERRED": 3
+    },
+    "effective_strength": {
+     "REQUIRED": 8,
+     "PREFERRED": 1
+    }
+   },
+   "mixed_clauses": [
+    {
+     "id": 83,
+     "clauses": [
+      {
+       "text": "有漏洞挖掘、CTF竞赛经验",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "或安卓系统安全开发经验者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "stored": "PREFERRED",
+     "effective": "REQUIRED"
+    },
+    {
+     "id": 84,
+     "clauses": [
+      {
+       "text": "有Linux内核漏洞挖掘经验（提交过CVE或给上游提交过修复补丁者优先）",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "或具备Syzkaller、Trinity等Fuzzing工具二次开发经验者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "stored": "PREFERRED",
+     "effective": "REQUIRED"
+    }
+   ],
+   "type_status": {
+    "ambiguous": [],
+    "unknown": [],
+    "unknown_not_hard_eligibility": []
+   },
+   "skill_preview": {
+    "status": "NO_APPLICABLE_SKILL",
+    "recommended_skill_id": null,
+    "score": null,
+    "reason": "当前目录没有充分适用的专业规则，请手动选择或使用通用策略。"
+   },
+   "matching_preview": {
+    "NOT_APPLICABLE": 1,
+    "NO_EVIDENCE": 8,
+    "rows": [
+     {
+      "id": 78,
+      "status": "NOT_APPLICABLE"
+     },
+     {
+      "id": 79,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 80,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 81,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 82,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 83,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 84,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 85,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 86,
+      "status": "NO_EVIDENCE"
+     }
+    ]
+   },
+   "problems": [],
+   "advisory": [],
+   "verbatim_buckets": {
+    "VERBATIM": 9,
+    "FORMAT_VARIANT": 0,
+    "HEADING_JOINED": 0,
+    "LABEL_INVENTED": 0,
+    "PARAPHRASE": 0
+   },
+   "verbatim_samples": {
+    "HEADING_JOINED": [],
+    "LABEL_INVENTED": [],
+    "PARAPHRASE": []
+   }
+  },
+  "17": {
+   "jd_id": 17,
+   "job_id": 9,
+   "company": "麒麟软件",
+   "job_title": "「2027校招」嵌入式研发工程师",
+   "version": 1,
+   "publication_status": "WAITING_REVIEW",
+   "job_status": "WAITING_REVIEW",
+   "company_status": "ACTIVE",
+   "body_chars": 845,
+   "body_equals_snapshot": true,
+   "snapshot_hash_ok": true,
+   "identity": {
+    "claim_id": 136,
+    "category": "JOB_JD",
+    "statement": "麒麟软件: 「2027校招」嵌入式研发工程师",
+    "evidence": 1,
+    "excerpts": [
+     "麒麟软件\n「2027校招」嵌入式研发工程师\n工作职责\n1、负责嵌入式Linux硬件驱动的移植、适配与二次开发，完成嵌入式"
+    ],
+    "company_literal_in_body": true,
+    "title_literal_in_body": true
+   },
+   "requirements": [
+    {
+     "id": 87,
+     "statement": "计算机、软件工程、电子信息、自动化等相关专业，2027届毕业生均可投递",
+     "stored_strength": "REQUIRED",
+     "type": "EDUCATION",
+     "claim_id": 143,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "EDUCATION",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": true,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "计算机、软件工程、电子信息、自动化等相关专业",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "2027届毕业生均可投递",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 88,
+     "statement": "熟练掌握C/C++编程",
+     "stored_strength": "REQUIRED",
+     "type": "SKILL",
+     "claim_id": 144,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "熟练掌握C/C++编程",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 89,
+     "statement": "掌握Rust或汇编（ARM/RISC-V/x86）者优先",
+     "stored_strength": "PREFERRED",
+     "type": "SKILL",
+     "claim_id": 145,
+     "effective_strength": "PREFERRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "掌握Rust或汇编（ARM/RISC-V/x86）者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 90,
+     "statement": "熟悉Linux基础环境、常用命令、Shell、Makefile、交叉编译等基础技能",
+     "stored_strength": "REQUIRED",
+     "type": "SKILL",
+     "claim_id": 146,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "熟悉Linux基础环境、常用命令、Shell、Makefile、交叉编译等基础技能",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 91,
+     "statement": "熟悉Linux内核任意子系统、有嵌入式相关实践经验者优先",
+     "stored_strength": "PREFERRED",
+     "type": "EXPERIENCE",
+     "claim_id": 147,
+     "effective_strength": "PREFERRED",
+     "type_normalized": "EXPERIENCE",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "熟悉Linux内核任意子系统、有嵌入式相关实践经验者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 92,
+     "statement": "熟悉芯片硬件架构原理及硬件虚拟化",
+     "stored_strength": "REQUIRED",
+     "type": "UNKNOWN",
+     "claim_id": 148,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "UNKNOWN",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "熟悉芯片硬件架构原理及硬件虚拟化",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 93,
+     "statement": "熟悉Linux内核或主流RTOS（FreeRTOS、LiteOS、RT-Thread、μC/OS、Zephyr、VxWorks等）",
+     "stored_strength": "REQUIRED",
+     "type": "UNKNOWN",
+     "claim_id": 149,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "UNKNOWN",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "熟悉Linux内核或主流RTOS（FreeRTOS、LiteOS、RT-Thread、μC/OS、Zephyr、VxWorks等）",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 94,
+     "statement": "熟悉ARM/LoongArch/x86至少一种体系架构",
+     "stored_strength": "REQUIRED",
+     "type": "UNKNOWN",
+     "claim_id": 150,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "UNKNOWN",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "熟悉ARM/LoongArch/x86至少一种体系架构",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 95,
+     "statement": "熟练使用GDB、逻辑分析仪、示波器等调试工具定位和解决复杂软硬件问题",
+     "stored_strength": "REQUIRED",
+     "type": "SKILL",
+     "claim_id": 151,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "熟练使用GDB、逻辑分析仪、示波器等调试工具定位和解决复杂软硬件问题",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 96,
+     "statement": "有RTOS软件模块设计、操作系统移植或模块开发经验者优先",
+     "stored_strength": "PREFERRED",
+     "type": "EXPERIENCE",
+     "claim_id": 152,
+     "effective_strength": "PREFERRED",
+     "type_normalized": "EXPERIENCE",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "有RTOS软件模块设计、操作系统移植或模块开发经验者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 97,
+     "statement": "有性能优化、低功耗、TSN、实时性、功能安全（IEC 61508/ISO 26262）或形式化验证经验者加分",
+     "stored_strength": "PREFERRED",
+     "type": "EXPERIENCE",
+     "claim_id": 153,
+     "effective_strength": "PREFERRED",
+     "type_normalized": "EXPERIENCE",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "有性能优化、低功耗、TSN、实时性、功能安全（IEC 61508/ISO 26262）或形式化验证经验者加分",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 98,
+     "statement": "热爱底层系统研发，学习能力强、踏实专注，愿意长期深耕国产嵌入式操作系统方向，具备良好的沟通能力和团队协作意识",
+     "stored_strength": "REQUIRED",
+     "type": "SOFT_SKILL",
+     "claim_id": 154,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SOFT_SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "热爱底层系统研发",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "学习能力强、踏实专注",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "愿意长期深耕国产嵌入式操作系统方向",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "具备良好的沟通能力和团队协作意识",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    }
+   ],
+   "counts": {
+    "requirements": 12,
+    "evidence_problems": 0,
+    "stored_strength": {
+     "REQUIRED": 8,
+     "PREFERRED": 4
+    },
+    "effective_strength": {
+     "REQUIRED": 8,
+     "PREFERRED": 4
+    }
+   },
+   "mixed_clauses": [],
+   "type_status": {
+    "ambiguous": [],
+    "unknown": [],
+    "unknown_not_hard_eligibility": []
+   },
+   "skill_preview": {
+    "status": "NO_APPLICABLE_SKILL",
+    "recommended_skill_id": null,
+    "score": null,
+    "reason": "当前目录没有充分适用的专业规则，请手动选择或使用通用策略。"
+   },
+   "matching_preview": {
+    "NOT_APPLICABLE": 1,
+    "NO_EVIDENCE": 11,
+    "rows": [
+     {
+      "id": 87,
+      "status": "NOT_APPLICABLE"
+     },
+     {
+      "id": 88,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 89,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 90,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 91,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 92,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 93,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 94,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 95,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 96,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 97,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 98,
+      "status": "NO_EVIDENCE"
+     }
+    ]
+   },
+   "problems": [],
+   "advisory": [],
+   "verbatim_buckets": {
+    "VERBATIM": 12,
+    "FORMAT_VARIANT": 0,
+    "HEADING_JOINED": 0,
+    "LABEL_INVENTED": 0,
+    "PARAPHRASE": 0
+   },
+   "verbatim_samples": {
+    "HEADING_JOINED": [],
+    "LABEL_INVENTED": [],
+    "PARAPHRASE": []
+   }
+  },
+  "18": {
+   "jd_id": 18,
+   "job_id": 10,
+   "company": "沐瞳科技",
+   "job_title": "【2027届秋招】AI测试工程师（web平台）",
+   "version": 1,
+   "publication_status": "WAITING_REVIEW",
+   "job_status": "WAITING_REVIEW",
+   "company_status": "ACTIVE",
+   "body_chars": 1871,
+   "body_equals_snapshot": true,
+   "snapshot_hash_ok": true,
+   "identity": {
+    "claim_id": 155,
+    "category": "JOB_JD",
+    "statement": "沐瞳科技: 【2027届秋招】AI测试工程师（web平台）",
+    "evidence": 1,
+    "excerpts": [
+     "沐瞳科技\n【2027届秋招】AI测试工程师（web平台）\n我们希望招聘的不是只负责执行测试用例、发现产品缺陷的传统测试工"
+    ],
+    "company_literal_in_body": true,
+    "title_literal_in_body": true
+   },
+   "requirements": [
+    {
+     "id": 99,
+     "statement": "2027届本科及以上学历，计算机、软件工程、人工智能、信息安全、数学等相关专业优先",
+     "stored_strength": "REQUIRED",
+     "type": "EDUCATION",
+     "claim_id": 162,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "EDUCATION",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": true,
+     "compound_mixed": true,
+     "clauses": [
+      {
+       "text": "2027届本科及以上学历",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "计算机、软件工程、人工智能、信息安全、数学等相关专业优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1,
+     "mandatory_clauses_not_in_body": []
+    },
+    {
+     "id": 100,
+     "statement": "具备扎实的计算机基础，了解数据结构、计算机网络、操作系统、数据库及软件工程基本知识",
+     "stored_strength": "REQUIRED",
+     "type": "UNKNOWN",
+     "claim_id": 163,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "UNKNOWN",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "具备扎实的计算机基础",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "了解数据结构、计算机网络、操作系统、数据库及软件工程基本知识",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 101,
+     "statement": "掌握至少一门编程语言，如 Python、Java、JavaScript、Go、C++ 等，能够独立完成基础编码和问题调试",
+     "stored_strength": "REQUIRED",
+     "type": "SKILL",
+     "claim_id": 164,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "掌握至少一门编程语言",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "如 Python、Java、JavaScript、Go、C++ 等",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "能够独立完成基础编码和问题调试",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 102,
+     "statement": "具备良好的逻辑分析能力，能够将复杂问题进行拆解、定位和验证",
+     "stored_strength": "REQUIRED",
+     "type": "SKILL",
+     "claim_id": 165,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "具备良好的逻辑分析能力",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "能够将复杂问题进行拆解、定位和验证",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 103,
+     "statement": "对软件质量、工程效率或 AI 技术有兴趣，愿意深入理解系统实现",
+     "stored_strength": "REQUIRED",
+     "type": "UNKNOWN",
+     "claim_id": 166,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "UNKNOWN",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "对软件质量、工程效率或 AI 技术有兴趣",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "愿意深入理解系统实现",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 104,
+     "statement": "具备较强的责任意识、沟通协作能力和主动学习能力，能够推动问题形成闭环",
+     "stored_strength": "REQUIRED",
+     "type": "SOFT_SKILL",
+     "claim_id": 167,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SOFT_SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "具备较强的责任意识、沟通协作能力和主动学习能力",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "能够推动问题形成闭环",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 105,
+     "statement": "能够接受从业务测试实践出发，逐步向测试工程、AI 测试及质量治理方向发展",
+     "stored_strength": "REQUIRED",
+     "type": "UNKNOWN",
+     "claim_id": 168,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "UNKNOWN",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "能够接受从业务测试实践出发",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "逐步向测试工程、AI 测试及质量治理方向发展",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 106,
+     "statement": "加分项：有测试开发、软件开发、AI 应用、数据分析或开源项目实践",
+     "stored_strength": "PREFERRED",
+     "type": "EXPERIENCE",
+     "claim_id": 169,
+     "effective_strength": "PREFERRED",
+     "type_normalized": "EXPERIENCE",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "加分项：有测试开发、软件开发、AI 应用、数据分析或开源项目实践",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": false,
+     "statement_in_raw_squashed": false,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 107,
+     "statement": "加分项：熟悉接口测试、自动化测试、持续集成、性能测试或稳定性测试中的一种或多种",
+     "stored_strength": "PREFERRED",
+     "type": "SKILL",
+     "claim_id": 170,
+     "effective_strength": "PREFERRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "加分项：熟悉接口测试、自动化测试、持续集成、性能测试或稳定性测试中的一种或多种",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": false,
+     "statement_in_raw_squashed": false,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 108,
+     "statement": "加分项：使用过大模型 API、Agent、RAG、MCP、Prompt Engineering 等相关技术，并有实际项目经验",
+     "stored_strength": "PREFERRED",
+     "type": "EXPERIENCE",
+     "claim_id": 171,
+     "effective_strength": "PREFERRED",
+     "type_normalized": "EXPERIENCE",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "加分项：使用过大模型 API、Agent、RAG、MCP、Prompt Engineering 等相关技术",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "并有实际项目经验",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": false,
+     "statement_in_raw_squashed": false,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 109,
+     "statement": "加分项：了解软件研发流程、DevOps、可观测性、微服务或云原生相关技术",
+     "stored_strength": "PREFERRED",
+     "type": "UNKNOWN",
+     "claim_id": 172,
+     "effective_strength": "PREFERRED",
+     "type_normalized": "UNKNOWN",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "加分项：了解软件研发流程、DevOps、可观测性、微服务或云原生相关技术",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": false,
+     "statement_in_raw_squashed": false,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 110,
+     "statement": "加分项：参加过程序设计、软件测试、人工智能、数学建模、CTF 等竞赛",
+     "stored_strength": "PREFERRED",
+     "type": "EXPERIENCE",
+     "claim_id": 173,
+     "effective_strength": "PREFERRED",
+     "type_normalized": "EXPERIENCE",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "加分项：参加过程序设计、软件测试、人工智能、数学建模、CTF 等竞赛",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": false,
+     "statement_in_raw_squashed": false,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 111,
+     "statement": "加分项：有较强的问题意识，能够主动发现现有流程或方案中的不足，并尝试通过技术手段解决",
+     "stored_strength": "PREFERRED",
+     "type": "SOFT_SKILL",
+     "claim_id": 174,
+     "effective_strength": "PREFERRED",
+     "type_normalized": "SOFT_SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "加分项：有较强的问题意识",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "能够主动发现现有流程或方案中的不足",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "并尝试通过技术手段解决",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": false,
+     "statement_in_raw_squashed": false,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    }
+   ],
+   "counts": {
+    "requirements": 13,
+    "evidence_problems": 0,
+    "stored_strength": {
+     "REQUIRED": 7,
+     "PREFERRED": 6
+    },
+    "effective_strength": {
+     "REQUIRED": 7,
+     "PREFERRED": 6
+    }
+   },
+   "mixed_clauses": [
+    {
+     "id": 99,
+     "clauses": [
+      {
+       "text": "2027届本科及以上学历",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "计算机、软件工程、人工智能、信息安全、数学等相关专业优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "stored": "REQUIRED",
+     "effective": "REQUIRED"
+    }
+   ],
+   "type_status": {
+    "ambiguous": [],
+    "unknown": [],
+    "unknown_not_hard_eligibility": []
+   },
+   "skill_preview": {
+    "status": "RECOMMENDED",
+    "recommended_skill_id": "ai_agent_application",
+    "score": null,
+    "reason": "岗位的RAG、Agent与该专业规则相符。"
+   },
+   "matching_preview": {
+    "NOT_APPLICABLE": 1,
+    "NO_EVIDENCE": 12,
+    "rows": [
+     {
+      "id": 99,
+      "status": "NOT_APPLICABLE"
+     },
+     {
+      "id": 100,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 101,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 102,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 103,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 104,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 105,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 106,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 107,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 108,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 109,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 110,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 111,
+      "status": "NO_EVIDENCE"
+     }
+    ]
+   },
+   "problems": [],
+   "advisory": [],
+   "verbatim_buckets": {
+    "VERBATIM": 7,
+    "FORMAT_VARIANT": 0,
+    "HEADING_JOINED": 6,
+    "LABEL_INVENTED": 0,
+    "PARAPHRASE": 0
+   },
+   "verbatim_samples": {
+    "HEADING_JOINED": [
+     {
+      "id": 106,
+      "statement": "加分项：有测试开发、软件开发、AI 应用、数据分析或开源项目实践"
+     },
+     {
+      "id": 107,
+      "statement": "加分项：熟悉接口测试、自动化测试、持续集成、性能测试或稳定性测试中的一种或多种"
+     },
+     {
+      "id": 108,
+      "statement": "加分项：使用过大模型 API、Agent、RAG、MCP、Prompt Engineering 等相关技术，并有实际项目经验"
+     },
+     {
+      "id": 109,
+      "statement": "加分项：了解软件研发流程、DevOps、可观测性、微服务或云原生相关技术"
+     }
+    ],
+    "LABEL_INVENTED": [],
+    "PARAPHRASE": []
+   }
+  },
+  "19": {
+   "jd_id": 19,
+   "job_id": 11,
+   "company": "蔚来",
+   "job_title": "校招-座舱大模型后训练/Agentic 算法工程师",
+   "version": 1,
+   "publication_status": "WAITING_REVIEW",
+   "job_status": "WAITING_REVIEW",
+   "company_status": "WAITING_REVIEW",
+   "body_chars": 1025,
+   "body_equals_snapshot": true,
+   "snapshot_hash_ok": true,
+   "identity": {
+    "claim_id": 175,
+    "category": "JOB_JD",
+    "statement": "蔚来: 校招-座舱大模型后训练/Agentic 算法工程师",
+    "evidence": 1,
+    "excerpts": [
+     "蔚来\n校招-座舱大模型后训练/Agentic 算法工程师\n1. 面向智能座舱与车载交互场景，探索大语言模型与 Agent"
+    ],
+    "company_literal_in_body": true,
+    "title_literal_in_body": true
+   },
+   "requirements": [
+    {
+     "id": 112,
+     "statement": "研究生及以上学历，计算机、人工智能、自动化、信号处理、数学等相关专业，具备扎实的机器学习与 NLP 基础",
+     "stored_strength": "REQUIRED",
+     "type": "EDUCATION",
+     "claim_id": 176,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "EDUCATION",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": true,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "研究生及以上学历",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "计算机、人工智能、自动化、信号处理、数学等相关专业",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "具备扎实的机器学习与 NLP 基础",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 113,
+     "statement": "具备 LLM 后训练相关科研或项目经验，熟悉 Reward Modeling、Preference Learning、On-policy Distillation、RLHF / RLVR 等训练流程",
+     "stored_strength": "REQUIRED",
+     "type": "EXPERIENCE",
+     "claim_id": 177,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "EXPERIENCE",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "具备 LLM 后训练相关科研或项目经验",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "熟悉 Reward Modeling、Preference Learning、On-policy Distillation、RLHF / RLVR 等训练流程",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": false,
+     "statement_in_raw_squashed": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 114,
+     "statement": "熟练掌握 Python、Java、TypeScript、JsonScript 等至少一门编程语言，具备良好的工程实现能力",
+     "stored_strength": "REQUIRED",
+     "type": "SKILL",
+     "claim_id": 178,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "熟练掌握 Python、Java、TypeScript、JsonScript 等至少一门编程语言",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "具备良好的工程实现能力",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 115,
+     "statement": "熟悉 LLM Agent 与 Agent Harness 技术体系，理解 ReAct、Function Calling、Tool Integrated Reasoning、Reflection、Memory、Planning、多轮交互等范式",
+     "stored_strength": "REQUIRED",
+     "type": "SKILL",
+     "claim_id": 179,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "熟悉 LLM Agent 与 Agent Harness 技术体系",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "理解 ReAct、Function Calling、Tool Integrated Reasoning、Reflection、Memory、Planning、多轮交互等范式",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 116,
+     "statement": "熟悉 PPO、GRPO、DAPO 等 LLM RL 算法原理，了解 Agentic RL、长程任务学习、稀疏奖励建模、轨迹级优化等方向",
+     "stored_strength": "REQUIRED",
+     "type": "SKILL",
+     "claim_id": 180,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "熟悉 PPO、GRPO、DAPO 等 LLM RL 算法原理",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "了解 Agentic RL、长程任务学习、稀疏奖励建模、轨迹级优化等方向",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 117,
+     "statement": "熟悉 Verl、Slime、ms-swift、OpenRLHF、TRL 等训练或强化学习框架，了解分布式训练、推理服务和评测 infra 者优先",
+     "stored_strength": "PREFERRED",
+     "type": "SKILL",
+     "claim_id": 181,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": true,
+     "clauses": [
+      {
+       "text": "熟悉 Verl、Slime、ms-swift、OpenRLHF、TRL 等训练或强化学习框架",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "了解分布式训练、推理服务和评测 infra 者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1,
+     "mandatory_clauses_not_in_body": []
+    },
+    {
+     "id": 118,
+     "statement": "具备较强的论文跟踪、技术复现和工程落地能力",
+     "stored_strength": "REQUIRED",
+     "type": "SKILL",
+     "claim_id": 182,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "具备较强的论文跟踪、技术复现和工程落地能力",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 119,
+     "statement": "有车载语音助手、智能座舱、Voice Agent、多模态交互、高水平论文或开源项目经验者优先",
+     "stored_strength": "PREFERRED",
+     "type": "EXPERIENCE",
+     "claim_id": 183,
+     "effective_strength": "PREFERRED",
+     "type_normalized": "EXPERIENCE",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "有车载语音助手、智能座舱、Voice Agent、多模态交互、高水平论文或开源项目经验者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    }
+   ],
+   "counts": {
+    "requirements": 8,
+    "evidence_problems": 0,
+    "stored_strength": {
+     "REQUIRED": 6,
+     "PREFERRED": 2
+    },
+    "effective_strength": {
+     "REQUIRED": 7,
+     "PREFERRED": 1
+    }
+   },
+   "mixed_clauses": [
+    {
+     "id": 117,
+     "clauses": [
+      {
+       "text": "熟悉 Verl、Slime、ms-swift、OpenRLHF、TRL 等训练或强化学习框架",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "了解分布式训练、推理服务和评测 infra 者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "stored": "PREFERRED",
+     "effective": "REQUIRED"
+    }
+   ],
+   "type_status": {
+    "ambiguous": [],
+    "unknown": [],
+    "unknown_not_hard_eligibility": []
+   },
+   "skill_preview": {
+    "status": "NO_APPLICABLE_SKILL",
+    "recommended_skill_id": null,
+    "score": null,
+    "reason": "当前目录没有充分适用的专业规则，请手动选择或使用通用策略。"
+   },
+   "matching_preview": {
+    "NOT_APPLICABLE": 1,
+    "NO_EVIDENCE": 7,
+    "rows": [
+     {
+      "id": 112,
+      "status": "NOT_APPLICABLE"
+     },
+     {
+      "id": 113,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 114,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 115,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 116,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 117,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 118,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 119,
+      "status": "NO_EVIDENCE"
+     }
+    ]
+   },
+   "problems": [],
+   "advisory": [
+    "STATEMENT_WHITESPACE_VARIANT:req113"
+   ],
+   "verbatim_buckets": {
+    "VERBATIM": 7,
+    "FORMAT_VARIANT": 1,
+    "HEADING_JOINED": 0,
+    "LABEL_INVENTED": 0,
+    "PARAPHRASE": 0
+   },
+   "verbatim_samples": {
+    "HEADING_JOINED": [],
+    "LABEL_INVENTED": [],
+    "PARAPHRASE": []
+   }
+  },
+  "20": {
+   "jd_id": 20,
+   "job_id": 12,
+   "company": "沐瞳科技",
+   "job_title": "【2027届秋招】Unity客户端开发工程师（活动）-MOBA",
+   "version": 1,
+   "publication_status": "WAITING_REVIEW",
+   "job_status": "WAITING_REVIEW",
+   "company_status": "ACTIVE",
+   "body_chars": 1315,
+   "body_equals_snapshot": true,
+   "snapshot_hash_ok": true,
+   "identity": {
+    "claim_id": 184,
+    "category": "JOB_JD",
+    "statement": "沐瞳科技: 【2027届秋招】Unity客户端开发工程师（活动）-MOBA",
+    "evidence": 1,
+    "excerpts": [
+     "沐瞳科技\n【2027届秋招】Unity客户端开发工程师（活动）-MOBA\n1、参与基于 Unity3D 引擎的移动端游戏"
+    ],
+    "company_literal_in_body": true,
+    "title_literal_in_body": true
+   },
+   "requirements": [
+    {
+     "id": 120,
+     "statement": "全日制本科及以上学历，计算机科学、软件工程及相关专业，具备扎实的计算机基础和良好的编程能力",
+     "stored_strength": "REQUIRED",
+     "type": "EDUCATION",
+     "claim_id": 190,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "EDUCATION",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": true,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "全日制本科及以上学历",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "计算机科学、软件工程及相关专业",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "具备扎实的计算机基础和良好的编程能力",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 121,
+     "statement": "熟悉 C#、C++、Lua、Python 等至少一种编程语言，具备良好的代码规范意识，能够编写结构清晰、易于维护的代码",
+     "stored_strength": "REQUIRED",
+     "type": "SKILL",
+     "claim_id": 191,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "熟悉 C#、C++、Lua、Python 等至少一种编程语言",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "具备良好的代码规范意识",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "能够编写结构清晰、易于维护的代码",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 122,
+     "statement": "掌握常用数据结构与算法，具备较好的逻辑分析和问题解决能力，能够独立分析并解决开发过程中遇到的技术问题",
+     "stored_strength": "REQUIRED",
+     "type": "SKILL",
+     "claim_id": 192,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "掌握常用数据结构与算法",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "具备较好的逻辑分析和问题解决能力",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "能够独立分析并解决开发过程中遇到的技术问题",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 123,
+     "statement": "熟悉 Unity3D 引擎及常用开发流程，了解 Unity 生命周期、UGUI、Prefab、Asset 等常用模块",
+     "stored_strength": "REQUIRED",
+     "type": "SKILL",
+     "claim_id": 193,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "熟悉 Unity3D 引擎及常用开发流程",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "了解 Unity 生命周期、UGUI、Prefab、Asset 等常用模块",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 124,
+     "statement": "有 Unity 项目开发经验、完整游戏项目经验或相关实习经历者优先",
+     "stored_strength": "PREFERRED",
+     "type": "EXPERIENCE",
+     "claim_id": 194,
+     "effective_strength": "PREFERRED",
+     "type_normalized": "EXPERIENCE",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "有 Unity 项目开发经验、完整游戏项目经验或相关实习经历者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 125,
+     "statement": "具备一定的游戏客户端开发基础，了解游戏常见模块及开发流程",
+     "stored_strength": "REQUIRED",
+     "type": "EXPERIENCE",
+     "claim_id": 195,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "EXPERIENCE",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "具备一定的游戏客户端开发基础",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "了解游戏常见模块及开发流程",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 126,
+     "statement": "对游戏战斗系统、角色控制、技能系统、网络同步等方向有一定了解或实践经验者优先",
+     "stored_strength": "PREFERRED",
+     "type": "EXPERIENCE",
+     "claim_id": 196,
+     "effective_strength": "PREFERRED",
+     "type_normalized": "EXPERIENCE",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "对游戏战斗系统、角色控制、技能系统、网络同步等方向有一定了解或实践经验者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 127,
+     "statement": "对移动端游戏开发及性能优化有一定认识，了解 Draw Call、GC、内存、CPU/GPU 性能等基础概念，有实际性能分析和优化经验者优先",
+     "stored_strength": "PREFERRED",
+     "type": "SKILL",
+     "claim_id": 197,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": true,
+     "clauses": [
+      {
+       "text": "对移动端游戏开发及性能优化有一定认识",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "了解 Draw Call、GC、内存、CPU/GPU 性能等基础概念",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "有实际性能分析和优化经验者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1,
+     "mandatory_clauses_not_in_body": []
+    },
+    {
+     "id": 128,
+     "statement": "热爱游戏，对游戏行业及游戏研发工作有深入了解，有较强的游戏体验和独立思考能力，能够从玩家和开发者视角对游戏设计提出自己的见解",
+     "stored_strength": "REQUIRED",
+     "type": "OTHER",
+     "claim_id": 198,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "OTHER",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "热爱游戏",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "对游戏行业及游戏研发工作有深入了解",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "有较强的游戏体验和独立思考能力",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "能够从玩家和开发者视角对游戏设计提出自己的见解",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 129,
+     "statement": "对 AI、大语言模型等新技术保持关注和学习热情，有 AI 相关项目、工具开发或实践经验者优先",
+     "stored_strength": "PREFERRED",
+     "type": "SKILL",
+     "claim_id": 199,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": true,
+     "clauses": [
+      {
+       "text": "对 AI、大语言模型等新技术保持关注和学习热情",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "有 AI 相关项目、工具开发或实践经验者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1,
+     "mandatory_clauses_not_in_body": []
+    },
+    {
+     "id": 130,
+     "statement": "思维敏捷，学习能力和理解能力强，具备较强的技术钻研意识，能够快速学习和适应新技术、新工具及新的业务需求",
+     "stored_strength": "REQUIRED",
+     "type": "SOFT_SKILL",
+     "claim_id": 200,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SOFT_SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "思维敏捷",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "学习能力和理解能力强",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "具备较强的技术钻研意识",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "能够快速学习和适应新技术、新工具及新的业务需求",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 131,
+     "statement": "工作积极主动，责任心强，具备良好的沟通能力和团队协作精神，能够主动承担任务并推动问题解决",
+     "stored_strength": "REQUIRED",
+     "type": "SOFT_SKILL",
+     "claim_id": 201,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SOFT_SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "工作积极主动",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "责任心强",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "具备良好的沟通能力和团队协作精神",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "能够主动承担任务并推动问题解决",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 132,
+     "statement": "有较强的自驱力和成长意愿，对游戏客户端开发有长期职业规划，并愿意在游戏研发领域持续深耕",
+     "stored_strength": "REQUIRED",
+     "type": "SOFT_SKILL",
+     "claim_id": 202,
+     "effective_strength": "REQUIRED",
+     "type_normalized": "SOFT_SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "有较强的自驱力和成长意愿",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "对游戏客户端开发有长期职业规划",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "并愿意在游戏研发领域持续深耕",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": true,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 133,
+     "statement": "有完整的 Unity 独立游戏或团队项目开发经验，并有可展示的项目作品（加分项）",
+     "stored_strength": "UNKNOWN",
+     "type": "EXPERIENCE",
+     "claim_id": 203,
+     "effective_strength": "UNKNOWN",
+     "type_normalized": "EXPERIENCE",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "有完整的 Unity 独立游戏或团队项目开发经验",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "并有可展示的项目作品（加分项）",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": false,
+     "statement_in_raw_squashed": false,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 134,
+     "statement": "有 MOBA、ARPG、FPS 等实时对战类游戏开发或相关项目经验（加分项）",
+     "stored_strength": "UNKNOWN",
+     "type": "EXPERIENCE",
+     "claim_id": 204,
+     "effective_strength": "UNKNOWN",
+     "type_normalized": "EXPERIENCE",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "有 MOBA、ARPG、FPS 等实时对战类游戏开发或相关项目经验（加分项）",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": false,
+     "statement_in_raw_squashed": false,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 135,
+     "statement": "熟悉 Unity 性能分析与优化工具，有移动端性能优化实践经验（加分项）",
+     "stored_strength": "UNKNOWN",
+     "type": "SKILL",
+     "claim_id": 205,
+     "effective_strength": "UNKNOWN",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "熟悉 Unity 性能分析与优化工具",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "有移动端性能优化实践经验（加分项）",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": false,
+     "statement_in_raw_squashed": false,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 136,
+     "statement": "了解网络通信、客户端与服务器架构、帧同步或状态同步等相关技术（加分项）",
+     "stored_strength": "UNKNOWN",
+     "type": "SKILL",
+     "claim_id": 206,
+     "effective_strength": "UNKNOWN",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "了解网络通信、客户端与服务器架构、帧同步或状态同步等相关技术（加分项）",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": false,
+     "statement_in_raw_squashed": false,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 137,
+     "statement": "熟悉 Lua 热更新、资源管理、AssetBundle/Addressables 等相关技术（加分项）",
+     "stored_strength": "UNKNOWN",
+     "type": "SKILL",
+     "claim_id": 207,
+     "effective_strength": "UNKNOWN",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "熟悉 Lua 热更新、资源管理、AssetBundle/Addressables 等相关技术（加分项）",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": false,
+     "statement_in_raw_squashed": false,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 138,
+     "statement": "有 Git 等版本管理工具使用经验，了解基本的软件工程开发流程（加分项）",
+     "stored_strength": "UNKNOWN",
+     "type": "SKILL",
+     "claim_id": 208,
+     "effective_strength": "UNKNOWN",
+     "type_normalized": "SKILL",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "有 Git 等版本管理工具使用经验",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "了解基本的软件工程开发流程（加分项）",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": false,
+     "statement_in_raw_squashed": false,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 139,
+     "statement": "参加过游戏开发相关比赛、Game Jam、程序设计竞赛或有开源项目贡献（加分项）",
+     "stored_strength": "UNKNOWN",
+     "type": "EXPERIENCE",
+     "claim_id": 209,
+     "effective_strength": "UNKNOWN",
+     "type_normalized": "EXPERIENCE",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "参加过游戏开发相关比赛、Game Jam、程序设计竞赛或有开源项目贡献（加分项）",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": false,
+     "statement_in_raw_squashed": false,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    },
+    {
+     "id": 140,
+     "statement": "有 AI、大模型、Agent 等相关项目实践，或对 AI 在游戏研发中的应用有深入思考（加分项）",
+     "stored_strength": "UNKNOWN",
+     "type": "EXPERIENCE",
+     "claim_id": 210,
+     "effective_strength": "UNKNOWN",
+     "type_normalized": "EXPERIENCE",
+     "type_status": "KNOWN",
+     "is_hard_eligibility": false,
+     "compound_mixed": false,
+     "clauses": [
+      {
+       "text": "有 AI、大模型、Agent 等相关项目实践",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "或对 AI 在游戏研发中的应用有深入思考（加分项）",
+       "strength": "REQUIRED"
+      }
+     ],
+     "statement_in_raw": false,
+     "statement_in_raw_squashed": false,
+     "evidence_rows": 1,
+     "evidence_offset_exact": 1,
+     "evidence_literal_in_body": 1
+    }
+   ],
+   "counts": {
+    "requirements": 21,
+    "evidence_problems": 0,
+    "stored_strength": {
+     "REQUIRED": 9,
+     "PREFERRED": 4,
+     "UNKNOWN": 8
+    },
+    "effective_strength": {
+     "REQUIRED": 11,
+     "PREFERRED": 2,
+     "UNKNOWN": 8
+    }
+   },
+   "mixed_clauses": [
+    {
+     "id": 127,
+     "clauses": [
+      {
+       "text": "对移动端游戏开发及性能优化有一定认识",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "了解 Draw Call、GC、内存、CPU/GPU 性能等基础概念",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "有实际性能分析和优化经验者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "stored": "PREFERRED",
+     "effective": "REQUIRED"
+    },
+    {
+     "id": 129,
+     "clauses": [
+      {
+       "text": "对 AI、大语言模型等新技术保持关注和学习热情",
+       "strength": "REQUIRED"
+      },
+      {
+       "text": "有 AI 相关项目、工具开发或实践经验者优先",
+       "strength": "PREFERRED"
+      }
+     ],
+     "stored": "PREFERRED",
+     "effective": "REQUIRED"
+    }
+   ],
+   "type_status": {
+    "ambiguous": [],
+    "unknown": [],
+    "unknown_not_hard_eligibility": []
+   },
+   "skill_preview": {
+    "status": "NO_APPLICABLE_SKILL",
+    "recommended_skill_id": null,
+    "score": null,
+    "reason": "当前目录没有充分适用的专业规则，请手动选择或使用通用策略。"
+   },
+   "matching_preview": {
+    "NOT_APPLICABLE": 1,
+    "NO_EVIDENCE": 20,
+    "rows": [
+     {
+      "id": 120,
+      "status": "NOT_APPLICABLE"
+     },
+     {
+      "id": 121,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 122,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 123,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 124,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 125,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 126,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 127,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 128,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 129,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 130,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 131,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 132,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 133,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 134,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 135,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 136,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 137,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 138,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 139,
+      "status": "NO_EVIDENCE"
+     },
+     {
+      "id": 140,
+      "status": "NO_EVIDENCE"
+     }
+    ]
+   },
+   "problems": [
+    "STATEMENT_PARAPHRASED:req133",
+    "STATEMENT_PARAPHRASED:req134",
+    "STATEMENT_PARAPHRASED:req135",
+    "STATEMENT_PARAPHRASED:req136",
+    "STATEMENT_PARAPHRASED:req137",
+    "STATEMENT_PARAPHRASED:req138",
+    "STATEMENT_PARAPHRASED:req139",
+    "STATEMENT_PARAPHRASED:req140"
+   ],
+   "advisory": [],
+   "verbatim_buckets": {
+    "VERBATIM": 13,
+    "FORMAT_VARIANT": 0,
+    "HEADING_JOINED": 0,
+    "LABEL_INVENTED": 0,
+    "PARAPHRASE": 8
+   },
+   "verbatim_samples": {
+    "HEADING_JOINED": [],
+    "LABEL_INVENTED": [],
+    "PARAPHRASE": [
+     {
+      "id": 133,
+      "statement": "有完整的 Unity 独立游戏或团队项目开发经验，并有可展示的项目作品（加分项）"
+     },
+     {
+      "id": 134,
+      "statement": "有 MOBA、ARPG、FPS 等实时对战类游戏开发或相关项目经验（加分项）"
+     },
+     {
+      "id": 135,
+      "statement": "熟悉 Unity 性能分析与优化工具，有移动端性能优化实践经验（加分项）"
+     },
+     {
+      "id": 136,
+      "statement": "了解网络通信、客户端与服务器架构、帧同步或状态同步等相关技术（加分项）"
+     }
+    ]
+   }
+  }
+ },
+ "decisions": {},
+ "published": {},
+ "gate": {
+  "16": {
+   "approved": true,
+   "reasons": []
+  },
+  "17": {
+   "approved": true,
+   "reasons": []
+  },
+  "18": {
+   "approved": true,
+   "reasons": []
+  },
+  "19": {
+   "approved": true,
+   "reasons": []
+  },
+  "20": {
+   "approved": false,
+   "reasons": [
+    "blocking:STATEMENT_PARAPHRASED:req133,STATEMENT_PARAPHRASED:req134,STATEMENT_PARAPHRASED:req135,STATEMENT_PARAPHRASED:req136,STATEMENT_PARAPHRASED:req137,STATEMENT_PARAPHRASED:req138,STATEMENT_PARAPHRASED:req139,STATEMENT_PARAPHRASED:req140"
+   ]
+  }
+ },
+ "verbatim": {
+  "16": {
+   "VERBATIM": [
+    78,
+    79,
+    80,
+    81,
+    82,
+    83,
+    84,
+    85,
+    86
+   ],
+   "FORMAT_VARIANT": [],
+   "HEADING_JOINED": [],
+   "LABEL_INVENTED": [],
+   "PARAPHRASE": []
+  },
+  "17": {
+   "VERBATIM": [
+    87,
+    88,
+    89,
+    90,
+    91,
+    92,
+    93,
+    94,
+    95,
+    96,
+    97,
+    98
+   ],
+   "FORMAT_VARIANT": [],
+   "HEADING_JOINED": [],
+   "LABEL_INVENTED": [],
+   "PARAPHRASE": []
+  },
+  "18": {
+   "VERBATIM": [
+    99,
+    100,
+    101,
+    102,
+    103,
+    104,
+    105
+   ],
+   "FORMAT_VARIANT": [],
+   "HEADING_JOINED": [
+    106,
+    107,
+    108,
+    109,
+    110,
+    111
+   ],
+   "LABEL_INVENTED": [],
+   "PARAPHRASE": []
+  },
+  "19": {
+   "VERBATIM": [
+    112,
+    114,
+    115,
+    116,
+    117,
+    118,
+    119
+   ],
+   "FORMAT_VARIANT": [
+    113
+   ],
+   "HEADING_JOINED": [],
+   "LABEL_INVENTED": [],
+   "PARAPHRASE": []
+  },
+  "20": {
+   "VERBATIM": [
+    120,
+    121,
+    122,
+    123,
+    124,
+    125,
+    126,
+    127,
+    128,
+    129,
+    130,
+    131,
+    132
+   ],
+   "FORMAT_VARIANT": [],
+   "HEADING_JOINED": [],
+   "LABEL_INVENTED": [],
+   "PARAPHRASE": [
+    133,
+    134,
+    135,
+    136,
+    137,
+    138,
+    139,
+    140
+   ]
+  }
+ }
+}
