@@ -1492,3 +1492,15 @@ L3 前置条件（purge_requests 表、清理顺序、audit_logs 脱敏、Celery
 **Live**：jd2 沐瞳 Agent 平台；合成简历显式标注。画像 1 HTTP/1550 + 续跑 7 HTTP/41064。3 题 3 评价、COMPLETED、Coach 真实生成（`SUMMARY_COACH_AGENT`, 1.0.3）、能力 PRACTICING、下一场计划引用本场评价。评价引用 6/6 来自对应回答；运行中一次 FAIL 是脚本用 question_id 映射的假阴性，已零 HTTP 更正。Prompt：main 2.3.3、eval 2.3.4。
 
 **D1**：`split_strength_clauses` 把"A，或B者优先"误拆成强制+优先。加 `_OR_CONTINUATION`/`_REQUIRED_MARKER`：以"或"开头且前段无显式硬条件则并成一条 PREFERRED；显式"必须/至少/需"不并。83/84 修复为 PREFERRED，117 是真 mixed 保持 REQUIRED。71+229 测试通过。HEAD 1d87a0b 未提交/未 push。
+
+---
+
+## 第四十三轮：R122 B Java Live + C 跨场次训练 Live（15 HTTP / 92,256 token，见 docs/122）
+
+**阶段一**：3 个本地提交未 push（9c1e660/aa69f23/564acf0）。pg/redis/minio 容器非正常退出(255)，重启 WAL 恢复后三库逐表一致。D1 71 passed。
+
+**B 场（Java）**：合成用户+简历+画像(1HTTP)，真实浏览器 CDP 真实治理路由 session15 三题 COMPLETED+Coach，9 截图/59 API 全 2xx。**缺陷：脚本漏勾自适应 → 走 Skill 1.1.0 非 Evaluation 2.3.4（adaptive_policy=None）**，执行配置错误非产品缺陷，但按验收标准不算完全通过。8HTTP/51,081。剩余 5HTTP 不足重跑，按"实质失败即停"未超预算。
+
+**C 场（跨场次训练）**：完全达标。用户A(id9)记忆无 Replay 混入；唯一合法 PRACTICING→WEAKNESS 候选 ai_agent_application:agent 引用 eval27/28/29。session16 adaptive+2.3.4，7HTTP/41,175。10 验收点全过，含 strategy NEXT/FOLLOW_UP、RELATED_TARGET_SELECTED+ACCEPTED、PRACTICING→GAP_SUSPECTED(未强求VERIFIED)、记忆被读取≠训练提升的边界说明。
+
+**质量**：三场评价均识别答非所问/技术错误且 covered_points 诚实；quote_all_ok=false 是 artifact 叙述式评价（引用内嵌 evaluation 文本）的探针假阴性，非引用造假。三场累计 23HTTP/139,936 全 SETTLED 单一模型。正式库/JD沙箱/MinIO/Evaluation2.3.4/Harness/L3L4/0030 均未越界。待裁决：B 场补验需新授权 13/90K。

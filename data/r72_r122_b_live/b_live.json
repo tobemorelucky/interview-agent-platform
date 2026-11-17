@@ -1,0 +1,109 @@
+{
+ "round": "R122-B",
+ "mode": "Java FULL Live / real governed model / browser-driven",
+ "email": "showcase-r2-live-B-synthetic@example.com",
+ "budget": {
+  "max_http": 13,
+  "max_tokens": 90000
+ },
+ "ledger_before": {
+  "http": 9,
+  "tokens": 44683
+ },
+ "ledger_now": {
+  "http": 15,
+  "tokens": 92468
+ },
+ "steps": [
+  {
+   "name": "登录合成用户B",
+   "detail": {
+    "path": "/dashboard",
+    "shot": "b01_login.png"
+   },
+   "ok": true
+  },
+  {
+   "name": "公共职业页查看 JD5 与来源",
+   "detail": {
+    "jd_visible": true,
+    "source_visible": true,
+    "shot": "b02_public_career.png"
+   },
+   "ok": true
+  },
+  {
+   "name": "简历与候选人画像页",
+   "detail": {
+    "resume_visible": false,
+    "profile_visible": true,
+    "shot": "b03_resume_profile.png"
+   },
+   "ok": true
+  },
+  {
+   "name": "选择 JD5 与 java_backend / FULL / 3题",
+   "detail": {
+    "job": "沐瞳科技 · 【2027届秋招】后端开发工程师（AI向/数据平台）",
+    "auto_recommended_skill": "java_backend",
+    "recommendation_visible": true,
+    "shot": "b04_setup.png"
+   },
+   "ok": true
+  },
+  {
+   "name": "浏览器创建会话并回答三题（真实模型）",
+   "detail": {
+    "new_clicked": true,
+    "questions": [
+     {
+      "question": "面试官\n 第 1 / 3 轮 \nJava 后端接口与事务链路\n适中\n你简历里提到用 Java / Spring Boot 做过订单与库存微服务，能挑一个你实际负责的接口，讲讲从请求进来、到扣减库存、再到返回结果这条链路是怎么走的吗？",
+      "answer_len": 238
+     },
+     {
+      "question": "面试官\n 追问 1 / 2\nRedis 预减库存与消息补偿链路\n适中\n你刚才提到用 Redis 预减库存、Lua 脚本保证原子性，那具体到一次下单，Lua 脚本里判断和扣减是怎么写的？扣减成功后如果 MQ 下单失败，这个预减的库存怎么补回来？",
+      "answer_len": 71
+     },
+     {
+      "question": "面试官\n 追问 2 / 2\nRedis 原子扣减脚本设计\n适中\n你刚才说一致性细节是别人处理的，那我们就退一步：如果让你自己写这段 Lua 脚本，你会怎么先判断库存再扣减，让判断和扣减不会被别的请求插进来？",
+      "answer_len": 97
+     }
+    ],
+    "session_id": 15,
+    "completed_visible": true,
+    "evaluation_visible": true,
+    "followup_visible": true,
+    "budget_after_answer": {
+     "http": 15,
+     "tokens": 92468
+    },
+    "shot": "b06_completed.png"
+   },
+   "ok": true
+  },
+  {
+   "name": "报告页生成并展示 Coach",
+   "detail": {
+    "session_id": 15,
+    "generated": true,
+    "stats_visible": true,
+    "coach_visible": true,
+    "shot": "b07_report_coach.png"
+   },
+   "ok": true
+  }
+ ],
+ "chosen": {
+  "job": "沐瞳科技 · 【2027届秋招】后端开发工程师（AI向/数据平台）",
+  "auto_skill": "java_backend"
+ },
+ "ledger_after": {
+  "http": 16,
+  "tokens": 118835
+ },
+ "consumed": {
+  "http": 7,
+  "tokens": 74152
+ },
+ "budget_ok": true
+}

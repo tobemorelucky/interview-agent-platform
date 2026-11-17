@@ -1,0 +1,651 @@
+{
+ "session_id": 15,
+ "session": {
+  "id": 15,
+  "user_id": 10,
+  "status": "COMPLETED",
+  "title": "沐瞳科技 · 【2027届秋招】后端开发工程师（AI向/数据平台）",
+  "question_count": 3,
+  "state_version": 7,
+  "completion_json": "{\"answered_count\": 3, \"evaluated_count\": 3, \"skipped_count\": 0, \"follow_up_count\": 2, \"dynamic_question_count\": 0, \"dimension_averages\": {\"technical_correctness\": 1.6667, \"coverage\": 1.3333, \"depth\": 1.3333, \"relevance\": 1.3333, \"communication\": 2.3333}, \"overall_average\": 1.6, \"total_questions\": 3, \"question_budget\": 3, \"mode\": \"live\", \"avg_score\": 1.6}",
+  "mode": null,
+  "evals": 3
+ },
+ "turns": [
+  {
+   "qid": 32,
+   "q": "你简历里提到用 Java / Spring Boot 做过订单与库存微服务，能挑一个你实际负责的接口，讲讲从请求进来、到扣减库存、再到返回结果这条链路是怎么走的吗？",
+   "kind": "NEXT",
+   "req": null,
+   "aid": 30,
+   "answer": "我用 Spring Boot 做订单服务，按领域拆成订单、库存和通知三个微服务。数据库用 MySQL，订单表按 user_id 分库分表，查询走覆盖索引避免回表。缓存用 Redis，热点 key 加随机过期时间防击穿，缓存和数据库的一致性用先更新数据库再删缓存，配合 binlog 订阅做最终一致对账。消息用 Kafka，生产者开启事务和 acks=all，消费者用幂等表按消息 ID 去重。缓存穿透我用空值缓存加布隆过滤器。分布式锁用 Redisson，看门狗续期避免死锁。",
+   "eid": 30,
+   "artifact": {
+    "tool_observed_outcome": null,
+    "tool_result_ids": [],
+    "technical_correctness": 3,
+    "coverage": 2,
+    "depth": 2,
+    "relevance": 2,
+    "communication": 3,
+    "evaluation": "回答罗列了订单/库存/通知微服务、MySQL 分库分表、Redis 缓存一致性、Kafka 事务与幂等、Redisson 分布式锁等大量技术点，但几乎没有回答题目要求的“一个实际负责接口从请求进入到扣减库存再到返回结果”的链路。没有说明 Controller/Service/DAO 分层、库存扣减的具体 SQL 或条件更新、事务边界、超卖防护与异常回滚/补偿。技术点本身多数方向正确，但属于泛泛堆叠，且“先更新数据库再删缓存”与“binlog 订阅对账”混在一起，未说明该接口实际采用哪种一致性方案；Kafka 生产者事务与 acks=all 的表述也较笼统。整体与当前问题相关性弱，深度不足。",
+    "covered_points": [
+     "提到使用 Spring Boot 构建订单服务，并按领域拆分为订单、库存、通知微服务",
+     "提到 MySQL 分库分表与覆盖索引，涉及数据存储层设计",
+     "提到 Redis 缓存击穿、穿透处理及缓存与数据库一致性思路",
+     "提到 Kafka 消息可靠性（事务、acks=all、幂等表去重）与 Redisson 分布式锁"
+    ],
+    "missing_points": [
+     "未描述具体接口的请求入口与 Controller/Service/DAO 分层调用链",
+     "未说明库存扣减的具体实现方式（如 UPDATE stock SET count=count-1 WHERE id=? AND count>=1 条件更新，或 Redis 预减）",
+     "未指出事务边界在哪里（本地事务范围、是否跨服务、是否用 Seata/TCC/本地消息表）",
+     "未说明如何避免超卖（条件更新影响行数判断、乐观锁版本号、唯一约束等）",
+     "未说明失败或异常时的回滚、重试、补偿与返回结果处理",
+     "未区分哪些是本人实际负责的接口与代码，技术点与题目链路脱节"
+    ],
+    "factual_or_reasoning_issues": [
+     "“先更新数据库再删缓存”与“binlog 订阅做最终一致对账”是两种不同的一致性策略，回答未说明该接口实际采用哪一种，存在概念混用",
+     "Kafka 生产者“开启事务和 acks=all”表述笼统，未说明事务消息与本地事务如何配合，也未与库存扣减链路关联",
+     "大量技术名词堆叠但未落到一个具体接口的请求-扣减-返回流程，逻辑主线不清晰"
+    ],
+    "follow_up_focus": [
+     "请聚焦一个实际负责的下单/扣库存接口，说明库存扣减用的是哪条 SQL 或哪种条件更新，事务边界在哪里，如何判断扣减成功并防止超卖"
+    ],
+    "next_action_recommendation": "FOLLOW_UP",
+    "reference_answer": {
+     "answer_framework": [
+      "先选定一个实际负责的接口（如下单扣库存），说明请求入口与 Controller/Service/DAO 分层",
+      "说明库存扣减的具体方式：数据库条件更新或 Redis 预减，并解释如何用影响行数/返回值判断成功",
+      "指出事务边界：本地事务覆盖订单创建与库存扣减，跨服务时说明一致性方案",
+      "说明异常处理：扣减失败回滚、消息重试、补偿与最终对账",
+      "如实区分本人负责部分，不夸大"
+     ],
+     "interview_answer": "我挑一个下单扣库存的接口来说。请求先到订单服务的 Controller，做参数校验和登录态校验，然后调用 OrderService 的 createOrder 方法。Service 里先查商品和价格，再调用库存服务扣减库存。库存扣减我用的是数据库条件更新，SQL 类似 update stock set count = count - 1 where sku_id = ? and count >= 1，根据返回的影响行数判断是否扣减成功，如果为 0 就说明库存不足，直接返回失败，这样在数据库层面就避免了超卖。订单创建和库存扣减在同一个本地事务里，任何一步失败都回滚。如果库存服务是独立部署的，我会用本地消息表或事务消息保证订单和库存的最终一致，失败时靠定时任务重试和补偿。接口最后返回订单号和扣减结果。需要说明的是，分库分表和缓存那些是项目里其他部分的设计，这个接口我主要负责的是 Controller 到 Service 的扣减逻辑和单元测试。",
+     "bonus_points": [
+      "能说明条件更新与乐观锁版本号两种防超卖方案的取舍",
+      "能说明跨服务时本地消息表/TCC 的补偿窗口与幂等设计",
+      "能说明高并发下 Redis 预减与数据库最终落库的配合方式"
+     ],
+     "possible_follow_ups": [
+      "条件更新影响行数为 0 时，你如何区分是库存不足还是商品不存在？",
+      "如果库存服务和订单服务是独立部署的，你的事务一致性怎么保证？",
+      "高并发下数据库条件更新成为瓶颈时，你会怎么优化？"
+     ]
+    }
+   },
+   "scores": {
+    "correct": 3,
+    "coverage": 2,
+    "depth": 2,
+    "relevance": 2,
+    "comm": 3
+   },
+   "prompt_version": "1.1.0"
+  },
+  {
+   "qid": 33,
+   "q": "你刚才提到用 Redis 预减库存、Lua 脚本保证原子性，那具体到一次下单，Lua 脚本里判断和扣减是怎么写的？扣减成功后如果 MQ 下单失败，这个预减的库存怎么补回来？",
+   "kind": "FOLLOW_UP",
+   "req": null,
+   "aid": 31,
+   "answer": "我用过 Redis 缓存，就是把它放在数据库前面，查询的时候先读缓存，没有就读数据库再写回。具体一致性细节项目里是别人处理的，我主要负责调用。",
+   "eid": 31,
+   "artifact": {
+    "tool_observed_outcome": null,
+    "tool_result_ids": [],
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 2,
+    "evaluation": "回答完全偏离当前问题。问题要求说明 Lua 脚本中库存判断与扣减的原子逻辑，以及 MQ 下单失败后预减库存的补偿方式；候选人却只泛泛描述“Redis 放在数据库前面、先读缓存再读库”，并明确表示一致性细节由别人处理、自己只负责调用。这既没有回答 Lua 脚本如何写，也没有涉及 MQ 失败补偿，属于未展示该问题所需能力。技术表述本身是通用缓存读流程，与秒杀预减库存场景不匹配，且未体现任何原子性、返回值区分或补偿机制。沟通上能成句表达，但未按问题结构作答，信息量极低。",
+    "covered_points": [],
+    "missing_points": [
+     "Lua 脚本中先判断库存是否大于 0 再 decrement 的原子逻辑",
+     "脚本返回值如何区分扣减成功与库存不足",
+     "预减成功后发送 MQ 消息的时机与失败处理",
+     "MQ 下单失败时如何回滚或补偿 Redis 库存（回补脚本、对账等）",
+     "预减与最终落库之间的一致性窗口及取舍"
+    ],
+    "factual_or_reasoning_issues": [
+     "将问题理解为普通缓存读流程，未进入秒杀预减库存与消息补偿语境",
+     "明确表示一致性细节由别人处理，未提供任何可评估的技术方案",
+     "未说明 Lua 脚本的原子判断与扣减，也未说明 MQ 失败后的库存回补路径"
+    ],
+    "follow_up_focus": [
+     "请具体说明一次下单时 Lua 脚本如何先判断库存再扣减，以及脚本返回值如何区分成功与库存不足；扣减成功后 MQ 下单失败时，预减库存通过什么方式补回。"
+    ],
+    "next_action_recommendation": "FOLLOW_UP",
+    "reference_answer": {
+     "answer_framework": [
+      "Lua 脚本原子性：在 Redis 中通过 EVAL/EVALSHA 执行脚本，先 GET 库存 key，判断是否大于 0，满足则 DECRBY 扣减并返回成功标识，否则直接返回库存不足，整个判断与扣减在 Redis 单线程内原子完成。",
+      "返回值设计：脚本返回不同状态码，例如 1 表示扣减成功、0 表示库存不足、-1 表示 key 不存在或异常，Java 侧根据返回值决定继续下单还是直接拒绝。",
+      "MQ 发送时机与失败处理：预减成功后发送下单消息，若发送失败则立即调用回补脚本把库存加回，并记录日志/告警；发送成功但消费失败则由消费端重试或进入死信队列。",
+      "补偿机制：消费端下单失败时调用回补 Lua 脚本（INCRBY 并校验上限），同时通过定时对账比对 Redis 预减量与数据库实际扣减量，修正差异。",
+      "一致性窗口与取舍：预减与最终落库之间存在短暂不一致窗口，需接受最终一致性，通过幂等消费、对账和告警控制风险，而不是追求强一致。"
+     ],
+     "interview_answer": "如果采用 Redis 预减库存方案，我会这样设计。首先把库存放在 Redis 的一个 key 里，下单时通过 Lua 脚本原子执行：脚本里先 GET 当前库存，判断是否大于 0，如果大于 0 就 DECRBY 扣减并返回成功标识，否则直接返回库存不足。因为 Redis 执行 Lua 是单线程原子的，判断和扣减之间不会被其他请求插入，所以不会超卖。脚本返回值我会设计成不同状态码，比如 1 表示扣减成功、0 表示库存不足、-1 表示 key 不存在，Java 侧根据返回值决定继续下单还是直接拒绝。扣减成功后发送 MQ 下单消息，如果消息发送失败，就立即调用回补脚本把库存加回去，并记录日志和告警；如果消息发送成功但消费端下单失败，消费端会重试，重试仍失败则进入死信队列，同时由回补脚本把预减库存加回。为了兜底，还会做定时对账，比对 Redis 预减量和数据库实际扣减量，发现差异就修正。这里要接受预减和最终落库之间的短暂不一致窗口，通过幂等消费、对账和告警来控制风险，而不是追求强一致。",
+     "bonus_points": [
+      "回补脚本中增加库存上限校验，避免重复回补导致库存虚高",
+      "消费端用订单号做幂等，防止 MQ 重复投递造成重复扣减",
+      "对账任务按时间窗口比对预减流水与落库记录，自动修复差异并告警",
+      "消息发送采用本地消息表或事务消息，降低预减成功但消息丢失的概率"
+     ],
+     "possible_follow_ups": [
+      "如果 MQ 发送成功但消费端一直失败，死信队列里的消息你打算怎么处理？",
+      "回补脚本如何防止重复回补导致库存超过初始值？",
+      "对账任务发现 Redis 与数据库库存不一致时，以哪边为准、怎么修复？",
+      "预减成功后用户取消订单，库存回补和订单状态如何保证一致？"
+     ]
+    }
+   },
+   "scores": {
+    "correct": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "comm": 2
+   },
+   "prompt_version": "1.1.0"
+  },
+  {
+   "qid": 34,
+   "q": "你刚才说一致性细节是别人处理的，那我们就退一步：如果让你自己写这段 Lua 脚本，你会怎么先判断库存再扣减，让判断和扣减不会被别的请求插进来？",
+   "kind": "FOLLOW_UP",
+   "req": null,
+   "aid": 32,
+   "answer": "分布式事务我直接用 Redis 的 SETNX 就能保证强一致性，因为 Redis 是单线程的，所以只要抢到锁整个事务就是原子的，不需要什么两阶段提交或者补偿机制，MySQL 那边也不用管回滚。",
+   "eid": 32,
+   "artifact": {
+    "tool_observed_outcome": null,
+    "tool_result_ids": [],
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 2,
+    "evaluation": "回答没有回应问题核心：题目问的是如何用 Lua 脚本把库存判断与扣减做成原子操作，候选人却转向 SETNX 分布式锁与分布式事务，并声称 Redis 单线程即可保证整个事务强一致、无需两阶段提交或补偿。该说法在技术上不成立：SETNX 只提供互斥，不保证跨 Redis/MySQL 的事务原子性；Redis 单线程只保证单条命令或单个脚本执行期间不被其他命令插入，不能覆盖 MQ 下单、数据库扣减等外部步骤。回答未提及 EVAL/EVALSHA、脚本内 GET 库存、判断大于 0 再 DECR、用不同返回值区分成功与库存不足，也未说明防止并发超卖的目的。沟通上虽语句通顺，但答非所问且概念混淆，无法体现脚本设计能力。",
+    "covered_points": [],
+    "missing_points": [
+     "未说明用 EVAL/EVALSHA 在 Redis 中执行 Lua 脚本，使判断与扣减在单次脚本执行内原子完成",
+     "未描述脚本先读取库存 key，判断大于 0 才扣减，否则返回库存不足",
+     "未说明用不同返回值区分扣减成功与库存不足，Java 侧据此决定后续流程",
+     "未指出该设计目的是防止并发请求下超卖",
+     "未区分 Redis 内原子扣减与跨 MySQL/MQ 的最终一致性，错误地把 SETNX 锁等同于分布式事务强一致"
+    ],
+    "factual_or_reasoning_issues": [
+     "声称 SETNX 能保证分布式事务强一致性，混淆了互斥锁与事务原子性",
+     "声称 Redis 单线程即可让整个事务原子、无需两阶段提交或补偿，忽略了 MySQL 扣减、MQ 投递等外部步骤不在 Redis 单线程保护范围内",
+     "未意识到 SETNX 锁存在锁超时、误删、续期、死锁等问题，不能直接等同于事务正确性"
+    ],
+    "follow_up_focus": [
+     "请具体写出这段 Lua 脚本：如何读取库存 key、判断大于 0 后扣减，并用不同返回值让 Java 侧区分成功与库存不足"
+    ],
+    "next_action_recommendation": "FOLLOW_UP",
+    "reference_answer": {
+     "answer_framework": [
+      "用 EVAL/EVALSHA 把脚本交给 Redis 执行，脚本内部先 GET 库存 key，判断是否大于 0",
+      "库存充足则 DECR 扣减并返回成功标识；不足则直接返回库存不足标识，不扣减",
+      "Java 侧根据脚本返回值分支：成功则继续创建订单/发 MQ，不足则直接返回失败",
+      "说明 Redis 单线程执行脚本保证判断与扣减之间不会被其他请求插入，从而防止并发超卖",
+      "补充边界：key 不存在、库存字段类型、脚本幂等与后续补偿需另行设计"
+     ],
+     "interview_answer": "如果让我自己写这段 Lua 脚本，我会把“读库存、判断、扣减”放在同一个脚本里，通过 EVAL 或 EVALSHA 交给 Redis 执行。脚本逻辑大概是：先 GET 库存 key，如果 key 不存在或者库存小于等于 0，就直接返回一个表示库存不足的标识，不做扣减；如果库存大于 0，就执行 DECR，并返回扣减成功。Java 侧拿到返回值后分支处理：成功才继续创建订单、发 MQ；失败就直接返回库存不足。这样做的关键点是，Redis 执行 Lua 脚本时是单线程的，脚本内部这几步不会被其他请求插进来，所以判断和扣减是一个原子操作，能防止并发下多个请求同时判断库存充足、结果扣成负数。需要说明的是，这只保证 Redis 内预减库存的原子性，后面 MySQL 扣减和 MQ 下单失败后的补偿仍然要单独设计，不能靠这个脚本解决。",
+     "bonus_points": [
+      "使用 EVALSHA 缓存脚本减少网络传输，并处理 NOSCRIPT 后回退 EVAL",
+      "脚本返回值设计成明确枚举，如 1 成功、0 库存不足、-1 key 不存在，便于 Java 侧区分异常",
+      "考虑库存 key 不存在时是初始化还是直接失败，避免误判为库存充足",
+      "说明预减成功但后续下单失败时需要补偿或对账，Redis 原子扣减不等于全链路强一致"
+     ],
+     "possible_follow_ups": [
+      "如果库存 key 不存在，你的脚本会怎么处理？为什么这样设计？",
+      "预减成功但 MQ 下单失败，你会怎么补偿？补偿时如何保证幂等？",
+      "EVAL 和 EVALSHA 有什么区别？脚本缓存失效时你怎么处理？",
+      "如果同一个用户重复请求，脚本层面需要做幂等吗？怎么做？"
+     ]
+    }
+   },
+   "scores": {
+    "correct": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "comm": 2
+   },
+   "prompt_version": "1.1.0"
+  }
+ ],
+ "reports": [
+  {
+   "id": 10,
+   "status": "COMPLETED",
+   "producer": "SUMMARY_COACH_AGENT",
+   "prompt_version": "1.0.3",
+   "fp": "6bb67118002ae28a27b42cfbc820f71cc4f3bb81869fa17ceb37ada1f0124757",
+   "statistics": {
+    "answered_count": 3,
+    "evaluated_count": 3,
+    "skipped_count": 0,
+    "follow_up_count": 2,
+    "deep_dive_count": 0,
+    "dynamic_question_count": 0,
+    "dimension_averages": {
+     "technical_correctness": 1.6667,
+     "coverage": 1.3333,
+     "depth": 1.3333,
+     "relevance": 1.3333,
+     "communication": 2.3333
+    },
+    "technical_correctness_average": 1.6667,
+    "coverage_average": 1.3333,
+    "depth_average": 1.3333,
+    "relevance_average": 1.3333,
+    "communication_average": 2.3333,
+    "overall_average": 1.6,
+    "total_questions": 3,
+    "provenance": "PERSISTED_VALID_INTERVIEW_EVALUATIONS"
+   },
+   "coach": {
+    "overall_summary": "本场围绕订单与库存链路展开，开场回答能列出微服务拆分、缓存、消息与分布式锁等技术名词，但未落到一个实际负责接口的请求—扣减—返回流程；后续追问聚焦 Redis 预减库存的 Lua 原子判断与 MQ 失败补偿，回答偏离问题，并出现把 SETNX 锁等同于分布式事务强一致、把 Redis 单线程等同于跨系统事务原子的错误推理。整体表现为技术点罗列多、机制细节与因果链不足，沟通表达尚可但答非所问较明显。",
+    "recommended_actions": [
+     "准备一个下单扣库存接口的端到端讲述模板：请求入口、参数校验、库存条件更新 SQL、事务边界、返回结果与异常分支，按顺序口述。",
+     "手写并讲解一段 Redis Lua 预减库存脚本：读取库存、判断大于零、扣减、用不同返回值区分成功与库存不足，并说明 Java 侧如何据此分支。",
+     "梳理 MQ 下单失败后的库存回补方案，比较回补脚本、对账补偿与本地消息表等做法的适用场景与代价。",
+     "复核分布式锁与分布式事务的区别：说明 SETNX 只提供互斥、锁超时与续期风险，以及为何跨 Redis/MySQL/MQ 仍需补偿或两阶段方案。",
+     "练习先复述问题再作答，确保回答结构对应提问中的每个子问题。"
+    ],
+    "practice_plan": [
+     "以“秒杀下单扣库存”为主题，写出接口链路说明文档，包含分层调用、条件更新 SQL、事务边界与超卖防护，并口头演练讲解。",
+     "编写并逐行讲解 Lua 预减库存脚本，重点说明原子判断、返回值约定与并发超卖防护目的。",
+     "设计 MQ 下单失败后的库存回补流程，画出时序并说明回补脚本与对账机制如何配合。",
+     "整理分布式锁与分布式事务的对比笔记，用具体反例说明为何单线程或互斥锁不能替代跨系统事务保证。",
+     "针对追问做复述练习：先用自己的话概括问题要点，再分点作答，记录偏离问题的情形并修正。"
+    ],
+    "memory_proposals": [
+     {
+      "proposal_type": "PREPARATION_FOCUS",
+      "content": "建议将“Redis Lua 预减库存脚本与 MQ 失败补偿”作为近期准备重点，练习写出脚本逻辑、返回值约定与回补路径。",
+      "supporting_evaluation_ids": [
+       31,
+       32
+      ]
+     },
+     {
+      "proposal_type": "SKILL_OBSERVATION",
+      "content": "本场追问中出现了把 SETNX 锁与 Redis 单线程等同于分布式事务强一致的推理，可作为后续复习原子性与一致性边界的观察点。",
+      "supporting_evaluation_ids": [
+       32
+      ]
+     }
+    ],
+    "epistemic_status": "AGENT_SYNTHESIS_OF_THIS_INTERVIEW_NOT_STABLE_CANDIDATE_FACTS",
+    "strengths": [
+     {
+      "statement": "开场回答能主动覆盖微服务拆分、MySQL 分库分表与索引、Redis 缓存防护、Kafka 可靠性与 Redisson 锁等方向，技术面较宽，具备组织后端方案的整体视角。",
+      "supporting_evaluation_ids": [
+       30
+      ],
+      "occurrence_count": 1,
+      "supporting_evaluations": [
+       {
+        "id": 30,
+        "evaluation_id": 30,
+        "session_question_id": 32,
+        "question_id": 32,
+        "question": "你简历里提到用 Java / Spring Boot 做过订单与库存微服务，能挑一个你实际负责的接口，讲讲从请求进来、到扣减库存、再到返回结果这条链路是怎么走的吗？",
+        "evaluation": "回答罗列了订单/库存/通知微服务、MySQL 分库分表、Redis 缓存一致性、Kafka 事务与幂等、Redisson 分布式锁等大量技术点，但几乎没有回答题目要求的“一个实际负责接口从请求进入到扣减库存再到返回结果”的链路。没有说明 Controller/Service/DAO 分层、库存扣减的具体 SQL 或条件更新、事务边界、超卖防护与异常回滚/补偿。技术点本身多数方向正确，但属于泛泛堆叠，且“先更新数据库再删缓存”与“binlog 订阅对账”混在一起，未说明该接口实际采用哪种一致性方案；Kafka 生产者事务与 acks=all 的表述也较笼统。整体与当前问题相关性弱，深度不足。",
+        "scores": {
+         "technical_correctness": 3,
+         "coverage": 2,
+         "depth": 2,
+         "relevance": 2,
+         "communication": 3
+        }
+       }
+      ]
+     },
+     {
+      "statement": "表达基本通顺，能成句说明自己的做法与分工，沟通层面没有明显障碍。",
+      "supporting_evaluation_ids": [
+       31,
+       32
+      ],
+      "occurrence_count": 2,
+      "supporting_evaluations": [
+       {
+        "id": 31,
+        "evaluation_id": 31,
+        "session_question_id": 33,
+        "question_id": 33,
+        "question": "你刚才提到用 Redis 预减库存、Lua 脚本保证原子性，那具体到一次下单，Lua 脚本里判断和扣减是怎么写的？扣减成功后如果 MQ 下单失败，这个预减的库存怎么补回来？",
+        "evaluation": "回答完全偏离当前问题。问题要求说明 Lua 脚本中库存判断与扣减的原子逻辑，以及 MQ 下单失败后预减库存的补偿方式；候选人却只泛泛描述“Redis 放在数据库前面、先读缓存再读库”，并明确表示一致性细节由别人处理、自己只负责调用。这既没有回答 Lua 脚本如何写，也没有涉及 MQ 失败补偿，属于未展示该问题所需能力。技术表述本身是通用缓存读流程，与秒杀预减库存场景不匹配，且未体现任何原子性、返回值区分或补偿机制。沟通上能成句表达，但未按问题结构作答，信息量极低。",
+        "scores": {
+         "technical_correctness": 1,
+         "coverage": 1,
+         "depth": 1,
+         "relevance": 1,
+         "communication": 2
+        }
+       },
+       {
+        "id": 32,
+        "evaluation_id": 32,
+        "session_question_id": 34,
+        "question_id": 34,
+        "question": "你刚才说一致性细节是别人处理的，那我们就退一步：如果让你自己写这段 Lua 脚本，你会怎么先判断库存再扣减，让判断和扣减不会被别的请求插进来？",
+        "evaluation": "回答没有回应问题核心：题目问的是如何用 Lua 脚本把库存判断与扣减做成原子操作，候选人却转向 SETNX 分布式锁与分布式事务，并声称 Redis 单线程即可保证整个事务强一致、无需两阶段提交或补偿。该说法在技术上不成立：SETNX 只提供互斥，不保证跨 Redis/MySQL 的事务原子性；Redis 单线程只保证单条命令或单个脚本执行期间不被其他命令插入，不能覆盖 MQ 下单、数据库扣减等外部步骤。回答未提及 EVAL/EVALSHA、脚本内 GET 库存、判断大于 0 再 DECR、用不同返回值区分成功与库存不足，也未说明防止并发超卖的目的。沟通上虽语句通顺，但答非所问且概念混淆，无法体现脚本设计能力。",
+        "scores": {
+         "technical_correctness": 1,
+         "coverage": 1,
+         "depth": 1,
+         "relevance": 1,
+         "communication": 2
+        }
+       }
+      ]
+     }
+    ],
+    "weaknesses": [
+     {
+      "statement": "未按题目要求讲清一个实际负责接口的完整链路：缺少 Controller/Service/DAO 分层、库存扣减的具体 SQL 或条件更新、事务边界与超卖防护，技术点堆叠但主线不清。",
+      "supporting_evaluation_ids": [
+       30
+      ],
+      "occurrence_count": 1,
+      "supporting_evaluations": [
+       {
+        "id": 30,
+        "evaluation_id": 30,
+        "session_question_id": 32,
+        "question_id": 32,
+        "question": "你简历里提到用 Java / Spring Boot 做过订单与库存微服务，能挑一个你实际负责的接口，讲讲从请求进来、到扣减库存、再到返回结果这条链路是怎么走的吗？",
+        "evaluation": "回答罗列了订单/库存/通知微服务、MySQL 分库分表、Redis 缓存一致性、Kafka 事务与幂等、Redisson 分布式锁等大量技术点，但几乎没有回答题目要求的“一个实际负责接口从请求进入到扣减库存再到返回结果”的链路。没有说明 Controller/Service/DAO 分层、库存扣减的具体 SQL 或条件更新、事务边界、超卖防护与异常回滚/补偿。技术点本身多数方向正确，但属于泛泛堆叠，且“先更新数据库再删缓存”与“binlog 订阅对账”混在一起，未说明该接口实际采用哪种一致性方案；Kafka 生产者事务与 acks=all 的表述也较笼统。整体与当前问题相关性弱，深度不足。",
+        "scores": {
+         "technical_correctness": 3,
+         "coverage": 2,
+         "depth": 2,
+         "relevance": 2,
+         "communication": 3
+        }
+       }
+      ]
+     },
+     {
+      "statement": "对 Redis 预减库存的 Lua 脚本缺乏可执行描述：未说明脚本内读取库存、判断大于零再扣减、用返回值区分成功与库存不足，也未说明 MQ 下单失败后的库存回补路径。",
+      "supporting_evaluation_ids": [
+       31
+      ],
+      "occurrence_count": 1,
+      "supporting_evaluations": [
+       {
+        "id": 31,
+        "evaluation_id": 31,
+        "session_question_id": 33,
+        "question_id": 33,
+        "question": "你刚才提到用 Redis 预减库存、Lua 脚本保证原子性，那具体到一次下单，Lua 脚本里判断和扣减是怎么写的？扣减成功后如果 MQ 下单失败，这个预减的库存怎么补回来？",
+        "evaluation": "回答完全偏离当前问题。问题要求说明 Lua 脚本中库存判断与扣减的原子逻辑，以及 MQ 下单失败后预减库存的补偿方式；候选人却只泛泛描述“Redis 放在数据库前面、先读缓存再读库”，并明确表示一致性细节由别人处理、自己只负责调用。这既没有回答 Lua 脚本如何写，也没有涉及 MQ 失败补偿，属于未展示该问题所需能力。技术表述本身是通用缓存读流程，与秒杀预减库存场景不匹配，且未体现任何原子性、返回值区分或补偿机制。沟通上能成句表达，但未按问题结构作答，信息量极低。",
+        "scores": {
+         "technical_correctness": 1,
+         "coverage": 1,
+         "depth": 1,
+         "relevance": 1,
+         "communication": 2
+        }
+       }
+      ]
+     },
+     {
+      "statement": "存在明显概念混淆：把 SETNX 互斥锁当作分布式事务强一致，把 Redis 单线程当作覆盖 MySQL 扣减与 MQ 投递的全局原子性，并据此否定补偿机制。",
+      "supporting_evaluation_ids": [
+       32
+      ],
+      "occurrence_count": 1,
+      "supporting_evaluations": [
+       {
+        "id": 32,
+        "evaluation_id": 32,
+        "session_question_id": 34,
+        "question_id": 34,
+        "question": "你刚才说一致性细节是别人处理的，那我们就退一步：如果让你自己写这段 Lua 脚本，你会怎么先判断库存再扣减，让判断和扣减不会被别的请求插进来？",
+        "evaluation": "回答没有回应问题核心：题目问的是如何用 Lua 脚本把库存判断与扣减做成原子操作，候选人却转向 SETNX 分布式锁与分布式事务，并声称 Redis 单线程即可保证整个事务强一致、无需两阶段提交或补偿。该说法在技术上不成立：SETNX 只提供互斥，不保证跨 Redis/MySQL 的事务原子性；Redis 单线程只保证单条命令或单个脚本执行期间不被其他命令插入，不能覆盖 MQ 下单、数据库扣减等外部步骤。回答未提及 EVAL/EVALSHA、脚本内 GET 库存、判断大于 0 再 DECR、用不同返回值区分成功与库存不足，也未说明防止并发超卖的目的。沟通上虽语句通顺，但答非所问且概念混淆，无法体现脚本设计能力。",
+        "scores": {
+         "technical_correctness": 1,
+         "coverage": 1,
+         "depth": 1,
+         "relevance": 1,
+         "communication": 2
+        }
+       }
+      ]
+     },
+     {
+      "statement": "开场回答中“先更新数据库再删缓存”与“binlog 订阅对账”两种一致性策略混用，未说明该接口实际采用哪一种。",
+      "supporting_evaluation_ids": [
+       30
+      ],
+      "occurrence_count": 1,
+      "supporting_evaluations": [
+       {
+        "id": 30,
+        "evaluation_id": 30,
+        "session_question_id": 32,
+        "question_id": 32,
+        "question": "你简历里提到用 Java / Spring Boot 做过订单与库存微服务，能挑一个你实际负责的接口，讲讲从请求进来、到扣减库存、再到返回结果这条链路是怎么走的吗？",
+        "evaluation": "回答罗列了订单/库存/通知微服务、MySQL 分库分表、Redis 缓存一致性、Kafka 事务与幂等、Redisson 分布式锁等大量技术点，但几乎没有回答题目要求的“一个实际负责接口从请求进入到扣减库存再到返回结果”的链路。没有说明 Controller/Service/DAO 分层、库存扣减的具体 SQL 或条件更新、事务边界、超卖防护与异常回滚/补偿。技术点本身多数方向正确，但属于泛泛堆叠，且“先更新数据库再删缓存”与“binlog 订阅对账”混在一起，未说明该接口实际采用哪种一致性方案；Kafka 生产者事务与 acks=all 的表述也较笼统。整体与当前问题相关性弱，深度不足。",
+        "scores": {
+         "technical_correctness": 3,
+         "coverage": 2,
+         "depth": 2,
+         "relevance": 2,
+         "communication": 3
+        }
+       }
+      ]
+     }
+    ],
+    "recurring_issues": [
+     {
+      "statement": "追问涉及具体机制实现时，回答反复停留在通用概念或分工说明，未给出脚本、SQL、返回值与补偿等可落地细节。",
+      "supporting_evaluation_ids": [
+       31,
+       32
+      ],
+      "occurrence_count": 2,
+      "supporting_evaluations": [
+       {
+        "id": 31,
+        "evaluation_id": 31,
+        "session_question_id": 33,
+        "question_id": 33,
+        "question": "你刚才提到用 Redis 预减库存、Lua 脚本保证原子性，那具体到一次下单，Lua 脚本里判断和扣减是怎么写的？扣减成功后如果 MQ 下单失败，这个预减的库存怎么补回来？",
+        "evaluation": "回答完全偏离当前问题。问题要求说明 Lua 脚本中库存判断与扣减的原子逻辑，以及 MQ 下单失败后预减库存的补偿方式；候选人却只泛泛描述“Redis 放在数据库前面、先读缓存再读库”，并明确表示一致性细节由别人处理、自己只负责调用。这既没有回答 Lua 脚本如何写，也没有涉及 MQ 失败补偿，属于未展示该问题所需能力。技术表述本身是通用缓存读流程，与秒杀预减库存场景不匹配，且未体现任何原子性、返回值区分或补偿机制。沟通上能成句表达，但未按问题结构作答，信息量极低。",
+        "scores": {
+         "technical_correctness": 1,
+         "coverage": 1,
+         "depth": 1,
+         "relevance": 1,
+         "communication": 2
+        }
+       },
+       {
+        "id": 32,
+        "evaluation_id": 32,
+        "session_question_id": 34,
+        "question_id": 34,
+        "question": "你刚才说一致性细节是别人处理的，那我们就退一步：如果让你自己写这段 Lua 脚本，你会怎么先判断库存再扣减，让判断和扣减不会被别的请求插进来？",
+        "evaluation": "回答没有回应问题核心：题目问的是如何用 Lua 脚本把库存判断与扣减做成原子操作，候选人却转向 SETNX 分布式锁与分布式事务，并声称 Redis 单线程即可保证整个事务强一致、无需两阶段提交或补偿。该说法在技术上不成立：SETNX 只提供互斥，不保证跨 Redis/MySQL 的事务原子性；Redis 单线程只保证单条命令或单个脚本执行期间不被其他命令插入，不能覆盖 MQ 下单、数据库扣减等外部步骤。回答未提及 EVAL/EVALSHA、脚本内 GET 库存、判断大于 0 再 DECR、用不同返回值区分成功与库存不足，也未说明防止并发超卖的目的。沟通上虽语句通顺，但答非所问且概念混淆，无法体现脚本设计能力。",
+        "scores": {
+         "technical_correctness": 1,
+         "coverage": 1,
+         "depth": 1,
+         "relevance": 1,
+         "communication": 2
+        }
+       }
+      ]
+     },
+     {
+      "statement": "对原子性与一致性的边界理解不清，把单机/单命令层面的保证外推到跨 Redis、MySQL、MQ 的完整事务。",
+      "supporting_evaluation_ids": [
+       31,
+       32
+      ],
+      "occurrence_count": 2,
+      "supporting_evaluations": [
+       {
+        "id": 31,
+        "evaluation_id": 31,
+        "session_question_id": 33,
+        "question_id": 33,
+        "question": "你刚才提到用 Redis 预减库存、Lua 脚本保证原子性，那具体到一次下单，Lua 脚本里判断和扣减是怎么写的？扣减成功后如果 MQ 下单失败，这个预减的库存怎么补回来？",
+        "evaluation": "回答完全偏离当前问题。问题要求说明 Lua 脚本中库存判断与扣减的原子逻辑，以及 MQ 下单失败后预减库存的补偿方式；候选人却只泛泛描述“Redis 放在数据库前面、先读缓存再读库”，并明确表示一致性细节由别人处理、自己只负责调用。这既没有回答 Lua 脚本如何写，也没有涉及 MQ 失败补偿，属于未展示该问题所需能力。技术表述本身是通用缓存读流程，与秒杀预减库存场景不匹配，且未体现任何原子性、返回值区分或补偿机制。沟通上能成句表达，但未按问题结构作答，信息量极低。",
+        "scores": {
+         "technical_correctness": 1,
+         "coverage": 1,
+         "depth": 1,
+         "relevance": 1,
+         "communication": 2
+        }
+       },
+       {
+        "id": 32,
+        "evaluation_id": 32,
+        "session_question_id": 34,
+        "question_id": 34,
+        "question": "你刚才说一致性细节是别人处理的，那我们就退一步：如果让你自己写这段 Lua 脚本，你会怎么先判断库存再扣减，让判断和扣减不会被别的请求插进来？",
+        "evaluation": "回答没有回应问题核心：题目问的是如何用 Lua 脚本把库存判断与扣减做成原子操作，候选人却转向 SETNX 分布式锁与分布式事务，并声称 Redis 单线程即可保证整个事务强一致、无需两阶段提交或补偿。该说法在技术上不成立：SETNX 只提供互斥，不保证跨 Redis/MySQL 的事务原子性；Redis 单线程只保证单条命令或单个脚本执行期间不被其他命令插入，不能覆盖 MQ 下单、数据库扣减等外部步骤。回答未提及 EVAL/EVALSHA、脚本内 GET 库存、判断大于 0 再 DECR、用不同返回值区分成功与库存不足，也未说明防止并发超卖的目的。沟通上虽语句通顺，但答非所问且概念混淆，无法体现脚本设计能力。",
+        "scores": {
+         "technical_correctness": 1,
+         "coverage": 1,
+         "depth": 1,
+         "relevance": 1,
+         "communication": 2
+        }
+       }
+      ]
+     }
+    ],
+    "job_alignment": [
+     {
+      "statement": "岗位要求熟悉 MySQL、Redis、Kafka 并具备高并发数据模型设计能力；本场回答覆盖了相关技术名词，但库存扣减与消息补偿的机制细节尚未展开，与该要求的匹配度有待在后续练习中验证。",
+      "supporting_evaluation_ids": [
+       30,
+       31
+      ],
+      "occurrence_count": 2,
+      "supporting_evaluations": [
+       {
+        "id": 30,
+        "evaluation_id": 30,
+        "session_question_id": 32,
+        "question_id": 32,
+        "question": "你简历里提到用 Java / Spring Boot 做过订单与库存微服务，能挑一个你实际负责的接口，讲讲从请求进来、到扣减库存、再到返回结果这条链路是怎么走的吗？",
+        "evaluation": "回答罗列了订单/库存/通知微服务、MySQL 分库分表、Redis 缓存一致性、Kafka 事务与幂等、Redisson 分布式锁等大量技术点，但几乎没有回答题目要求的“一个实际负责接口从请求进入到扣减库存再到返回结果”的链路。没有说明 Controller/Service/DAO 分层、库存扣减的具体 SQL 或条件更新、事务边界、超卖防护与异常回滚/补偿。技术点本身多数方向正确，但属于泛泛堆叠，且“先更新数据库再删缓存”与“binlog 订阅对账”混在一起，未说明该接口实际采用哪种一致性方案；Kafka 生产者事务与 acks=all 的表述也较笼统。整体与当前问题相关性弱，深度不足。",
+        "scores": {
+         "technical_correctness": 3,
+         "coverage": 2,
+         "depth": 2,
+         "relevance": 2,
+         "communication": 3
+        }
+       },
+       {
+        "id": 31,
+        "evaluation_id": 31,
+        "session_question_id": 33,
+        "question_id": 33,
+        "question": "你刚才提到用 Redis 预减库存、Lua 脚本保证原子性，那具体到一次下单，Lua 脚本里判断和扣减是怎么写的？扣减成功后如果 MQ 下单失败，这个预减的库存怎么补回来？",
+        "evaluation": "回答完全偏离当前问题。问题要求说明 Lua 脚本中库存判断与扣减的原子逻辑，以及 MQ 下单失败后预减库存的补偿方式；候选人却只泛泛描述“Redis 放在数据库前面、先读缓存再读库”，并明确表示一致性细节由别人处理、自己只负责调用。这既没有回答 Lua 脚本如何写，也没有涉及 MQ 失败补偿，属于未展示该问题所需能力。技术表述本身是通用缓存读流程，与秒杀预减库存场景不匹配，且未体现任何原子性、返回值区分或补偿机制。沟通上能成句表达，但未按问题结构作答，信息量极低。",
+        "scores": {
+         "technical_correctness": 1,
+         "coverage": 1,
+         "depth": 1,
+         "relevance": 1,
+         "communication": 2
+        }
+       }
+      ]
+     },
+     {
+      "statement": "岗位强调逻辑思维与问题解决能力；本场追问中出现答非所问与因果推理错误，需通过结构化拆解问题来加强。",
+      "supporting_evaluation_ids": [
+       31,
+       32
+      ],
+      "occurrence_count": 2,
+      "supporting_evaluations": [
+       {
+        "id": 31,
+        "evaluation_id": 31,
+        "session_question_id": 33,
+        "question_id": 33,
+        "question": "你刚才提到用 Redis 预减库存、Lua 脚本保证原子性，那具体到一次下单，Lua 脚本里判断和扣减是怎么写的？扣减成功后如果 MQ 下单失败，这个预减的库存怎么补回来？",
+        "evaluation": "回答完全偏离当前问题。问题要求说明 Lua 脚本中库存判断与扣减的原子逻辑，以及 MQ 下单失败后预减库存的补偿方式；候选人却只泛泛描述“Redis 放在数据库前面、先读缓存再读库”，并明确表示一致性细节由别人处理、自己只负责调用。这既没有回答 Lua 脚本如何写，也没有涉及 MQ 失败补偿，属于未展示该问题所需能力。技术表述本身是通用缓存读流程，与秒杀预减库存场景不匹配，且未体现任何原子性、返回值区分或补偿机制。沟通上能成句表达，但未按问题结构作答，信息量极低。",
+        "scores": {
+         "technical_correctness": 1,
+         "coverage": 1,
+         "depth": 1,
+         "relevance": 1,
+         "communication": 2
+        }
+       },
+       {
+        "id": 32,
+        "evaluation_id": 32,
+        "session_question_id": 34,
+        "question_id": 34,
+        "question": "你刚才说一致性细节是别人处理的，那我们就退一步：如果让你自己写这段 Lua 脚本，你会怎么先判断库存再扣减，让判断和扣减不会被别的请求插进来？",
+        "evaluation": "回答没有回应问题核心：题目问的是如何用 Lua 脚本把库存判断与扣减做成原子操作，候选人却转向 SETNX 分布式锁与分布式事务，并声称 Redis 单线程即可保证整个事务强一致、无需两阶段提交或补偿。该说法在技术上不成立：SETNX 只提供互斥，不保证跨 Redis/MySQL 的事务原子性；Redis 单线程只保证单条命令或单个脚本执行期间不被其他命令插入，不能覆盖 MQ 下单、数据库扣减等外部步骤。回答未提及 EVAL/EVALSHA、脚本内 GET 库存、判断大于 0 再 DECR、用不同返回值区分成功与库存不足，也未说明防止并发超卖的目的。沟通上虽语句通顺，但答非所问且概念混淆，无法体现脚本设计能力。",
+        "scores": {
+         "technical_correctness": 1,
+         "coverage": 1,
+         "depth": 1,
+         "relevance": 1,
+         "communication": 2
+        }
+       }
+      ]
+     }
+    ]
+   }
+  }
+ ],
+ "memory": [],
+ "quote_provenance": {
+  "all_ok": false,
+  "per_turn": [
+   {
+    "eid": 30,
+    "quote_fields": [],
+    "quotes": 0,
+    "hits": 0,
+    "ok": false,
+    "samples": [],
+    "covered_points": [
+     "提到使用 Spring Boot 构建订单服务，并按领域拆分为订单、库存、通知微服务",
+     "提到 MySQL 分库分表与覆盖索引，涉及数据存储层设计",
+     "提到 Redis 缓存击穿、穿透处理及缓存与数据库一致性思路",
+     "提到 Kafka 消息可靠性（事务、acks=all、幂等表去重）与 Redisson 分布式锁"
+    ]
+   },
+   {
+    "eid": 31,
+    "quote_fields": [],
+    "quotes": 0,
+    "hits": 0,
+    "ok": false,
+    "samples": [],
+    "covered_points": []
+   },
+   {
+    "eid": 32,
+    "quote_fields": [],
+    "quotes": 0,
+    "hits": 0,
+    "ok": false,
+    "samples": [],
+    "covered_points": []
+   }
+  ]
+ }
+}

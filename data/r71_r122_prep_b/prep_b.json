@@ -1,0 +1,18 @@
+{
+ "round": "R122-B",
+ "email": "showcase-r2-live-B-synthetic@example.com",
+ "synthetic": true,
+ "user_id": 10,
+ "resume_id": 8,
+ "password": "ShowcaseR2LiveBOnly!",
+ "profile": {
+  "status": "COMPLETED",
+  "version_id": 8,
+  "error": null
+ },
+ "profile_http_delta": 1,
+ "ledger": {
+  "before": 8,
+  "after": 9
+ }
+}

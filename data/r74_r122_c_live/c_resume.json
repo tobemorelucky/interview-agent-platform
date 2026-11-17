@@ -1,0 +1,224 @@
+{
+ "round": "R122-C-resume",
+ "mode": "WEAKNESS cross-session Live (continued from session 16)",
+ "started_at": "2026-11-17T02:24:40.214044+00:00",
+ "budget": {
+  "max_http": 13,
+  "max_tokens": 90000
+ },
+ "user_id": 9,
+ "session_id": 16,
+ "knowledge_id": "ai_agent_application:agent",
+ "steps": [
+  {
+   "name": "续跑前置：会话 IN_PROGRESS，首题已由真实模型生成（不重复 start）",
+   "ok": true,
+   "detail": {
+    "status": "IN_PROGRESS",
+    "questions": 1
+   }
+  },
+  {
+   "name": "第1题真实作答与评价",
+   "ok": true,
+   "detail": {
+    "qid": 35,
+    "events": []
+   }
+  },
+  {
+   "name": "第2题真实作答与评价",
+   "ok": true,
+   "detail": {
+    "qid": 36,
+    "events": []
+   }
+  },
+  {
+   "name": "第3题真实作答与评价",
+   "ok": true,
+   "detail": {
+    "qid": 37,
+    "events": []
+   }
+  },
+  {
+   "name": "会话 COMPLETED 且 3 条 Evaluation 落库",
+   "ok": true,
+   "detail": {
+    "status": "COMPLETED",
+    "evals": 3
+   }
+  },
+  {
+   "name": "adaptive_decision 的 strategy/target_knowledge_id 对应训练目标",
+   "ok": true,
+   "detail": [
+    {
+     "qid": 35,
+     "strategy": "NEXT",
+     "target_knowledge_id": "ai_agent_application:agent",
+     "q": "假设你要做一个能调用外部工具的 Agent，比如帮用户查订单并执行退款。请说说从用户输入到最终回复，你会怎么设计整条链路？重点讲讲工具调用前后，哪些判断由模型做、哪些必须由程序来做"
+    },
+    {
+     "qid": 36,
+     "strategy": "FOLLOW_UP",
+     "target_knowledge_id": "ai_agent_application:agent",
+     "q": "你提到写操作带幂等键、失败时从检查点恢复。假设退款请求已经发到下游并成功扣款，但流程在记录结果前崩了，恢复后重放这一步会发生什么？你的幂等键具体怎么生成，又怎么保证不会重复退款、也"
+    },
+    {
+     "qid": 37,
+     "strategy": "FOLLOW_UP",
+     "target_knowledge_id": "ai_agent_application:agent",
+     "q": "回到退款那个场景：下游已经扣款成功，但流程在记录结果前崩了。恢复后你第一步会做什么？幂等键具体怎么生成，才能让下游把重放识别成同一笔请求？"
+    }
+   ]
+  },
+  {
+   "name": "Coach 正常完成并引用本场真实评价",
+   "ok": true,
+   "detail": {
+    "id": 11,
+    "producer": "SUMMARY_COACH_AGENT",
+    "fp": null
+   }
+  },
+  {
+   "name": "训练反馈 before/after/effective/independent",
+   "ok": true,
+   "detail": {
+    "mode": "WEAKNESS"
+   }
+  }
+ ],
+ "ledger_baseline": {
+  "http": 17,
+  "tokens": 102964
+ },
+ "feedback": {
+  "available": true,
+  "status": "COMPLETED",
+  "job_id": 2,
+  "company_id": 2,
+  "job_target_id": null,
+  "skill_id": "ai_agent_application",
+  "memory_usage": [
+   {
+    "run_id": 85,
+    "model_input": "PREPARED",
+    "candidate_memory": [
+     {
+      "knowledge_id": "ai_agent_application:agent",
+      "memory_revision": 1
+     }
+    ],
+    "plan_fingerprint": "93fb32ece49d0437c99a27d5e23ccd1d263994da3e3930ee696c3a6365a60dc6",
+    "target_knowledge_id": "ai_agent_application:agent",
+    "strategy": "NEXT",
+    "candidate_id": "C_f2fced5407de43f0621978e0",
+    "selection": "RELATED_TARGET_SELECTED",
+    "controller_verdict": "ACCEPTED",
+    "error": null
+   },
+   {
+    "run_id": 87,
+    "model_input": "PREPARED",
+    "candidate_memory": [
+     {
+      "knowledge_id": "ai_agent_application:agent",
+      "memory_revision": 1
+     }
+    ],
+    "plan_fingerprint": "93fb32ece49d0437c99a27d5e23ccd1d263994da3e3930ee696c3a6365a60dc6",
+    "target_knowledge_id": "ai_agent_application:agent",
+    "strategy": "FOLLOW_UP",
+    "candidate_id": "C_f2fced5407de43f0621978e0",
+    "selection": "RELATED_TARGET_SELECTED",
+    "controller_verdict": "ACCEPTED",
+    "error": null
+   },
+   {
+    "run_id": 89,
+    "model_input": "PREPARED",
+    "candidate_memory": [
+     {
+      "knowledge_id": "ai_agent_application:agent",
+      "memory_revision": 1
+     }
+    ],
+    "plan_fingerprint": "93fb32ece49d0437c99a27d5e23ccd1d263994da3e3930ee696c3a6365a60dc6",
+    "target_knowledge_id": "ai_agent_application:agent",
+    "strategy": "FOLLOW_UP",
+    "candidate_id": "C_f2fced5407de43f0621978e0",
+    "selection": "RELATED_TARGET_SELECTED",
+    "controller_verdict": "ACCEPTED",
+    "error": null
+   }
+  ],
+  "version": "2.3.0",
+  "mode": "WEAKNESS",
+  "targets": [
+   {
+    "knowledge_id": "ai_agent_application:agent",
+    "label": "Agent 工具与状态管理",
+    "before_state": "PRACTICING",
+    "before_revision": 1,
+    "after_state": "GAP_SUSPECTED",
+    "after_revision": 2,
+    "effective_evaluations": 3,
+    "independent_evaluations": 1,
+    "conflict_status": "UNKNOWN",
+    "result": "OBSERVED",
+    "evaluations": [
+     {
+      "evaluation_id": 33,
+      "question_id": 35,
+      "state": "PARTIALLY_DEMONSTRATED"
+     },
+     {
+      "evaluation_id": 34,
+      "question_id": 36,
+      "state": "NEEDS_CLARIFICATION"
+     },
+     {
+      "evaluation_id": 35,
+      "question_id": 37,
+      "state": "NEEDS_CLARIFICATION"
+     }
+    ],
+    "next_action": "安排新的独立场景复核"
+   }
+  ],
+  "questions": [
+   {
+    "question_id": 36,
+    "question": "你提到写操作带幂等键、失败时从检查点恢复。假设退款请求已经发到下游并成功扣款，但流程在记录结果前崩了，恢复后重放这一步会发生什么？你的幂等键具体怎么生成，又怎么保证不会重复退款、也不会漏掉这笔已发生的退款？",
+    "strategy": "FOLLOW_UP",
+    "knowledge_id": "ai_agent_application:agent"
+   },
+   {
+    "question_id": 37,
+    "question": "回到退款那个场景：下游已经扣款成功，但流程在记录结果前崩了。恢复后你第一步会做什么？幂等键具体怎么生成，才能让下游把重放识别成同一笔请求？",
+    "strategy": "FOLLOW_UP",
+    "knowledge_id": "ai_agent_application:agent"
+   },
+   {
+    "question_id": 35,
+    "question": "假设你要做一个能调用外部工具的 Agent，比如帮用户查订单并执行退款。请说说从用户输入到最终回复，你会怎么设计整条链路？重点讲讲工具调用前后，哪些判断由模型做、哪些必须由程序来做。",
+    "strategy": "NEXT",
+    "knowledge_id": "ai_agent_application:agent"
+   }
+  ],
+  "semantics": "根据已提交评价与能力规则计算，不是掌握概率或记忆因果收益证明"
+ },
+ "consumed_this_resume": {
+  "http": 6,
+  "tokens": 36972
+ },
+ "consumed_total_c": {
+  "http": 7,
+  "tokens": 41175
+ },
+ "budget_ok": true,
+ "finished_at": "2026-11-17T02:25:23.103260+00:00"
+}

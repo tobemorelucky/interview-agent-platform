@@ -1,0 +1,171 @@
+{
+ "round": "R122-C",
+ "mode": "WEAKNESS cross-session Live / real model",
+ "environment": {
+  "database": "interview_agent_showcase_r1_20261116",
+  "routes": {
+   "interview_main": {
+    "provider": "modelscope",
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "governed": true
+   },
+   "answer_evaluation": {
+    "provider": "modelscope",
+    "model": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+    "governed": true
+   }
+  },
+  "coach_harness": false,
+  "main_harness": false,
+  "evaluation_frozen": "2.3.4"
+ },
+ "started_at": "2026-11-17T02:23:34.986426+00:00",
+ "budget": {
+  "max_http": 13,
+  "max_tokens": 90000
+ },
+ "user_id": 9,
+ "jd_version": 2,
+ "knowledge_id": "ai_agent_application:agent",
+ "steps": [
+  {
+   "name": "0HTTP 训练候选合法（PRACTICING→WEAKNESS，来源全为 R121 Live session14）",
+   "ok": true,
+   "detail": {
+    "target": {
+     "knowledge_id": "ai_agent_application:agent",
+     "label": "Agent 工具与状态管理",
+     "state": "PRACTICING",
+     "revision": 1,
+     "revoked": false,
+     "available_modes": [
+      "FULL",
+      "WEAKNESS"
+     ],
+     "reason_tags": [
+      "RECENT_MISSING_EVIDENCE"
+     ],
+     "independent_sessions": 0,
+     "conflicts": [],
+     "observations": [
+      {
+       "session_id": 14,
+       "assisted": false,
+       "state": "PARTIALLY_DEMONSTRATED",
+       "evaluation_id": 27,
+       "observed_at": "2026-11-16T13:46:21.812124+00:00"
+      },
+      {
+       "session_id": 14,
+       "assisted": true,
+       "state": "INSUFFICIENT_EVIDENCE",
+       "evaluation_id": 28,
+       "observed_at": "2026-11-16T13:46:30.532341+00:00"
+      },
+      {
+       "session_id": 14,
+       "assisted": true,
+       "state": "PARTIALLY_DEMONSTRATED",
+       "evaluation_id": 29,
+       "observed_at": "2026-11-16T13:46:36.059129+00:00"
+      }
+     ]
+    },
+    "all_obs_from_live_14": true,
+    "recommendations": [
+     {
+      "knowledge_id": "ai_agent_application:agent",
+      "label": "Agent 工具与状态管理",
+      "state": "PRACTICING",
+      "intent": "INDEPENDENT_VERIFICATION",
+      "priority": 5,
+      "needs_recheck": false,
+      "reason_tags": [
+       "RECENT_MISSING_EVIDENCE"
+      ],
+      "memory_revision": 1,
+      "observation_refs": [
+       "evaluation:27",
+       "evaluation:28",
+       "evaluation:29"
+      ],
+      "history_summary": "历史待核对：执行前对工具调用做参数校验与权限/白名单判断，区分模型建议与程序实际执行；工具结果以结构化形式回填上下文并进入下一轮模型调用的机制；工具超时/报错后的降级路径与错误反馈给模型的方式。此前经过提示或追问的回答不算独立掌握，本次建议换场景独立验证。"
+     }
+    ]
+   }
+  },
+  {
+   "name": "冻结快照含合法训练目标 + MemoryGuidedPlan 引用 R121 Live 评价",
+   "ok": true,
+   "detail": {
+    "mode": "WEAKNESS",
+    "knowledge_id": "ai_agent_application:agent",
+    "plan_refs": [
+     "evaluation:27",
+     "evaluation:28",
+     "evaluation:29"
+    ]
+   }
+  },
+  {
+   "name": "真实模型首题生成",
+   "ok": true,
+   "detail": {
+    "result": "{'question_id': 35, 'question_index': 0, 'total_questions': 3, 'question': '假设你要做一个能调用外部工具的 Agent，比如帮用户查订单并执行退款。请说说从用户输入到最终回复，你会怎么设计整条链路？重点讲讲工具调用前后，哪些判断由模型做、哪些必须由程序来做。', 'dimension': 'Agent 工具与状态管理', "
+   }
+  },
+  {
+   "name": "第1题无可答题",
+   "ok": false,
+   "detail": {
+    "status": "IN_PROGRESS"
+   }
+  },
+  {
+   "name": "会话 COMPLETED 且 3 条真实 Evaluation 落库",
+   "ok": false,
+   "detail": {
+    "status": "IN_PROGRESS",
+    "evals": 0
+   }
+  },
+  {
+   "name": "adaptive_decision 的 strategy/target_knowledge_id 与训练目标对应",
+   "ok": true,
+   "detail": [
+    {
+     "qid": 35,
+     "strategy": "NEXT",
+     "target_knowledge_id": "ai_agent_application:agent",
+     "q": "假设你要做一个能调用外部工具的 Agent，比如帮用户查订单并执行退款。请说说从用户输入到最终回复，你会怎么设计整条链路？重点讲讲工具调用前后，哪些判断由模型做、哪些必须由程序来做"
+    }
+   ]
+  },
+  {
+   "name": "运行异常",
+   "ok": false,
+   "detail": "AppError: 面试完成后才能生成报告"
+  }
+ ],
+ "stopped": {
+  "reason": "EXCEPTION",
+  "error": "AppError: 面试完成后才能生成报告"
+ },
+ "session_id": 16,
+ "consumed": {
+  "http": 1,
+  "tokens": 4203
+ },
+ "budget_ok": true,
+ "ledger": {
+  "before": {
+   "http": 16,
+   "tokens": 98761
+  },
+  "after": {
+   "http": 17,
+   "tokens": 102964
+  }
+ },
+ "finished_at": "2026-11-17T02:23:38.513365+00:00"
+}
