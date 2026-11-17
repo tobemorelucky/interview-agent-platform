@@ -10,6 +10,19 @@ from interview_api.core.url_safety import canonicalize_public_url, URLSafetyErro
 
 APPROVED = ("APPROVED", "AUTO_APPROVED")
 
+# User-facing direction filters for the public job search. These are literal
+# keyword sets over title/body, not inferred job families: curated JDs carry no
+# structured family field, and guessing one would make the filter unverifiable.
+DIRECTIONS = {
+    "ai_agent": ("AI", "Agent", "大模型", "LLM", "RAG", "机器学习", "深度学习", "算法"),
+    "java": ("Java", "后端", "服务端", "Spring"),
+    "python": ("Python",),
+    "frontend": ("前端", "Vue", "React", "Web"),
+    "test": ("测试", "QA"),
+    "data": ("数据", "大数据", "数仓"),
+    "embedded": ("嵌入式", "操作系统", "内核", "C++"),
+}
+
 
 def published_jobs():
     latest = select(func.max(JobDescriptionVersion.version_number)).where(
@@ -30,6 +43,32 @@ def job_projection(company, job, jd, source):
         updated_at=jd.observed_at, published_at=jd.published_at)
 
 
+DUTY_HEADINGS = ("岗位职责", "工作职责", "职位描述", "岗位描述", "职责描述", "工作内容")
+SKILL_HEADINGS = ("任职要求", "任职资格", "职位要求", "岗位要求", "技能要求", "任职条件", "我们希望你")
+
+
+def split_jd_sections(text):
+    """Keep the source's own duty/qualification split; never invent a heading."""
+    buckets = {"responsibilities": [], "qualifications": []}
+    current, has_sections = None, False
+    for raw in (text or "").splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        bare = line.strip("【】[]#：: ")
+        if any(bare.startswith(head) for head in DUTY_HEADINGS):
+            current, has_sections = "responsibilities", True
+            continue
+        if any(bare.startswith(head) for head in SKILL_HEADINGS):
+            current, has_sections = "qualifications", True
+            continue
+        if current:
+            buckets[current].append(line)
+    return dict(responsibilities=buckets["responsibilities"] if has_sections else [],
+                qualifications=buckets["qualifications"] if has_sections else [],
+                has_sections=has_sections)
+
+
 class PublicCareerLibrary:
     def __init__(self, db):
         self.db = db
@@ -37,6 +76,43 @@ class PublicCareerLibrary:
     async def jobs(self, limit=20, offset=0):
         rows = (await self.db.execute(published_jobs().order_by(Job.id).limit(limit).offset(offset))).all()
         return [job_projection(*row) for row in rows]
+
+    async def search(self, limit=20, offset=0, q=None, company_id=None, direction=None):
+        """Search every published job, not just the current page.
+
+        SQL LIKE over company/title/body is deliberate: the library is small and
+        bounded, and this keeps the result explainable (no semantic guess).
+        """
+        from sqlalchemy import or_
+        query = published_jobs()
+        conditions = []
+        text = (q or "").strip()
+        if text:
+            like = f"%{text}%"
+            conditions.append(or_(Company.canonical_name.ilike(like), Job.canonical_title.ilike(like),
+                                  JobDescriptionVersion.raw_text.ilike(like)))
+        if company_id:
+            conditions.append(Company.id == company_id)
+        keywords = DIRECTIONS.get(direction or "", ())
+        if keywords:
+            conditions.append(or_(*[or_(Job.canonical_title.ilike(f"%{word}%"),
+                                         JobDescriptionVersion.raw_text.ilike(f"%{word}%"))
+                                    for word in keywords]))
+        if conditions:
+            query = query.where(*conditions)
+        total = (await self.db.execute(select(func.count()).select_from(query.subquery()))).scalar_one()
+        rows = (await self.db.execute(query.order_by(Company.canonical_name, Job.id)
+                                      .limit(limit).offset(offset))).all()
+        return dict(items=[job_projection(*row) for row in rows], total=total, limit=limit, offset=offset)
+
+    async def companies(self):
+        rows = (await self.db.execute(published_jobs().with_only_columns(
+            Company.id, Company.canonical_name).order_by(Company.canonical_name))).all()
+        counts = {}
+        for company_id, name in rows:
+            entry = counts.setdefault(company_id, dict(company_id=company_id, name=name, job_count=0))
+            entry["job_count"] += 1
+        return list(counts.values())
 
     async def job(self, job_id):
         row = (await self.db.execute(published_jobs().where(Job.id == job_id))).first()
@@ -54,6 +130,12 @@ class PublicCareerLibrary:
         result.update(description=jd.raw_text[:500], description_truncated=len(jd.raw_text) > 500, requirements=[dict(id=r.id, text=r.statement,
             type=describe(r.statement, r.requirement_type, r.importance)["type"],
             importance=describe(r.statement, r.requirement_type, r.importance)["effective_strength"]) for r in requirements])
+        # Curated JDs keep the source's own 【岗位职责】/【任职要求】 headings; show
+        # them separately instead of one undifferentiated blob.
+        sections = split_jd_sections(jd.raw_text)
+        result.update(responsibilities=sections["responsibilities"],
+                      qualifications=sections["qualifications"],
+                      has_sections=sections["has_sections"])
         return result
 
     async def experiences(self, limit=20, offset=0, experience_id=None):

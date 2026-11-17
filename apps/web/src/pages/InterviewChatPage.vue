@@ -56,6 +56,18 @@ const interviewerOptionsError = ref('')
 const creatingSession = ref(false)
 const designInterview = ref(false), activeDesign = ref(false)
 const adaptiveInterview = ref(false)
+// Creation is a guided dialog; the sidebar only holds the button and history.
+const showCreate = ref(false)
+// First-question contract rejections are recoverable, not a dead end.
+const startBlocked = ref('')
+const summaryJobLabel = computed(() => {
+  if (selectedTargetId.value) {
+    const target = jobTargets.value.find(t => t.id === selectedTargetId.value)
+    return target ? `${target.company_name} · ${target.job_title}` : '自定义岗位'
+  }
+  const job = targets.value.find(t => t.job_id === selectedJobId.value)
+  return job ? `${publicName(job.company_name)} · ${publicName(job.job_title)}` : '未选择'
+})
 watch(adaptiveInterview, value => { if (value) designInterview.value = false })
 watch(designInterview, value => { if (value) adaptiveInterview.value = false })
 const designTrace = ref<DesignTrace>()
@@ -330,6 +342,7 @@ async function handleCreateSession() {
         })()
     sessions.value.unshift(session)
     await selectSession(session.id)
+    showCreate.value = false
     await handleStart()
   } catch (e) {
     if (e instanceof ApiError) alert(e.message)
@@ -339,12 +352,34 @@ async function handleCreateSession() {
 async function handleStart() {
   if (!activeSessionId.value) return
   generationStage.value = "generating_first_question"
+  startBlocked.value = ""
   try {
     await startInterview(activeSessionId.value)
     await loadSessions()
     await selectSession(activeSessionId.value, true)
-  } catch (e) { alert(e instanceof ApiError ? e.message : "首题生成失败，可以重试开始") }
+  } catch (e) {
+    // The server already refused the question without saving it; explain and
+    // offer the deterministic recovery instead of a dead-end alert.
+    if (e instanceof ApiError && e.code === 'ADAPTIVE_TOPIC_MISMATCH') {
+      startBlocked.value = e.message
+    } else {
+      alert(e instanceof ApiError ? e.message : "首题生成失败，可以重试开始")
+    }
+  }
   finally { generationStage.value = "idle" }
+}
+
+async function recoverWithRequirement() {
+  if (!activeSessionId.value) return
+  generationStage.value = "generating_first_question"
+  try {
+    await startInterview(activeSessionId.value, 'REQUIREMENT')
+    startBlocked.value = ""
+    await loadSessions()
+    await selectSession(activeSessionId.value, true)
+  } catch (e) {
+    startBlocked.value = e instanceof ApiError ? e.message : "岗位要求开场失败，请稍后重试"
+  } finally { generationStage.value = "idle" }
 }
 
 async function handleDeleteSession(id: number) {
@@ -871,60 +906,13 @@ getInterviewTargets().then(async data => {
     <!-- Left: Session List -->
     <aside class="session-sidebar">
       <div class="sidebar-header">
-        <h3>面试会话</h3>
-        <button class="btn-new" :disabled="creatingSession || !interviewerOptions || (!selectedJobId && !selectedTargetId) || !skillChoice.skill_id" @click="handleCreateSession">{{ creatingSession ? '正在创建…' : '+ 新建' }}</button>
+        <h3>面试记录</h3>
+        <button class="btn-new" @click="showCreate = true">+ 新建面试</button>
       </div>
-      <div style="padding:12px;display:grid;gap:8px">
-        <label>公司 / 岗位
-          <select v-model="selectedJobId" aria-label="公司和岗位" style="width:100%">
-            <option :value="null">请选择已发布岗位</option>
-            <option v-for="t in targets" :key="t.job_id" :value="t.job_id">{{ publicName(t.company_name) }} · {{ publicName(t.job_title) }}</option>
-          </select>
-        </label>
-        <label>我的目标岗位
-          <select v-model="selectedTargetId" aria-label="我的目标岗位" style="width:100%">
-            <option :value="null">不使用（只用已发布岗位）</option>
-            <option v-for="t in jobTargets.filter(t => t.parse_status === 'CONFIRMED')" :key="t.id" :value="t.id">
-              {{ t.company_name }} · {{ t.job_title }}（第 {{ t.version }} 版）
-            </option>
-          </select>
-          <small v-if="!jobTargets.some(t => t.parse_status === 'CONFIRMED')">
-            还没有已确认的目标岗位，可在「我的目标岗位」粘贴 JD 并确认。
-          </small>
-          <small v-else>私人岗位现在会按你已确认的 JD 要求给出规则推荐，仍可手动更换；来源为用户提供，未经企业核实。</small>
-        </label>
-        <label>面试轮数（含追问）<input v-model.number="createBudget" type="number" min="1" max="40" style="width:60px"></label>
-        <label><input type="checkbox" v-model="designInterview" aria-label="系统设计验证面试"> 系统设计验证面试（限量预约场景）</label>
-        <label><input type="checkbox" v-model="adaptiveInterview" aria-label="自适应面试"> 自适应面试 · 根据回答调整考察目标</label>
-        <small v-if="adaptiveInterview">结合岗位要求、真实项目与已审核资料安排技术主题；回答后补具体缺口或切换主题，不形成长期能力评分。</small>
-        <template v-if="interviewerOptions">
-          <label>岗位专业 Skill<select :value="skillChoice.skill_id" @change="selectSkill" aria-label="岗位专业 Skill" style="width:100%">
-            <option value="">请选择专业 Skill</option>
-            <option v-for="option in interviewerOptions.skills" :key="option.id" :value="option.id">{{ option.label }}</option>
-          </select></label>
-          <p v-if="skillRecommendation" role="status">{{ skillRecommendation.reason }}</p>
-          <small>{{ skillChoice.source === 'USER_SELECTED' ? '用户手动选择' : skillChoice.source === 'AUTO_RECOMMENDED' ? '根据岗位规则自动推荐' : '推荐依据不足，请手动选择' }}</small>
-          <small v-if="skillRecommendation">推荐来源：确定性规则匹配（0 次模型调用），不是模型置信度或百分比。</small>
-          <p v-if="recommendationStale" role="alert">这份 JD 的推荐输入已更新，此前的推荐方向可能已过期；请回到「我的目标岗位」重新查看后再使用。</p>
-          <p v-if="manualSkillMismatch">已保留你的手动选择；与当前岗位推荐方向可能不同，请确认。</p>
-          <details v-if="skillRecommendation"><summary>查看推荐依据与其他方向</summary>
-            <div v-for="item in skillRecommendation.ranking" :key="item.skill_id"><p>{{ item.label }}：{{ item.excluded ? '不适用' : item.reason }}</p>
-              <small v-for="e in item.evidence.slice(0, 3)" :key="`${e.field}-${e.term}`">对应 JD 依据：{{ e.excerpt }}<br></small>
-            </div>
-          </details>
-          <label>面试轮次<select v-model="roundAndStyle.interview_round" aria-label="面试轮次" style="width:100%">
-            <option v-for="option in interviewerOptions.rounds" :key="option.id" :value="option.id">{{ option.label }}</option>
-          </select></label>
-          <label>面试官风格<select v-model="roundAndStyle.interviewer_style" aria-label="面试官风格" style="width:100%">
-            <option v-for="option in interviewerOptions.styles" :key="option.id" :value="option.id">{{ option.label }}</option>
-          </select></label>
-          <small>{{ interviewerOptions.styles.find(option => option.id === interviewerSelection.interviewer_style)?.description }} 严格不等于更难或额外扣分。</small>
-          <small>设置后点击“新建”。从岗位推荐进入时也可先调整本场配置。</small>
-        </template>
-        <p v-else :role="interviewerOptionsError ? 'alert' : 'status'">{{ interviewerOptionsError || '正在读取面试官配置…' }}</p>
-        <router-link to="/profile">先查看 / 完成我的画像</router-link>
-        <p v-if="targetsLoading">正在读取岗位…</p>
-        <p v-else-if="!targets.length && !pageError">当前岗位库暂无可用岗位。</p>
+      <div class="sidebar-hint">
+        <p v-if="targetsLoading" class="meta">正在读取岗位…</p>
+        <p v-else-if="!targets.length && !pageError" class="meta">当前岗位库暂无可用岗位。</p>
+        <p v-else class="meta">共 {{ sessions.length }} 场记录，点击可继续查看；需要在其他岗位练习时新建一场。</p>
       </div>
       <div class="session-list">
         <div
@@ -957,6 +945,14 @@ getInterviewTargets().then(async data => {
 
     <!-- Center: Chat -->
     <main class="chat-main">
+      <div v-if="startBlocked" class="start-blocked" role="alert">
+        <p><strong>第一题没有生成成功。</strong>{{ startBlocked }}</p>
+        <p class="meta">这道题没有被保存，也没有产生评价；重试不会重复计费或重复评价。</p>
+        <div class="start-blocked-actions">
+          <button class="btn-primary" :disabled="generationStage !== 'idle'" @click="handleStart">重新生成第一题</button>
+          <button class="btn-ghost" :disabled="generationStage !== 'idle'" @click="recoverWithRequirement">改用岗位要求开场</button>
+        </div>
+      </div>
       <!-- No session selected -->
       <div v-if="!activeSessionId" class="no-session">
         <p>选择一个面试会话或新建一个开始模拟面试</p>
@@ -1210,6 +1206,108 @@ getInterviewTargets().then(async data => {
         </div>
       </template>
     </main>
+
+    <div v-if="showCreate" class="overlay" role="dialog" aria-modal="true" aria-label="新建模拟面试" @click.self="showCreate = false">
+      <div class="wizard">
+        <header>
+          <div><h2>新建模拟面试</h2><p class="meta">按你选的配置冻结一场面试；创建后立即生成第一题。</p></div>
+          <button class="btn-ghost" @click="showCreate = false">关闭</button>
+        </header>
+
+        <section class="step">
+          <h3><span>1</span>选择岗位</h3>
+          <label>已发布岗位
+            <select v-model="selectedJobId" aria-label="公司和岗位">
+              <option :value="null">请选择已发布岗位</option>
+              <option v-for="t in targets" :key="t.job_id" :value="t.job_id">{{ publicName(t.company_name) }} · {{ publicName(t.job_title) }}</option>
+            </select>
+          </label>
+          <label v-if="jobTargets.filter(t => t.parse_status === 'CONFIRMED').length">或者用我的「自定义岗位」
+            <select v-model="selectedTargetId" aria-label="我的目标岗位">
+              <option :value="null">不使用（只用已发布岗位）</option>
+              <option v-for="t in jobTargets.filter(t => t.parse_status === 'CONFIRMED')" :key="t.id" :value="t.id">
+                {{ t.company_name }} · {{ t.job_title }}（第 {{ t.version }} 版）
+              </option>
+            </select>
+          </label>
+          <p v-else class="meta">找不到岗位？可以在「<router-link to="/jobs/targets">自定义岗位</router-link>」里粘贴 JD 并确认。</p>
+        </section>
+
+        <section class="step">
+          <h3><span>2</span>确认面试方向</h3>
+          <template v-if="interviewerOptions">
+            <label>专业方向
+              <select :value="skillChoice.skill_id" @change="selectSkill" aria-label="岗位专业 Skill">
+                <option value="">请选择专业 Skill</option>
+                <option v-for="option in interviewerOptions.skills" :key="option.id" :value="option.id">{{ option.label }}</option>
+              </select>
+            </label>
+            <p v-if="skillRecommendation" class="meta">{{ skillRecommendation.reason }}</p>
+            <p v-if="recommendationStale" role="alert" class="warn">这份 JD 的推荐输入已更新，推荐方向可能过期，请确认后再使用。</p>
+            <p v-if="manualSkillMismatch" class="meta">已保留你的手动选择，可能与岗位推荐方向不同。</p>
+            <details v-if="skillRecommendation"><summary>查看推荐依据</summary>
+              <div v-for="item in skillRecommendation.ranking" :key="item.skill_id">
+                <p class="meta">{{ item.label }}：{{ item.excluded ? '不适用' : item.reason }}</p>
+              </div>
+            </details>
+          </template>
+          <p v-else :role="interviewerOptionsError ? 'alert' : 'status'" class="meta">{{ interviewerOptionsError || '正在读取面试官配置…' }}</p>
+        </section>
+
+        <section class="step">
+          <h3><span>3</span>考察侧重</h3>
+          <div class="chips">
+            <button v-for="option in interviewerOptions?.rounds || []" :key="option.id"
+              :class="['chip', { active: roundAndStyle.interview_round === option.id }]"
+              @click="roundAndStyle.interview_round = option.id">{{ option.label }}</button>
+          </div>
+          <p class="meta">目前只有基础技术与项目深挖两种考察侧重，不代表企业真实的一面 / 二面流程。</p>
+        </section>
+
+        <section class="step">
+          <h3><span>4</span>题量</h3>
+          <div class="chips">
+            <button v-for="preset in [3, 8, 20]" :key="preset" :class="['chip', { active: createBudget === preset }]"
+              @click="createBudget = preset">{{ preset === 3 ? '快速体验 3 题' : preset === 8 ? '标准面试 8 题' : '完整面试 20 题' }}</button>
+          </div>
+          <label class="inline">自定义题量<input v-model.number="createBudget" type="number" min="1" max="40"></label>
+        </section>
+
+        <section class="step">
+          <h3><span>5</span>面试官风格</h3>
+          <div class="chips">
+            <button v-for="option in interviewerOptions?.styles || []" :key="option.id"
+              :class="['chip', { active: roundAndStyle.interviewer_style === option.id }]"
+              @click="roundAndStyle.interviewer_style = option.id">{{ option.label }}</button>
+          </div>
+          <p class="meta">{{ interviewerOptions?.styles.find(o => o.id === interviewerSelection.interviewer_style)?.description }} 严格不等于更难或额外扣分。</p>
+        </section>
+
+        <section class="step">
+          <h3><span>6</span>是否自适应</h3>
+          <label class="switch"><input type="checkbox" v-model="adaptiveInterview" aria-label="自适应面试"> 根据回答调整考察目标</label>
+          <p class="meta">开启后，面试会根据你的回答补具体缺口或切换技术主题；关闭则按固定大纲出题。两种都按同一套评价标准打分。</p>
+          <label v-if="!adaptiveInterview" class="switch"><input type="checkbox" v-model="designInterview" aria-label="系统设计验证面试"> 系统设计验证面试（限量预约场景）</label>
+        </section>
+
+        <section class="step summary">
+          <h3><span>7</span>确认</h3>
+          <p>岗位：{{ summaryJobLabel }}</p>
+          <p>方向：{{ interviewerOptions?.skills.find(s => s.id === skillChoice.skill_id)?.label || '未选择' }}
+            · 侧重：{{ interviewerOptions?.rounds.find(r => r.id === roundAndStyle.interview_round)?.label || '—' }}
+            · 题量 {{ createBudget }} · 风格：{{ interviewerOptions?.styles.find(s => s.id === roundAndStyle.interviewer_style)?.label || '—' }}
+            · 自适应：{{ adaptiveInterview ? '开' : '关' }}</p>
+          <p v-if="pageError" role="alert">{{ pageError }}</p>
+        </section>
+
+        <footer class="wizard-actions">
+          <button class="btn-ghost" @click="showCreate = false">取消</button>
+          <button class="btn-primary" :disabled="creatingSession || !interviewerOptions || (!selectedJobId && !selectedTargetId) || !skillChoice.skill_id" @click="handleCreateSession">
+            {{ creatingSession ? '正在创建…' : '开始面试' }}
+          </button>
+        </footer>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -1715,10 +1813,43 @@ getInterviewTargets().then(async data => {
   font-size: 13px;
   color: #529b2e;
 }
+.sidebar-hint { padding: 10px 14px; }
+.sidebar-hint .meta { margin: 0; color: #667085; font-size: 12px; line-height: 1.6; }
+.start-blocked { margin: 16px; padding: 14px 16px; border: 1px solid #f3c2bd; background: #fdeceb; border-radius: 10px; color: #7a271a; }
+.start-blocked p { margin: 4px 0; line-height: 1.7; }
+.start-blocked .meta { color: #9a5b52; font-size: 13px; }
+.start-blocked-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+
+/* ── Creation wizard ── */
+.overlay { position: fixed; inset: 0; background: rgba(16, 24, 40, .45); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 24px; }
+.wizard { background: #fff; border-radius: 14px; width: min(680px, 100%); max-height: 90vh; overflow-y: auto; padding: 24px; }
+.wizard header { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+.wizard h2 { margin: 0; font-size: 20px; }
+.wizard .meta { color: #667085; font-size: 13px; margin: 4px 0 0; }
+.wizard .step { border-top: 1px solid #eef1f6; padding: 16px 0 6px; }
+.wizard .step h3 { display: flex; gap: 10px; align-items: center; font-size: 15px; margin: 0 0 10px; }
+.wizard .step h3 span { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px;
+  border-radius: 50%; background: #eef2ff; color: #315be5; font-size: 12px; }
+.wizard label { display: grid; gap: 6px; font-size: 13px; color: #475467; margin-bottom: 10px; }
+.wizard label.inline { display: flex; align-items: center; gap: 10px; }
+.wizard select, .wizard input[type=number] { padding: 9px 11px; border: 1px solid #d0d5dd; border-radius: 8px; font: inherit; }
+.wizard input[type=number] { width: 90px; }
+.wizard .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.wizard .chip { border: 1px solid #d0d5dd; background: #fff; border-radius: 999px; padding: 6px 14px; cursor: pointer; color: #344054; }
+.wizard .chip.active { background: #315be5; border-color: #315be5; color: #fff; }
+.wizard .switch { display: flex; align-items: center; gap: 8px; }
+.wizard .warn { color: #b42318; }
+.wizard .summary p { margin: 6px 0; font-size: 14px; }
+.wizard-actions { display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #eef1f6; padding-top: 16px; margin-top: 12px; }
+.btn-primary { background: #315be5; color: #fff; border: 0; border-radius: 8px; padding: 10px 18px; cursor: pointer; }
+.btn-primary:disabled { opacity: .5; cursor: default; }
+.btn-ghost { background: #fff; border: 1px solid #d0d5dd; border-radius: 8px; padding: 9px 16px; cursor: pointer; color: #344054; }
 @media (max-width: 700px) {
   .interview-page { flex-direction: column; height: auto; }
   .session-sidebar { width: 100%; min-width: 0; max-height: 320px; flex-shrink: 0; }
   .chat-main { min-height: 620px; height: 72vh; flex: none; }
   .message-bubble { max-width: 95%; overflow-wrap: anywhere; }
+  .overlay { padding: 0; align-items: flex-end; }
+  .wizard { border-radius: 14px 14px 0 0; max-height: 94vh; }
 }
 </style>

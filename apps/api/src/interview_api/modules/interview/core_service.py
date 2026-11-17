@@ -15,7 +15,7 @@ from interview_api.infrastructure.models.router import build_interview_router
 from interview_api.modules.interview.agents import InterviewMainAgent, AnswerEvaluationAgent
 from interview_api.modules.interview.controller import SessionController, question_data
 from interview_api.modules.interview.context import question_policy, model_context
-from interview_api.modules.interview.topics import coverage
+from interview_api.modules.interview.topics import coverage, requirement_opening_question
 from interview_api.modules.interview.models import InterviewSession, InterviewMessage, InterviewSessionQuestion, InterviewAnswer, InterviewContextSnapshot, InterviewEvaluation
 
 logger = logging.getLogger(__name__)
@@ -30,6 +30,22 @@ def session_policy(context, questions, action="NEXT"):
 
 def sse(event, data):
     return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+class SystemOpening:
+    """A server-authored opening question, never presented as model output.
+
+    Used only when the operator explicitly asks for it after a model question
+    failed the frozen topic gate. The wording quotes the frozen JD requirement
+    and names the frozen target, and the result still goes through
+    ``validate_decision`` — nothing is forced through.
+    """
+    provider = "system"
+    run_id = None
+    usage = {}
+
+    def __init__(self, artifact):
+        self.artifact = artifact
 
 
 class MockInterviewService:
@@ -218,7 +234,50 @@ class MockInterviewService:
             rubric=(active.standard_answer or "").splitlines() if active else [],
             answer=answer, evaluation=evaluation)
 
-    async def start(self, session_id, user_id):
+    @staticmethod
+    def requirement_opening(payload):
+        """Build and validate a zero-model opening question from frozen evidence."""
+        from interview_api.modules.interview.adaptive import (
+            AdaptiveSelection, ScopedAdaptiveSelection, QuestionDraft, resolve_selection,
+            validate_decision, uses_gap_scope)
+        adaptive = payload["adaptive"]
+        requirements = {r["id"]: r for r in payload["snapshot"].get("requirements") or []}
+        chosen = next((c for c in adaptive.get("candidates") or []
+                       if c["source"]["source_type"] == "JOB_REQUIREMENT"
+                       and "NEXT" in c["strategies"]
+                       and c["source"]["source_id"] in requirements), None)
+        if chosen is None:
+            raise AppError("REQUIREMENT_OPENING_UNAVAILABLE",
+                           "本场没有可用于开场的岗位要求，请改用模型出题", 409)
+        statement = requirements[chosen["source"]["source_id"]]["statement"].strip()
+        label = chosen.get("label") or chosen["topic"]
+        question = requirement_opening_question(statement, label)
+        draft = QuestionDraft(question=question,
+                              expected_points=[f"{label}的实际做法", "一次具体问题与解决"],
+                              dimension=label[:50],
+                              difficulty=payload.get("desired_difficulty") or "MEDIUM")
+        selection_cls = ScopedAdaptiveSelection if uses_gap_scope(payload) else AdaptiveSelection
+        extra = {"focus_gap_ids": []} if uses_gap_scope(payload) else {}
+        selection = selection_cls(candidate_id=chosen["candidate_id"], strategy="NEXT",
+                                 supporting_refs=[chosen["source"]["ref"]], reason_tags=["OPENING"],
+                                 proposed_question=draft, **extra)
+        artifact = resolve_selection(selection, payload)
+        return artifact, validate_decision(artifact, payload)
+
+    async def record_topic_mismatch(self, session_id, user_id, exc):
+        """Persist why a NEXT question was rejected; never masks the error."""
+        from interview_api.modules.audit.models import AuditLog
+        try:
+            async with self.factory() as db:
+                db.add(AuditLog(actor_user_id=user_id, actor_role="USER",
+                                action="ADAPTIVE_TOPIC_MISMATCH", resource_type="interview_session",
+                                resource_id=str(session_id), metadata_json=exc.diagnostic,
+                                status="REJECTED", error_message=exc.message[:500]))
+                await db.commit()
+        except Exception:
+            logger.warning("topic mismatch audit write failed for session %s", session_id, exc_info=True)
+
+    async def start(self, session_id, user_id, *, opening="MODEL"):
         session, context, questions, active, _ = await self.read_state(session_id, user_id)
         if session.status == "IN_PROGRESS" and active:
             return question_data(active, session.question_count)
@@ -227,10 +286,25 @@ class MockInterviewService:
         if context.get("adaptive_policy"):
             from interview_api.modules.interview.adaptive import planning_payload, validate_decision
             payload = planning_payload(context, questions, None, session.interview_plan_json)
+            if opening == "REQUIREMENT":
+                # Explicit, user-chosen fallback: no model call, no fabricated
+                # question — the wording quotes the frozen JD requirement and
+                # names the frozen target. It is still validated by the same gate.
+                artifact, policy = self.requirement_opening(payload)
+                result = SystemOpening(artifact=artifact)
+                async with self.factory() as db:
+                    data = await SessionController(db).start(session_id, user_id, session.state_version, result, policy)
+                    await db.commit()
+                return data
             result = await self.call_agent(self.main.adaptive(payload), session_id, user_id, session.state_version, payload)
             if result is None:
                 raise AppError("INTERVIEW_BUDGET_EXHAUSTED", "首题预算不足", 409)
-            policy = validate_decision(result.artifact, payload)
+            try:
+                policy = validate_decision(result.artifact, payload)
+            except AppError as exc:
+                if getattr(exc, "diagnostic", None):
+                    await self.record_topic_mismatch(session_id, user_id, exc)
+                raise
             try:
                 async with self.factory() as db:
                     data = await SessionController(db).start(session_id, user_id, session.state_version, result, policy)

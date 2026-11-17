@@ -17,6 +17,21 @@ async def jobs(limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0
     return success(data=await PublicCareerLibrary(db).jobs(limit, offset))
 
 
+@router.get("/job-search")
+async def job_search(limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0),
+                     q: str | None = Query(None, max_length=100),
+                     company_id: int | None = Query(None),
+                     direction: str | None = Query(None, max_length=40),
+                     db=Depends(get_db)):
+    """Search the whole published library, not just the current page."""
+    return success(data=await PublicCareerLibrary(db).search(limit, offset, q, company_id, direction))
+
+
+@router.get("/companies")
+async def companies(db=Depends(get_db)):
+    return success(data=await PublicCareerLibrary(db).companies())
+
+
 @router.get("/jobs/{job_id}")
 async def job(job_id: int, db=Depends(get_db)):
     return success(data=await PublicCareerLibrary(db).job(job_id))

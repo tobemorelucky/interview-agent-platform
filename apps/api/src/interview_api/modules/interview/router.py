@@ -112,8 +112,10 @@ async def delete_session(session_id: int, current_user=Depends(get_current_user)
 
 
 @router.post("/sessions/{session_id}/start")
-async def start_interview(session_id: int, current_user=Depends(get_current_user), _limit=Depends(interview_chat_limit)):
-    return success(data=await build_core().start(session_id, current_user.id))
+async def start_interview(session_id: int, opening: str = "MODEL", current_user=Depends(get_current_user), _limit=Depends(interview_chat_limit)):
+    if opening not in ("MODEL", "REQUIREMENT"):
+        raise HTTPException(status_code=422, detail="opening must be MODEL or REQUIREMENT")
+    return success(data=await build_core().start(session_id, current_user.id, opening=opening))
 
 
 @router.post("/sessions/{session_id}/messages/stream")

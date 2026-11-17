@@ -12,6 +12,7 @@ from interview_api.modules.candidate_profile.models import CandidateProfileVersi
 from interview_api.modules.candidate_profile.service import CandidateProfileService, iter_facts
 from interview_api.modules.candidate_profile.evidence import digest
 from interview_api.modules.job_matching.policy import norm, eligibility, evidence_matrix, ranking_components, pre_rank_key
+from interview_api.modules.job_matching.skills import profile_topics, requirement_topics
 from interview_api.modules.public_career.requirement_vocabulary import effective_strength
 
 
@@ -80,6 +81,7 @@ async def retrieve(db, profile, filters):
         rows += list((await db.execute(base.where(~condition).order_by(case((explicit_exclusion, 1), else_=0), Job.id)
             .limit(settings.job_matching_top_n))).all())
     results = []
+    candidate_terms = profile_topics(profile["facts"])
     for job, company, jd, count in rows:
         requirements = (await db.scalars(select(JobRequirement).where(JobRequirement.job_description_version_id == jd.id).order_by(JobRequirement.id))).all()
         structured = jd.structured_data_json if isinstance(jd.structured_data_json, dict) else {}
@@ -94,6 +96,14 @@ async def retrieve(db, profile, filters):
                 claim_id=r.claim_id) for r in requirements],
             demo=bool((jd.metadata_json or {}).get("fixture") or (jd.metadata_json or {}).get("demo") or (jd.metadata_json or {}).get("mode") == "replay"),
             sql_tag_overlap=count)
+        # JobTag rows are empty for curated JDs, so a tag-only overlap would let
+        # the database id decide the order. Count the literal technology overlap
+        # between this JD's requirements and the candidate's own material.
+        job_terms = set()
+        for requirement in item["requirements"]:
+            job_terms |= requirement_topics(requirement)
+        item["topic_overlap"] = len(candidate_terms & job_terms)
+        item["job_terms"] = sorted(job_terms)
         item["input_fingerprint"] = digest(item)
         item.update(eligibility(item, filters))
         item["evidence_matrix"] = evidence_matrix(item, profile)
@@ -103,9 +113,13 @@ async def retrieve(db, profile, filters):
     selected = normal[:settings.job_matching_top_n]
     for rank, item in enumerate(selected, 1): item["pre_rank"] = rank
     excluded = [r for r in results if r["eligibility_status"] == "NOT_SATISFIED"][:settings.job_matching_top_n]
+    basis = [item["ranking_components"]["evidence_basis"] for item in selected]
+    confidence = "EVIDENCE" if any(value != "NONE" for value in basis) else "NONE"
     coverage = dict(status="SUFFICIENT" if len(selected) >= settings.job_matching_top_n else "LIMITED" if selected else "INSUFFICIENT",
         candidate_count=len(selected), excluded_count=len(excluded), top_n=settings.job_matching_top_n,
         retrieval_window=window, window_may_be_truncated=len(rows) >= window,
         omitted_eligible_count=max(0, len(normal) - len(selected)),
-        message="只使用已发布公共数据；岗位库覆盖不足时不联网补库。")
+        ranking_confidence=confidence,
+        message="只使用已发布公共数据；岗位库覆盖不足时不联网补库。" if confidence == "EVIDENCE"
+            else "材料里没有能和岗位要求对照的技术证据，这里的顺序不代表匹配程度，请先补全简历或技能。")
     return selected, excluded, coverage

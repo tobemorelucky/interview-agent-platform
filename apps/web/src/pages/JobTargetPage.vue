@@ -246,8 +246,8 @@ load()
 
 <template>
   <div class="page">
-    <h2>我的目标岗位</h2>
-    <p role="status">这里保存你从招聘网站或公司官网复制的 JD。内容只对你可见，不会发布为企业官方岗位或公共面经；面试只使用你确认过的版本。</p>
+    <h2>自定义岗位（粘贴 JD）</h2>
+    <p role="status">在岗位库里找不到的岗位，可以把招聘网站或官网的 JD 粘贴到这里，保存为你自己的岗位并用于模拟面试。内容只对你可见，不会发布成企业官方岗位或公共面经；面试只使用你确认过的版本。</p>
     <p v-if="error" class="ux-empty" role="alert">{{ error }}</p>
     <p v-if="notice" role="status">{{ notice }}</p>
 

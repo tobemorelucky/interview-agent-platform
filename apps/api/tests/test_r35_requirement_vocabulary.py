@@ -147,12 +147,28 @@ def test_education_labels_are_not_counted_as_a_technical_gap(requirement_type):
 
 
 @pytest.mark.parametrize("requirement_type", ["某些未知标签", "", "SKILL/EXPERIENCE", "bonus"])
-def test_unknown_category_is_not_scored_as_technical(requirement_type):
+def test_unknown_category_naming_a_technology_is_still_scored(requirement_type):
+    """R124: the stored type is a heuristic, the technology name is evidence.
+
+    Curated imports label "理解ReAct、Planning、Memory、RAG" as OTHER and
+    "掌握Python、算法和深度学习" as SOFT_SKILL. Excluding every ambiguous label
+    made 169 of 252 real requirements unmatchable, so the statement's literal
+    technology now decides; a statement naming none stays NOT_APPLICABLE below.
+    """
     from interview_api.modules.job_matching.policy import evidence_matrix
     rows = evidence_matrix(_job([{"id": 1, "statement": "了解Kubernetes", "requirement_type": requirement_type,
                                   "normalized_value": "Kubernetes"}]), _profile())
+    assert rows[0]["status"] == "NO_EVIDENCE"
+    assert rows[0]["matched_topics"] == ["kubernetes"]
+
+
+@pytest.mark.parametrize("requirement_type", ["某些未知标签", "", "OTHER", "UNKNOWN"])
+def test_unknown_category_without_a_technology_is_not_scored(requirement_type):
+    from interview_api.modules.job_matching.policy import evidence_matrix
+    rows = evidence_matrix(_job([{"id": 1, "statement": "做事踏实，能承受一定工作压力",
+                                  "requirement_type": requirement_type, "normalized_value": None}]), _profile())
     assert rows[0]["status"] == "NOT_APPLICABLE"
-    assert "需人工确认" in rows[0]["message"]
+    assert "没有可确定识别的技术点" in rows[0]["message"]
 
 
 @pytest.mark.parametrize("requirement_type", ["SKILL", "skill", "技能", "编程能力"])

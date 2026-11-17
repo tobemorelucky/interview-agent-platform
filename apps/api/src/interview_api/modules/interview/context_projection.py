@@ -153,7 +153,8 @@ def model_payload(payload, route):
             if frozen is None:
                 raise AppError('CONTEXT_CANDIDATE_TARGET_NOT_FOUND',
                     f'候选组合引用的考察目标 {kid!r} 不在本场冻结目标集合中，未替换为其他目标', 409)
-            targets[kid] = pick(frozen, ('knowledge_id', 'topic', 'label', 'purpose', 'scope', 'priority'))
+            targets[kid] = pick(frozen, ('knowledge_id', 'topic', 'label', 'purpose', 'scope', 'priority',
+                'mention_terms'))
             sources[ref] = {**pick(candidate['source'], ('ref', 'source_type', 'source_id', 'kind')),
                 'semantics': candidate['source_semantics']}
             candidates.append(pick(candidate, ('candidate_id', 'target_knowledge_id', 'strategies')) |

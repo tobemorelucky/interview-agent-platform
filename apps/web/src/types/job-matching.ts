@@ -19,7 +19,13 @@ export interface MatchCandidate {
   unknown_constraints: string[]; evidence_matrix: MatrixRow[]
   matching_constraints?: Record<string, unknown>
   pre_rank: number | null; agent_rank: number | null; final_rank: number | null
-  ranking_components: { fit_band_ceiling: FitBand }
+  ranking_components: {
+    fit_band_ceiling: FitBand
+    evidence_basis?: 'NONE' | 'PARTIAL' | 'SUPPORTED'
+    required_counts?: { SUPPORTED: number; PARTIAL: number; NO_EVIDENCE: number }
+    preferred_supported?: number
+    preferred_total?: number
+  }
   recommendation: null | { id: number; fit_band: FitBand; analysis: {
     matched_strengths: MatchSupport[]; alignment_reasons: MatchSupport[]
     current_evidence_gaps: MatrixRow[]; preparation_focus: MatrixRow[]; unknowns_to_confirm: string[]
@@ -29,7 +35,7 @@ export interface MatchRun {
   id: number; status: string; error: string | null; producer: string; provider: string | null
   model: string | null; profile_version_id: number; policy_version: string; prompt_version: string
   input_fingerprint: string; created_at: string; candidates: MatchCandidate[]; excluded_candidates: MatchCandidate[]
-  coverage: { status: string; candidate_count: number; excluded_count: number; top_n: number; window_may_be_truncated: boolean; message: string; generation_mode?: string; reused_from_run_id?: number }
+  coverage: { status: string; candidate_count: number; excluded_count: number; top_n: number; window_may_be_truncated: boolean; message: string; generation_mode?: string; reused_from_run_id?: number; ranking_confidence?: 'EVIDENCE' | 'NONE' }
   snapshot: { data_mode: string; profile: { evidence: MatchEvidence[]; facts?: { id: number; label: string; category: string; evidence_state?: string | null }[] }; request: { filters: MatchFilters }; approved_preferences: { items: { id: number; content: string }[]; omitted_count: number } }
   attempts: { id: number; status: string; error: string | null; agent_run_id: number | null }[]
 }

@@ -14,7 +14,7 @@ const route=useRoute(), router=useRouter()
 const jobs=ref<InterviewTarget[]>([]), options=ref<InterviewerOptions|null>(null)
 const privateTargets=ref<JobTarget[]>([]), privateTargetId=ref('')
 const jobId=ref(''), skill=ref(''), round=ref('technical_screen'), style=ref('standard'), count=ref(4)
-const mode=ref<TrainingMode>('FULL'), goal=ref(''), board=ref<TrainingBoard|null>(null)
+const mode=ref<TrainingMode>('WEAKNESS'), goal=ref(''), board=ref<TrainingBoard|null>(null)
 const candidates=ref<TrainingCandidateSet|null>(null), candidateError=ref(''), notice=ref('')
 const loading=ref(false), stage=ref(''), error=ref(''), saved=ref<number|null>(null)
 const needsProfile=ref(false)
@@ -27,6 +27,9 @@ const privateTarget=computed(()=>privateTargets.value.find(t=>String(t.id)===pri
 const hasSource=computed(()=>!!(privateTargetId.value||jobId.value))
 const available=computed(()=>board.value?.targets.filter(t=>t.available_modes.includes(mode.value))||[])
 function selectTarget(id:string, selected:TrainingMode){mode.value=selected;goal.value=id}
+// Only goals the rules actually allow a专项 run for; FULL belongs to /interview.
+const trainable=computed(()=>(board.value?.targets||[]).filter(t=>t.available_modes.some(m=>m==='WEAKNESS'||m==='RECHECK')))
+const plainMode=(m:string)=>m==='RECHECK'?'独立复测':m==='WEAKNESS'?'薄弱项练习':'完整面试'
 const reason=(tags:string[])=>tags.map(t=>capabilityReasons[t]||'结合新的岗位场景继续验证').join('；')
 function request(){
   // Exactly one job source; the server re-checks ownership for private ids.
@@ -141,7 +144,13 @@ onMounted(async()=>{
 
 <template>
   <main class="training-page">
-    <header><h1>个性化面试训练</h1><p>选定目标岗位，先看哪些知识需要练习，再决定如何开始。</p></header>
+    <header class="page-head">
+      <div>
+        <h1>专项训练</h1>
+        <p>这里根据你上一场模拟面试的表现，挑出值得单独练的知识点。需要完整模拟面试，请到
+          <router-link to="/interview">模拟面试</router-link>。</p>
+      </div>
+    </header>
     <p v-if="error" role="alert">{{ error }} <button @click="load">重试读取</button>
       <router-link v-if="needsProfile" to="/resumes">去上传简历</router-link></p>
     <section class="setup" aria-label="训练配置">
@@ -154,43 +163,47 @@ onMounted(async()=>{
     <p v-if="privateTarget" class="provenance" role="note">当前目标来自你自己提供的 JD（{{ privateTarget.company_name }} · {{ privateTarget.job_title }}，第 {{ privateTarget.version }} 版），{{ privateTarget.source_label }}。训练只使用该目标已确认的岗位要求，以及你在上方选择的平台专业 Skill；它不会进入公开招聘岗位或公共题库。</p>
     <p v-if="privateTarget && !skill" role="note">请先在上方「专业方向」里选择一个已注册 Skill；平台只会在你选定的 Skill 与你确认的岗位要求范围内生成训练目标。</p>
     <p v-if="loading" role="status">正在核对岗位范围和有效历史表现…</p>
-    <section v-if="board" class="targets"><h2>这个岗位适合练什么</h2>
-      <p v-if="!board.targets.length">当前岗位与专业规则没有合法考察目标，请更换专业方向，暂不创建训练任务。</p>
-      <p v-if="!board.coverage.reviewed_question_count">该岗位暂无已审核的专属面试题，使用合法专业规则和岗位要求出题，不冒充公司历史真题。</p>
-      <ul><li v-for="t in board.targets" :key="t.knowledge_id"><div><strong>{{ t.label }}</strong><span>{{ t.revoked?'已撤销推断':capabilityLabels[t.state] }}</span></div>
-        <p>{{ reason(t.reason_tags)||'尚无足够历史观察，可从完整模拟面试开始。' }} <span v-if="t.independent_sessions">独立支持 {{t.independent_sessions}} 场。</span></p>
-        <button v-if="t.available_modes.includes('RECHECK')" @click="selectTarget(t.knowledge_id,'RECHECK')">选择此目标独立复测</button>
-        <button v-else-if="t.available_modes.includes('WEAKNESS')" @click="selectTarget(t.knowledge_id,'WEAKNESS')">选择此弱项练习</button>
-        <details v-if="t.observations.length"><summary>为什么推荐 / 查看历史依据</summary><p v-for="o in t.observations" :key="o.session_id+o.observed_at">{{ o.assisted?'提示或追问后作答':'独立作答' }} <router-link :to="`/interview?session_id=${o.session_id}`">查看来源面试</router-link></p><router-link to="/memory">更正或撤销有争议的推断</router-link></details>
+    <section v-if="board" class="targets"><h2>可以练什么</h2>
+      <p v-if="!trainable.length" class="empty-state">
+        还没有可以专项练习的目标。先完成一场<router-link to="/interview">完整的模拟面试</router-link>，
+        系统会根据那一场的正式评价判断哪些点值得单独练；在既有规则下，不会凭空生成弱项。
+      </p>
+      <p v-if="!board.coverage.reviewed_question_count" class="meta">该岗位暂无已审核的专属面试题，使用专业规则和岗位要求出题，不冒充公司真题。</p>
+      <ul><li v-for="t in trainable" :key="t.knowledge_id"><div><strong>{{ t.label }}</strong><span>{{ capabilityLabels[t.state] }}</span></div>
+        <p>{{ reason(t.reason_tags)||'尚无足够历史观察。' }} <span v-if="t.independent_sessions">已在 {{ t.independent_sessions }} 场面试中被独立验证过。</span></p>
+        <button v-if="t.available_modes.includes('RECHECK')" @click="selectTarget(t.knowledge_id,'RECHECK')">安排独立复测</button>
+        <button v-else @click="selectTarget(t.knowledge_id,'WEAKNESS')">练这个薄弱项</button>
+        <details v-if="t.observations.length"><summary>这个判断来自哪场面试</summary>
+          <p v-for="o in t.observations" :key="o.session_id+o.observed_at">
+            {{ o.assisted?'提示或追问后作答':'独立作答' }}
+            <router-link :to="`/interview?session_id=${o.session_id}`">查看来源面试</router-link>
+          </p>
+          <router-link to="/memory">认为判断有误？去更正或撤销</router-link>
+        </details>
       </li></ul>
     </section>
-    <section v-if="candidates" class="candidate-panel" aria-label="下一步训练候选">
-      <h2>下一步训练候选 <small>（规则生成 · 读取时按当前能力状态计算 · 0 次模型调用）</small></h2>
-      <p><small>{{ candidates.semantics }}</small></p>
-      <p><small>{{ candidates.disclaimer }}</small></p>
+    <details v-if="candidates" class="candidate-panel advanced">
+      <summary>系统推荐的练习顺序（内部依据）</summary>
+      <p class="meta">{{ candidates.semantics }}</p>
+      <p class="meta">{{ candidates.disclaimer }}</p>
       <p v-if="candidateError" role="alert">候选读取失败：{{ candidateError }}</p>
       <p v-if="candidates.status==='TARGET_UNAVAILABLE'" role="alert">{{ candidates.message || candidateEmptyLabels[candidates.empty_reason||''] }}</p>
       <p v-else-if="!candidates.candidates.length" role="status">{{ candidateEmptyLabels[candidates.empty_reason||''] || '当前没有可训练候选。' }}</p>
       <ul><li v-for="c in candidates.candidates" :key="`${c.knowledge_id}-${c.mode}`">
-        <div><strong>{{ c.label }}</strong><span> {{ candidateModeLabels[c.mode] }} · {{ capabilityLabels[c.state]||c.state }} · 规则优先级 {{ c.priority }}</span></div>
+        <div><strong>{{ c.label }}</strong><span>{{ plainMode(c.mode) }} · {{ capabilityLabels[c.state]||c.state }}</span></div>
         <p>{{ c.reason }}</p>
-        <p><small>正式依据：{{ c.evidence.evaluation_refs.length ? c.evidence.evaluation_refs.join('、') : '暂无正式评价引用' }} · 能力修订 {{ c.evidence.memory_revision===null?'—':c.evidence.memory_revision }} · 独立会话 {{ c.evidence.independent_sessions }}</small></p>
-        <p><small>{{ c.scope_note }}</small></p>
-        <p><small>{{ c.revalidation_note }}</small></p>
-        <button :aria-label="`选用 ${c.label} 候选`" @click="selectCandidate(c)">选用此候选（仅预选，不创建训练）</button>
+        <p class="meta">依据：{{ c.evidence.evaluation_refs.length ? c.evidence.evaluation_refs.join('、') : '暂无正式评价引用' }}
+          · 独立会话 {{ c.evidence.independent_sessions }}</p>
+        <button :aria-label="`选用 ${c.label} 候选`" @click="selectCandidate(c)">预选这个目标</button>
       </li></ul>
-      <p v-if="candidates.fallback"><small>{{ candidates.fallback.reason }}（FULL 始终合法，不针对任何编造的弱项）</small></p>
-      <p v-if="candidates.general_only.length"><small>跨岗位通用历史（不作为当前岗位候选）：{{ candidates.general_only.map(g=>`${g.label}/${capabilityLabels[g.state]||g.state}`).join('、') }}。{{ candidates.verified_note }}</small></p>
-      <p><small>来源：{{ candidates.source }} · {{ candidates.modes_source || 'interview.training.modes()' }} · 计算于 {{ candidates.computed_at }}</small></p>
-    </section>
+      <p v-if="candidates.fallback" class="meta">{{ candidates.fallback.reason }}</p>
+    </details>
     <p v-if="notice" role="status" class="candidate-notice">{{ notice }}</p>
-    <section v-if="board" class="launch"><h2>选择本次练习方式</h2>
-      <label>训练模式<select v-model="mode"><option value="FULL">完整模拟面试</option><option value="WEAKNESS">薄弱项专项训练</option><option value="RECHECK">冲突 / 遗忘独立复测</option></select></label>
-      <label v-if="mode!=='FULL'">训练知识点<select v-model="goal"><option value="">请选择本次目标</option><option v-for="t in available" :key="t.knowledge_id" :value="t.knowledge_id">{{t.label}} · {{capabilityLabels[t.state]}}</option></select></label>
-      <p v-if="mode!=='FULL'&&!available.length">当前没有符合此模式的有效知识目标。可选择完整模拟面试，不会凭空生成复测任务。</p>
-      <p v-if="mode==='RECHECK'">第一题先独立作答，不提前提供标准答案；之后的提示与追问不算独立验证。请使用标准或严格风格。</p>
-      <label>本次轮数（含追问）<input v-model.number="count" type="number" min="1" max="12" /></label>
-      <button class="primary" :disabled="loading||!!stage||!board.targets.length||(mode!=='FULL'&&!goal)" @click="begin">{{stage||'开始本次训练'}}</button>
+    <section v-if="board && trainable.length" class="launch"><h2>开始这次专项练习</h2>
+      <label>练哪个知识点<select v-model="goal"><option value="">请选择本次目标</option><option v-for="t in trainable.filter(t=>t.available_modes.includes(mode))" :key="t.knowledge_id" :value="t.knowledge_id">{{t.label}} · {{capabilityLabels[t.state]}}</option></select></label>
+      <p class="meta" v-if="goal">练习方式：{{ plainMode(mode) }}<template v-if="mode==='RECHECK'">，第一题先独立作答，不提前给答案；之后的提示不算独立验证。</template></p>
+      <label>本次题量<input v-model.number="count" type="number" min="1" max="12" /></label>
+      <button class="primary" :disabled="loading||!!stage||!goal" @click="begin">{{stage||'开始专项练习'}}</button>
       <p v-if="stage" role="status">{{stage}}</p>
       <router-link v-if="saved&&error" :to="`/interview?session_id=${saved}`">查看已创建的训练并安全恢复</router-link>
     </section>

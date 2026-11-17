@@ -8,7 +8,8 @@ from pydantic import ConfigDict, Field, ValidationError
 from interview_api.core.exceptions import AppError
 from interview_api.modules.candidate_profile.evidence import digest
 from interview_api.modules.interview.artifacts import StrictArtifact, QuestionArtifact, EvaluationArtifact
-from interview_api.modules.interview.topics import mentioned_topics, is_hard_condition, coverage
+from interview_api.modules.interview.topics import (
+    mentioned_topics, is_hard_condition, coverage, topic_terms, topic_diagnostic)
 
 VERSION = "2.1.0"
 LABELS = dict(java="Java 与并发", mysql_consistency="数据库事务与一致性", redis="缓存工程",
@@ -211,6 +212,9 @@ def build_blueprint(context, *, deprioritized_topics=()):
         targets[topic] = dict(knowledge_id=f"{skill['id']}:{topic}", topic=topic,
             label=LABELS.get(topic, topic), category="TECHNICAL", purpose="验证机制、实际应用和边界条件",
             scope="THIS_INTERVIEW_NOT_STABLE_SKILL", priority=0,
+            # Published so the model can literally name the topic; the NEXT gate
+            # still checks the question text exactly as before.
+            mention_terms=topic_terms(topic),
             sources=[dict(ref=f"skill:{skill['id']}@{skill['version']}", source_type="DYNAMIC_GENERATED", source_id=None)])
     pools = [("requirement", "JOB_REQUIREMENT", context["requirements"], "statement", 4),
         ("public_question", "PUBLIC_QUESTION", context["public_questions"], "question", 3),
@@ -415,7 +419,16 @@ def validate_decision(artifact, payload):
     if not source:
         raise AppError("UNKNOWN_DIRECTOR_SOURCE", "题源必须属于选定考察目标", 422)
     if artifact.strategy == "NEXT" and choice["target"]["topic"] not in mentioned_topics(artifact.question.question):
-        raise AppError("ADAPTIVE_TOPIC_MISMATCH", "新问题须明确围绕选定的技术目标，不能只更换目标标签", 422)
+        target = choice["target"]
+        label = target.get("label") or target["topic"]
+        terms = "、".join(topic_terms(target["topic"])) or target["topic"]
+        error = AppError("ADAPTIVE_TOPIC_MISMATCH",
+            f"模型这一题没有围绕「{label}」出题（该主题需点到：{terms}）。本题未保存、未计评价，可安全重试；"
+            "也可以改用岗位要求开场。", 422)
+        # Kept off the wire; the service writes it to the audit trail so a
+        # rejected question is diagnosable instead of vanishing.
+        error.diagnostic = topic_diagnostic(artifact.question.question, target["topic"])
+        raise error
     policy = dict(source_type=source["source_type"], source_id=source["source_id"],
         target_topic=choice["target"]["topic"], target_category="TECHNICAL",
         topic_coverage=adaptive["topic_coverage"])

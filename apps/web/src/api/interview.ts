@@ -79,8 +79,8 @@ export async function setTargetPosition(
   return response as unknown as TargetPositionResult;
 }
 
-export async function startInterview(sessionId: number): Promise<StartInterviewResult> {
-  const response = await client.post(`/interview/sessions/${sessionId}/start`);
+export async function startInterview(sessionId: number, opening: 'MODEL' | 'REQUIREMENT' = 'MODEL'): Promise<StartInterviewResult> {
+  const response = await client.post(`/interview/sessions/${sessionId}/start`, {}, { params: { opening } });
   return response as unknown as StartInterviewResult;
 }
 

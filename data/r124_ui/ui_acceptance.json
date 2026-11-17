@@ -1,0 +1,85 @@
+{
+ "steps": [
+  {
+   "name": "登录",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "name": "岗位库打开",
+   "ok": true,
+   "detail": "秋招面试助手\n首页\n我的简历\n我的画像\n岗位推荐\n自定义岗位\n岗位库\n专项训练\n模拟面试\n面试报告\n成长记录\nshowcase-r123-user@example.com\n退出\n岗位库\n\n已发布的真实招聘岗位，可按公司、岗位名和技术关键字搜"
+  },
+  {
+   "name": "搜索 Agent 覆盖全库",
+   "ok": true,
+   "detail": "total=27"
+  },
+  {
+   "name": "详情区分职责与要求",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "name": "详情标注整理版",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "name": "画像分组展示",
+   "ok": true,
+   "detail": "buttons=19"
+  },
+  {
+   "name": "画像不再逐条铺开依据",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "name": "来源抽屉可打开",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "name": "推荐页可打开",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "name": "推荐页解释排序依据",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "name": "推荐页区分匹配与待确认",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "name": "训练页定位为专项",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "name": "面试页左侧不再堆放配置",
+   "ok": true,
+   "detail": "selects=0"
+  },
+  {
+   "name": "新建面试向导可打开",
+   "ok": true,
+   "detail": null
+  },
+  {
+   "name": "响应式 1024px 无横向溢出",
+   "ok": true,
+   "detail": "overflow=0"
+  },
+  {
+   "name": "响应式 390px 无横向溢出",
+   "ok": true,
+   "detail": "overflow=0"
+  }
+ ],
+ "all_ok": true
+}

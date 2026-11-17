@@ -25,6 +25,21 @@ TOPICS = {
     "python": r"\bpython\b|\bgil\b|协程",
     "system_design": r"系统设计|故障|排查|限流|熔断|可用性|部署|docker|监控",
 }
+# The literal words the NEXT-question gate actually accepts, per topic. They are
+# published to the interviewer model so "explicitly name the topic" is a
+# checkable instruction rather than a guess; the gate itself is unchanged.
+TOPIC_TERMS = {
+    "data_security": ["数据安全", "敏感信息", "脱敏", "权限", "审计"],
+    "rag_retrieval": ["RAG", "检索", "召回", "向量", "重排"],
+    "kafka_reliability": ["Kafka", "消息队列", "消息可靠性", "重复消费"],
+    "redis": ["Redis", "缓存", "分布式锁"],
+    "mysql_consistency": ["MySQL", "数据库", "事务", "隔离级别", "索引"],
+    "agent": ["Agent", "工具调用", "多智能体"],
+    "llm": ["大模型", "LLM", "Transformer", "微调", "注意力"],
+    "java": ["Java", "JVM", "Spring", "线程", "垃圾回收"],
+    "python": ["Python", "GIL", "协程"],
+    "system_design": ["系统设计", "故障", "排查", "限流", "熔断", "可用性", "监控"],
+}
 BACKGROUND = {
     "education": r"学历|学校|毕业院校|哪所大学|本科|硕士|博士|研究生|教育背景|专业背景|什么专业|就读|所学专业",
     "motivation": r"为什么(?:投|应聘|加入|学计算机|转行做计算机)|投递动机|求职动机|职业规划",
@@ -73,6 +88,36 @@ def mentioned_topics(text):
     # Unicode word boundaries treat both as word characters and miss the topic.
     text = TOPIC_SIGNOFF.sub("", (text or "").casefold(), count=1)
     return [topic for topic, pattern in TOPICS.items() if re.search(pattern, text, re.ASCII)]
+
+
+def topic_terms(topic):
+    """Literal wording the NEXT gate accepts for this topic (may be empty)."""
+    return list(TOPIC_TERMS.get(topic, []))
+
+
+def requirement_opening_question(statement, label):
+    """Deterministic opening question: frozen requirement + frozen target label.
+
+    Used only by the explicit REQUIREMENT fallback, so it must not invent any
+    candidate experience. The label keeps the question inside the target's own
+    topic, which is what the NEXT gate checks.
+    """
+    return (f"岗位要求里有一条：「{(statement or '').strip()}」。请结合你做过的一个项目，"
+            f"讲讲你在{label}方面的具体做法，并说明遇到过一次什么问题、最后怎么解决的。")
+
+
+def topic_diagnostic(question, target_topic):
+    """Everything needed to tell "model drifted" from "gate missed the wording".
+
+    The raw model response is deliberately not persisted, so a rejected question
+    used to leave no trace at all. This record keeps the wording that failed,
+    without turning the audit trail into a transcript of model output.
+    """
+    import hashlib
+    text = question or ""
+    return dict(target_topic=target_topic, expected_terms=topic_terms(target_topic),
+                matched_topics=mentioned_topics(text), question_excerpt=text[:160],
+                question_sha256=hashlib.sha256(text.encode("utf-8")).hexdigest())
 
 
 def question_topic(question):

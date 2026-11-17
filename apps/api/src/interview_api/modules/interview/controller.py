@@ -280,7 +280,7 @@ class SessionController:
         session.status, session.started_at = "IN_PROGRESS", datetime.now(timezone.utc)
         session.state_version += 1
         data = question_data(q, session.question_count)
-        data["mode"] = "replay" if result.provider == "replay" else "live"
+        data["mode"] = {"replay": "replay", "system": "system_opening"}.get(result.provider, "live")
         await self._message(session, "QUESTION", q.question, data)
         return data
 
