@@ -1,0 +1,18 @@
+企业：华为云计算
+岗位：AI应用平台开发工程师
+招聘类型：2027校招
+
+【岗位职责】
+1. 研发企业级AI Agent、Data Agent和Workflow平台
+2. 建设NL2SQL、智能问数、多Agent编排
+3. 整合RAG、知识库、Ontology与企业数据分析能力
+【任职要求】
+1. 计算机/软件/AI/数据科学等相关
+2. Java/Python/C++/Go至少一种
+3. 理解LLM、Agent、RAG、Workflow和NL2SQL
+4. 具备软件工程基础
+5. 有AI工程、开源或实习项目经验优先
+
+原始招聘来源：https://www.nowcoder.com/jobs/detail/460715
+
+说明：此为真实岗位信息的结构化整理版本，非官方网站逐字原文；当前开放情况未逐条核验。

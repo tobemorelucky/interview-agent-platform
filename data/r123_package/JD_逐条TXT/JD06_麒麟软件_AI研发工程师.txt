@@ -1,0 +1,18 @@
+企业：麒麟软件
+岗位：AI研发工程师
+招聘类型：2027校招
+
+【岗位职责】
+1. 基于Agent/RAG开发操作系统助手和智能故障诊断
+2. 研发端侧推理、模型量化、异构算力适配与智能运维能力
+3. 建设知识库、Agent评测和端云协同链路
+【任职要求】
+1. 2027届计算机/AI等本硕博
+2. Python熟练，另了解C/C++/Go/Java之一
+3. 理解Transformer、PyTorch/TensorFlow及LLM工具调用与RAG
+4. 了解Linux及推理引擎onnx-runtime/TensorRT/vLLM等
+5. 有CUDA、端侧部署、模型微调或Agent项目优先
+
+原始招聘来源：https://www.kylinos.cn/about/job/campusRecruitment/
+
+说明：此为真实岗位信息的结构化整理版本，非官方网站逐字原文；当前开放情况未逐条核验。

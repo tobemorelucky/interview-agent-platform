@@ -1,0 +1,14 @@
+{
+  "jd_count": 50,
+  "job_companies": 21,
+  "jd_unique_url": 47,
+  "origin_existing_recruitment_sources": 30,
+  "freshly_researched_recruitment_sources": 20,
+  "interview_count": 3,
+  "interview_question_count": 61,
+  "synthetic_scoring_answers": 183,
+  "job_txt_files": 50,
+  "job_req_count": 252,
+  "job_duties_count": 150,
+  "no_model_or_database_calls": true
+}

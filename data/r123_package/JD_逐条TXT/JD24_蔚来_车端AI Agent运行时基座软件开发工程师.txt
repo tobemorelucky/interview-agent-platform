@@ -1,0 +1,18 @@
+企业：蔚来
+岗位：车端AI Agent运行时基座软件开发工程师
+招聘类型：2027校招
+
+【岗位职责】
+1. 研发嵌入式Agent运行时及模型调度、上下文和工具框架
+2. 对接车端操作系统和感知、推理模块
+3. 优化运行时稳定性和多车型复用
+【任职要求】
+1. 计算机/AI等本科及以上
+2. 熟练C/C++/Python至少一种，理解Linux/FreeRTOS等嵌入式OS
+3. 了解LLM、Function Calling和Agent编排
+4. LangChain、AutoGen或端侧Agent运行时实践优先
+5. 有性能调试与协作能力
+
+原始招聘来源：https://nio.jobs.feishu.cn/campus/position/7678155050254616883/detail
+
+说明：此为真实岗位信息的结构化整理版本，非官方网站逐字原文；当前开放情况未逐条核验。

@@ -1,0 +1,18 @@
+企业：Unity中国
+岗位：AI Agent算法研发工程师
+招聘类型：2027校招
+
+【岗位职责】
+1. 开发长链路Coding/Interactive Agent的规划、工具调用、执行和纠错能力
+2. 研究Agent Harness、环境交互、轨迹数据与Agentic RL
+3. 设计以任务成功率为核心的自动化评测
+【任职要求】
+1. 2027届计算机/AI/软件/数学相关专业本硕博
+2. 掌握Python、算法和深度学习，理解Transformer与LLM
+3. 理解ReAct、Planning、Memory、RAG和Function Calling
+4. 了解SFT、偏好学习、强化学习或Agentic RL
+5. 有Agent项目、Harness或基准评测实践优先
+
+原始招聘来源：https://recruiting.unity.cn/982864/position/7686376033126385939/detail
+
+说明：此为真实岗位信息的结构化整理版本，非官方网站逐字原文；当前开放情况未逐条核验。

@@ -1,0 +1,4653 @@
+{
+ "round": "R123-3",
+ "mode": "OFFLINE REPLAY / 0 model HTTP",
+ "started_at": "2026-11-17T03:31:54.477299+00:00",
+ "note": "scripted questions from package; grading deterministic from answer text; hidden key_points/red_flag never sent to evaluated model",
+ "cases": {
+  "A_AI_APP": {
+   "coach_session": 436,
+   "coach_status": "COMPLETED"
+  },
+  "B_JAVA_2ROUND": {
+   "coach_session": 496,
+   "coach_status": "COMPLETED"
+  },
+  "C_AGENT_RAG": {
+   "coach_session": 562,
+   "coach_status": "COMPLETED"
+  }
+ },
+ "runs": [
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q01",
+   "variant": "strong",
+   "session_id": 436,
+   "status": "COMPLETED",
+   "stage": "开场/项目",
+   "topic": "项目真实性",
+   "question": "请介绍你最能代表AI应用开发能力的两个项目，并说清个人职责。",
+   "answer": "我的处理会包括：业务问题与目标；本人实现的具体模块；技术选型依据；可复现的成果或指标。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 361,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "把整个团队成果说成自己独立实现"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q01",
+   "variant": "blank",
+   "session_id": 437,
+   "status": "COMPLETED",
+   "stage": "开场/项目",
+   "topic": "项目真实性",
+   "question": "请介绍你最能代表AI应用开发能力的两个项目，并说清个人职责。",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 362,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "把整个团队成果说成自己独立实现"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q01",
+   "variant": "incorrect",
+   "session_id": 438,
+   "status": "COMPLETED",
+   "stage": "开场/项目",
+   "topic": "项目真实性",
+   "question": "请介绍你最能代表AI应用开发能力的两个项目，并说清个人职责。",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 363,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "把整个团队成果说成自己独立实现"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q02",
+   "variant": "strong",
+   "session_id": 439,
+   "status": "COMPLETED",
+   "stage": "项目/AI编程",
+   "topic": "AI编程质量",
+   "question": "项目中使用AI Coding的边界是什么，如何审查生成代码？",
+   "answer": "我的处理会包括：明确AI辅助与本人设计边界；测试/Code Review/安全检查；对幻觉和未知API进行验证；能说明具体实例。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 364,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "声称AI生成的代码不必测试"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q02",
+   "variant": "blank",
+   "session_id": 440,
+   "status": "COMPLETED",
+   "stage": "项目/AI编程",
+   "topic": "AI编程质量",
+   "question": "项目中使用AI Coding的边界是什么，如何审查生成代码？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 365,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "声称AI生成的代码不必测试"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q02",
+   "variant": "incorrect",
+   "session_id": 441,
+   "status": "COMPLETED",
+   "stage": "项目/AI编程",
+   "topic": "AI编程质量",
+   "question": "项目中使用AI Coding的边界是什么，如何审查生成代码？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 366,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "声称AI生成的代码不必测试"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q03",
+   "variant": "strong",
+   "session_id": 442,
+   "status": "COMPLETED",
+   "stage": "项目/模型选型",
+   "topic": "模型选型",
+   "question": "多个模型Provider之间如何比较质量、成本、时延和稳定性？",
+   "answer": "我的处理会包括：明确任务和评测集；精度/延迟/失败率/Token成本；灰度与回退；合规与隐私考虑。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 367,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "只看榜单排名不做任务级评测"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q03",
+   "variant": "blank",
+   "session_id": 443,
+   "status": "COMPLETED",
+   "stage": "项目/模型选型",
+   "topic": "模型选型",
+   "question": "多个模型Provider之间如何比较质量、成本、时延和稳定性？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 368,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "只看榜单排名不做任务级评测"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q03",
+   "variant": "incorrect",
+   "session_id": 444,
+   "status": "COMPLETED",
+   "stage": "项目/模型选型",
+   "topic": "模型选型",
+   "question": "多个模型Provider之间如何比较质量、成本、时延和稳定性？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 369,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "只看榜单排名不做任务级评测"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q04",
+   "variant": "strong",
+   "session_id": 445,
+   "status": "COMPLETED",
+   "stage": "Agent上下文",
+   "topic": "上下文管理",
+   "question": "长对话导致上下文溢出时如何压缩并保留必要状态？",
+   "answer": "我的处理会包括：分离硬约束/任务状态/历史摘要；保留工具调用和未完成事项；摘要可追溯；压缩后回归测试。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 370,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "无条件丢弃所有历史工具结果"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q04",
+   "variant": "blank",
+   "session_id": 446,
+   "status": "COMPLETED",
+   "stage": "Agent上下文",
+   "topic": "上下文管理",
+   "question": "长对话导致上下文溢出时如何压缩并保留必要状态？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 371,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "无条件丢弃所有历史工具结果"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q04",
+   "variant": "incorrect",
+   "session_id": 447,
+   "status": "COMPLETED",
+   "stage": "Agent上下文",
+   "topic": "上下文管理",
+   "question": "长对话导致上下文溢出时如何压缩并保留必要状态？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 372,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "无条件丢弃所有历史工具结果"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q05",
+   "variant": "strong",
+   "session_id": 448,
+   "status": "COMPLETED",
+   "stage": "Agent架构",
+   "topic": "Agent架构",
+   "question": "自研Agent而不是直接使用LangGraph等框架，理由和代价是什么？",
+   "answer": "我的处理会包括：明确核心需求与现有框架匹配度；维护和调试成本；执行状态/工具安全能力；量化对照。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 373,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "所有框架都不能用且不给证据"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q05",
+   "variant": "blank",
+   "session_id": 449,
+   "status": "COMPLETED",
+   "stage": "Agent架构",
+   "topic": "Agent架构",
+   "question": "自研Agent而不是直接使用LangGraph等框架，理由和代价是什么？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 374,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "所有框架都不能用且不给证据"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q05",
+   "variant": "incorrect",
+   "session_id": 450,
+   "status": "COMPLETED",
+   "stage": "Agent架构",
+   "topic": "Agent架构",
+   "question": "自研Agent而不是直接使用LangGraph等框架，理由和代价是什么？",
+   "answer": "我认为所有框架都不能用且不给证据。",
+   "evaluation_id": 375,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    3
+   ],
+   "in_band": true,
+   "red_flag": "所有框架都不能用且不给证据"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q06",
+   "variant": "strong",
+   "session_id": 451,
+   "status": "COMPLETED",
+   "stage": "Agent架构",
+   "topic": "模型接入",
+   "question": "三类模型API的输入输出结构怎么抽象成统一接口？",
+   "answer": "我的处理会包括：统一请求/响应schema；Provider适配器；错误与Usage归一化；可测试的故障处理。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 376,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "将不同Provider的原始输出假定完全一致"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q06",
+   "variant": "blank",
+   "session_id": 452,
+   "status": "COMPLETED",
+   "stage": "Agent架构",
+   "topic": "模型接入",
+   "question": "三类模型API的输入输出结构怎么抽象成统一接口？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 377,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "将不同Provider的原始输出假定完全一致"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q06",
+   "variant": "incorrect",
+   "session_id": 453,
+   "status": "COMPLETED",
+   "stage": "Agent架构",
+   "topic": "模型接入",
+   "question": "三类模型API的输入输出结构怎么抽象成统一接口？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 378,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "将不同Provider的原始输出假定完全一致"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q07",
+   "variant": "strong",
+   "session_id": 454,
+   "status": "COMPLETED",
+   "stage": "Agent工具",
+   "topic": "工具调用安全",
+   "question": "如何注册工具并保护参数校验、权限和执行幂等性？",
+   "answer": "我的处理会包括：明确工具schema和能力边界；鉴权与参数校验；执行超时/重试/幂等；审计留痕。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 379,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "把LLM决定直接等同授权"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q07",
+   "variant": "blank",
+   "session_id": 455,
+   "status": "COMPLETED",
+   "stage": "Agent工具",
+   "topic": "工具调用安全",
+   "question": "如何注册工具并保护参数校验、权限和执行幂等性？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 380,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "把LLM决定直接等同授权"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q07",
+   "variant": "incorrect",
+   "session_id": 456,
+   "status": "COMPLETED",
+   "stage": "Agent工具",
+   "topic": "工具调用安全",
+   "question": "如何注册工具并保护参数校验、权限和执行幂等性？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 381,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "把LLM决定直接等同授权"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q08",
+   "variant": "strong",
+   "session_id": 457,
+   "status": "COMPLETED",
+   "stage": "Agent记忆",
+   "topic": "记忆系统",
+   "question": "短期会话、工作记忆和长期记忆各存什么，什么时候淘汰？",
+   "answer": "我的处理会包括：会话上下文；任务状态/检查点；长期偏好或证据；隐私/纠错/过期策略。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 382,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "所有模型输出都自动写成可靠事实"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q08",
+   "variant": "blank",
+   "session_id": 458,
+   "status": "COMPLETED",
+   "stage": "Agent记忆",
+   "topic": "记忆系统",
+   "question": "短期会话、工作记忆和长期记忆各存什么，什么时候淘汰？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 383,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "所有模型输出都自动写成可靠事实"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q08",
+   "variant": "incorrect",
+   "session_id": 459,
+   "status": "COMPLETED",
+   "stage": "Agent记忆",
+   "topic": "记忆系统",
+   "question": "短期会话、工作记忆和长期记忆各存什么，什么时候淘汰？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 384,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "所有模型输出都自动写成可靠事实"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q09",
+   "variant": "strong",
+   "session_id": 460,
+   "status": "COMPLETED",
+   "stage": "Agent文档",
+   "topic": "Context+RAG",
+   "question": "对超长PDF和知识库检索结果如何做渐进式披露？",
+   "answer": "我的处理会包括：按章节/元数据先检索；按需打开原文片段；引用定位；Token预算控制。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 385,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "一次性将整库文档塞进Context"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q09",
+   "variant": "blank",
+   "session_id": 461,
+   "status": "COMPLETED",
+   "stage": "Agent文档",
+   "topic": "Context+RAG",
+   "question": "对超长PDF和知识库检索结果如何做渐进式披露？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 386,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "一次性将整库文档塞进Context"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q09",
+   "variant": "incorrect",
+   "session_id": 462,
+   "status": "COMPLETED",
+   "stage": "Agent文档",
+   "topic": "Context+RAG",
+   "question": "对超长PDF和知识库检索结果如何做渐进式披露？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 387,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "一次性将整库文档塞进Context"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q10",
+   "variant": "strong",
+   "session_id": 463,
+   "status": "COMPLETED",
+   "stage": "RAG评测",
+   "topic": "评测数据",
+   "question": "描述RAG评测集如何构建，以及训练集与评测集如何隔离。",
+   "answer": "我的处理会包括：真实业务问题覆盖；人工校验与合成题标记；数据去重与分割；召回与答案指标。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 388,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "直接用系统生成的答案当唯一正确金标"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q10",
+   "variant": "blank",
+   "session_id": 464,
+   "status": "COMPLETED",
+   "stage": "RAG评测",
+   "topic": "评测数据",
+   "question": "描述RAG评测集如何构建，以及训练集与评测集如何隔离。",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 389,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "直接用系统生成的答案当唯一正确金标"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q10",
+   "variant": "incorrect",
+   "session_id": 465,
+   "status": "COMPLETED",
+   "stage": "RAG评测",
+   "topic": "评测数据",
+   "question": "描述RAG评测集如何构建，以及训练集与评测集如何隔离。",
+   "answer": "我认为直接用系统生成的答案当唯一正确金标。",
+   "evaluation_id": 390,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    3
+   ],
+   "in_band": true,
+   "red_flag": "直接用系统生成的答案当唯一正确金标"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q11",
+   "variant": "strong",
+   "session_id": 466,
+   "status": "COMPLETED",
+   "stage": "RAG评测",
+   "topic": "指标可信度",
+   "question": "RAG命中率接近100%，你如何判断是否数据泄漏或者样本过小？",
+   "answer": "我的处理会包括：拆分测试集与未见数据；显著样本数量；TopK召回与回答正确性区分；错误分析。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 391,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "把小测试集100%命中视为生产准确"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q11",
+   "variant": "blank",
+   "session_id": 467,
+   "status": "COMPLETED",
+   "stage": "RAG评测",
+   "topic": "指标可信度",
+   "question": "RAG命中率接近100%，你如何判断是否数据泄漏或者样本过小？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 392,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "把小测试集100%命中视为生产准确"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q11",
+   "variant": "incorrect",
+   "session_id": 468,
+   "status": "COMPLETED",
+   "stage": "RAG评测",
+   "topic": "指标可信度",
+   "question": "RAG命中率接近100%，你如何判断是否数据泄漏或者样本过小？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 393,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "把小测试集100%命中视为生产准确"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q12",
+   "variant": "strong",
+   "session_id": 469,
+   "status": "COMPLETED",
+   "stage": "RAG评测",
+   "topic": "数据泄漏",
+   "question": "文档可能进入过模型预训练集时，如何验证RAG实际贡献？",
+   "answer": "我的处理会包括：私有/未见数据和时间切分；禁用检索对照实验；检查回答证据引用；不同K值消融。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 394,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "认为预训练完全不影响评估"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q12",
+   "variant": "blank",
+   "session_id": 470,
+   "status": "COMPLETED",
+   "stage": "RAG评测",
+   "topic": "数据泄漏",
+   "question": "文档可能进入过模型预训练集时，如何验证RAG实际贡献？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 395,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "认为预训练完全不影响评估"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q12",
+   "variant": "incorrect",
+   "session_id": 471,
+   "status": "COMPLETED",
+   "stage": "RAG评测",
+   "topic": "数据泄漏",
+   "question": "文档可能进入过模型预训练集时，如何验证RAG实际贡献？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 396,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "认为预训练完全不影响评估"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q13",
+   "variant": "strong",
+   "session_id": 472,
+   "status": "COMPLETED",
+   "stage": "Redis",
+   "topic": "Redis持久化",
+   "question": "RDB和AOF分别有哪些持久化与恢复取舍？",
+   "answer": "我的处理会包括：RDB快照/恢复快但可能丢最近数据；AOF日志及fsync策略；重写与恢复成本；持久化组合方案。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 397,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "认为RDB对每条写命令同步落盘"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q13",
+   "variant": "blank",
+   "session_id": 473,
+   "status": "COMPLETED",
+   "stage": "Redis",
+   "topic": "Redis持久化",
+   "question": "RDB和AOF分别有哪些持久化与恢复取舍？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 398,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "认为RDB对每条写命令同步落盘"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q13",
+   "variant": "incorrect",
+   "session_id": 474,
+   "status": "COMPLETED",
+   "stage": "Redis",
+   "topic": "Redis持久化",
+   "question": "RDB和AOF分别有哪些持久化与恢复取舍？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 399,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "认为RDB对每条写命令同步落盘"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q14",
+   "variant": "strong",
+   "session_id": 475,
+   "status": "COMPLETED",
+   "stage": "Redis",
+   "topic": "Redis并发",
+   "question": "为什么Redis可以高性能处理大量命令？Redis 6多线程改变了什么？",
+   "answer": "我的处理会包括：内存访问和事件循环；IO多路复用；Redis6主要IO线程；命令执行模型的约束。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 400,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "声称Redis6每条命令默认多线程并行修改数据"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q14",
+   "variant": "blank",
+   "session_id": 476,
+   "status": "COMPLETED",
+   "stage": "Redis",
+   "topic": "Redis并发",
+   "question": "为什么Redis可以高性能处理大量命令？Redis 6多线程改变了什么？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 401,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "声称Redis6每条命令默认多线程并行修改数据"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q14",
+   "variant": "incorrect",
+   "session_id": 477,
+   "status": "COMPLETED",
+   "stage": "Redis",
+   "topic": "Redis并发",
+   "question": "为什么Redis可以高性能处理大量命令？Redis 6多线程改变了什么？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 402,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "声称Redis6每条命令默认多线程并行修改数据"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q15",
+   "variant": "strong",
+   "session_id": 478,
+   "status": "COMPLETED",
+   "stage": "网络",
+   "topic": "IO多路复用",
+   "question": "select、poll、epoll在监控文件描述符上的主要区别？",
+   "answer": "我的处理会包括：select fd集合限制/线性扫描；poll避免固定fdset限制仍扫描；epoll事件就绪通知；边沿/水平触发。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 403,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "声称epoll在任何负载下都严格O(1)"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q15",
+   "variant": "blank",
+   "session_id": 479,
+   "status": "COMPLETED",
+   "stage": "网络",
+   "topic": "IO多路复用",
+   "question": "select、poll、epoll在监控文件描述符上的主要区别？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 404,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "声称epoll在任何负载下都严格O(1)"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q15",
+   "variant": "incorrect",
+   "session_id": 480,
+   "status": "COMPLETED",
+   "stage": "网络",
+   "topic": "IO多路复用",
+   "question": "select、poll、epoll在监控文件描述符上的主要区别？",
+   "answer": "我认为声称epoll在任何负载下都严格O(1)。",
+   "evaluation_id": 405,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    3
+   ],
+   "in_band": true,
+   "red_flag": "声称epoll在任何负载下都严格O(1)"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q16",
+   "variant": "strong",
+   "session_id": 481,
+   "status": "COMPLETED",
+   "stage": "MySQL",
+   "topic": "SQL优化",
+   "question": "线上SQL查询突然很慢，你会按什么证据顺序排查？",
+   "answer": "我的处理会包括：慢查询和监控证据；EXPLAIN计划与索引；数据分布和锁等待；变更前后对照。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 406,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "直接加索引不检查执行计划"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q16",
+   "variant": "blank",
+   "session_id": 482,
+   "status": "COMPLETED",
+   "stage": "MySQL",
+   "topic": "SQL优化",
+   "question": "线上SQL查询突然很慢，你会按什么证据顺序排查？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 407,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "直接加索引不检查执行计划"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q16",
+   "variant": "incorrect",
+   "session_id": 483,
+   "status": "COMPLETED",
+   "stage": "MySQL",
+   "topic": "SQL优化",
+   "question": "线上SQL查询突然很慢，你会按什么证据顺序排查？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 408,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "直接加索引不检查执行计划"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q17",
+   "variant": "strong",
+   "session_id": 484,
+   "status": "COMPLETED",
+   "stage": "架构",
+   "topic": "分库分表",
+   "question": "何时考虑分库分表，拆分键与跨库事务如何处理？",
+   "answer": "我的处理会包括：先判断单库优化上限；选择稳定均匀拆分键；跨分片查询和事务复杂度；迁移回滚与扩容。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 409,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "声称分库分表自动解决所有事务一致性"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q17",
+   "variant": "blank",
+   "session_id": 485,
+   "status": "COMPLETED",
+   "stage": "架构",
+   "topic": "分库分表",
+   "question": "何时考虑分库分表，拆分键与跨库事务如何处理？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 410,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "声称分库分表自动解决所有事务一致性"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q17",
+   "variant": "incorrect",
+   "session_id": 486,
+   "status": "COMPLETED",
+   "stage": "架构",
+   "topic": "分库分表",
+   "question": "何时考虑分库分表，拆分键与跨库事务如何处理？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 411,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "声称分库分表自动解决所有事务一致性"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q18",
+   "variant": "strong",
+   "session_id": 487,
+   "status": "COMPLETED",
+   "stage": "场景",
+   "topic": "可靠性",
+   "question": "如果Agent工具调用超时但已经扣款，重试怎样避免重复扣费？",
+   "answer": "我的处理会包括：幂等key和业务流水；状态机/查询确认；不能盲目重放不可逆副作用；补偿与人工对账。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 412,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "无条件重试支付工具直到成功"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q18",
+   "variant": "blank",
+   "session_id": 488,
+   "status": "COMPLETED",
+   "stage": "场景",
+   "topic": "可靠性",
+   "question": "如果Agent工具调用超时但已经扣款，重试怎样避免重复扣费？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 413,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "无条件重试支付工具直到成功"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q18",
+   "variant": "incorrect",
+   "session_id": 489,
+   "status": "COMPLETED",
+   "stage": "场景",
+   "topic": "可靠性",
+   "question": "如果Agent工具调用超时但已经扣款，重试怎样避免重复扣费？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 414,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "无条件重试支付工具直到成功"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q19",
+   "variant": "strong",
+   "session_id": 490,
+   "status": "COMPLETED",
+   "stage": "综合",
+   "topic": "AI工程评测",
+   "question": "你会如何构建可供上线的Agent质量与成本监控？",
+   "answer": "我的处理会包括：任务成功率和工具正确率；端到端延迟与失败分类；Token及模型成本；Case回流和回归集。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 415,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "只有聊天流畅度一个指标"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q19",
+   "variant": "blank",
+   "session_id": 491,
+   "status": "COMPLETED",
+   "stage": "综合",
+   "topic": "AI工程评测",
+   "question": "你会如何构建可供上线的Agent质量与成本监控？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 416,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "只有聊天流畅度一个指标"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q19",
+   "variant": "incorrect",
+   "session_id": 492,
+   "status": "COMPLETED",
+   "stage": "综合",
+   "topic": "AI工程评测",
+   "question": "你会如何构建可供上线的Agent质量与成本监控？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 417,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "只有聊天流畅度一个指标"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q20",
+   "variant": "strong",
+   "session_id": 493,
+   "status": "COMPLETED",
+   "stage": "收尾/反问",
+   "topic": "沟通",
+   "question": "如果面试通过，你最想了解团队的哪类真实AI工程问题？",
+   "answer": "我的处理会包括：对团队业务与岗位有理解；提出具体工程问题；说明学习与协作意愿。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 418,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "没有必然技术对错，以表达质量为主"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q20",
+   "variant": "blank",
+   "session_id": 494,
+   "status": "COMPLETED",
+   "stage": "收尾/反问",
+   "topic": "沟通",
+   "question": "如果面试通过，你最想了解团队的哪类真实AI工程问题？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 419,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "没有必然技术对错，以表达质量为主"
+  },
+  {
+   "case": "A_AI_APP",
+   "qid": "A_AI_APP_Q20",
+   "variant": "incorrect",
+   "session_id": 495,
+   "status": "COMPLETED",
+   "stage": "收尾/反问",
+   "topic": "沟通",
+   "question": "如果面试通过，你最想了解团队的哪类真实AI工程问题？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 420,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "没有必然技术对错，以表达质量为主"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q01",
+   "variant": "strong",
+   "session_id": 496,
+   "status": "COMPLETED",
+   "stage": "一面/算法",
+   "topic": "算法",
+   "question": "用二分查找在有序数组中查找目标，如何避免边界死循环？",
+   "answer": "我的处理会包括：明确搜索不变量；mid避免整型溢出；区间更新与终止条件；复杂度O(log n)。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 421,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "说二分可以直接处理无序数组"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q01",
+   "variant": "blank",
+   "session_id": 497,
+   "status": "COMPLETED",
+   "stage": "一面/算法",
+   "topic": "算法",
+   "question": "用二分查找在有序数组中查找目标，如何避免边界死循环？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 422,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "说二分可以直接处理无序数组"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q01",
+   "variant": "incorrect",
+   "session_id": 498,
+   "status": "COMPLETED",
+   "stage": "一面/算法",
+   "topic": "算法",
+   "question": "用二分查找在有序数组中查找目标，如何避免边界死循环？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 423,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "说二分可以直接处理无序数组"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q02",
+   "variant": "strong",
+   "session_id": 499,
+   "status": "COMPLETED",
+   "stage": "一面/操作系统",
+   "topic": "OS进程线程",
+   "question": "进程和线程有哪些共享与隔离资源，线程切换为何较轻？",
+   "answer": "我的处理会包括：独立地址空间与资源；线程共享地址空间但有栈；切换上下文开销；同步隔离风险。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 424,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "认为所有线程完全共享栈空间"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q02",
+   "variant": "blank",
+   "session_id": 500,
+   "status": "COMPLETED",
+   "stage": "一面/操作系统",
+   "topic": "OS进程线程",
+   "question": "进程和线程有哪些共享与隔离资源，线程切换为何较轻？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 425,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "认为所有线程完全共享栈空间"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q02",
+   "variant": "incorrect",
+   "session_id": 501,
+   "status": "COMPLETED",
+   "stage": "一面/操作系统",
+   "topic": "OS进程线程",
+   "question": "进程和线程有哪些共享与隔离资源，线程切换为何较轻？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 426,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "认为所有线程完全共享栈空间"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q03",
+   "variant": "strong",
+   "session_id": 502,
+   "status": "COMPLETED",
+   "stage": "一面/操作系统",
+   "topic": "虚拟内存",
+   "question": "虚拟内存、缺页异常和页面置换之间是什么关系？",
+   "answer": "我的处理会包括：虚拟地址到物理地址映射；缺页处理；页面置换策略；缺页性能代价。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 427,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "将缺页异常等同系统崩溃"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q03",
+   "variant": "blank",
+   "session_id": 503,
+   "status": "COMPLETED",
+   "stage": "一面/操作系统",
+   "topic": "虚拟内存",
+   "question": "虚拟内存、缺页异常和页面置换之间是什么关系？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 428,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "将缺页异常等同系统崩溃"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q03",
+   "variant": "incorrect",
+   "session_id": 504,
+   "status": "COMPLETED",
+   "stage": "一面/操作系统",
+   "topic": "虚拟内存",
+   "question": "虚拟内存、缺页异常和页面置换之间是什么关系？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 429,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "将缺页异常等同系统崩溃"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q04",
+   "variant": "strong",
+   "session_id": 505,
+   "status": "COMPLETED",
+   "stage": "一面/网络",
+   "topic": "网络链路",
+   "question": "浏览器输入域名到展示页面，你会如何梳理完整链路？",
+   "answer": "我的处理会包括：DNS解析；TCP/TLS建连；HTTP请求响应；缓存/CDN/浏览器渲染。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 430,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "认为DNS直接发送HTML"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q04",
+   "variant": "blank",
+   "session_id": 506,
+   "status": "COMPLETED",
+   "stage": "一面/网络",
+   "topic": "网络链路",
+   "question": "浏览器输入域名到展示页面，你会如何梳理完整链路？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 431,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "认为DNS直接发送HTML"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q04",
+   "variant": "incorrect",
+   "session_id": 507,
+   "status": "COMPLETED",
+   "stage": "一面/网络",
+   "topic": "网络链路",
+   "question": "浏览器输入域名到展示页面，你会如何梳理完整链路？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 432,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "认为DNS直接发送HTML"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q05",
+   "variant": "strong",
+   "session_id": 508,
+   "status": "COMPLETED",
+   "stage": "一面/网络",
+   "topic": "TCP",
+   "question": "TCP主动关闭方为何可能出现TIME_WAIT？",
+   "answer": "我的处理会包括：四次挥手状态机；2MSL和迟到报文；最后ACK重传；端口资源/服务端治理。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 433,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "声称TIME_WAIT一定表示服务端泄漏"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q05",
+   "variant": "blank",
+   "session_id": 509,
+   "status": "COMPLETED",
+   "stage": "一面/网络",
+   "topic": "TCP",
+   "question": "TCP主动关闭方为何可能出现TIME_WAIT？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 434,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "声称TIME_WAIT一定表示服务端泄漏"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q05",
+   "variant": "incorrect",
+   "session_id": 510,
+   "status": "COMPLETED",
+   "stage": "一面/网络",
+   "topic": "TCP",
+   "question": "TCP主动关闭方为何可能出现TIME_WAIT？",
+   "answer": "我认为声称TIME_WAIT一定表示服务端泄漏。",
+   "evaluation_id": 435,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    3
+   ],
+   "in_band": true,
+   "red_flag": "声称TIME_WAIT一定表示服务端泄漏"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q06",
+   "variant": "strong",
+   "session_id": 511,
+   "status": "COMPLETED",
+   "stage": "一面/算法",
+   "topic": "数据结构",
+   "question": "如何实现支持O(1)查询最小元素的栈？",
+   "answer": "我的处理会包括：双栈保存历史最小值；push/pop同步；top/min O(1)；空栈和重复最小值处理。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 436,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "每次查询都遍历整个栈"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q06",
+   "variant": "blank",
+   "session_id": 512,
+   "status": "COMPLETED",
+   "stage": "一面/算法",
+   "topic": "数据结构",
+   "question": "如何实现支持O(1)查询最小元素的栈？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 437,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "每次查询都遍历整个栈"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q06",
+   "variant": "incorrect",
+   "session_id": 513,
+   "status": "COMPLETED",
+   "stage": "一面/算法",
+   "topic": "数据结构",
+   "question": "如何实现支持O(1)查询最小元素的栈？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 438,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "每次查询都遍历整个栈"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q07",
+   "variant": "strong",
+   "session_id": 514,
+   "status": "COMPLETED",
+   "stage": "一面/Linux",
+   "topic": "日志处理",
+   "question": "如何从海量服务器日志统计出现次数最多的10种错误？",
+   "answer": "我的处理会包括：明确错误归一化与时间窗；grep/awk/sort/uniq或流式TopK；大文件内存限制；结果可复现。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 439,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "直接把全部日志装进有限内存"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q07",
+   "variant": "blank",
+   "session_id": 515,
+   "status": "COMPLETED",
+   "stage": "一面/Linux",
+   "topic": "日志处理",
+   "question": "如何从海量服务器日志统计出现次数最多的10种错误？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 440,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "直接把全部日志装进有限内存"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q07",
+   "variant": "incorrect",
+   "session_id": 516,
+   "status": "COMPLETED",
+   "stage": "一面/Linux",
+   "topic": "日志处理",
+   "question": "如何从海量服务器日志统计出现次数最多的10种错误？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 441,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "直接把全部日志装进有限内存"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q08",
+   "variant": "strong",
+   "session_id": 517,
+   "status": "COMPLETED",
+   "stage": "一面/Java",
+   "topic": "Java对象语义",
+   "question": "==与equals有什么区别，重写equals为什么同步重写hashCode？",
+   "answer": "我的处理会包括：引用比较与逻辑等价；equals合同；hashCode与哈希容器查找；可变键风险。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 442,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "认为只重写equals绝不会影响HashMap"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q08",
+   "variant": "blank",
+   "session_id": 518,
+   "status": "COMPLETED",
+   "stage": "一面/Java",
+   "topic": "Java对象语义",
+   "question": "==与equals有什么区别，重写equals为什么同步重写hashCode？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 443,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "认为只重写equals绝不会影响HashMap"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q08",
+   "variant": "incorrect",
+   "session_id": 519,
+   "status": "COMPLETED",
+   "stage": "一面/Java",
+   "topic": "Java对象语义",
+   "question": "==与equals有什么区别，重写equals为什么同步重写hashCode？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 444,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "认为只重写equals绝不会影响HashMap"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q09",
+   "variant": "strong",
+   "session_id": 520,
+   "status": "COMPLETED",
+   "stage": "一面/Java",
+   "topic": "HashMap",
+   "question": "HashMap索引定位、扩容和碰撞处理如何工作？",
+   "answer": "我的处理会包括：hash扰动与数组索引；负载因子与扩容；链表/红黑树；线程安全限制。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 445,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "声称HashMap默认线程安全"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q09",
+   "variant": "blank",
+   "session_id": 521,
+   "status": "COMPLETED",
+   "stage": "一面/Java",
+   "topic": "HashMap",
+   "question": "HashMap索引定位、扩容和碰撞处理如何工作？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 446,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "声称HashMap默认线程安全"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q09",
+   "variant": "incorrect",
+   "session_id": 522,
+   "status": "COMPLETED",
+   "stage": "一面/Java",
+   "topic": "HashMap",
+   "question": "HashMap索引定位、扩容和碰撞处理如何工作？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 447,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "声称HashMap默认线程安全"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q10",
+   "variant": "strong",
+   "session_id": 523,
+   "status": "COMPLETED",
+   "stage": "一面/MySQL",
+   "topic": "MySQL索引",
+   "question": "聚簇索引与二级索引的叶子节点各存什么？",
+   "answer": "我的处理会包括：InnoDB主键聚簇索引含整行；二级索引存索引键和主键；回表条件；覆盖索引。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 448,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "认为二级索引叶子永远存整行"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q10",
+   "variant": "blank",
+   "session_id": 524,
+   "status": "COMPLETED",
+   "stage": "一面/MySQL",
+   "topic": "MySQL索引",
+   "question": "聚簇索引与二级索引的叶子节点各存什么？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 449,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "认为二级索引叶子永远存整行"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q10",
+   "variant": "incorrect",
+   "session_id": 525,
+   "status": "COMPLETED",
+   "stage": "一面/MySQL",
+   "topic": "MySQL索引",
+   "question": "聚簇索引与二级索引的叶子节点各存什么？",
+   "answer": "我认为认为二级索引叶子永远存整行。",
+   "evaluation_id": 450,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    3
+   ],
+   "in_band": true,
+   "red_flag": "认为二级索引叶子永远存整行"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q11",
+   "variant": "strong",
+   "session_id": 526,
+   "status": "COMPLETED",
+   "stage": "一面/MySQL",
+   "topic": "MySQL优化",
+   "question": "如何理解联合索引最左前缀，以及ORDER BY优化边界？",
+   "answer": "我的处理会包括：联合索引顺序和范围条件；执行计划；filesort与覆盖；基于实际数据选择索引。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 451,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "不看SQL条件就认定组合索引一定有效"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q11",
+   "variant": "blank",
+   "session_id": 527,
+   "status": "COMPLETED",
+   "stage": "一面/MySQL",
+   "topic": "MySQL优化",
+   "question": "如何理解联合索引最左前缀，以及ORDER BY优化边界？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 452,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "不看SQL条件就认定组合索引一定有效"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q11",
+   "variant": "incorrect",
+   "session_id": 528,
+   "status": "COMPLETED",
+   "stage": "一面/MySQL",
+   "topic": "MySQL优化",
+   "question": "如何理解联合索引最左前缀，以及ORDER BY优化边界？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 453,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "不看SQL条件就认定组合索引一定有效"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q12",
+   "variant": "strong",
+   "session_id": 529,
+   "status": "COMPLETED",
+   "stage": "一面/Redis",
+   "topic": "缓存可靠性",
+   "question": "大量不存在的key导致数据库负载骤升，如何防缓存穿透？",
+   "answer": "我的处理会包括：缓存空值与TTL；布隆过滤器及误判；限流与监控；区分穿透/击穿/雪崩。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 454,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "把穿透和雪崩定义为同一现象"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q12",
+   "variant": "blank",
+   "session_id": 530,
+   "status": "COMPLETED",
+   "stage": "一面/Redis",
+   "topic": "缓存可靠性",
+   "question": "大量不存在的key导致数据库负载骤升，如何防缓存穿透？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 455,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "把穿透和雪崩定义为同一现象"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q12",
+   "variant": "incorrect",
+   "session_id": 531,
+   "status": "COMPLETED",
+   "stage": "一面/Redis",
+   "topic": "缓存可靠性",
+   "question": "大量不存在的key导致数据库负载骤升，如何防缓存穿透？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 456,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "把穿透和雪崩定义为同一现象"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q13",
+   "variant": "strong",
+   "session_id": 532,
+   "status": "COMPLETED",
+   "stage": "一面/Redis",
+   "topic": "高可用",
+   "question": "缓存雪崩时，系统如何保护数据库并恢复服务？",
+   "answer": "我的处理会包括：TTL抖动；热点保护与限流降级；互斥更新或逻辑过期；逐步预热。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 457,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "只要求数据库无限扩容"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q13",
+   "variant": "blank",
+   "session_id": 533,
+   "status": "COMPLETED",
+   "stage": "一面/Redis",
+   "topic": "高可用",
+   "question": "缓存雪崩时，系统如何保护数据库并恢复服务？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 458,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "只要求数据库无限扩容"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q13",
+   "variant": "incorrect",
+   "session_id": 534,
+   "status": "COMPLETED",
+   "stage": "一面/Redis",
+   "topic": "高可用",
+   "question": "缓存雪崩时，系统如何保护数据库并恢复服务？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 459,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "只要求数据库无限扩容"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q14",
+   "variant": "strong",
+   "session_id": 535,
+   "status": "COMPLETED",
+   "stage": "一面/项目",
+   "topic": "项目深挖",
+   "question": "详细讲一个订单系统项目的写入链路与一致性边界。",
+   "answer": "我的处理会包括：真实业务与吞吐目标；事务与幂等；缓存或消息队列边界；失败恢复与可观测证据。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 460,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "将本地事务称为天然跨Kafka的原子事务"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q14",
+   "variant": "blank",
+   "session_id": 536,
+   "status": "COMPLETED",
+   "stage": "一面/项目",
+   "topic": "项目深挖",
+   "question": "详细讲一个订单系统项目的写入链路与一致性边界。",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 461,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "将本地事务称为天然跨Kafka的原子事务"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q14",
+   "variant": "incorrect",
+   "session_id": 537,
+   "status": "COMPLETED",
+   "stage": "一面/项目",
+   "topic": "项目深挖",
+   "question": "详细讲一个订单系统项目的写入链路与一致性边界。",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 462,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "将本地事务称为天然跨Kafka的原子事务"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q16",
+   "variant": "strong",
+   "session_id": 541,
+   "status": "COMPLETED",
+   "stage": "二面/安全",
+   "topic": "密码学",
+   "question": "RSA公钥与私钥怎么用于加密或签名，工程上容易踩什么坑？",
+   "answer": "我的处理会包括：公私钥数学对应；加密和签名方向区分；填充模式与密钥管理；不自行设计密码协议。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 463,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "声称RSA用于直接加密GB级大文件最合适"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q16",
+   "variant": "blank",
+   "session_id": 542,
+   "status": "COMPLETED",
+   "stage": "二面/安全",
+   "topic": "密码学",
+   "question": "RSA公钥与私钥怎么用于加密或签名，工程上容易踩什么坑？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 464,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "声称RSA用于直接加密GB级大文件最合适"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q16",
+   "variant": "incorrect",
+   "session_id": 543,
+   "status": "COMPLETED",
+   "stage": "二面/安全",
+   "topic": "密码学",
+   "question": "RSA公钥与私钥怎么用于加密或签名，工程上容易踩什么坑？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 465,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "声称RSA用于直接加密GB级大文件最合适"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q17",
+   "variant": "strong",
+   "session_id": 544,
+   "status": "COMPLETED",
+   "stage": "二面/Java并发",
+   "topic": "并发",
+   "question": "ReentrantLock和synchronized差异以及锁重入如何实现？",
+   "answer": "我的处理会包括：AQS状态和owner概念；可中断/定时/公平锁能力；synchronized监视器；释放finally。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 466,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "把ReentrantLock自动释放视为默认行为"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q17",
+   "variant": "blank",
+   "session_id": 545,
+   "status": "COMPLETED",
+   "stage": "二面/Java并发",
+   "topic": "并发",
+   "question": "ReentrantLock和synchronized差异以及锁重入如何实现？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 467,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "把ReentrantLock自动释放视为默认行为"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q17",
+   "variant": "incorrect",
+   "session_id": 546,
+   "status": "COMPLETED",
+   "stage": "二面/Java并发",
+   "topic": "并发",
+   "question": "ReentrantLock和synchronized差异以及锁重入如何实现？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 468,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "把ReentrantLock自动释放视为默认行为"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q18",
+   "variant": "strong",
+   "session_id": 547,
+   "status": "COMPLETED",
+   "stage": "二面/Java并发",
+   "topic": "JVM锁",
+   "question": "synchronized的优化与锁升级路径如何理解？",
+   "answer": "我的处理会包括：竞争强度与对象监视器；偏向/轻量/重量级历史实现差异；JDK版本差别；测量比背版本术语重要。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 469,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "不考虑JDK版本仍断言所有版本都支持同样的偏向锁"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q18",
+   "variant": "blank",
+   "session_id": 548,
+   "status": "COMPLETED",
+   "stage": "二面/Java并发",
+   "topic": "JVM锁",
+   "question": "synchronized的优化与锁升级路径如何理解？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 470,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "不考虑JDK版本仍断言所有版本都支持同样的偏向锁"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q18",
+   "variant": "incorrect",
+   "session_id": 549,
+   "status": "COMPLETED",
+   "stage": "二面/Java并发",
+   "topic": "JVM锁",
+   "question": "synchronized的优化与锁升级路径如何理解？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 471,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "不考虑JDK版本仍断言所有版本都支持同样的偏向锁"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q19",
+   "variant": "strong",
+   "session_id": 550,
+   "status": "COMPLETED",
+   "stage": "二面/设计模式",
+   "topic": "设计模式",
+   "question": "设计包含选择题、问答题的试卷判分器，你怎样抽象扩展点？",
+   "answer": "我的处理会包括：接口策略分发；共用流程模板；新增题型无需改核心if链；可测试性。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 472,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "认为所有题型一定使用完全一样的评分逻辑"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q19",
+   "variant": "blank",
+   "session_id": 551,
+   "status": "COMPLETED",
+   "stage": "二面/设计模式",
+   "topic": "设计模式",
+   "question": "设计包含选择题、问答题的试卷判分器，你怎样抽象扩展点？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 473,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "认为所有题型一定使用完全一样的评分逻辑"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q19",
+   "variant": "incorrect",
+   "session_id": 552,
+   "status": "COMPLETED",
+   "stage": "二面/设计模式",
+   "topic": "设计模式",
+   "question": "设计包含选择题、问答题的试卷判分器，你怎样抽象扩展点？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 474,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "认为所有题型一定使用完全一样的评分逻辑"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q20",
+   "variant": "strong",
+   "session_id": 553,
+   "status": "COMPLETED",
+   "stage": "二面/可靠性",
+   "topic": "幂等",
+   "question": "订单消费Kafka消息后数据库已落库但ACK失败，如何防止重复写？",
+   "answer": "我的处理会包括：至少一次投递语义；唯一业务键和幂等表；事务提交顺序；重试/死信/对账。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 475,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "声称Kafka恰好一次能自动覆盖外部MySQL事务"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q20",
+   "variant": "blank",
+   "session_id": 554,
+   "status": "COMPLETED",
+   "stage": "二面/可靠性",
+   "topic": "幂等",
+   "question": "订单消费Kafka消息后数据库已落库但ACK失败，如何防止重复写？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 476,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "声称Kafka恰好一次能自动覆盖外部MySQL事务"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q20",
+   "variant": "incorrect",
+   "session_id": 555,
+   "status": "COMPLETED",
+   "stage": "二面/可靠性",
+   "topic": "幂等",
+   "question": "订单消费Kafka消息后数据库已落库但ACK失败，如何防止重复写？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 477,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "声称Kafka恰好一次能自动覆盖外部MySQL事务"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q21",
+   "variant": "strong",
+   "session_id": 556,
+   "status": "COMPLETED",
+   "stage": "二面/收尾",
+   "topic": "工程复盘",
+   "question": "你如何复盘一次线上性能事故并说明改进方案？",
+   "answer": "我的处理会包括：症状与指标；根因证据；回滚/恢复；长期监控和测试。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 478,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "只说“加机器”而不分析根因"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q21",
+   "variant": "blank",
+   "session_id": 557,
+   "status": "COMPLETED",
+   "stage": "二面/收尾",
+   "topic": "工程复盘",
+   "question": "你如何复盘一次线上性能事故并说明改进方案？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 479,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "只说“加机器”而不分析根因"
+  },
+  {
+   "case": "B_JAVA_2ROUND",
+   "qid": "B_JAVA_2ROUND_Q21",
+   "variant": "incorrect",
+   "session_id": 558,
+   "status": "COMPLETED",
+   "stage": "二面/收尾",
+   "topic": "工程复盘",
+   "question": "你如何复盘一次线上性能事故并说明改进方案？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 480,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "只说“加机器”而不分析根因"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q02",
+   "variant": "strong",
+   "session_id": 562,
+   "status": "COMPLETED",
+   "stage": "项目/架构",
+   "topic": "Agent架构",
+   "question": "请画出用户输入到最终回答的完整Agent运行流程。",
+   "answer": "我的处理会包括：意图分析和检索；工具注册与调度；状态变化/重试/终止条件；引用与可观测。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 481,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "没有停止条件的无限工具循环"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q02",
+   "variant": "blank",
+   "session_id": 563,
+   "status": "COMPLETED",
+   "stage": "项目/架构",
+   "topic": "Agent架构",
+   "question": "请画出用户输入到最终回答的完整Agent运行流程。",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 482,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "没有停止条件的无限工具循环"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q02",
+   "variant": "incorrect",
+   "session_id": 564,
+   "status": "COMPLETED",
+   "stage": "项目/架构",
+   "topic": "Agent架构",
+   "question": "请画出用户输入到最终回答的完整Agent运行流程。",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 483,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "没有停止条件的无限工具循环"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q03",
+   "variant": "strong",
+   "session_id": 565,
+   "status": "COMPLETED",
+   "stage": "评测数据",
+   "topic": "Agent评测",
+   "question": "你的Agent评测集如何建立，覆盖哪些失败场景？",
+   "answer": "我的处理会包括：真实任务与合成任务来源区分；异常/多跳/工具失败样例；人工审核和隔离；成功率与成本。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 484,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "只用自己生成的最简单样例"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q03",
+   "variant": "blank",
+   "session_id": 566,
+   "status": "COMPLETED",
+   "stage": "评测数据",
+   "topic": "Agent评测",
+   "question": "你的Agent评测集如何建立，覆盖哪些失败场景？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 485,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "只用自己生成的最简单样例"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q03",
+   "variant": "incorrect",
+   "session_id": 567,
+   "status": "COMPLETED",
+   "stage": "评测数据",
+   "topic": "Agent评测",
+   "question": "你的Agent评测集如何建立，覆盖哪些失败场景？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 486,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "只用自己生成的最简单样例"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q04",
+   "variant": "strong",
+   "session_id": 568,
+   "status": "COMPLETED",
+   "stage": "评测数据",
+   "topic": "评测可靠性",
+   "question": "测试题大量使用AI生成，怎样避免过拟合和错误金标？",
+   "answer": "我的处理会包括：人工验真；难度分层；去重与未见集；双人复核或证据链。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 487,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "认为LLM生成即天然正确"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q04",
+   "variant": "blank",
+   "session_id": 569,
+   "status": "COMPLETED",
+   "stage": "评测数据",
+   "topic": "评测可靠性",
+   "question": "测试题大量使用AI生成，怎样避免过拟合和错误金标？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 488,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "认为LLM生成即天然正确"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q04",
+   "variant": "incorrect",
+   "session_id": 570,
+   "status": "COMPLETED",
+   "stage": "评测数据",
+   "topic": "评测可靠性",
+   "question": "测试题大量使用AI生成，怎样避免过拟合和错误金标？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 489,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "认为LLM生成即天然正确"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q05",
+   "variant": "strong",
+   "session_id": 571,
+   "status": "COMPLETED",
+   "stage": "意图理解",
+   "topic": "意图识别",
+   "question": "用户口语化、错别字和含糊需求会如何影响Agent？",
+   "answer": "我的处理会包括：纠错与归一化；低置信度澄清；歧义分支与可回退；端到端评测。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 490,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "不经确认执行高风险工具"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q05",
+   "variant": "blank",
+   "session_id": 572,
+   "status": "COMPLETED",
+   "stage": "意图理解",
+   "topic": "意图识别",
+   "question": "用户口语化、错别字和含糊需求会如何影响Agent？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 491,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "不经确认执行高风险工具"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q05",
+   "variant": "incorrect",
+   "session_id": 573,
+   "status": "COMPLETED",
+   "stage": "意图理解",
+   "topic": "意图识别",
+   "question": "用户口语化、错别字和含糊需求会如何影响Agent？",
+   "answer": "我认为不经确认执行高风险工具。",
+   "evaluation_id": 492,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    3
+   ],
+   "in_band": true,
+   "red_flag": "不经确认执行高风险工具"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q06",
+   "variant": "strong",
+   "session_id": 574,
+   "status": "COMPLETED",
+   "stage": "RAG数据",
+   "topic": "文档切分",
+   "question": "Markdown、TXT和PDF的切分应该有哪些差异？",
+   "answer": "我的处理会包括：标题层级与结构信息；段落与长度重叠；PDF表格/OCR异常；引用源位置。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 493,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "把所有格式按固定字节随意切断"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q06",
+   "variant": "blank",
+   "session_id": 575,
+   "status": "COMPLETED",
+   "stage": "RAG数据",
+   "topic": "文档切分",
+   "question": "Markdown、TXT和PDF的切分应该有哪些差异？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 494,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "把所有格式按固定字节随意切断"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q06",
+   "variant": "incorrect",
+   "session_id": 576,
+   "status": "COMPLETED",
+   "stage": "RAG数据",
+   "topic": "文档切分",
+   "question": "Markdown、TXT和PDF的切分应该有哪些差异？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 495,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "把所有格式按固定字节随意切断"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q07",
+   "variant": "strong",
+   "session_id": 577,
+   "status": "COMPLETED",
+   "stage": "RAG检索",
+   "topic": "混合检索",
+   "question": "为什么结合BM25和向量检索，它们各自擅长什么？",
+   "answer": "我的处理会包括：BM25关键词和精确实体；语义检索处理同义改写；召回互补；分桶分析。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 496,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "声称BM25一定能理解上下文语义"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q07",
+   "variant": "blank",
+   "session_id": 578,
+   "status": "COMPLETED",
+   "stage": "RAG检索",
+   "topic": "混合检索",
+   "question": "为什么结合BM25和向量检索，它们各自擅长什么？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 497,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "声称BM25一定能理解上下文语义"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q07",
+   "variant": "incorrect",
+   "session_id": 579,
+   "status": "COMPLETED",
+   "stage": "RAG检索",
+   "topic": "混合检索",
+   "question": "为什么结合BM25和向量检索，它们各自擅长什么？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 498,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "声称BM25一定能理解上下文语义"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q08",
+   "variant": "strong",
+   "session_id": 580,
+   "status": "COMPLETED",
+   "stage": "RAG融合",
+   "topic": "RRF",
+   "question": "RRF为什么常用于多路召回，为什么不直接相加原始分数？",
+   "answer": "我的处理会包括：按rank而非原始分值融合；1/(k+rank)公式；不同检索器分数不可比较；RRF参数和候选去重。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 499,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "把不同评分尺度直接相加等同概率"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q08",
+   "variant": "blank",
+   "session_id": 581,
+   "status": "COMPLETED",
+   "stage": "RAG融合",
+   "topic": "RRF",
+   "question": "RRF为什么常用于多路召回，为什么不直接相加原始分数？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 500,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "把不同评分尺度直接相加等同概率"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q08",
+   "variant": "incorrect",
+   "session_id": 582,
+   "status": "COMPLETED",
+   "stage": "RAG融合",
+   "topic": "RRF",
+   "question": "RRF为什么常用于多路召回，为什么不直接相加原始分数？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 501,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "把不同评分尺度直接相加等同概率"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q09",
+   "variant": "strong",
+   "session_id": 583,
+   "status": "COMPLETED",
+   "stage": "RAG重排",
+   "topic": "Reranker",
+   "question": "为什么粗召回后使用Cross-Encoder重排，其代价是什么？",
+   "answer": "我的处理会包括：查询与候选联合编码；精排质量提升；推理成本与延迟；候选TopN控制。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 502,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "Cross-Encoder可以无限候选零成本排序"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q09",
+   "variant": "blank",
+   "session_id": 584,
+   "status": "COMPLETED",
+   "stage": "RAG重排",
+   "topic": "Reranker",
+   "question": "为什么粗召回后使用Cross-Encoder重排，其代价是什么？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 503,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "Cross-Encoder可以无限候选零成本排序"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q09",
+   "variant": "incorrect",
+   "session_id": 585,
+   "status": "COMPLETED",
+   "stage": "RAG重排",
+   "topic": "Reranker",
+   "question": "为什么粗召回后使用Cross-Encoder重排，其代价是什么？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 504,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "Cross-Encoder可以无限候选零成本排序"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q10",
+   "variant": "strong",
+   "session_id": 586,
+   "status": "COMPLETED",
+   "stage": "RAG评测",
+   "topic": "RAG评测",
+   "question": "预训练Cross-Encoder不一定符合业务域，怎样验证重排收益？",
+   "answer": "我的处理会包括：评测集与业务查询分布；Recall@K/MRR/NDCG；重排消融；时延与泛化检查。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 505,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "只用单条示例就认为有效"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q10",
+   "variant": "blank",
+   "session_id": 587,
+   "status": "COMPLETED",
+   "stage": "RAG评测",
+   "topic": "RAG评测",
+   "question": "预训练Cross-Encoder不一定符合业务域，怎样验证重排收益？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 506,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "只用单条示例就认为有效"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q10",
+   "variant": "incorrect",
+   "session_id": 588,
+   "status": "COMPLETED",
+   "stage": "RAG评测",
+   "topic": "RAG评测",
+   "question": "预训练Cross-Encoder不一定符合业务域，怎样验证重排收益？",
+   "answer": "我认为只用单条示例就认为有效。",
+   "evaluation_id": 507,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    3
+   ],
+   "in_band": true,
+   "red_flag": "只用单条示例就认为有效"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q11",
+   "variant": "strong",
+   "session_id": 589,
+   "status": "COMPLETED",
+   "stage": "项目对照",
+   "topic": "项目理解",
+   "question": "比较两个不同检索项目的本质技术差异，不要只罗列组件。",
+   "answer": "我的处理会包括：用户任务和数据分布；指标差异；系统约束；取舍与失败案例。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 508,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "纯粹比较用到多少库"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q11",
+   "variant": "blank",
+   "session_id": 590,
+   "status": "COMPLETED",
+   "stage": "项目对照",
+   "topic": "项目理解",
+   "question": "比较两个不同检索项目的本质技术差异，不要只罗列组件。",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 509,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "纯粹比较用到多少库"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q11",
+   "variant": "incorrect",
+   "session_id": 591,
+   "status": "COMPLETED",
+   "stage": "项目对照",
+   "topic": "项目理解",
+   "question": "比较两个不同检索项目的本质技术差异，不要只罗列组件。",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 510,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "纯粹比较用到多少库"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q12",
+   "variant": "strong",
+   "session_id": 592,
+   "status": "COMPLETED",
+   "stage": "故障复盘",
+   "topic": "Agent可观测",
+   "question": "你遇到过最难定位的Agent错误？如何用Trace找到原因？",
+   "answer": "我的处理会包括：请求/会话与step id关联；模型/工具/检索失败分类；输入输出与权限审计；回归验证。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 511,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "只有最终答案日志无法定位工具步骤"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q12",
+   "variant": "blank",
+   "session_id": 593,
+   "status": "COMPLETED",
+   "stage": "故障复盘",
+   "topic": "Agent可观测",
+   "question": "你遇到过最难定位的Agent错误？如何用Trace找到原因？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 512,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "只有最终答案日志无法定位工具步骤"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q12",
+   "variant": "incorrect",
+   "session_id": 594,
+   "status": "COMPLETED",
+   "stage": "故障复盘",
+   "topic": "Agent可观测",
+   "question": "你遇到过最难定位的Agent错误？如何用Trace找到原因？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 513,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "只有最终答案日志无法定位工具步骤"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q13",
+   "variant": "strong",
+   "session_id": 595,
+   "status": "COMPLETED",
+   "stage": "评测",
+   "topic": "任务成功率",
+   "question": "如果只能选一个指标判断Agent是否完成任务，你怎么设计？",
+   "answer": "我的处理会包括：任务定义与可验证成功条件；人工/自动Judge一致性；拒答与安全边界；分解失败类型。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 514,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "只把BLEU/ROUGE当真实任务成功率"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q13",
+   "variant": "blank",
+   "session_id": 596,
+   "status": "COMPLETED",
+   "stage": "评测",
+   "topic": "任务成功率",
+   "question": "如果只能选一个指标判断Agent是否完成任务，你怎么设计？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 515,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "只把BLEU/ROUGE当真实任务成功率"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q13",
+   "variant": "incorrect",
+   "session_id": 597,
+   "status": "COMPLETED",
+   "stage": "评测",
+   "topic": "任务成功率",
+   "question": "如果只能选一个指标判断Agent是否完成任务，你怎么设计？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 516,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "只把BLEU/ROUGE当真实任务成功率"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q14",
+   "variant": "strong",
+   "session_id": 598,
+   "status": "COMPLETED",
+   "stage": "工程",
+   "topic": "幂等与恢复",
+   "question": "工具调用后发生重试，外部状态如何保持幂等？",
+   "answer": "我的处理会包括：执行key/事务状态；重放前查询外部结果；失败补偿；Checkpoint与状态恢复。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 517,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "认为Checkpoint自动回滚第三方支付"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q14",
+   "variant": "blank",
+   "session_id": 599,
+   "status": "COMPLETED",
+   "stage": "工程",
+   "topic": "幂等与恢复",
+   "question": "工具调用后发生重试，外部状态如何保持幂等？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 518,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "认为Checkpoint自动回滚第三方支付"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q14",
+   "variant": "incorrect",
+   "session_id": 600,
+   "status": "COMPLETED",
+   "stage": "工程",
+   "topic": "幂等与恢复",
+   "question": "工具调用后发生重试，外部状态如何保持幂等？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 519,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "认为Checkpoint自动回滚第三方支付"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q15",
+   "variant": "strong",
+   "session_id": 601,
+   "status": "COMPLETED",
+   "stage": "向量检索",
+   "topic": "RAG基础",
+   "question": "Embedding索引和Rerank各解决什么不同问题？",
+   "answer": "我的处理会包括：Embedding用于候选召回；向量近似搜索与距离度量；Rerank做相对精细排序；分阶段延迟管理。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 520,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "把Embedding向量相似度直接等同事实真实性"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q15",
+   "variant": "blank",
+   "session_id": 602,
+   "status": "COMPLETED",
+   "stage": "向量检索",
+   "topic": "RAG基础",
+   "question": "Embedding索引和Rerank各解决什么不同问题？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 521,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "把Embedding向量相似度直接等同事实真实性"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q15",
+   "variant": "incorrect",
+   "session_id": 603,
+   "status": "COMPLETED",
+   "stage": "向量检索",
+   "topic": "RAG基础",
+   "question": "Embedding索引和Rerank各解决什么不同问题？",
+   "answer": "我认为把Embedding向量相似度直接等同事实真实性。",
+   "evaluation_id": 522,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    3
+   ],
+   "in_band": true,
+   "red_flag": "把Embedding向量相似度直接等同事实真实性"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q16",
+   "variant": "strong",
+   "session_id": 604,
+   "status": "COMPLETED",
+   "stage": "Agent运行时",
+   "topic": "长任务执行",
+   "question": "Agent运行超时且工具副作用已生效，怎样继续或终止？",
+   "answer": "我的处理会包括：Checkpoint状态；外部副作用事实校验；取消与补偿语义；限额和审计。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 523,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "失败就盲目从第一步重放所有工具"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q16",
+   "variant": "blank",
+   "session_id": 605,
+   "status": "COMPLETED",
+   "stage": "Agent运行时",
+   "topic": "长任务执行",
+   "question": "Agent运行超时且工具副作用已生效，怎样继续或终止？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 524,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "失败就盲目从第一步重放所有工具"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q16",
+   "variant": "incorrect",
+   "session_id": 606,
+   "status": "COMPLETED",
+   "stage": "Agent运行时",
+   "topic": "长任务执行",
+   "question": "Agent运行超时且工具副作用已生效，怎样继续或终止？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 525,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "失败就盲目从第一步重放所有工具"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q17",
+   "variant": "strong",
+   "session_id": 607,
+   "status": "COMPLETED",
+   "stage": "编码/算法",
+   "topic": "贪心算法",
+   "question": "给定若干区间，设计按结束位置贪心选择不重叠区间的思路。",
+   "answer": "我的处理会包括：按结束时间排序；选择最早结束的可行区间；交换论证；O(n log n)复杂度。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 526,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "只按开始时间排序保证最优"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q17",
+   "variant": "blank",
+   "session_id": 608,
+   "status": "COMPLETED",
+   "stage": "编码/算法",
+   "topic": "贪心算法",
+   "question": "给定若干区间，设计按结束位置贪心选择不重叠区间的思路。",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 527,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "只按开始时间排序保证最优"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q17",
+   "variant": "incorrect",
+   "session_id": 609,
+   "status": "COMPLETED",
+   "stage": "编码/算法",
+   "topic": "贪心算法",
+   "question": "给定若干区间，设计按结束位置贪心选择不重叠区间的思路。",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 528,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "只按开始时间排序保证最优"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q18",
+   "variant": "strong",
+   "session_id": 610,
+   "status": "COMPLETED",
+   "stage": "代码质量",
+   "topic": "AI Coding",
+   "question": "模型生成的Agent代码如何做单元与集成测试？",
+   "answer": "我的处理会包括：工具mock与schema契约；故障注入；端到端Replay；评测集回归；真实用户数据隔离。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 529,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "AI生成代码免于审查"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q18",
+   "variant": "blank",
+   "session_id": 611,
+   "status": "COMPLETED",
+   "stage": "代码质量",
+   "topic": "AI Coding",
+   "question": "模型生成的Agent代码如何做单元与集成测试？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 530,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "AI生成代码免于审查"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q18",
+   "variant": "incorrect",
+   "session_id": 612,
+   "status": "COMPLETED",
+   "stage": "代码质量",
+   "topic": "AI Coding",
+   "question": "模型生成的Agent代码如何做单元与集成测试？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 531,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "AI生成代码免于审查"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q19",
+   "variant": "strong",
+   "session_id": 613,
+   "status": "COMPLETED",
+   "stage": "总结",
+   "topic": "上线策略",
+   "question": "如果下周要上线第一版Agent，你如何制定发布与回滚门槛？",
+   "answer": "我的处理会包括：安全/权限与注入测试；任务成功率/延迟/成本阈值；灰度与回滚；日志隐私。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 532,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "只看Demo漂亮就全量上线"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q19",
+   "variant": "blank",
+   "session_id": 614,
+   "status": "COMPLETED",
+   "stage": "总结",
+   "topic": "上线策略",
+   "question": "如果下周要上线第一版Agent，你如何制定发布与回滚门槛？",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 533,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "只看Demo漂亮就全量上线"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q19",
+   "variant": "incorrect",
+   "session_id": 615,
+   "status": "COMPLETED",
+   "stage": "总结",
+   "topic": "上线策略",
+   "question": "如果下周要上线第一版Agent，你如何制定发布与回滚门槛？",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 534,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "只看Demo漂亮就全量上线"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q20",
+   "variant": "strong",
+   "session_id": 616,
+   "status": "COMPLETED",
+   "stage": "收尾",
+   "topic": "项目真实性",
+   "question": "描述上述项目中个人真正做过的环节及当前尚未解决的问题。",
+   "answer": "我的处理会包括：清晰区分个人贡献；诚实说明未完成项目；可追溯验证；未来迭代优先级。具体方案需要结合数据规模和业务约束验证。",
+   "evaluation_id": 535,
+   "scores": {
+    "technical_correctness": 4,
+    "coverage": 4,
+    "depth": 4,
+    "relevance": 4,
+    "communication": 4
+   },
+   "overall": 8.0,
+   "expected_band": [
+    7,
+    10
+   ],
+   "in_band": true,
+   "red_flag": "把研究计划说成线上已完成效果"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q20",
+   "variant": "blank",
+   "session_id": 617,
+   "status": "COMPLETED",
+   "stage": "收尾",
+   "topic": "项目真实性",
+   "question": "描述上述项目中个人真正做过的环节及当前尚未解决的问题。",
+   "answer": "这个问题我目前不清楚，无法给出可靠结论。",
+   "evaluation_id": 536,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 1,
+    "communication": 1
+   },
+   "overall": 2.0,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": true,
+   "red_flag": "把研究计划说成线上已完成效果"
+  },
+  {
+   "case": "C_AGENT_RAG",
+   "qid": "C_AGENT_RAG_Q20",
+   "variant": "incorrect",
+   "session_id": 618,
+   "status": "COMPLETED",
+   "stage": "收尾",
+   "topic": "项目真实性",
+   "question": "描述上述项目中个人真正做过的环节及当前尚未解决的问题。",
+   "answer": "这个问题我没有可靠依据，暂时无法回答。",
+   "evaluation_id": 537,
+   "scores": {
+    "technical_correctness": 1,
+    "coverage": 1,
+    "depth": 1,
+    "relevance": 2,
+    "communication": 2
+   },
+   "overall": 2.8,
+   "expected_band": [
+    0,
+    2
+   ],
+   "in_band": false,
+   "red_flag": "把研究计划说成线上已完成效果"
+  }
+ ],
+ "errors": [
+  "B_JAVA_2ROUND/strong/B_JAVA_2ROUND_Q15: AppError: 本场背景类题目已覆盖，请切换技术问题",
+  "B_JAVA_2ROUND/blank/B_JAVA_2ROUND_Q15: AppError: 本场背景类题目已覆盖，请切换技术问题",
+  "B_JAVA_2ROUND/incorrect/B_JAVA_2ROUND_Q15: AppError: 本场背景类题目已覆盖，请切换技术问题",
+  "C_AGENT_RAG/strong/C_AGENT_RAG_Q01: AppError: 本场背景类题目已覆盖，请切换技术问题",
+  "C_AGENT_RAG/blank/C_AGENT_RAG_Q01: AppError: 本场背景类题目已覆盖，请切换技术问题",
+  "C_AGENT_RAG/incorrect/C_AGENT_RAG_Q01: AppError: 本场背景类题目已覆盖，请切换技术问题"
+ ],
+ "counts": {
+  "questions": 61,
+  "runs": 177,
+  "expected_runs": 183,
+  "errors": 6
+ },
+ "in_band_by_variant": {
+  "strong": {
+   "total": 59,
+   "in_band": 59
+  },
+  "blank": {
+   "total": 59,
+   "in_band": 59
+  },
+  "incorrect": {
+   "total": 59,
+   "in_band": 8
+  }
+ },
+ "finished_at": "2026-11-17T03:32:43.371696+00:00"
+}

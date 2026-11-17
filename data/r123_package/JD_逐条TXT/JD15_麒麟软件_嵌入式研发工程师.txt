@@ -1,0 +1,18 @@
+企业：麒麟软件
+岗位：嵌入式研发工程师
+招聘类型：2027校招
+
+【岗位职责】
+1. 移植和调优嵌入式Linux驱动、镜像和启动流程
+2. 实现RTOS调度、内存、中断和外设BSP
+3. 使用GDB等工具定位软硬件问题
+【任职要求】
+1. 2027届计算机/电子/自动化
+2. C/C++熟练，Rust/汇编加分
+3. 熟悉Linux Shell、Makefile、交叉编译
+4. 理解FreeRTOS/RT-Thread等RTOS及ARM/LoongArch/x86架构
+5. 有设备驱动、协议栈或调试实践优先
+
+原始招聘来源：https://kylinos.zhiye.com/campus/detail?jobAdId=cd3ac686-922d-4445-a35c-f74cd6b582e5
+
+说明：此为真实岗位信息的结构化整理版本，非官方网站逐字原文；当前开放情况未逐条核验。

@@ -44,7 +44,8 @@ test*.py
 .playwright-cli/
 output/playwright/
 # Headless Chrome user-data-dir holds session cookies/cache, never product data.
-data/**/chrome/
+data/**/chrome*/
+data/**/chrome*/**
 
 # Private/local delivery artifacts
 *.dump

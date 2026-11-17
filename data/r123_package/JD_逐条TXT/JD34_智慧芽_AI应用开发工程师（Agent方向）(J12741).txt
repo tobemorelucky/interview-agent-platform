@@ -1,0 +1,18 @@
+企业：智慧芽
+岗位：AI应用开发工程师（Agent方向）(J12741)
+招聘类型：2027校招
+
+【岗位职责】
+1. 基于用户任务构建LLM Agent与AI应用模块
+2. 通过工具、检索和工作流进行任务分解与交付
+3. 用对比实验定位模型、数据、检索和工具问题
+【任职要求】
+1. 计算机/AI/软件等硕士及以上
+2. Python编程、接口开发和数据处理能力
+3. 熟悉Linux、Git与工程测试
+4. 理解Transformer、Embedding、RAG和Agent
+5. 有模型API、向量数据库、工具调度及Agent项目经验加分
+
+原始招聘来源：https://mnowpick.nowcoder.com/jobs/detail/467510?deliverSource=2&pageSource=5003
+
+说明：此为真实岗位信息的结构化整理版本，非官方网站逐字原文；当前开放情况未逐条核验。

@@ -1,0 +1,18 @@
+企业：百度
+岗位：AI智能化测试开发岗位
+招聘类型：2027校招
+
+【岗位职责】
+1. 研发自动化测试平台和工具
+2. 开展LLM生成测试、Agent测试与模型效果评测
+3. 分析接口、性能和功能自动化质量问题
+【任职要求】
+1. 计算机/软件/AI本科及以上
+2. Python/Java/Go至少一种并有自动化测试开发能力
+3. 熟悉Pytest、Selenium或JMeter等
+4. 掌握LLM评测、Prompt或AI测试用例生成
+5. 有测试平台或Agent测试项目加分
+
+原始招聘来源：https://talent.baidu.com/jobs/detail/GRADUATE/f53dd4ae-d2fb-4f8b-b3b6-fb81469edc4e
+
+说明：此为真实岗位信息的结构化整理版本，非官方网站逐字原文；当前开放情况未逐条核验。

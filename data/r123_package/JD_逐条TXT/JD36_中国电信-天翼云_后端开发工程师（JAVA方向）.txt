@@ -1,0 +1,18 @@
+企业：中国电信-天翼云
+岗位：后端开发工程师（JAVA方向）
+招聘类型：2027校招
+
+【岗位职责】
+1. 研发天翼云分布式、高并发核心Java服务
+2. 设计微服务、中间件封装与数据库模块
+3. 处理线上问题、性能优化和可观测性
+【任职要求】
+1. 2027届硕士及以上计算机相关
+2. Java和Shell/Python脚本
+3. 熟悉Spring/Spring Boot/Spring Cloud
+4. 熟悉MySQL/PostgreSQL/Oracle及SQL优化
+5. 了解Redis、Kafka/RocketMQ、Docker/K8s与分布式
+
+原始招聘来源：https://www.nowcoder.com/jobs/detail/452135
+
+说明：此为真实岗位信息的结构化整理版本，非官方网站逐字原文；当前开放情况未逐条核验。

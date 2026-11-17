@@ -1,0 +1,18 @@
+企业：字节跳动
+岗位：AI Agent开发工程师（客户端研发效能）
+招聘类型：2027校招
+
+【岗位职责】
+1. 研发面向客户端开发的Agent Harness、Skills/CLI及Trace评测能力
+2. 整合Issue Diagnosis、Coding、Review、Validation工程链路
+3. 提升长链路研发任务的可控性与效率
+【任职要求】
+1. 2027届及以后计算机/软件相关
+2. 软件工程基础和客户端开发经验
+3. 熟悉LLM与Agent技术
+4. 具备完整研发流程认知
+5. IDE插件、AI Coding、自动化测试或开发工具链经验加分
+
+原始招聘来源：https://www.nowcoder.com/jobs/detail/446897
+
+说明：此为真实岗位信息的结构化整理版本，非官方网站逐字原文；当前开放情况未逐条核验。

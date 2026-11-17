@@ -1,0 +1,18 @@
+企业：蔚来
+岗位：座舱大模型后训练/Agentic算法工程师
+招聘类型：2027校招
+
+【岗位职责】
+1. 研发车载对话与Agent的后训练、评测和失败回流机制
+2. 探索On-policy Distillation、RLHF/RLVR和Agentic RL
+3. 构建Tool/User Simulator/Reward/Harness训练环境
+【任职要求】
+1. 计算机/AI等研究生及以上
+2. 掌握NLP、机器学习和大模型后训练流程
+3. 了解Reward Modeling、PPO/GRPO/DAPO或强化学习
+4. 掌握Python/Java/TypeScript至少一门
+5. 接触TRL、OpenRLHF、ms-swift、verl等框架优先
+
+原始招聘来源：https://nio.jobs.feishu.cn/campus/position/7673027279396768009/detail
+
+说明：此为真实岗位信息的结构化整理版本，非官方网站逐字原文；当前开放情况未逐条核验。

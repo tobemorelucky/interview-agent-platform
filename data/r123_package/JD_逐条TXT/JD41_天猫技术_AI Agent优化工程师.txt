@@ -1,0 +1,19 @@
+企业：天猫技术
+岗位：AI Agent优化工程师
+招聘类型：2027校招
+
+【岗位职责】
+1. 优化电商场景智能体能力与任务成功率
+2. 构造后训练数据、Agent执行轨迹并设计评测体系
+3. 研发工具协议、记忆和RAG系统
+【任职要求】
+1. 2027届，计算机/数学等相关，硕博优先
+2. 理解Transformer、LLM和后训练，Agentic RL实践加分
+3. 掌握MCP、Skills、Memory、RAG
+4. Python与PyTorch熟练
+5. 了解大模型训推框架和合成数据、Trajectory
+6. 具备Agent评测设计能力
+
+原始招聘来源：https://www.nowcoder.com/jobs/detail/441195
+
+说明：此为真实岗位信息的结构化整理版本，非官方网站逐字原文；当前开放情况未逐条核验。

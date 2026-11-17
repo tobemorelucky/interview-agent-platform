@@ -1,0 +1,8 @@
+{
+ "email": "r123-ui-acceptance-synthetic@example.com",
+ "password": "R123-ui-acceptance-only",
+ "user_id": 20,
+ "resume_id": 19,
+ "profile_status": "COMPLETED",
+ "synthetic": true
+}

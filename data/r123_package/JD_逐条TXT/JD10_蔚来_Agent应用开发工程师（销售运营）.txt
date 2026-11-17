@@ -1,0 +1,18 @@
+企业：蔚来
+岗位：Agent应用开发工程师（销售运营）
+招聘类型：2027校招
+
+【岗位职责】
+1. 开发智能问答、运营助手、数据分析和流程自动化Agent
+2. 建设Prompt、RAG、工具调用、上下文管理与任务编排
+3. 进行Badcase分析、监控、限流与稳定性优化
+【任职要求】
+1. 计算机/AI/数据科学本科及以上
+2. 熟悉Java/Python/JavaScript/TypeScript/Go之一
+3. 了解Web前后端、API、数据库、权限与异常处理
+4. 理解Embedding、RAG、Function Calling与Agent
+5. LangChain、Spring AI、Dify、Milvus、ES、Redis等经验加分
+
+原始招聘来源：https://nio.jobs.feishu.cn/campus/position/7673028737668417833/detail
+
+说明：此为真实岗位信息的结构化整理版本，非官方网站逐字原文；当前开放情况未逐条核验。

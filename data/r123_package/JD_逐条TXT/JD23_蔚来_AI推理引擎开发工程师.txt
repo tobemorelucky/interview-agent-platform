@@ -1,0 +1,18 @@
+企业：蔚来
+岗位：AI推理引擎开发工程师
+招聘类型：2027校招
+
+【岗位职责】
+1. 研发大模型高性能推理引擎
+2. 优化KV Cache、模型量化、算子和分布式并行
+3. 分析GPU性能瓶颈并降低推理成本
+【任职要求】
+1. 熟练C++与Python并有数据结构、操作系统基础
+2. 理解Transformer和LLM推理的延迟、吞吐、显存指标
+3. 了解PyTorch/TensorFlow
+4. 了解CUDA或并行计算
+5. 使用vLLM/SGLang/TensorRT-LLM或Triton优先
+
+原始招聘来源：https://nio.jobs.feishu.cn/campus/position/7673027294877337866/detail
+
+说明：此为真实岗位信息的结构化整理版本，非官方网站逐字原文；当前开放情况未逐条核验。

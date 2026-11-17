@@ -1,0 +1,18 @@
+企业：蔚来
+岗位：AI模型部署与性能优化工程师
+招聘类型：2027校招
+
+【岗位职责】
+1. 在车载算力芯片部署CNN/Transformer/LLM/VLM/VLA模型
+2. 通过算子融合、内存优化、量化和性能剖析提升推理效率
+3. 定位部署精度、Crash和并发稳定性问题
+【任职要求】
+1. 硕士及以上
+2. 精通Python与C++、熟悉PyTorch/TensorFlow/ONNX
+3. 熟悉TensorRT/TVM/ONNX Runtime/vLLM/llama.cpp之一
+4. 了解算子调优、Nsight/perf/VTune等
+5. 具有GPU/NPU部署和软硬协同经验优先
+
+原始招聘来源：https://nio.jobs.feishu.cn/campus/position/7687434450226317604/detail
+
+说明：此为真实岗位信息的结构化整理版本，非官方网站逐字原文；当前开放情况未逐条核验。

@@ -1,0 +1,18 @@
+企业：百度
+岗位：Agent Harness研发工程师(J100815)
+招聘类型：2027校招
+
+【岗位职责】
+1. 研发Agent Harness架构和状态管理、沙箱、执行约束
+2. 实现上下文压缩、人机反馈闭环和长期任务可控执行
+3. 验证Harness设计对Agent行为的影响
+【任职要求】
+1. 计算机/人工智能/软件相关本科及以上
+2. 理解ReAct、CoT、Plan-and-Execute及Agent基本原理
+3. 熟悉PyTorch、LangChain或AutoGen等
+4. 具备Agent系统设计和工程落地能力
+5. 有Harness开源或复杂智能体产品经验加分
+
+原始招聘来源：https://talent.baidu.com/jobs/detail/GRADUATE/8683fc23-9bff-4d25-84b2-f5ddce782c5a
+
+说明：此为真实岗位信息的结构化整理版本，非官方网站逐字原文；当前开放情况未逐条核验。

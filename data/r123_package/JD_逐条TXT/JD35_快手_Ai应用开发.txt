@@ -1,0 +1,19 @@
+企业：快手
+岗位：Ai应用开发
+招聘类型：2027校招
+
+【岗位职责】
+1. 开发智能问答、知识助手和智能运营大模型应用
+2. 建设Agent任务编排、工具调用、多轮对话和容错链路
+3. 开发RAG的切片、向量/混合召回、重排及AI网关
+【任职要求】
+1. 2027届本科及以上
+2. 熟悉Java/Python/Go之一，了解Spring Boot或FastAPI
+3. 理解Prompt、RAG、Function Calling及Agent
+4. 了解MySQL、Redis、Elasticsearch、MongoDB
+5. 熟悉Milvus/FAISS/Chroma/pgvector优先
+6. 重视限流、日志、安全和评测
+
+原始招聘来源：https://www.nowcoder.com/jobs/detail/451856
+
+说明：此为真实岗位信息的结构化整理版本，非官方网站逐字原文；当前开放情况未逐条核验。

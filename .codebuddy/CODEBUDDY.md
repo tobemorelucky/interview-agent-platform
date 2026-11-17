@@ -1504,3 +1504,11 @@ L3 前置条件（purge_requests 表、清理顺序、audit_logs 脱敏、Celery
 **C 场（跨场次训练）**：完全达标。用户A(id9)记忆无 Replay 混入；唯一合法 PRACTICING→WEAKNESS 候选 ai_agent_application:agent 引用 eval27/28/29。session16 adaptive+2.3.4，7HTTP/41,175。10 验收点全过，含 strategy NEXT/FOLLOW_UP、RELATED_TARGET_SELECTED+ACCEPTED、PRACTICING→GAP_SUSPECTED(未强求VERIFIED)、记忆被读取≠训练提升的边界说明。
 
 **质量**：三场评价均识别答非所问/技术错误且 covered_points 诚实；quote_all_ok=false 是 artifact 叙述式评价（引用内嵌 evaluation 文本）的探针假阴性，非引用造假。三场累计 23HTTP/139,936 全 SETTLED 单一模型。正式库/JD沙箱/MinIO/Evaluation2.3.4/Harness/L3L4/0030 均未越界。待裁决：B 场补验需新授权 13/90K。
+
+---
+
+## 第四十四轮：R123 50 JD + 3 套面试 + 用户验收准备（7 HTTP/23,754 token 误触发，见 docs/123）
+
+用户提供 zip 数据包（50 真实整理版 JD + 3 套面经改编面试 61 题 + 183 合成回答），校验 PASS。**新建独立库 interview_agent_showcase_r123_20261117**（0029）导入 50 个 CURATED_PARAPHRASE 岗位（21 企业，0 Claim/Evidence，不伪造），前端 50 可选（20+20+10，下拉 51），Skill 推荐诚实 23/26/1。
+
+三套面试离线 Replay（R24 固定题夹具，每题独立 session 走真实 Evaluation 落库）：183 应跑，177 成功，6 个被背景题去重策略合法拒绝。strong/blank 59/59 in band，incorrect 全低分但 52/61 样本实为 blank（数据包缺陷），真错误断言 8 个均判低分。**7 次真实 Coach 是误用默认 router 触发（23,754 token），已披露**，之后 ReplayCoach 0 HTTP。UI 9/9（8 截图、170 API 全 2xx）。干净验收账号已备（0 简历/面试/记忆），未代上传简历。docs/123 交付，停止，无 R124。

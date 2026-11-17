@@ -1,0 +1,96 @@
+{
+ "round": "R123-4",
+ "mode": "browser UI acceptance / Replay / 0 model HTTP",
+ "email": "r123-ui-acceptance-synthetic@example.com",
+ "steps": [
+  {
+   "name": "登录合成用户",
+   "ok": true,
+   "detail": {
+    "path": "/dashboard",
+    "shot": "01_login.png"
+   }
+  },
+  {
+   "name": "公共职业页三页显示 50 岗位",
+   "ok": true,
+   "detail": {
+    "page1": 20,
+    "page2": 20,
+    "page3": 10,
+    "total_visible": 50,
+    "curated_label": true,
+    "shot": "02_career_list.png"
+   }
+  },
+  {
+   "name": "岗位详情显示职责/要求/来源",
+   "ok": true,
+   "detail": {
+    "details": true,
+    "source_link": true,
+    "shot": "03_job_detail.png"
+   }
+  },
+  {
+   "name": "面试页岗位下拉 = 50",
+   "ok": true,
+   "detail": {
+    "option_count": 51,
+    "sample": [
+     "请选择已发布岗位",
+     "Unity中国 · AI Agent算法研发工程师",
+     "万兴科技 · AI应用开发工程师（Agent应用与平台方向）(J14852)"
+    ],
+    "shot": "04_interview_targets.png"
+   }
+  },
+  {
+   "name": "不同岗位带入 JD 上下文",
+   "ok": true,
+   "detail": {
+    "career_has_50_context": true,
+    "detail_len": 1943,
+    "shot": "05_jd_context.png"
+   }
+  },
+  {
+   "name": "选Java岗→建会话→三题作答与评价",
+   "ok": true,
+   "detail": {
+    "job": "上海华为技术有限公司 · JAVA后端开发工程师",
+    "auto_skill": "java_backend",
+    "btn_disabled": false,
+    "q1": "面试官\n 第 1 / 3 轮 \nJava 与并发\n适中\nDEMO 第1轮：接下来聊 Java 与并发，你会怎样解释其中的关键机制和一个异常边界？",
+    "completed": true
+   }
+  },
+  {
+   "name": "报告与历史列表",
+   "ok": true,
+   "detail": {
+    "report_list": true,
+    "shot": "07_reports.png"
+   }
+  },
+  {
+   "name": "刷新后历史恢复",
+   "ok": true,
+   "detail": {
+    "sessions_before": 3,
+    "sessions_after": 3,
+    "recovered": true
+   }
+  },
+  {
+   "name": "测试数据标识清楚",
+   "ok": true,
+   "detail": {
+    "no_fake_live": true,
+    "curated_visible": true,
+    "shot": "08_labels.png"
+   }
+  }
+ ],
+ "all_ok": true
+}

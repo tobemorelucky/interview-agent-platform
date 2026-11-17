@@ -1,0 +1,63 @@
+{
+ "package": "data\\r123_package",
+ "jd": {
+  "jd_50_count": 50,
+  "json_errors": [],
+  "manual_count": 50,
+  "manual_json_errors": [],
+  "companies": 21,
+  "unique_url": 47,
+  "unique_id": 50,
+  "incomplete": [],
+  "manual_hash_mismatch": [],
+  "cross_file_mismatch": [],
+  "txt_count": 50,
+  "txt_ids_missing": [],
+  "txt_ids_extra": []
+ },
+ "interviews": {
+  "raw_type": "list",
+  "question_count": 61,
+  "question_json_errors": [],
+  "answer_count": 183,
+  "answer_json_errors": [],
+  "question_ids_unique": 61,
+  "case_count": 3,
+  "per_case": {
+   "A_AI_APP": {
+    "questions": 20,
+    "has_key_points": 20,
+    "has_red_flags": 20
+   },
+   "B_JAVA_2ROUND": {
+    "questions": 21,
+    "has_key_points": 21,
+    "has_red_flags": 21
+   },
+   "C_AGENT_RAG": {
+    "questions": 20,
+    "has_key_points": 20,
+    "has_red_flags": 20
+   }
+  },
+  "questions_per_case_jsonl": {
+   "A_AI_APP": 20,
+   "B_JAVA_2ROUND": 21,
+   "C_AGENT_RAG": 20
+  },
+  "answers_per_variant": {
+   "strong": 61,
+   "blank": 61,
+   "incorrect": 61
+  },
+  "answers_per_case": {
+   "A_AI_APP": 60,
+   "B_JAVA_2ROUND": 63,
+   "C_AGENT_RAG": 60
+  },
+  "missing_variants": [],
+  "missing_variants_count": 0,
+  "answer_keys_not_in_questions": []
+ },
+ "verdict": "PASS"
+}

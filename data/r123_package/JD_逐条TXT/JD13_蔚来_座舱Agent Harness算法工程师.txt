@@ -1,0 +1,18 @@
+企业：蔚来
+岗位：座舱Agent Harness算法工程师
+招聘类型：2027校招
+
+【岗位职责】
+1. 研发车载Agentic Loop、工具系统、上下文压缩与会话持久化
+2. 优化实时语音和中断交互的时延、稳定性与容错
+3. 对接模型SFT/Agentic RL和执行追踪
+【任职要求】
+1. 计算机/AI相关专业
+2. Python/TypeScript/Java/C++/Go/Rust至少一种，Python异步优先
+3. 理解Prompt、RAG、MCP、Tool Calling、Agent框架
+4. 熟悉LangGraph/PydanticAI/OpenAI Agents SDK等更好
+5. 实时语音或WebSocket/LiveKit项目加分
+
+原始招聘来源：https://nio.jobs.feishu.cn/campus/position/7673027279396161801/detail
+
+说明：此为真实岗位信息的结构化整理版本，非官方网站逐字原文；当前开放情况未逐条核验。

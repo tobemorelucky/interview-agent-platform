@@ -1,0 +1,18 @@
+企业：麒麟软件
+岗位：云原生研发工程师
+招聘类型：2027校招
+
+【岗位职责】
+1. 研发容器运行时、容器网络/存储/安全组件
+2. 分析Kubernetes兼容性和性能故障
+3. 参与操作系统可观测平台建设
+【任职要求】
+1. 2027届计算机相关本硕博
+2. 熟悉Linux进程、系统调用和操作系统原理
+3. 使用Rust/Go/C/C++/Python至少一种
+4. 了解容器故障分析与perf/strace/bpftrace
+5. Docker/runc/containerd开发或开源贡献优先
+
+原始招聘来源：https://www.kylinos.cn/about/job/campusRecruitment/
+
+说明：此为真实岗位信息的结构化整理版本，非官方网站逐字原文；当前开放情况未逐条核验。

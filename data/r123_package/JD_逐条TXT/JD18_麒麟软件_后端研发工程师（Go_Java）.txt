@@ -1,0 +1,19 @@
+企业：麒麟软件
+岗位：后端研发工程师（Go/Java）
+招聘类型：2027校招
+
+【岗位职责】
+1. 开发移动操作系统管理平台和云端服务模块
+2. 使用Go/Java进行接口开发、联调及性能优化
+3. 处理服务安全、部署维护和代码评审
+【任职要求】
+1. 2027届计算机相关本硕博
+2. 掌握Go或Java和常见Web/并发编程
+3. 熟悉Linux、Git
+4. 了解MySQL、Redis及Docker
+5. 熟悉Spring Boot、Spring Cloud、go-zero或Kubernetes优先
+6. 消息队列、ELK经验加分
+
+原始招聘来源：https://www.kylinos.cn/about/job/campusRecruitment/
+
+说明：此为真实岗位信息的结构化整理版本，非官方网站逐字原文；当前开放情况未逐条核验。

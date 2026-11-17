@@ -1,0 +1,19 @@
+企业：麒麟软件
+岗位：Python研发工程师
+招聘类型：2027校招
+
+【岗位职责】
+1. 维护研发生产平台的Python后端服务
+2. 建设Jenkins/GitLab CI等构建、测试、发布流水线
+3. 集成SAST/DAST和AI Agent/MCP智能化工具
+【任职要求】
+1. 2027届计算机等本科及以上
+2. 熟练Python、asyncio与性能调优
+3. 熟悉Django/FastAPI及REST/gRPC
+4. 了解OWASP Top10与代码扫描
+5. 使用Docker/K8s和MySQL/PostgreSQL
+6. 智能体、CI/CD或Helm经验优先
+
+原始招聘来源：https://www.kylinos.cn/about/job/campusRecruitment/
+
+说明：此为真实岗位信息的结构化整理版本，非官方网站逐字原文；当前开放情况未逐条核验。

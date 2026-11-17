@@ -1,0 +1,18 @@
+企业：沐瞳科技
+岗位：全栈开发工程师
+招聘类型：2027校招
+
+【岗位职责】
+1. 开发Web前端业务模块和组件
+2. 逐步参与Node.js后端接口
+3. 优化业务文档、组件库和前端工程化工具链
+【任职要求】
+1. 扎实HTML/CSS/JavaScript和ES6基础
+2. 熟悉React或Vue
+3. 了解Node.js和接口联调
+4. 理解TypeScript、前端工程化与数据库基础
+5. 有独立项目、GitHub或Vibe Coding实践加分
+
+原始招聘来源：https://moonton.jobs.feishu.cn/campus/m/position/7668257490513070378/detail
+
+说明：此为真实岗位信息的结构化整理版本，非官方网站逐字原文；当前开放情况未逐条核验。
