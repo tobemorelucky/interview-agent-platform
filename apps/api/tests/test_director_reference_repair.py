@@ -166,7 +166,7 @@ def test_interview_can_commit_a_repaired_selection_once(database_url,mode):
             session=await core.create(uid,CreateSessionRequest(company_id=ctx['company_id'],job_id=ctx['job_id'],
                 interviewer_skill_id='java_backend',adaptive_interview=True,question_count=4,training_mode='FULL',
                 training_request_key=uuid4().hex))
-            assert session['context_snapshot']['adaptive_policy']['prompts']['interview_main']['version']=='2.3.3'
+            assert session['context_snapshot']['adaptive_policy']['prompts']['interview_main']['version']=='2.5.0'
             opening=await core.start(session['id'],uid)
             key=uuid4().hex;answer='Kafka 先处理业务再 ACK，我还没有完整设计数据库事务边界。'
             if mode!='repaired':

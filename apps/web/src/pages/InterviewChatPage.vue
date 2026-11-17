@@ -202,6 +202,13 @@ const memoryConsolidatedMap = ref<Record<number, boolean>>({})
 const displayItems = computed(() => buildDisplayItems(messages.value))
 const evaluatedQuestionIds = computed(() => displayItems.value.filter(item => item.type === 'EVALUATION').map(item => item.question_id))
 const canReview = (item: any) => canReviewQuestion(item.question_id, evaluatedQuestionIds.value)
+// A running mock interview must not turn into per-question marking: scores,
+// reference answers and target labels only appear once this session is over.
+// The evaluation still runs in the background and still drives the next question.
+const interviewFinished = computed(() => {
+  const status = activeSession()?.status
+  return status === 'COMPLETED' || status === 'COMPLETE' || Boolean(completion.value)
+})
 const inputText = ref("")
 const loading = ref(false)
 const sending = ref(false)
@@ -1070,12 +1077,12 @@ getInterviewTargets().then(async data => {
                     追问 {{ followUpOrdinal(questionList, item.question_id) ?? item.follow_up_count ?? '' }}{{ item.max_follow_ups ? ' / ' + item.max_follow_ups : '' }}
                   </span>
                   <span class="q-badge dynamic" v-else>动态问题</span>
-                  <span class="q-dimension" v-if="item.dimension">{{ displayLabel(item.dimension, "技术 / 项目") }}</span>
-                  <span class="q-difficulty" v-if="item.difficulty">{{ displayLabel(item.difficulty) }}</span>
+                  <span class="q-dimension" v-if="item.dimension && interviewFinished">{{ displayLabel(item.dimension, "技术 / 项目") }}</span>
+                  <span class="q-difficulty" v-if="item.difficulty && interviewFinished">{{ displayLabel(item.difficulty) }}</span>
                 </div>
                 <div class="q-body">{{ item.content }}</div>
-                <p v-if="item.interviewer_guidance" class="q-dimension">表达提示：{{ item.interviewer_guidance }}</p>
-                <div v-if="item.question_kind === 'DEEP_DIVE'" class="q-dimension">技术深挖</div>
+                <p v-if="item.interviewer_guidance && interviewFinished" class="q-dimension">表达提示：{{ item.interviewer_guidance }}</p>
+                <div v-if="item.question_kind === 'DEEP_DIVE' && interviewFinished" class="q-dimension">技术深挖</div>
                 <details v-if="canReview(item) && item.evidence?.evidence?.length">
                   <summary>查看候选人依据</summary>
                   <div v-for="e in item.evidence.evidence" :key="e.key">
@@ -1084,16 +1091,19 @@ getInterviewTargets().then(async data => {
                   </div>
                 </details>
                 <details v-if="canReview(item) && item.source_fingerprint" class="ux-technical"><summary>题目技术详情</summary>公共原题指纹：{{ item.source_fingerprint }}</details>
-                <button v-if="canReview(item)" class="q-answer-btn" @click="toggleAnswerForItem(item)">
+                <button v-if="canReview(item) && interviewFinished" class="q-answer-btn" @click="toggleAnswerForItem(item)">
                   {{ answerVisibleMap[item.id] ? '收起答案' : '展开参考答案' }}
                 </button>
-                <ReferenceAnswerView v-if="canReview(item) && answerVisibleMap[item.id]" :reference="referenceAnswerMap[item.id]" :fallback="standardAnswerMap[item.id]" />
+                <ReferenceAnswerView v-if="canReview(item) && interviewFinished && answerVisibleMap[item.id]" :reference="referenceAnswerMap[item.id]" :fallback="standardAnswerMap[item.id]" />
               </div>
             </div>
 
-            <!-- EVALUATION: collapsible card -->
+            <!-- EVALUATION: live mode shows only "noted"; the marking appears after the interview -->
             <div v-else-if="item.type === 'EVALUATION'" class="message-row assistant">
-              <div class="message-bubble eval-bubble" @click="toggleEvalCollapse(item.id)">
+              <div v-if="!interviewFinished" class="message-bubble eval-ack">
+                面试官已记下这段回答，继续下一题。
+              </div>
+              <div v-else class="message-bubble eval-bubble" @click="toggleEvalCollapse(item.id)">
                 <div class="eval-summary">
                   面试官点评 · 得分 {{ item.score ?? '?' }}/5
                   <span class="eval-toggle">{{ evalCollapsed[item.id] !== false ? '▸ 展开' : '▾ 收起' }}</span>
@@ -1776,6 +1786,13 @@ getInterviewTargets().then(async data => {
 .dynamic { background: #f56c6c !important; }
 
 /* Evaluation collapsible card */
+.eval-ack {
+  background: transparent !important;
+  border: 1px dashed var(--line) !important;
+  color: var(--muted);
+  font-size: 13px;
+  max-width: 90% !important;
+}
 .eval-bubble {
   background: #fdf6ec !important;
   border: 1px solid #faecd8 !important;

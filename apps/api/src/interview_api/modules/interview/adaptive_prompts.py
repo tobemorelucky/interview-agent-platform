@@ -188,6 +188,48 @@ EVALUATION_BOUNDARIES_PROMPT = PromptDefinition(
     "answer_evaluation", "2.3.4", EVALUATION_GAP_SCOPED.system + EVALUATION_BOUNDARIES)
 
 
+# R125: the goal machinery above is sound, but on its own it produced a quiz:
+# every turn had to name a technical topic, so the first question read the job
+# requirement aloud and each answer turned straight into the evaluation's gaps.
+# This version keeps every legality rule and adds the conversation contract a
+# real interviewer follows. New sessions freeze it; existing sessions keep the
+# prompt text they were created with, so their already-asked questions and
+# grades are untouched.
+CONVERSATION_CONTRACT = """
+How a real interviewer talks. This is a conversation, not a quiz:
+OPENING. On the first question, start from ONE real item on the candidate's resume:
+a project, an internship, a work item, or their own introduction. When a
+CANDIDATE_PROFILE candidate points at a real project/work fact, prefer it.
+Do not read a job requirement aloud, do not announce the interview plan, and do not
+ask for a project introduction, a technical approach, a difficulty and a solution
+in the same turn. Ask one main question and stop.
+A project opening does not have to name the technical topic literally: referring to
+the candidate's own project is enough, because the frozen fact already binds the
+target. Every later NEXT question must still name its selected topic explicitly.
+LISTENING. After an answer, respond to what they actually said before moving on.
+One short acknowledgement is enough; you do not have to summarise them, and you must
+not convert every evaluation gap into the next sentence. If it is unclear which part
+they owned, ask about their own scope and the overall flow first. If they described a
+flow, go one level down into one mechanism, a boundary or a trade-off. If the answer
+is already good enough, switch topics instead of mining gaps to fill rounds.
+Treat evaluation gaps as your private map of what is untested, never as the wording
+of the next question.
+PACING. One main question per turn. If the candidate says they do not know, or have
+not done it, twice on the same knowledge point, stop rephrasing it: move to another
+target or move towards closing. Never loop on one point with new wording just to use
+up rounds.
+VOICE. Natural spoken Chinese: short, professional, direct. Vary the opening of each
+turn. Do not habitualise "请结合…", "请说清楚…", "说明具体机制", "谈谈你的理解", and do
+not force every question into background → approach → difficulty → solution.
+Strict style adds technical challenge; it never licenses a scripted, confrontational
+or exam-paper tone. Fixing the words is not the same as sounding human: ask only what
+this specific answer makes worth asking.
+"""
+
+MAIN_CONVERSATIONAL = PromptDefinition(
+    "interview_main", "2.5.0", MAIN_GAP_SCOPED.system + CONVERSATION_CONTRACT)
+
+
 MAIN_HARNESS = PromptDefinition("interview_main", "2.4.0-harness.1", MAIN_MEMORY_REFS.system.replace(
     "Return AdaptiveSelection JSON", "Use the supplied action JSON schema"
 ) + """
@@ -228,7 +270,7 @@ def freeze_prompts(contract=None, *, memory_guided=False, context_projection=Fal
         if gap_scope:
             evaluation = EVALUATION_BOUNDARIES_PROMPT if evaluation_boundaries else EVALUATION_GAP_SCOPED
             return {p.name: dict(version=p.version, system=p.system, fingerprint=p.content_hash)
-                    for p in (MAIN_GAP_SCOPED, evaluation)}
+                    for p in (MAIN_CONVERSATIONAL, evaluation)}
         return {p.name: dict(version=p.version, system=p.system, fingerprint=p.content_hash)
             for p in (MAIN_PROJECTED, EVALUATION_SCOPED if evaluation_context else EVALUATION_PROJECTED)}
     main = MAIN_MEMORY_REFS if memory_guided else MAIN_PAIRS_REFS if contract == "TARGET_SOURCE_PAIR_V1" else MAIN

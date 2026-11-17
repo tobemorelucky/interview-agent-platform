@@ -424,7 +424,7 @@ def test_frozen_legacy_and_pair_sessions_execute_without_upgrading_history(datab
                                              (old_memory, "2.2.0", "AdaptiveSelection"),
                                              (old_references, "2.2.1", "AdaptiveSelection"),
                                              (old_projected, "2.3.1", "AdaptiveSelection"),
-                                             (modern, "2.3.3", "AdaptiveSelection")]:
+                                             (modern, "2.5.0", "AdaptiveSelection")]:
                 pinned = deepcopy(detail["context_snapshot"])
                 sid = detail["id"]
                 question = await core.start(sid, uid)

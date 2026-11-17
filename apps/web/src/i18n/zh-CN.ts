@@ -1,10 +1,11 @@
 /** Presentation only: API/database enums and deterministic policy remain unchanged. */
+// R125: the main flow is upload resume → find a job → interview → read the report.
+// "自定义岗位" and "专项训练" keep their routes and data but no longer sit in the
+// top nav: they are reached from the job library and from a finished report.
 export const userNavigation = [
   { label: '首页', path: '/dashboard' }, { label: '我的简历', path: '/resumes' },
   { label: '我的画像', path: '/profile' }, { label: '岗位推荐', path: '/jobs/matches' },
-  { label: '自定义岗位', path: '/jobs/targets' },
   { label: '岗位库', path: '/career' },
-  { label: '专项训练', path: '/training' },
   { label: '模拟面试', path: '/interview' }, { label: '面试报告', path: '/interview/reports' },
   { label: '成长记录', path: '/memory' },
 ]
@@ -31,6 +32,8 @@ export const labels: Record<string, string> = {
   MENTIONED: '材料提及', DEMONSTRATED: '有具体使用依据', STRONG_EVIDENCE: '多处具体使用依据',
   SUPPORTED: '有匹配证据', PARTIAL: '部分匹配', NO_EVIDENCE: '当前材料未提供证据', NOT_APPLICABLE: '不适用',
   EASY: '基础', MEDIUM: '适中', HARD: '深入', LOW: '较低', HIGH: '较高',
+  RULE_READY: '基础排序已就绪', AI_RUNNING: 'AI 解读生成中', AI_COMPLETED: 'AI 解读已完成',
+  AI_FAILED_RULE_READY: 'AI 解读未完成 · 基础排序可用', NO_RESULT: '没有可推荐结果',
   RESUME: '简历依据', USER_CONFIRMED: '本人确认', AGENT: 'Agent 抽取', REPLAY_FIXTURE: 'Replay 回放模式',
   PUBLIC_QUESTION: '公共题库', JOB_REQUIREMENT: '岗位要求', CANDIDATE_PROFILE: '候选人画像', DYNAMIC_GENERATED: '动态问题',
   GOAL: '求职目标', PREFERENCE: '偏好', EXPERIENCE: '经历', SKILL_OBSERVATION: '本场表现观察', PREPARATION_FOCUS: '准备重点',
@@ -98,6 +101,13 @@ export const errorLabels: Record<string, string> = {
   INDEPENDENT_RECHECK_STYLE: '独立复测请使用标准或严格风格，避免开场提示影响验证。',
   JOB_NOT_AVAILABLE: '该岗位当前不可用，请选择其他岗位。', JOB_UNAVAILABLE: '该岗位当前不可用，请选择其他岗位。',
   COVERAGE_INSUFFICIENT: '当前公开岗位数据不足，暂时无法生成可靠推荐。',
+  MATCH_INPUT_BUDGET: '这轮岗位材料超过了单次解读的输入上限，所以没有调用模型；下面的基础排序是规则算出来的，完整可用，也没有产生模型费用。',
+  MATCH_COVERAGE_INSUFFICIENT: '当前岗位库里没有可以和画像对照的岗位，这一轮没有调用模型。',
+  MATCH_RUNNING: '这次匹配正在生成，稍后刷新即可查看，重复点击不会重复扣费。',
+  MATCH_NOT_FOUND: '这条匹配记录不存在或已不可用，请在历史推荐里选择其他记录。',
+  MATCH_REQUEST_CONFLICT: '同一个请求标识已经用于不同的筛选条件，请重新发起匹配。',
+  MATCH_PROMPT_VERSION_UNAVAILABLE: '这条历史匹配的规则版本已不可用；为避免用新规则覆盖旧输入，本轮没有生成解读。',
+  MATCH_ATTEMPT_CONFLICT: '这次匹配的生成状态已经变化，请刷新后再试。',
   NETWORK_ERROR: '网络连接异常，请检查连接后重试。',
   UNAUTHORIZED: '登录已失效，请重新登录。', INVALID_CREDENTIALS: '邮箱或密码不正确，请检查后重试。',
   FORBIDDEN: '没有访问权限，请联系管理员。', NOT_FOUND: '内容不存在或已不可用。',

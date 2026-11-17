@@ -54,6 +54,23 @@ CAREER_CHOICE = (
 )
 TOPIC_SIGNOFF = re.compile(r"^\s*[^，。？！；,.?!;\n]{1,24}?(?:这块|这部分|这个话题)"
                            r"先(?:聊到这(?:里)?|放一放|告一段落)[，。,.]\s*(?=\S)")
+# Resume sections that can legitimately open an interview. Education/contact
+# facts stay out: a project opening must come from real work, not from a degree.
+PROJECT_FIELDS = ("projects", "work_experience", "internship_experience")
+# What makes a first question a *project* opening rather than a topic switch:
+# it visibly refers to something the candidate actually did. The frozen fact it
+# is bound to still supplies the technical target, so this is a reference test,
+# not a replacement for provenance.
+PROJECT_REFERENCE = re.compile(
+    r"项目|作品|实习|工作经历|简历|这段经历|你(?:做过|写的|实现的|负责的)")
+
+
+def is_project_fact(field_path):
+    return str(field_path or "").split(".")[0] in PROJECT_FIELDS
+
+
+def refers_to_candidate_work(text):
+    return bool(PROJECT_REFERENCE.search((text or "").casefold()))
 
 
 def classify(text):
@@ -181,7 +198,8 @@ def validate_topic(artifact, policy):
     if actual["topic"] in pacing["blocked_topics"]:
         raise AppError("INTERVIEW_TOPIC_COOLDOWN", "该主题已连续深入，请切换其他技术主题", 422)
     target = policy.get("target_topic")
-    if policy.get("source_type") == "CANDIDATE_PROFILE" and target in TOPICS and target not in mentioned_topics(artifact.question):
+    if (policy.get("source_type") == "CANDIDATE_PROFILE" and target in TOPICS
+            and target not in mentioned_topics(artifact.question) and not policy.get("project_opening")):
         raise AppError("INTERVIEW_TOPIC_REQUIRED", "新问题未围绕已选择的技术主题", 422)
     if wording_fingerprint(artifact.question) in pacing["asked_wording_fingerprints"]:
         raise AppError("INTERVIEW_REPEATED_QUESTION", "不能重复已经问过的问题", 422)

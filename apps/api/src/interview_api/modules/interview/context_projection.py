@@ -109,8 +109,11 @@ def model_payload(payload, route):
     if scoring not in (None, SCORING_VERSION):
         raise AppError('SCORING_CONTEXT_UNSUPPORTED', '本场评分语境版本不可用，未自动升级', 409)
     main_version = policy['prompts']['interview_main']['version']
+    # 2.5.0 keeps the 2.3.3 decision/project shape and adds the conversation
+    # contract, so both remain valid for the same projection. Anything else is a
+    # mixed pair and is refused rather than guessed.
     expected_main = (MAIN_HARNESS.version, MAIN_HARNESS_CONTEXT_HINTS.version) if harness else (
-        ('2.3.3',) if gap_scope else ('2.3.1',))
+        ('2.5.0', '2.3.3') if gap_scope else ('2.3.1',))
     # 2.3.4 adds the five-dimension boundary contract. It is only accepted when the
     # session froze that contract: an older session must keep reading 2.3.3 with the
     # exact prompt it was scored under, and a mixed pair is refused, not upgraded.

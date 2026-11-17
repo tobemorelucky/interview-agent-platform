@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import client from '../api/client';
-type Job = { company_id: number; company: string; job_id: number; title: string; source_url?: string; source_type?: string; updated_at: string; published_at?: string };
+type Job = { company_id: number; company: string; job_id: number; title: string; source_url?: string; source_type?: string; updated_at: string; published_at?: string;
+  direction?: string | null; direction_label?: string | null; direction_labels?: string[]; direction_basis?: string; direction_reason?: string; tech_tags?: string[] };
 type Experience = { id: number; company?: string; title?: string; summary?: string; source_url?: string; updated_at: string };
 type Detail = Job & {
   description: string; requirements: { id: number; text: string; type?: string; importance?: string }[];
@@ -24,6 +25,12 @@ const DIRECTIONS = [
   { key: 'embedded', label: '嵌入式 / 系统' },
 ];
 const pages = computed(() => Math.max(1, Math.ceil(total.value / pageSize)));
+// A job can genuinely span directions; show the extras without losing the main one.
+const extraDirections = computed(() => {
+  const item = detail.value
+  if (!item?.direction_labels) return '';
+  return item.direction_labels.filter(label => label !== item.direction_label).join('、');
+});
 const hasFilter = computed(() => Boolean(q.value || direction.value || companyId.value !== ''));
 
 let timer: ReturnType<typeof setTimeout> | undefined;
@@ -89,16 +96,28 @@ onMounted(() => { loadJobs(); loadMeta(); });
     <div class="chips" role="group" aria-label="岗位方向">
       <button v-for="d in DIRECTIONS" :key="d.key" :class="['chip', { active: direction === d.key }]" @click="direction = d.key">{{ d.label }}</button>
     </div>
+    <!-- 自定义岗位从岗位库进入：找不到对应岗位时，直接粘贴 JD 定向准备。 -->
+    <p class="jd-entry">
+      这里没有你想投的岗位？
+      <router-link to="/jobs/targets">粘贴一份 JD，用它做定向准备 →</router-link>
+    </p>
 
     <p v-if="error" role="alert" class="error">{{ error }} <button class="ghost" @click="loadJobs">重试</button></p>
 
     <div v-if="loading" class="skeleton" role="status">正在加载岗位…</div>
-    <p v-else-if="!jobs.length" class="empty">没有符合条件的岗位。换个关键字，或清空筛选查看全部 {{ total === 0 ? '' : '' }}岗位。</p>
+    <p v-else-if="!jobs.length" class="empty">
+      没有符合条件的岗位。换个关键字或清空筛选；如果你要投的岗位不在这里，
+      <router-link to="/jobs/targets">粘贴 JD 直接准备</router-link>。
+    </p>
 
     <div v-else class="grid">
       <button v-for="job in jobs" :key="job.job_id" class="job-card" @click="show(job)">
         <span class="company">{{ job.company }}</span>
         <strong>{{ job.title }}</strong>
+        <span v-if="job.direction_label" class="direction">
+          {{ job.direction_label }}
+          <template v-if="job.direction_labels && job.direction_labels.length > 1"> · 兼 {{ job.direction_labels.filter(l => l !== job.direction_label).join(' / ') }}</template>
+        </span>
         <span class="meta">{{ sourceLabel(job.source_type) }} · 更新于 {{ date(job.updated_at) }}</span>
         <span class="more">查看职责与要求 →</span>
       </button>
@@ -137,6 +156,11 @@ onMounted(() => { loadJobs(); loadMeta(); });
           {{ sourceLabel(detail.source_type) }} · 更新于 {{ date(detail.updated_at) }}
           <a v-if="source(detail.source_url)" :href="source(detail.source_url)" target="_blank" rel="noopener noreferrer">查看原始来源</a>
         </p>
+        <p v-if="detail.direction_label" class="meta">
+          主要方向：<strong>{{ detail.direction_label }}</strong>
+          <template v-if="extraDirections">（同时涉及 {{ extraDirections }}）</template>          · {{ detail.direction_basis === 'TITLE' ? '按岗位名称判定' : detail.direction_basis === 'DUTY' ? '按核心职责判定' : '仅任职要求提及' }}
+        </p>
+        <p v-if="detail.tech_tags && detail.tech_tags.length" class="meta">技术标签：{{ detail.tech_tags.join('、') }}</p>
         <template v-if="detail.has_sections">
           <h3>岗位职责</h3>
           <ul><li v-for="(item, i) in detail.responsibilities" :key="`r${i}`">{{ item }}</li></ul>
@@ -167,7 +191,9 @@ onMounted(() => { loadJobs(); loadMeta(); });
 .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin: 18px 0 10px; }
 .search { flex: 1 1 320px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; }
 select { padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: white; }
-.chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.jd-entry { margin: 0 0 18px; font-size: 13px; color: var(--muted); }
+.jd-entry a { color: var(--brand); }
 .chip { border: 1px solid var(--line); background: white; border-radius: 999px; padding: 6px 14px; cursor: pointer; color: var(--ink); }
 .chip.active { background: var(--brand); border-color: var(--brand); color: white; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
@@ -176,6 +202,7 @@ select { padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; 
 .job-card:hover { border-color: var(--brand); box-shadow: 0 4px 14px rgba(49, 91, 229, .08); }
 .job-card strong { font-size: 16px; }
 .company { color: var(--muted); font-size: 13px; }
+.direction { align-self: flex-start; background: var(--soft); color: var(--brand); border-radius: 999px; padding: 2px 10px; font-size: 12px; }
 .meta { color: var(--muted); font-size: 13px; }
 .more { color: var(--brand); font-size: 13px; margin-top: 4px; }
 .pager { display: flex; gap: 14px; align-items: center; justify-content: center; margin: 22px 0; }

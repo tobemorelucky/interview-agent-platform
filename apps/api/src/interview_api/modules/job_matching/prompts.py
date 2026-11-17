@@ -15,7 +15,7 @@ Preparation focus chooses these gaps only. Unknowns are exact supplied unknown_c
 Approved preference/goal is qualitative preference only, never skill/education/major proof.
 Rank based on provided evidence and explicit/user-confirmed preference, not inferred behaviors.
 """)
-MATCH_PROMPT = PromptDefinition(JOB_MATCHING_ROUTE, "1.0.1", LEGACY_MATCH_PROMPT.system + """
+PROMPT_V101 = PromptDefinition(JOB_MATCHING_ROUTE, "1.0.1", LEGACY_MATCH_PROMPT.system + """
 Be selective, not exhaustive: choose at most three core support associations per job,
 one per requirement. Put SUPPORTED highlights in matched_strengths; put additional PARTIAL
 associations in alignment_reasons. Do not repeat a selected association in both lists.
@@ -23,6 +23,15 @@ Copy the selected association's exact explanation and evidence keys; do not rewr
 Still return ALL current evidence gap IDs and ALL unknown constraint names without hiding any.
 Preparation focus chooses at most three of those real gaps. Do not reproduce resume/JD text.
 """)
+MATCH_PROMPT = PromptDefinition(JOB_MATCHING_ROUTE, "1.0.2", PROMPT_V101.system + """
+Each evidence row carries the strongest bounded set of support associations; a row's
+supports are a sample of a larger matrix, not a claim that no other support exists.
+Never treat an absent association as NO_EVIDENCE, and never invent an association,
+evidence key or explanation that is not present in this payload.
+evidence_counts and fit_band_ceiling are server-computed and authoritative.
+""")
+
+_HISTORICAL = {p.version: p for p in (LEGACY_MATCH_PROMPT, PROMPT_V101)}
 
 
 class MatchPromptRegistry(PromptRegistry):
@@ -32,5 +41,6 @@ class MatchPromptRegistry(PromptRegistry):
     def get(self, name, version=None):
         version = version or self.version or MATCH_PROMPT.version
         if name == MATCH_PROMPT.name and version == MATCH_PROMPT.version: return MATCH_PROMPT
-        if name == LEGACY_MATCH_PROMPT.name and version == LEGACY_MATCH_PROMPT.version: return LEGACY_MATCH_PROMPT
+        # Frozen historical versions stay resolvable so old runs keep their own prompt.
+        if name == MATCH_PROMPT.name and version in _HISTORICAL: return _HISTORICAL[version]
         raise KeyError(f"Unknown matching prompt {name}@{version}")

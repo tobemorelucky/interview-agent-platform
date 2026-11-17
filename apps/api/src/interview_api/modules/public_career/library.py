@@ -10,18 +10,8 @@ from interview_api.core.url_safety import canonicalize_public_url, URLSafetyErro
 
 APPROVED = ("APPROVED", "AUTO_APPROVED")
 
-# User-facing direction filters for the public job search. These are literal
-# keyword sets over title/body, not inferred job families: curated JDs carry no
-# structured family field, and guessing one would make the filter unverifiable.
-DIRECTIONS = {
-    "ai_agent": ("AI", "Agent", "大模型", "LLM", "RAG", "机器学习", "深度学习", "算法"),
-    "java": ("Java", "后端", "服务端", "Spring"),
-    "python": ("Python",),
-    "frontend": ("前端", "Vue", "React", "Web"),
-    "test": ("测试", "QA"),
-    "data": ("数据", "大数据", "数仓"),
-    "embedded": ("嵌入式", "操作系统", "内核", "C++"),
-}
+# Direction filtering now lives in ``classification.py``: it classifies the role
+# (title first, duties second) instead of matching keywords inside the whole JD.
 
 
 def published_jobs():
@@ -37,8 +27,22 @@ def published_jobs():
 
 def job_projection(company, job, jd, source):
     declared = (jd.metadata_json or {}).get('web_source') or (jd.metadata_json or {}).get('manual_source') or {}
+    sections = split_jd_sections(jd.raw_text)
+    # Direction is a classification of the role, not a keyword hit in the body:
+    # title first, then the duties section; qualifications only add a tag.
+    from interview_api.modules.public_career.classification import RULES, classify
+    classified = classify(job.canonical_title, sections["responsibilities"], sections["qualifications"])
+    tech = []
+    for direction, hit in classified["evidence"].items():
+        if direction == classified["primary"]:
+            continue
+        tech.extend(hit["duties"] + hit["qualifications"])
     return dict(company_id=company.id, company=company.canonical_name, job_id=job.id,
-        title=job.canonical_title, jd_version_id=jd.id, version=jd.version_number,
+        title=job.canonical_title, direction=classified["primary"], direction_label=classified["label"],
+        directions=classified["directions"], direction_labels=[RULES[key]["label"] for key in classified["directions"]],
+        direction_basis=classified["basis"], direction_reason=classified["reason"],
+        tech_tags=sorted(dict.fromkeys(tech))[:8], has_sections=sections["has_sections"],
+        jd_version_id=jd.id, version=jd.version_number,
         source_url=source.canonical_url if source else None, source_type=declared.get('source_type') or (source.source_type if source else None),
         updated_at=jd.observed_at, published_at=jd.published_at)
 
@@ -80,8 +84,9 @@ class PublicCareerLibrary:
     async def search(self, limit=20, offset=0, q=None, company_id=None, direction=None):
         """Search every published job, not just the current page.
 
-        SQL LIKE over company/title/body is deliberate: the library is small and
-        bounded, and this keeps the result explainable (no semantic guess).
+        Free text is a SQL LIKE over company/title/body. A *direction* is not a
+        keyword: it filters on the job's classified main direction, which is why
+        a backend role that merely mentions "Agent" no longer answers an AI query.
         """
         from sqlalchemy import or_
         query = published_jobs()
@@ -93,17 +98,16 @@ class PublicCareerLibrary:
                                   JobDescriptionVersion.raw_text.ilike(like)))
         if company_id:
             conditions.append(Company.id == company_id)
-        keywords = DIRECTIONS.get(direction or "", ())
-        if keywords:
-            conditions.append(or_(*[or_(Job.canonical_title.ilike(f"%{word}%"),
-                                         JobDescriptionVersion.raw_text.ilike(f"%{word}%"))
-                                    for word in keywords]))
         if conditions:
             query = query.where(*conditions)
-        total = (await self.db.execute(select(func.count()).select_from(query.subquery()))).scalar_one()
-        rows = (await self.db.execute(query.order_by(Company.canonical_name, Job.id)
-                                      .limit(limit).offset(offset))).all()
-        return dict(items=[job_projection(*row) for row in rows], total=total, limit=limit, offset=offset)
+        rows = (await self.db.execute(query.order_by(Company.canonical_name, Job.id))).all()
+        items = [job_projection(*row) for row in rows]
+        if direction:
+            from interview_api.modules.public_career.classification import matches
+            items = [item for item in items if matches(direction, item)]
+        # The library is small and bounded; filter first, then page, so the count
+        # matches what the classifier actually selected.
+        return dict(items=items[offset:offset + limit], total=len(items), limit=limit, offset=offset)
 
     async def companies(self):
         rows = (await self.db.execute(published_jobs().with_only_columns(

@@ -31,15 +31,17 @@ export interface MatchCandidate {
     current_evidence_gaps: MatrixRow[]; preparation_focus: MatrixRow[]; unknowns_to_confirm: string[]
   } }
 }
+export type ResultState = 'RULE_READY' | 'AI_RUNNING' | 'AI_COMPLETED' | 'AI_FAILED_RULE_READY' | 'NO_RESULT'
 export interface MatchRun {
   id: number; status: string; error: string | null; producer: string; provider: string | null
+  result_state: ResultState; rule_ready: boolean; ai_attempted: boolean
   model: string | null; profile_version_id: number; policy_version: string; prompt_version: string
   input_fingerprint: string; created_at: string; candidates: MatchCandidate[]; excluded_candidates: MatchCandidate[]
   coverage: { status: string; candidate_count: number; excluded_count: number; top_n: number; window_may_be_truncated: boolean; message: string; generation_mode?: string; reused_from_run_id?: number; ranking_confidence?: 'EVIDENCE' | 'NONE' }
   snapshot: { data_mode: string; profile: { evidence: MatchEvidence[]; facts?: { id: number; label: string; category: string; evidence_state?: string | null }[] }; request: { filters: MatchFilters }; approved_preferences: { items: { id: number; content: string }[]; omitted_count: number } }
   attempts: { id: number; status: string; error: string | null; agent_run_id: number | null }[]
 }
-export type MatchHistory = Pick<MatchRun, 'id' | 'status' | 'producer' | 'profile_version_id' | 'created_at' | 'coverage'>
+export type MatchHistory = Pick<MatchRun, 'id' | 'status' | 'producer' | 'profile_version_id' | 'created_at' | 'coverage' | 'result_state' | 'error'>
 export { fitLabels, eligibilityLabels } from '../i18n/zh-CN.ts'
 export function interviewTarget(candidate: Pick<MatchCandidate, 'company_id' | 'job_id' | 'interviewer_skill_recommendation'>) {
   const skill = candidate.interviewer_skill_recommendation

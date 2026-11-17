@@ -1,6 +1,6 @@
 """Frozen runs, short claims/commits and atomic publication; never changes M2–M5."""
 from datetime import datetime, timezone, timedelta
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
 from interview_api.core.config import settings
 from interview_api.core.exceptions import AppError
@@ -153,11 +153,33 @@ class JobMatchingService:
                 run = await self.owned(db, user_id, run_id, True)
                 attempt = await db.get(JobMatchAttempt, attempt_id)
                 if run.status == "RUNNING" and run.attempt_version == token:
-                    run.status, run.error = "FAILED", getattr(exc, "code", type(exc).__name__)
-                    attempt.status, attempt.error, attempt.completed_at = "FAILED", run.error, datetime.now(timezone.utc)
+                    code = getattr(exc, "code", type(exc).__name__)
+                    # Deterministic ranking is already persisted. A failed AI layer must
+                    # never hide it, so the run stays READY (rule result usable) and the
+                    # failure is recorded on the attempt plus the run's error field.
+                    usable = await db.scalar(select(func.count()).select_from(JobMatchCandidate).where(
+                        JobMatchCandidate.run_id == run.id, JobMatchCandidate.eligibility_status != "NOT_SATISFIED"))
+                    run.status = "READY" if usable else "FAILED"
+                    run.error = code
+                    attempt.status, attempt.error, attempt.completed_at = "FAILED", code, datetime.now(timezone.utc)
                     await db.commit()
                     return await self.serialize(db, run)
                 raise AppError("MATCH_ATTEMPT_CONFLICT", "旧尝试未覆盖当前结果", 409) from exc
+
+    @staticmethod
+    def result_state(status, producer, error, usable):
+        """Separate "deterministic ranking exists" from "AI interpretation ran".
+
+        No schema change: the value is derived from frozen run columns, so old rows
+        keep their stored status and are read, never rewritten.
+        """
+        if status == "COMPLETED":
+            return "AI_COMPLETED"
+        if status == "RUNNING":
+            return "AI_RUNNING"
+        if usable:
+            return "AI_FAILED_RULE_READY" if error else "RULE_READY"
+        return "NO_RESULT"
 
     async def serialize(self, db, run):
         coverage = dict(run.coverage_json)
@@ -172,11 +194,14 @@ class JobMatchingService:
             return attach_to_match({**c.input_json, "id": c.id, "pre_rank": c.pre_rank, "agent_rank": c.agent_rank, "final_rank": c.final_rank,
                 "recommendation": dict(id=r.id, fit_band=r.fit_band, analysis=r.analysis_json) if r else None})
         attempts = list((await db.scalars(select(JobMatchAttempt).where(JobMatchAttempt.run_id == run.id).order_by(JobMatchAttempt.id))).all())
+        usable = [c for c in rows if c.eligibility_status != "NOT_SATISFIED"]
         return dict(id=run.id, status=run.status, error=run.error, producer=run.producer, provider=run.provider, model=run.model,
+            result_state=self.result_state(run.status, run.producer, run.error, bool(usable)),
+            rule_ready=bool(usable), ai_attempted=run.attempt_version > 0,
             profile_version_id=run.candidate_profile_version_id, policy_version=run.policy_version, prompt_version=run.prompt_version,
             input_fingerprint=run.input_fingerprint, snapshot=run.input_snapshot_json, coverage=coverage,
             created_at=run.created_at.isoformat(), completed_at=run.completed_at.isoformat() if run.completed_at else None,
-            candidates=[view(c) for c in rows if c.eligibility_status != "NOT_SATISFIED"],
+            candidates=[view(c) for c in usable],
             excluded_candidates=[view(c) for c in rows if c.eligibility_status == "NOT_SATISFIED"],
             attempts=[dict(id=a.id, status=a.status, error=a.error, agent_run_id=a.agent_run_id, attempt_number=a.attempt_number) for a in attempts])
 
@@ -186,5 +211,11 @@ class JobMatchingService:
     async def history(self, user_id, limit=20, offset=0):
         async with self.factory() as db:
             rows = (await db.scalars(select(JobMatchRun).where(JobMatchRun.user_id == user_id).order_by(JobMatchRun.id.desc()).offset(offset).limit(limit))).all()
+            usable = set()
+            if rows:
+                usable = {r for (r,) in (await db.execute(select(JobMatchCandidate.run_id).where(
+                    JobMatchCandidate.run_id.in_([r.id for r in rows]),
+                    JobMatchCandidate.eligibility_status != "NOT_SATISFIED").distinct())).all()}
             return [dict(id=r.id, status=r.status, producer=r.producer, profile_version_id=r.candidate_profile_version_id,
+                error=r.error, result_state=self.result_state(r.status, r.producer, r.error, r.id in usable),
                 created_at=r.created_at.isoformat(), coverage=r.coverage_json) for r in rows]

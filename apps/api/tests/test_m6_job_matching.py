@@ -193,7 +193,12 @@ def test_repair_and_hard_fail_retry(database_url, failure):
         body = artifact(created)
         provider.responses.extend([json.dumps(body, ensure_ascii=False)[:-1], "not json" if failure else body])
         final = await core.generate(uid, created["id"])
-        assert final["status"] == ("FAILED" if failure else "COMPLETED") and provider.calls == 2
+        assert provider.calls == 2
+        if failure:
+            # R125: a hard AI failure keeps the deterministic ranking readable.
+            assert final["status"] == "READY" and final["result_state"] == "AI_FAILED_RULE_READY"
+        else:
+            assert final["status"] == "COMPLETED"
         async with factory() as db:
             attempt = await db.scalar(select(JobMatchAttempt).where(JobMatchAttempt.run_id == created["id"]))
             step = await db.scalar(select(ExperienceAgentStepRun).where(ExperienceAgentStepRun.agent_run_id == attempt.agent_run_id))
@@ -342,8 +347,12 @@ def test_failed_attempt_keeps_inputs_and_no_partial_recommendations(database_url
                 return await original(self, *args, **kwargs)
             monkeypatch.setattr(AsyncSession, "flush", fail_flush)
         failed = await core.generate(uid, created["id"])
-        assert failed["status"] == "FAILED" and failed["snapshot"] == created["snapshot"]
+        # R125: the deterministic ranking stays usable; only the AI layer failed.
+        assert failed["status"] == "READY" and failed["snapshot"] == created["snapshot"]
+        assert failed["result_state"] == "AI_FAILED_RULE_READY" and failed["rule_ready"] is True
+        assert failed["error"] and failed["candidates"]
         assert all(c["recommendation"] is None and c["agent_rank"] is None and c["final_rank"] is None for c in failed["candidates"])
+        assert [c["job_id"] for c in failed["candidates"]] == [c["job_id"] for c in created["candidates"]]
         assert failed["attempts"][0]["status"] == "FAILED"
         if case == "budget": assert provider.calls == 0
     asyncio.run(run_with_database(database_url, run))

@@ -9,7 +9,8 @@ from interview_api.core.exceptions import AppError
 from interview_api.modules.candidate_profile.evidence import digest
 from interview_api.modules.interview.artifacts import StrictArtifact, QuestionArtifact, EvaluationArtifact
 from interview_api.modules.interview.topics import (
-    mentioned_topics, is_hard_condition, coverage, topic_terms, topic_diagnostic)
+    mentioned_topics, is_hard_condition, coverage, topic_terms, topic_diagnostic,
+    is_project_fact, refers_to_candidate_work)
 
 VERSION = "2.1.0"
 LABELS = dict(java="Java 与并发", mysql_consistency="数据库事务与一致性", redis="缓存工程",
@@ -391,6 +392,25 @@ def planning_payload(context, questions, active, plan, *, answer=None, answer_id
     return bounded(payload, maximum=192_000 if enabled(payload) else 96_000)
 
 
+def is_project_opening(payload, source, artifact):
+    """A natural first question taken from the candidate's own real project.
+
+    This relaxes ONLY the "name the topic literally" wording check, and only for
+    the opening question whose source is a frozen project/work fact that already
+    binds the selected target. Provenance, target legality and evidence binding
+    are all still enforced by the caller and by ``validate_question``.
+    """
+    if artifact.strategy != "NEXT" or payload.get("current_question"):
+        return False
+    if (source or {}).get("source_type") != "CANDIDATE_PROFILE":
+        return False
+    fact = next((f for f in payload["snapshot"].get("candidate_facts") or []
+                 if f["id"] == source.get("source_id")), None)
+    if fact is None or not is_project_fact(fact.get("field_path")):
+        return False
+    return refers_to_candidate_work(artifact.question.question)
+
+
 def validate_decision(artifact, payload):
     adaptive = payload["adaptive"]
     choice = next((c for c in adaptive["choices"] if c["target"]["knowledge_id"] == artifact.target_knowledge_id), None)
@@ -418,7 +438,8 @@ def validate_decision(artifact, payload):
         source = next((s for s in choice["target"]["sources"] if s["ref"] == artifact.question_source_ref), None)
     if not source:
         raise AppError("UNKNOWN_DIRECTOR_SOURCE", "题源必须属于选定考察目标", 422)
-    if artifact.strategy == "NEXT" and choice["target"]["topic"] not in mentioned_topics(artifact.question.question):
+    project_opening = is_project_opening(payload, source, artifact)
+    if artifact.strategy == "NEXT" and choice["target"]["topic"] not in mentioned_topics(artifact.question.question) and not project_opening:
         target = choice["target"]
         label = target.get("label") or target["topic"]
         terms = "、".join(topic_terms(target["topic"])) or target["topic"]
@@ -434,6 +455,8 @@ def validate_decision(artifact, payload):
         topic_coverage=adaptive["topic_coverage"])
     if artifact.strategy in ("FOLLOW_UP", "REQUEST_EXAMPLE", "DEEP_DIVE"):
         policy.update(source_type="DYNAMIC_GENERATED" if artifact.strategy == "DEEP_DIVE" else "FOLLOW_UP", source_id=None)
+    if project_opening:
+        policy["project_opening"] = True
     from interview_api.modules.interview.skill_engine import interaction_policy
     policy = interaction_policy(payload["snapshot"], policy)
     from interview_api.modules.interview.context import validate_question

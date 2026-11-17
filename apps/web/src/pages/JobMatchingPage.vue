@@ -121,7 +121,7 @@ function suggestions(card: { candidate: MatchCandidate }) {
     <section v-if="run" class="result">
       <div class="result-head">
         <div>
-          <h2>本次推荐 <span class="badge">{{ displayLabel(run.status) }}</span></h2>
+          <h2>本次推荐 <span class="badge">{{ displayLabel(run.result_state) }}</span></h2>
           <p class="meta">{{ run.created_at }} · {{ modelModeLabel(run.provider, run.model) }}</p>
         </div>
         <button class="ghost" :disabled="busy" @click="showMoreFilters = !showMoreFilters">
@@ -150,8 +150,13 @@ function suggestions(card: { candidate: MatchCandidate }) {
       </p>
       <p v-if="run.coverage.status !== 'SUFFICIENT'" class="banner">当前岗位库只覆盖 {{ run.coverage.candidate_count }} 个岗位，推荐不代表全部招聘机会。</p>
       <p v-if="run.producer === 'REPLAY_FIXTURE' || run.snapshot.data_mode === 'DEMO_REPLAY'" class="banner">DEMO / REPLAY · 回放模式，非真实模型验收结果。</p>
-      <p v-if="run.error" role="alert" class="error">生成失败：{{ userError(run.error) }}。固定输入仍可查看。</p>
-      <button v-if="run.status === 'READY' || run.status === 'FAILED' || run.status === 'RUNNING'" class="ghost" :disabled="busy" @click="retry">安全重试 / 读取生成结果</button>
+      <p v-if="run.result_state === 'AI_FAILED_RULE_READY'" role="alert" class="banner warn">
+        AI 解读这一步没有完成：{{ userError(run.error || '') }}
+        下面的顺序来自规则排序（硬性条件 → 必需技术要求里有无真实依据 → 加分项），和完整解读用的是同一份材料。
+      </p>
+      <button v-if="run.result_state !== 'AI_COMPLETED'" class="ghost" :disabled="busy" @click="retry">
+        {{ run.result_state === 'AI_RUNNING' ? '读取生成结果' : '补充 AI 解读（会调用一次模型）' }}
+      </button>
 
       <p v-if="!cards.length" class="empty">这次没有可推荐的岗位。</p>
       <div v-else class="cards">
@@ -183,8 +188,8 @@ function suggestions(card: { candidate: MatchCandidate }) {
 
           <p class="meta">硬性条件 · {{ eligibilityLabels[card.candidate.eligibility_status] }}</p>
           <div class="actions">
-            <button class="primary" v-if="card.candidate.recommendation" @click="interview(card.candidate)">开始模拟面试</button>
-            <router-link v-if="card.candidate.recommendation" class="ghost" :to="{ path: '/training', query: interviewTarget(card.candidate) }">专项训练</router-link>
+            <button class="primary" @click="interview(card.candidate)">开始模拟面试</button>
+            <router-link class="ghost" :to="{ path: '/training', query: interviewTarget(card.candidate) }">专项训练</router-link>
           </div>
           <p v-if="card.candidate.interviewer_skill_recommendation" class="meta">
             面试方向：{{ card.candidate.interviewer_skill_recommendation.auto_select
@@ -214,7 +219,7 @@ function suggestions(card: { candidate: MatchCandidate }) {
 
       <details class="advanced history-box">
         <summary>历史推荐（{{ history.length }}）与本次固定筛选</summary>
-        <p v-for="h in history" :key="h.id"><router-link :to="`/jobs/matches/${h.id}`">{{ h.created_at }} · {{ displayLabel(h.status) }}</router-link></p>
+        <p v-for="h in history" :key="h.id"><router-link :to="`/jobs/matches/${h.id}`">{{ h.created_at }} · {{ displayLabel(h.result_state) }}</router-link></p>
         <button v-if="moreHistory" class="ghost" @click="older">更早的记录</button>
         <pre>{{ run.snapshot.request.filters }}</pre>
       </details>
