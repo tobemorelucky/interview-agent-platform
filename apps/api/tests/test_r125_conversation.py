@@ -218,13 +218,14 @@ UNKNOWN_PLAN = [
     dict(strategy="FOLLOW_UP", topic="redis",
          text=lambda p: "没关系。那这个项目里你主要参与了哪一块，能说个大概就行？",
          reason="ANSWER_TOO_GENERAL"),
-    dict(strategy="FOLLOW_UP", topic="redis",
-         text=lambda p: "好，那我们换成看问题的角度：如果让你设计，你会先考虑什么？",
-         reason="NEEDS_EXAMPLE"),
+    # R130: one clarification is spent and the second answer still carries no
+    # information, so the controller withdraws further follow-ups on this thread.
     dict(strategy="NEXT", topic="mysql_consistency",
          text="那聊个别的。MySQL 的事务隔离级别，你平时用得多吗？"),
     dict(strategy="NEXT", topic="java",
          text="再换一个，Java 里你比较熟的是哪部分？线程池用过吗？"),
+    dict(strategy="NEXT", topic="kafka_reliability",
+         text="最后聊聊 Kafka：重复消费你们一般怎么处理？"),
 ]
 UNKNOWN_RULES = [
     dict(match="记不清", state="INSUFFICIENT_EVIDENCE", score=2,
@@ -259,13 +260,14 @@ def test_repeated_unknown_is_dropped_instead_of_reworded(database_url):
         interviewer = [row for row in result["transcript"] if row["role"] == "interviewer"]
         assert len(interviewer) >= 5, result["transcript"]
         topics = [row["topic"] for row in result["main"].made]
-        # Two follow-ups on the same point are the budget; after that it switches.
-        assert topics[:3] == ["redis"] * 3
-        assert topics[3] != "redis" and topics[4] != topics[3]
+        # One clarification on a thread that produced nothing, then the topic
+        # moves on: the second unknown is never re-asked in different words.
+        assert topics[:2] == ["redis", "redis"]
+        assert topics[2] != "redis"
         # The wording never repeats, so a "reworded" loop cannot masquerade as progress.
         assert len({row["text"] for row in interviewer}) == len(interviewer)
-        # At most two follow-ups per knowledge point, by the pinned budget.
-        assert sum(1 for row in result["main"].made[:3] if row["strategy"] == "FOLLOW_UP") <= 2
+        # A stalled thread keeps at most one follow-up; the pinned budget is a cap.
+        assert sum(1 for row in result["main"].made[:2] if row["strategy"] == "FOLLOW_UP") == 1
     asyncio.run(_with_db(database_url, run))
 
 
@@ -280,7 +282,7 @@ def test_new_session_freezes_the_conversational_prompt_and_old_ones_keep_theirs(
             job_id=job["job_id"], interviewer_skill_id="ai_agent_application",
             adaptive_interview=True, question_count=6))
         policy = session["context_snapshot"]["adaptive_policy"]
-        assert policy["prompts"]["interview_main"]["version"] == "2.6.0"
+        assert policy["prompts"]["interview_main"]["version"] == "3.0.0"
         # The grading contract is deliberately untouched by this round.
         assert policy["prompts"]["answer_evaluation"]["version"] == "2.3.4"
         assert policy["fingerprint"] if "fingerprint" in policy else True

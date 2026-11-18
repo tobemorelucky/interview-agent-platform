@@ -24,6 +24,8 @@ const detail = ref<InterviewReportDetail | null>(null)
 const proposals = ref<MemoryProposal[]>([])
 const loading = ref(false), generating = ref(false), deciding = ref<number | null>(null)
 const error = ref(""), notice = ref("")
+// Where an approved memory actually landed; lets the user jump straight to it.
+const lastApprovedMemoryId = ref<number | null>(null)
 const correction = ref<{ id: number; content: string; reason: string } | null>(null)
 const decision = ref<{ proposal: MemoryProposal; action: "approve" | "reject" } | null>(null)
 // Round 16: a separate read-time rule projection, never written into the report.
@@ -173,6 +175,7 @@ async function confirmDecision() {
     const result = action === "approve" ? await approveMemoryProposal(proposal.id) : await rejectMemoryProposal(proposal.id)
     proposals.value = proposals.value.map(item => item.id === result.id ? result : item)
     decision.value = null
+    lastApprovedMemoryId.value = action === "approve" ? (result.memory_item_id ?? null) : null
     notice.value = action === "approve" ? "已由本人批准并写入成长记录。" : "已拒绝，没有写入长期记忆。"
   } catch (err) { error.value = message(err) }
   finally { deciding.value = null }
@@ -186,6 +189,7 @@ async function saveCorrection() {
     const result = await correctMemoryProposal(edit.id, edit.content.trim(), edit.reason.trim())
     proposals.value = proposals.value.map(item => item.id === result.id ? result : item)
     correction.value = null
+    lastApprovedMemoryId.value = result.memory_item_id ?? null
     notice.value = "修正文已由本人确认并写入 长期成长记忆；原始提案与修正来源保留。"
   } catch (err) { error.value = message(err) }
   finally { deciding.value = null }
@@ -201,6 +205,10 @@ watch(() => route.fullPath, () => { notice.value = ""; load() }, { immediate: tr
       <button :disabled="loading || generating" @click="load">{{ loading ? '读取中…' : '刷新' }}</button></header>
     <p v-if="error" class="error" role="alert">{{ error }}</p>
     <p v-if="notice" class="notice" role="status">{{ notice }}</p>
+    <p v-if="lastApprovedMemoryId" class="notice" role="status">
+      已保存到成长记录「本人确认的记忆」·
+      <router-link :to="{ path: '/memory', query: { memory_id: String(lastApprovedMemoryId) } }">前往成长记录并定位这条记忆</router-link>
+    </p>
     <div class="report-layout">
       <aside class="card report-list"><h2>历史报告</h2>
         <p v-if="!reports.length && !loading">完成一场模拟面试后，这里会生成复盘报告。</p>
@@ -243,7 +251,7 @@ watch(() => route.fullPath, () => { notice.value = ""; load() }, { immediate: tr
             <div class="dimension-grid"><div v-for="(label, key) in REPORT_DIMENSION_LABELS" :key="key"><span>{{ label }}</span><strong>{{ detail.statistics.dimension_averages[key] ?? '—' }} / 5</strong></div></div>
           </article>
           <article v-if="detail.adaptive_review" class="card"><h2>本场考察与练习重点</h2>
-            <p>{{ detail.adaptive_review.semantics }}</p>
+            <p><small>只描述这一场的回答，不代表长期能力结论。</small></p>
             <section v-for="target in detail.adaptive_review.targets" :key="target.label" class="findings">
               <h3>{{ target.label }} · {{ knowledgeStateLabel(target.state) }}</h3>
               <p v-if="target.missing_mechanisms.length">继续练习：{{ target.missing_mechanisms.join('；') }}</p>
@@ -256,8 +264,8 @@ watch(() => route.fullPath, () => { notice.value = ""; load() }, { immediate: tr
               </details>
             </section>
           </article>
-          <details v-if="selectedReport" class="card ux-technical"><summary>报告技术详情</summary>
-            <p>报告 ID {{ selectedReport.id }} · 版本 {{ selectedReport.generation_number ?? '—' }} · {{ displayLabel(reportGenerationStatus(selectedReport)) }}</p>
+          <details v-if="selectedReport" class="card ux-technical"><summary>高级详情</summary>
+            <p>报告 {{ selectedReport.id }} · 第 {{ selectedReport.generation_number ?? '—' }} 次生成 · {{ displayLabel(reportGenerationStatus(selectedReport)) }}</p>
             <p>{{ selectedReport.producer }} · {{ selectedReport.provider || '—' }} / {{ selectedReport.model || '—' }} · 提示版本 {{ selectedReport.prompt_version }} · {{ selectedReport.created_at }}</p>
             <p v-if="selectedReport.error" class="error">{{ userError(selectedReport.error) }}。这不会改变已完成面试。</p>
           </details>
@@ -280,38 +288,42 @@ watch(() => route.fullPath, () => { notice.value = ""; load() }, { immediate: tr
             <h3>练习计划</h3><ol><li v-for="(item, index) in [...new Set(analysis.practice_plan)]" :key="index">{{ text(item) }}</li></ol>
             <!-- Advisory only: the training centre re-validates the target before use. -->
             <template v-if="analysis.suggested_training">
-              <h3>下一场可以练什么 <small>（模型 Coach · 报告生成时的历史结论）</small></h3>
-              <p>{{ trainingModeLabel(analysis.suggested_training.mode) }} · {{ analysis.suggested_training.knowledge_id.split(':').pop() }}：{{ text(analysis.suggested_training.reason) }}</p>
-              <p><small>来源：模型在生成本报告时给出的建议，是按当时的输入得出的历史结论，不是已排好的训练，也不是此刻重新计算的可执行状态。下方「当前可训练候选」由规则在读取时生成，来源不同、二者不等价。</small></p>
+              <h3>下一场可以练什么</h3>
+              <p>{{ trainingModeLabel(analysis.suggested_training.mode) }}：{{ text(analysis.suggested_training.reason) }}</p>
+              <p><small>这是生成报告时给出的建议，不会自动排成训练。</small></p>
               <router-link :to="trainingLink">去训练中心查看</router-link>
             </template>
           </article>
           <article v-else-if="generating" class="card" role="status">正在生成 Coach 分析。本场评分与完成状态已经保存；请勿重复点击「生成面试报告」，生成完成后点「刷新」查看结果。</article>
           <article v-else class="card">暂无成功的 Coach 分析。可以生成 / 安全重试；本场评分与完成状态已经保存。</article>
           <article class="card candidate-card">
-            <h2>当前可训练候选 <small>（规则生成 · 读取时计算 · 0 次模型调用）</small></h2>
-            <p><small>按当前正式能力状态与 training.modes() 重新计算，不改写本报告、不写入能力记忆；与上方模型在报告生成时给出的建议来源不同，二者不等价。</small></p>
-            <p v-if="ruleCandidateError" role="alert">候选读取失败：{{ ruleCandidateError }}</p>
-            <p v-if="!ruleCandidates && !ruleCandidateError" role="status">正在读取当前可训练候选…</p>
+            <h2>可以接着练什么</h2>
+            <p><small>根据你最新的面试表现推荐练习方向；建议会随后续面试表现更新。</small></p>
+            <p v-if="ruleCandidateError" role="alert">练习方向读取失败：{{ ruleCandidateError }}</p>
+            <p v-if="!ruleCandidates && !ruleCandidateError" role="status">正在读取练习方向…</p>
             <template v-if="ruleCandidates">
-              <p><small>{{ ruleCandidates.semantics }}</small></p>
               <p v-if="ruleCandidates.status==='TARGET_UNAVAILABLE'" role="alert">{{ ruleCandidates.message || candidateEmptyLabels[ruleCandidates.empty_reason||''] }}</p>
-              <p v-else-if="!ruleCandidates.candidates.length" role="status">{{ candidateEmptyLabels[ruleCandidates.empty_reason||''] || '当前没有可训练候选。' }}</p>
+              <p v-else-if="!ruleCandidates.candidates.length" role="status">{{ candidateEmptyLabels[ruleCandidates.empty_reason||''] || '当前没有可练习的方向。' }}</p>
               <ul class="candidate-list">
                 <li v-for="c in ruleCandidates.candidates" :key="`${c.knowledge_id}-${c.mode}`">
-                  <strong>{{ c.label }}</strong> · {{ candidateModeLabels[c.mode] }} · 规则优先级 {{ c.priority }}
+                  <strong>{{ c.label }}</strong> · {{ candidateModeLabels[c.mode] }}
                   <p>{{ c.reason }}</p>
-                  <p><small>正式依据：{{ c.evidence.evaluation_refs.length ? c.evidence.evaluation_refs.join('、') : '暂无正式评价引用' }} · 能力修订 {{ c.evidence.memory_revision===null?'—':c.evidence.memory_revision }}</small></p>
-                  <p><small>{{ c.scope_note }}</small></p>
+                  <details class="ux-technical"><summary>高级详情</summary>
+                    <p><small>依据：{{ c.evidence.evaluation_refs.length ? c.evidence.evaluation_refs.join('、') : '暂无评价引用' }} · 记忆修订 {{ c.evidence.memory_revision===null?'—':c.evidence.memory_revision }} · 规则优先级 {{ c.priority }}</small></p>
+                    <p><small>{{ c.scope_note }}</small></p>
+                    <p v-if="ruleCandidates.semantics"><small>{{ ruleCandidates.semantics }}</small></p>
+                    <p v-if="ruleCandidates.computed_at"><small>读取时计算于 {{ ruleCandidates.computed_at }}</small></p>
+                  </details>
                   <router-link :to="c.launch">去训练中心查看（仅预选，不会自动创建训练）</router-link>
                 </li>
               </ul>
-              <p v-if="ruleCandidates.fallback"><small>{{ ruleCandidates.fallback.reason }}</small></p>
-              <p v-if="ruleCandidates.general_only.length"><small>跨岗位通用历史（不作为当前岗位候选）：{{ ruleCandidates.general_only.map(g=>`${g.label}/${g.state}`).join('、') }}。{{ ruleCandidates.verified_note }}</small></p>
-              <p><small>计算于 {{ ruleCandidates.computed_at }} · {{ ruleCandidates.modes_source || 'interview.training.modes()' }}</small></p>
+              <details v-if="ruleCandidates.fallback || ruleCandidates.general_only.length" class="ux-technical"><summary>高级详情</summary>
+                <p v-if="ruleCandidates.fallback"><small>{{ ruleCandidates.fallback.reason }}</small></p>
+                <p v-if="ruleCandidates.general_only.length"><small>跨岗位通用历史（不作为当前岗位候选）：{{ ruleCandidates.general_only.map(g=>`${g.label}/${g.state}`).join('、') }}。{{ ruleCandidates.verified_note }}</small></p>
+              </details>
             </template>
           </article>
-          <article class="card proposals"><h2>本场建议记住</h2><p>长期记忆建议：尚未批准不会影响下一场，也不会修改候选人画像。批准后可在成长记录查看，下次新建面试时固定使用。表现观察只描述来源场次。</p>
+          <article class="card proposals"><h2>本场建议记住</h2><p>需要你确认后才会写入成长记录。未批准前不影响下一场面试，也不会修改你的画像。</p>
             <p v-if="!proposals.length">该报告暂无记忆提案。</p>
             <article v-for="proposal in proposals" :key="proposal.id" class="proposal">
               <h3>{{ displayLabel(proposal.proposal_type) }} · {{ displayLabel(proposal.status) }}</h3>
@@ -337,7 +349,9 @@ watch(() => route.fullPath, () => { notice.value = ""; load() }, { immediate: tr
                 <button :disabled="deciding !== null">确认修正文并写入记忆</button> <button type="button" :disabled="deciding !== null" @click="correction = null">取消</button>
               </form>
               <p v-if="proposal.confirmed_at">用户确认 / 决定：本人 · {{ proposal.confirmed_at }} · {{ proposal.confirmation_reason || '无附加原因' }}</p>
-              <p v-if="proposal.memory_item_id">已保存到成长记录 · <router-link to="/memory">查看成长记录</router-link></p>
+              <p v-if="proposal.memory_item_id">已保存到成长记录「本人确认的记忆」 ·
+                <router-link :to="{ path: '/memory', query: { memory_id: String(proposal.memory_item_id) } }">查看并定位这条记忆</router-link>
+              </p>
             </article>
           </article>
           <DesignTraceView :trace="detail?.design_trace" />
@@ -376,7 +390,7 @@ p { line-height: 1.6; } small, .heading p, .statistics > p:first-of-type { color
 button { padding: 8px 12px; border: 1px solid #d0d5dd; border-radius: 6px; background: #fff; font: inherit; cursor: pointer; color: #344054; }
 .actions { justify-content: flex-start; margin-top: 14px; } .actions button:first-child { background: #2e7d6f; color: white; border-color: #2e7d6f; }
 button:disabled { cursor: not-allowed; opacity: .6; } .danger { color: #b42318; }
-.error { color: #b42318; background: #fff1f0; padding: 12px; } .notice { padding: 12px; background: #edf7f3; } .mode { color: #8a6113; background: #fff8e8; padding: 10px; }
+.error { color: #b42318; background: #fff1f0; padding: 12px; } .notice { padding: 12px; background: #edf7f3; } .notice a { color: #2563eb; text-decoration: underline; } .mode { color: #8a6113; background: #fff8e8; padding: 10px; }
 .overall { font-size: 22px; font-weight: 600; color: #2e7d6f; }
 .stat-grid, .dimension-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); gap: 10px; margin-top: 14px; }
 .stat-grid > div, .dimension-grid > div { display: flex; flex-direction: column; gap: 7px; padding: 12px; background: #f8fafc; border-radius: 6px; }

@@ -173,7 +173,9 @@ async def seed_job(factory, title, statements, family=None):
 
 async def converse(core, user_id, session_id, answers):
     """Drive one continuous session; return the transcript with real decisions."""
-    first = await core.start(session_id, user_id)
+    # Scripted plans start at the first technical question; the product default
+    # is now the zero-model self-introduction, so ask for MODEL explicitly here.
+    first = await core.start(session_id, user_id, opening="MODEL")
     transcript = [dict(turn=1, role="interviewer", text=first["question"],
                        kind="OPENING", question_id=first["question_id"])]
     question_id = first["question_id"]

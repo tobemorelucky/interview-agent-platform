@@ -79,7 +79,7 @@ export async function setTargetPosition(
   return response as unknown as TargetPositionResult;
 }
 
-export async function startInterview(sessionId: number, opening: 'MODEL' | 'REQUIREMENT' = 'MODEL'): Promise<StartInterviewResult> {
+export async function startInterview(sessionId: number, opening: 'MODEL' | 'INTRODUCTION' | 'REQUIREMENT' = 'MODEL'): Promise<StartInterviewResult> {
   const response = await client.post(`/interview/sessions/${sessionId}/start`, {}, { params: { opening } });
   return response as unknown as StartInterviewResult;
 }
@@ -206,7 +206,7 @@ export function sendMessageStream(
     dimension_averages?: Record<string, number>;
     overall_average?: number;
   }) => void,
-  answerContext?: { question_id: number; idempotency_key: string; design_plan?: DesignPlan }
+  answerContext?: { question_id: number; idempotency_key: string; design_plan?: DesignPlan; confirm_off_topic?: boolean; restart_after_off_topic?: boolean }
 ): AbortController {
   const controller = new AbortController();
   const token = localStorage.getItem("access_token");

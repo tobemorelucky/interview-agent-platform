@@ -153,7 +153,7 @@ def decision_candidates(context, choices):
         target = choice["target"]
         if target not in blueprint["targets"]:
             raise AppError("ADAPTIVE_BLUEPRINT_CHANGED", "候选目标不属于冻结蓝图", 409)
-        sources = target["sources"]
+        sources = [s for s in target["sources"] if s["ref"] != choice.get("exclude_source_ref")]
         # An empty source list is not an approved public source. Only an actual
         # pinned Skill topic can supply an explicitly generic question fallback.
         if not sources and target["topic"] in skill["priority_topics"] and target["knowledge_id"] == f"{skill['id']}:{target['topic']}":
@@ -170,9 +170,35 @@ def decision_candidates(context, choices):
             candidates.append(dict(candidate_id="C_" + digest(identity)[:24],
                 target_knowledge_id=target["knowledge_id"], topic=target["topic"], label=target["label"],
                 strategies=choice["strategies"], source=deepcopy(source),
+                # What kind of NEW question this frozen source can naturally carry.
+                # A project fact supports a project question and can extend into a
+                # scenario; a requirement or a generic Skill topic supports a
+                # fundamentals question or an engineering scenario. Follow-ups keep
+                # the shape of the thread they continue.
+                question_shapes=(question_shapes_for(context, source) if "NEXT" in choice["strategies"] else []),
                 source_semantics="GENERIC_SKILL_NOT_COMPANY_EVIDENCE" if source["ref"].startswith("skill:") else
                     "REPORTED_TOPIC_NOT_VERBATIM" if source.get("kind") == "REPORTED_TOPIC" else "FROZEN_SOURCE"))
     return candidates
+
+
+def question_shapes_for(context, source):
+    """Legal shapes of a new question, derived from its frozen source.
+
+    Shapes are presentation, not provenance: the target topic and its source are
+    still enforced by the same gate. This exists so the interviewer can switch
+    between a project question, a fundamentals question and an engineering
+    scenario without inventing a new Agent or a new source type.
+    """
+    kind = (source or {}).get("source_type")
+    if kind == "CANDIDATE_PROFILE":
+        fact = next((f for f in context["candidate_facts"] if f["id"] == source.get("source_id")), None)
+        if fact is not None and is_project_fact(fact.get("field_path")):
+            return ["PROJECT", "SCENARIO"]
+        return ["FUNDAMENTALS"]
+    if kind == "PUBLIC_QUESTION":
+        # A reported question is a reported topic, never a verbatim company question.
+        return ["FUNDAMENTALS"]
+    return ["FUNDAMENTALS", "SCENARIO"]
 
 
 def resolve_selection(selection, payload):
@@ -319,21 +345,87 @@ def apply_observations(state, observations, *, question_id, answer_id, evaluatio
     return bounded(KnowledgeState.model_validate(state).model_dump())
 
 
-def decision_space(context, questions, active, state, *, allow_followups):
+def thread_pacing(questions, active, before_state, after_state, evaluation, budgets):
+    """Deterministic facts about the thread the interviewer is currently on.
+
+    The model owns the strategy, but it should not have to infer whether its own
+    last clarification moved the answer forward. ``stalled`` is derived from
+    persisted questions plus the evaluated knowledge state, never from wording
+    or answer length: one clarification has already been spent on this thread
+    and the latest answer neither resolved an open gap nor produced a positive
+    observation. When that is true the controller stops offering yet another
+    follow-up on the same narrow point, so a short interview cannot spend every
+    remaining slot re-asking one detail. A rich answer keeps follow-ups legal.
+    """
+    from interview_api.modules.interview.controller import SessionController
+    if active is None:
+        return None
+    active_id = ((active.candidate_refs_json or {}).get("adaptive_decision") or {}).get("target_knowledge_id")
+    used = SessionController.follow_up_consumption(questions, active)
+    before = {g["id"] for g in (before_state.get("items", {}).get(active_id) or {}).get("open_gaps") or []}
+    after = {g["id"] for g in (after_state.get("items", {}).get(active_id) or {}).get("open_gaps") or []}
+    resolved = before - after
+    observations = list(getattr(evaluation, "knowledge_observations", None) or []) if evaluation else []
+    positive = any(item.state in ("DEMONSTRATED_IN_SESSION", "PARTIALLY_DEMONSTRATED") for item in observations)
+    gained = bool(resolved) or positive
+    technical = [q for q in questions if q.question_kind != "INTRODUCTION"]
+    remaining = max(0, budgets["question_count"] - len(technical))
+    pacing = coverage(questions, budgets["question_count"])
+    return dict(
+        root_question_id=SessionController.root_question_id(questions, active),
+        follow_ups_used=used,
+        follow_ups_allowed=budgets["max_follow_ups"],
+        same_topic_streak=pacing["consecutive_count"],
+        remaining_slots=remaining,
+        latest_answer_added_information=gained if evaluation else None,
+        resolved_gap_count=len(resolved),
+        # Only the second clarification onward can be "stalled": the first one is
+        # always a legitimate attempt to clear up a vague answer.
+        stalled=bool(used >= 1 and evaluation is not None and not gained),
+        # A soft hint, not a rule: with one slot left, a third question on the
+        # same narrow point is usually worth less than a different topic.
+        prefer_switch=bool(pacing["consecutive_count"] >= 2 and remaining <= 1),
+    )
+
+
+def decision_space(context, questions, active, state, *, allow_followups, must_switch=False):
     pacing = coverage(questions, context["budgets"]["question_count"])
     active_id = ((active.candidate_refs_json or {}).get("adaptive_decision") or {}).get("target_knowledge_id") if active else None
-    choices = []
-    for target in context["adaptive_blueprint"]["targets"]:
-        if target["topic"] in pacing["blocked_topics"]:
-            continue
-        item = state["items"].get(target["knowledge_id"], {})
-        if item.get("state") == "DEMONSTRATED_IN_SESSION":
-            continue
-        strategies = ["NEXT"]
-        if active and active_id == target["knowledge_id"]:
-            strategies = ["FOLLOW_UP", "REQUEST_EXAMPLE", "DEEP_DIVE"] if allow_followups else []
-        if strategies:
-            choices.append(dict(target=target, strategies=strategies))
+    active_source_ref = ((active.candidate_refs_json or {}).get("adaptive_decision") or {}).get(
+        "question_source_ref") if active else None
+
+    def build(allow):
+        rows = []
+        for target in context["adaptive_blueprint"]["targets"]:
+            if target["topic"] in pacing["blocked_topics"]:
+                continue
+            item = state["items"].get(target["knowledge_id"], {})
+            if item.get("state") == "DEMONSTRATED_IN_SESSION":
+                continue
+            strategies = ["NEXT"]
+            exclude_source = None
+            if active and active_id == target["knowledge_id"]:
+                strategies = ["FOLLOW_UP", "REQUEST_EXAMPLE", "DEEP_DIVE"] if allow else []
+                # The same target can still be approached from a *different* frozen
+                # source: a project thread may move to the fundamentals of the same
+                # subject instead of drilling the same detail again. The old source
+                # is excluded so this cannot be a rewording of the active question.
+                other_sources = [s for s in target["sources"] if s["ref"] != active_source_ref]
+                if not must_switch and other_sources:
+                    strategies = ["NEXT", *strategies]
+                    exclude_source = active_source_ref
+            if strategies:
+                rows.append(dict(target=target, strategies=strategies,
+                                 **({"exclude_source_ref": exclude_source} if exclude_source else {})))
+        return rows
+
+    choices = build(allow_followups)
+    if must_switch and any(choice["target"]["knowledge_id"] != active_id for choice in choices):
+        # Never strand the model without a legal choice: if nothing else is
+        # available, the thread keeps its follow-ups instead of failing.
+        switched = build(False)
+        if switched:
+            choices = switched
     return choices
 
 
@@ -376,12 +468,19 @@ def planning_payload(context, questions, active, plan, *, answer=None, answer_id
         # Controller already persists the validated decision atomically with
         # the question. Evaluation never supplies or changes this scope.
         adaptive["focus_gap_ids"] = ((active.candidate_refs_json or {}).get("adaptive_decision") or {}).get("focus_gap_ids")
+    # Snapshot the state the thread arrived with, before this answer's pending
+    # projection: whether the latest clarification resolved anything is exactly
+    # the before/after difference.
+    before_state = state
     if evaluation:
         observations = resolve_observations(evaluation, payload)
         # Pending projection is NOT persisted until the Evaluation commits.
         state = apply_observations(state, observations, question_id=active.id, answer_id=answer_id, evaluation_id=None)
+    thread = thread_pacing(questions, active, before_state, state, evaluation, context["budgets"])
     can_probe = bool(active) and SessionController.follow_up_consumption(questions, active) < context["budgets"]["max_follow_ups"]
-    adaptive.update(choices=decision_space(context, questions, active, state, allow_followups=can_probe),
+    adaptive.update(thread=thread,
+        choices=decision_space(context, questions, active, state, allow_followups=can_probe,
+                               must_switch=bool(thread and thread["stalled"])),
         knowledge_state=state, current_answer_ref=f"answer:{answer_id}" if answer_id else None,
         current_evaluation_ref=f"evaluation_run:{evaluation_run_id}" if evaluation_run_id else None)
     refs = {s["ref"] for t in context["adaptive_blueprint"]["targets"] for s in t["sources"]}
@@ -419,6 +518,106 @@ def is_project_opening(payload, source, artifact):
     return refers_to_candidate_work(artifact.question.question)
 
 
+def frozen_source_text(payload, source):
+    """Frozen wording behind a candidate source, never model-authored text."""
+    source_type = (source or {}).get("source_type")
+    key = (source or {}).get("source_id")
+    if source_type == "JOB_REQUIREMENT":
+        rows = payload["snapshot"].get("requirements") or []
+        row = next((item for item in rows if item.get("id") == key), None)
+        return (row or {}).get("statement") or ""
+    if source_type == "CANDIDATE_PROFILE":
+        rows = payload["snapshot"].get("candidate_facts") or []
+        row = next((item for item in rows if item.get("id") == key), None)
+        return (row or {}).get("statement") or ""
+    if source_type == "PUBLIC_QUESTION":
+        rows = payload["snapshot"].get("public_questions") or []
+        row = next((item for item in rows if item.get("id") == key), None)
+        return (row or {}).get("question") or ""
+    return ""
+
+
+def source_grounds_topic(payload, source, topic):
+    """A frozen requirement/fact can carry the target without restating it.
+
+    build_blueprint only attaches such a source to a target because the frozen
+    text itself mentions that topic. A question bound to that source is already
+    semantically tied to the target; forcing the model to repeat one literal
+    token turns natural Chinese into keyword reporting.
+    """
+    return bool(topic) and topic in mentioned_topics(frozen_source_text(payload, source))
+
+
+def conflicting_topics(question, target_topic):
+    """Explicit other technical subjects in the question, never inferred."""
+    return sorted(topic for topic in mentioned_topics(question) if topic != target_topic)
+
+
+def grounded_question(statement, label, source_type):
+    """Zero-model wording for a source-bound fallback NEXT question."""
+    text = (statement or "").strip()
+    if not text:
+        return (f"我们换个方向，聊聊{label}。请讲一个你实际遇到过的场景，"
+                "重点说清楚你自己的判断依据。")
+    if source_type == "JOB_REQUIREMENT":
+        return (f"岗位要求里有一条：「{text}」。请结合你做过的一个项目，"
+                f"讲讲你在{label}方面的具体做法，并说一次你踩过的坑。")
+    if source_type == "CANDIDATE_PROFILE":
+        return (f"你简历里提到：{text}。请围绕{label}讲清楚你自己负责的部分，"
+                "以及当时一个需要取舍的具体决定。")
+    return (f"我们接着看{label}：{text}。请讲一个你实际处理过的场景，"
+            "重点说清楚你自己的判断依据。")
+
+
+def fallback_selection(payload, rejected_target=None):
+    """A deterministic, source-bound NEXT after the model drifted.
+
+    It never accepts the rejected wording: a fresh question is built from a
+    different frozen candidate and passes the same validate_decision gate.
+    """
+    adaptive = payload["adaptive"]
+    refs = set(adaptive.get("allowed_refs") or [])
+    support = [ref for ref in (adaptive.get("current_answer_ref"), adaptive.get("current_evaluation_ref"))
+               if ref and ref in refs]
+    next_candidates = [c for c in (adaptive.get("candidates") or []) if "NEXT" in (c.get("strategies") or [])]
+    # Prefer another target with frozen wording, then the same target with a
+    # different frozen source, then a generic Skill target named by its own
+    # label. The rejected question itself is never reused.
+    ordered = ([c for c in next_candidates if c["target_knowledge_id"] != rejected_target and
+                frozen_source_text(payload, c["source"])] +
+               [c for c in next_candidates if frozen_source_text(payload, c["source"])] +
+               [c for c in next_candidates if c["target_knowledge_id"] != rejected_target] +
+               next_candidates)
+    seen = set()
+    last = None
+    for candidate in ordered:
+        if candidate["candidate_id"] in seen:
+            continue
+        seen.add(candidate["candidate_id"])
+        target = candidate["target_knowledge_id"]
+        source = candidate["source"]
+        label = candidate.get("label") or candidate.get("topic") or target.rsplit(":", 1)[-1]
+        statement = frozen_source_text(payload, source)
+        draft = QuestionDraft(question=grounded_question(statement, label, source["source_type"]),
+            expected_points=[f"{label}的实际做法", "一次真实取舍"], dimension=label[:50],
+            difficulty=payload["desired_difficulty"])
+        selection = dict(candidate_id=candidate["candidate_id"], strategy="NEXT",
+            supporting_refs=list(dict.fromkeys([source["ref"], *support]))[:12],
+            reason_tags=["COVERAGE_SWITCH"], proposed_question=draft)
+        if uses_gap_scope(payload):
+            # NEXT does not have to test an existing open gap; [] is explicit scope.
+            selection = ScopedAdaptiveSelection(**selection, focus_gap_ids=[])
+        try:
+            artifact = resolve_selection(selection, payload)
+            return artifact, validate_decision(artifact, payload)
+        except AppError as exc:
+            # A stale candidate must not prevent trying the next legal source.
+            last = exc
+            continue
+    reason = f"（最后一项：{getattr(last, 'code', last)}）" if last is not None else ""
+    raise AppError("ADAPTIVE_FALLBACK_UNAVAILABLE", f"没有可安全复用的保底题目，请明确重试{reason}", 409)
+
+
 def validate_decision(artifact, payload):
     adaptive = payload["adaptive"]
     choice = next((c for c in adaptive["choices"] if c["target"]["knowledge_id"] == artifact.target_knowledge_id), None)
@@ -447,17 +646,27 @@ def validate_decision(artifact, payload):
     if not source:
         raise AppError("UNKNOWN_DIRECTOR_SOURCE", "题源必须属于选定考察目标", 422)
     project_opening = is_project_opening(payload, source, artifact)
-    if artifact.strategy == "NEXT" and choice["target"]["topic"] not in mentioned_topics(artifact.question.question) and not project_opening:
-        target = choice["target"]
-        label = target.get("label") or target["topic"]
-        terms = "、".join(topic_terms(target["topic"])) or target["topic"]
-        error = AppError("ADAPTIVE_TOPIC_MISMATCH",
-            f"模型这一题没有围绕「{label}」出题（该主题需点到：{terms}）。本题未保存、未计评价，可安全重试；"
-            "也可以改用岗位要求开场。", 422)
-        # Kept off the wire; the service writes it to the audit trail so a
-        # rejected question is diagnosable instead of vanishing.
-        error.diagnostic = topic_diagnostic(artifact.question.question, target["topic"])
-        raise error
+    target = choice["target"]
+    topic = target["topic"]
+    if artifact.strategy == "NEXT" and topic not in mentioned_topics(artifact.question.question) and not project_opening:
+        # A NEXT may speak naturally about the frozen project/requirement that
+        # already carries this target. It may NOT wander into another explicit
+        # technical subject, and a generic Skill candidate still has to name
+        # its own topic because no frozen wording ties the question to it.
+        grounded = source_grounds_topic(payload, source, topic)
+        conflicts = conflicting_topics(artifact.question.question, topic)
+        if not grounded or conflicts:
+            label = target.get("label") or topic
+            terms = "、".join(topic_terms(topic)) or topic
+            recovery = ("可以重新生成第一题，也可以改用岗位要求开场。" if adaptive.get("opening_slot")
+                        else "本题不保存、不评价；可以继续处理本轮，不会重新评价上一题。")
+            error = AppError("ADAPTIVE_TOPIC_MISMATCH",
+                f"这一题偏离了「{label}」（该主题需点到：{terms}）。{recovery}", 422)
+            # Kept off the wire; the service writes it to the audit trail so a
+            # rejected question is diagnosable instead of vanishing.
+            error.diagnostic = topic_diagnostic(artifact.question.question, topic,
+                source_ref=source["ref"], source_grounded=grounded, conflicting_topics=conflicts)
+            raise error
     policy = dict(source_type=source["source_type"], source_id=source["source_id"],
         target_topic=choice["target"]["topic"], target_category="TECHNICAL",
         topic_coverage=adaptive["topic_coverage"])

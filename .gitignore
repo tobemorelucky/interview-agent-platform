@@ -26,6 +26,11 @@ docker-compose.override.yml
 # OS
 .DS_Store
 Thumbs.db
+# Windows device-name artifact (e.g. `> NUL` creating a real file)
+NUL
+
+# Local agent workspace (WorkBuddy memory and run logs)
+.workbuddy/
 
 # Dev runtime
 .runtime/

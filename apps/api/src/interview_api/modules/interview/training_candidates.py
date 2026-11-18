@@ -21,10 +21,10 @@ import json
 STATE_PRIORITY = dict(CONFLICTED=4, RECHECK_DUE=3, GAP_SUSPECTED=2, PRACTICING=1,
                       VERIFIED=0, UNKNOWN=0)
 STATE_REASONS = {
-    "CONFLICTED": "同一考察范围内先有独立达标、后有不达标表现，冲突尚未由独立复测解决；按现有准入规则只能独立复测。",
-    "RECHECK_DUE": "此前有跨场次独立达标，但距上次独立验证已超过规则期限；按现有准入规则需要复核。",
-    "GAP_SUSPECTED": "最近一次正式评价仍有未覆盖的关键机制；按现有准入规则进入薄弱项专项训练。",
-    "PRACTICING": "有正式评价支持，但尚未形成跨场次独立掌握；按现有准入规则继续针对性练习。",
+    "CONFLICTED": "同一考察范围内先后出现达标和不达标，结论还不一致，建议再独立复测一场。",
+    "RECHECK_DUE": "这个方向以前独立达标过，但距离上次验证已经有一段时间，建议复核一次。",
+    "GAP_SUSPECTED": "最近一次评价里还有没覆盖到的关键点，建议专项练一下。",
+    "PRACTICING": "已有评价支持，但还没有在多场面试里稳定表现，可以继续针对性练习。",
 }
 PROJECTION_VERSION = "TRAINING_CANDIDATES_V1"
 CAPABILITY_SCOPE = "CROSS_JOB_TOPIC_AGGREGATE"
@@ -34,8 +34,7 @@ CAPABILITY_SCOPE_NOTE = (
     "通用能力 VERIFIED 不能解释为当前岗位已完全胜任。"
 )
 SEMANTICS = (
-    "这些候选项是读取这一刻按正式能力状态与 training.modes() 重新计算的规则投影，"
-    "不是报告生成时模型给出的历史结论，不写入能力记忆，也不自动创建训练会话。"
+    "以下是当前推荐的练习内容，依据你最近的面试评价生成；不会自动创建训练，也不会改写你的记忆。"
 )
 
 
@@ -95,7 +94,7 @@ def build_training_candidates(views, states, *, skill_id, computed_at,
             state=state, state_revision=view.get("revision"),
             state_last_observed_at=row.get("last_observed_at"),
             priority=priority,
-            reason=STATE_REASONS.get(state, "当前正式能力状态允许该训练模式。"),
+            reason=STATE_REASONS.get(state, "当前表现支持这个练习方向。"),
             reason_tags=list(view.get("reason_tags") or []),
             evidence=dict(
                 capability_source="CAPABILITY_MEMORY_SERVICE",
@@ -143,10 +142,10 @@ def build_training_candidates(views, states, *, skill_id, computed_at,
         target_version=target_version,
         candidates=candidates, general_only=general_only,
         empty_reason=empty_reason, semantics=SEMANTICS,
-        verified_note=("通用能力 VERIFIED 只说明该 topic 有跨场次独立支持，"
-                       "不代表当前岗位已完全胜任，也不触发针对性训练候选。"),
-        disclaimer=("规则候选与模型 Coach 建议来源不同：模型建议是报告生成时的历史结论，"
-                    "此处候选是读取时按当前正式状态重算的可执行方向；两者不等价。"),
+        verified_note=("跨场次验证过只说明这个方向多次被独立支持，"
+                       "不代表当前岗位已完全胜任，也不会因此推荐针对性训练。"),
+        disclaimer=("上面的练习建议来自生成报告时的分析，这里的推荐依据你最新的评价，"
+                    "两者可能不同，以实际练习目标为准。"),
     )
     if not candidates:
         # FULL is always legal (modes() returns it for every state). Offer it

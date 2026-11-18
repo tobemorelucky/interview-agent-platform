@@ -163,14 +163,19 @@ class SessionController:
         return levels[max(0, min(2, current + shift))]
 
     @staticmethod
-    def follow_up_consumption(questions, active):
+    def root_question_id(questions, question):
+        """The main question a follow-up chain belongs to, or None."""
         by_id = {q.id: q for q in questions}
-        def root_id(q):
-            while q and q.parent_question_id:
-                q = by_id.get(q.parent_question_id)
-            return q.id if q else None
-        root = root_id(active)
-        return sum(q.question_kind in ("FOLLOW_UP", "DEEP_DIVE") and root_id(q) == root for q in questions)
+        current = question
+        while current is not None and current.parent_question_id:
+            current = by_id.get(current.parent_question_id)
+        return current.id if current else None
+
+    @staticmethod
+    def follow_up_consumption(questions, active):
+        root = SessionController.root_question_id(questions, active)
+        return sum(q.question_kind in ("FOLLOW_UP", "DEEP_DIVE")
+                   and SessionController.root_question_id(questions, q) == root for q in questions)
 
     @staticmethod
     def stop_reason(context, questions, *, rounds, tokens, started_at):
@@ -181,7 +186,10 @@ class SessionController:
         as an early budget stop even when a budget happens to be spent too.
         """
         budgets = context["budgets"]
-        if len(questions) >= budgets["question_count"]:
+        # The scripted self-introduction opens the conversation; it is not a
+        # technical question and must not consume the chosen question_count.
+        technical = sum(getattr(q, "question_kind", None) != "INTRODUCTION" for q in questions)
+        if technical >= budgets["question_count"]:
             return "QUESTION_COUNT_REACHED"
         if rounds >= budgets["max_rounds"]:
             return "ROUND_LIMIT"
@@ -364,7 +372,8 @@ class SessionController:
         await self.db.flush()
         return events
 
-    async def prepare_answer(self, session_id, user_id, question_id, key, content, *, allow_unknown_retry=False):
+    async def prepare_answer(self, session_id, user_id, question_id, key, content, *, allow_unknown_retry=False,
+                             restart_after_off_topic=False):
         session = await self.owned(session_id, user_id, lock=True)
         answer = await self.db.scalar(select(InterviewAnswer).where(InterviewAnswer.session_id == session_id, InterviewAnswer.idempotency_key == key))
         if answer:
@@ -418,16 +427,31 @@ class SessionController:
             raise conflict()
         q = await self.db.get(InterviewSessionQuestion, question_id)
         if not answer:
+            replace_answer = None
             if q.status != "ASKED":
-                raise conflict("该题已有回答，请使用原幂等键重试")
+                # One Answer row per question is a schema constraint. The
+                # rejected paste stays in messages + AuditLog; the row is
+                # rebound to the new answer so no abandoned attempt can score.
+                prior = await self.db.scalar(select(InterviewAnswer).where(
+                    InterviewAnswer.session_id == session_id,
+                    InterviewAnswer.session_question_id == question_id,
+                    InterviewAnswer.error == "OFF_TOPIC_CONFIRMATION_REQUIRED").order_by(InterviewAnswer.id.desc()))
+                if not (restart_after_off_topic and prior and q.status == "ANSWERED"):
+                    raise conflict("该题已有回答，请使用原幂等键重试")
+                replace_answer = prior
+                q.status = "ASKED"
             session.turn_count += 1
             msg = InterviewMessage(session_id=session_id, role="USER", content=content,
                 metadata_json={"question_id": question_id, "idempotency_key": key, "display_order": 0}, turn_index=session.turn_count)
             self.db.add(msg)
             await self.db.flush()
-            answer = InterviewAnswer(session_id=session_id, session_question_id=question_id,
-                message_id=msg.id, idempotency_key=key, status="RUNNING")
-            self.db.add(answer)
+            if replace_answer is not None:
+                answer = replace_answer
+                answer.idempotency_key, answer.message_id, answer.result_events = key, msg.id, None
+            else:
+                answer = InterviewAnswer(session_id=session_id, session_question_id=question_id,
+                    message_id=msg.id, idempotency_key=key, status="RUNNING")
+                self.db.add(answer)
             q.status = "ANSWERED"
         answer.status, answer.error = "RUNNING", None
         session.state_version += 1
@@ -444,6 +468,32 @@ class SessionController:
         processing = dict((session.interview_plan_json or {}).get("answer_processing") or {})
         if processing.get("answer_id") == answer_id:
             session.interview_plan_json = {**session.interview_plan_json, "answer_processing": {**processing, "stage": stage}}
+
+    async def checkpoint_evaluation(self, session_id, user_id, answer_id, expected_version, evaluation,
+                                    stage, *, diagnostic=None, source=None):
+        """Persist a validated evaluation before the next-question call.
+
+        Evaluation and next-question generation are two model calls. Losing the
+        first artifact because the second one failed would both waste the paid
+        call and invite a double charge on retry. This checkpoint stays in the
+        session's own transactional JSON; it is cleared only by a successful
+        commit, never used to fabricate a score.
+        """
+        session = await self.owned(session_id, user_id, lock=True)
+        answer = await self.db.get(InterviewAnswer, answer_id)
+        if (session.state_version != expected_version or not answer or
+                answer.status != "RUNNING" or session.active_question_id != answer.session_question_id):
+            raise conflict()
+        plan = dict(session.interview_plan_json or {})
+        plan["answer_recovery"] = dict(answer_id=answer_id, stage=stage,
+            artifact=evaluation.artifact.model_dump(), provider=evaluation.provider,
+            model=evaluation.model, prompt_version=evaluation.prompt_version,
+            retry=evaluation.retry, usage=evaluation.usage, run_id=evaluation.run_id,
+            diagnostic=diagnostic, source=source,
+            at=datetime.now(timezone.utc).isoformat())
+        from interview_api.modules.interview.adaptive import bounded
+        session.interview_plan_json = bounded(plan, maximum=192_000)
+        await self.db.flush()
 
     async def failed_answer(self, session_id, user_id, answer_id, expected_version, error):
         session = await self.owned(session_id, user_id, lock=True)
@@ -570,7 +620,9 @@ class SessionController:
         session.state_version += 1
         events.append(["done", dict(message_id=answer.message_id, turn_index=session.turn_count, action=action, state_version=session.state_version)])
         answer.status, answer.result_events = "COMPLETED", events
-        session.interview_plan_json = {**(session.interview_plan_json or {}), "answer_processing": None}
+        plan = {**(session.interview_plan_json or {}), "answer_processing": None}
+        plan.pop("answer_recovery", None)
+        session.interview_plan_json = plan
         await self.db.flush()
         return events
 
@@ -601,6 +653,8 @@ class SessionController:
             dynamic_question_count=sum(q.is_dynamic for q in questions),
             dimension_averages=averages, overall_average=round(sum(sum(getattr(e, key) for key in DIMENSIONS) for e in rows) / (len(rows) * len(DIMENSIONS)), 4) if rows else None,
             total_questions=len(questions), question_budget=session.question_count,
+            introduction_count=sum(getattr(q, "question_kind", None) == "INTRODUCTION" for q in questions),
+            technical_question_count=sum(getattr(q, "question_kind", None) != "INTRODUCTION" for q in questions),
             mode="replay" if providers == {"replay"} else "live" if providers and "replay" not in providers else "mixed" if providers else "not_run")
         summary["avg_score"] = summary["overall_average"]
         if reason:

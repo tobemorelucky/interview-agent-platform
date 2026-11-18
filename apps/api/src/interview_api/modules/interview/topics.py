@@ -149,7 +149,7 @@ def introduction_opening_question():
     return INTRODUCTION_QUESTION
 
 
-def topic_diagnostic(question, target_topic):
+def topic_diagnostic(question, target_topic, **extra):
     """Everything needed to tell "model drifted" from "gate missed the wording".
 
     The raw model response is deliberately not persisted, so a rejected question
@@ -158,9 +158,11 @@ def topic_diagnostic(question, target_topic):
     """
     import hashlib
     text = question or ""
-    return dict(target_topic=target_topic, expected_terms=topic_terms(target_topic),
-                matched_topics=mentioned_topics(text), question_excerpt=text[:160],
-                question_sha256=hashlib.sha256(text.encode("utf-8")).hexdigest())
+    result = dict(target_topic=target_topic, expected_terms=topic_terms(target_topic),
+                  matched_topics=mentioned_topics(text), question_excerpt=text[:160],
+                  question_sha256=hashlib.sha256(text.encode("utf-8")).hexdigest())
+    result.update(extra)
+    return result
 
 
 def question_topic(question):

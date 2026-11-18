@@ -209,7 +209,8 @@ def test_each_autonomous_strategy_still_has_legal_provenance_and_cooldown(strate
     ctx = packet()["snapshot"]
     active = SimpleNamespace(id=1, question="Kafka 消息如何确认？", status="ANSWERED", difficulty="MEDIUM",
         parent_question_id=None, question_kind="NEXT", standard_answer="事务与幂等", source="DYNAMIC_GENERATED",
-        candidate_refs_json=dict(adaptive_decision=dict(target_knowledge_id="java_backend:kafka_reliability")))
+        candidate_refs_json=dict(adaptive_decision=dict(target_knowledge_id="java_backend:kafka_reliability",
+            question_source_ref="skill:java_backend@1.0.0")))
     p = planning_payload(ctx, [active], active, None, answer="消费后 ACK", answer_id=7)
     pair = next(c for c in p["adaptive"]["candidates"] if strategy in c["strategies"])
     raw = selection(p, pair, strategy)
@@ -222,7 +223,11 @@ def test_each_autonomous_strategy_still_has_legal_provenance_and_cooldown(strate
         assert result.target_knowledge_id == "java_backend:kafka_reliability"
         assert result.question.source_question_id is None
     else:
-        assert result.target_knowledge_id != "java_backend:kafka_reliability"
+        # R130: NEXT is a new question, not necessarily a new subject. It may take
+        # the same target from a different frozen source, but never repeat the
+        # exact target+source pair that is already active.
+        assert (result.target_knowledge_id != "java_backend:kafka_reliability"
+                or result.question_source_ref != "skill:java_backend@1.0.0")
 
 
 def test_public_and_candidate_sources_resolve_only_the_selected_exact_refs():
@@ -424,7 +429,7 @@ def test_frozen_legacy_and_pair_sessions_execute_without_upgrading_history(datab
                                              (old_memory, "2.2.0", "AdaptiveSelection"),
                                              (old_references, "2.2.1", "AdaptiveSelection"),
                                              (old_projected, "2.3.1", "AdaptiveSelection"),
-                                             (modern, "2.6.0", "AdaptiveSelection")]:
+                                             (modern, "3.0.0", "AdaptiveSelection")]:
                 pinned = deepcopy(detail["context_snapshot"])
                 sid = detail["id"]
                 question = await core.start(sid, uid)

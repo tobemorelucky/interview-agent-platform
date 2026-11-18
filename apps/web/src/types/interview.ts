@@ -149,7 +149,7 @@ export interface InterviewMemoryConsolidateResult {
 }
 
 export interface InterviewSessionDetail extends InterviewSession {
-  pending_answer?: { question_id: number; idempotency_key: string; content: string; status: string; error: string | null; processing_stage?: string; processing_deadline?: string; retryable?: boolean; design_plan?: DesignPlan } | null
+  pending_answer?: { question_id: number; idempotency_key: string; content: string; status: string; error: string | null; processing_stage?: string; processing_deadline?: string; retryable?: boolean; recovery_stage?: string | null; evaluation_reusable?: boolean; recovery_diagnostic?: Record<string, unknown> | null; design_plan?: DesignPlan } | null
   memory_summary: string | null
   messages: InterviewMessage[]
   questions?: InterviewQuestion[]
@@ -206,7 +206,7 @@ export interface InterviewSession {
   active_question_id?: number | null
   state_version?: number
   context_snapshot?: { adaptive_policy?: { version: string }; adaptive_blueprint?: { targets: { label: string }[] }; company_name: string; job_title: string; profile_version_number: number; jd_version_number: number; job_target?: { id: number; version: number }; coverage_insufficient: boolean; profile?: unknown; interviewer_config?: InterviewerConfig; interviewer_selection?: { source: 'AUTO_RECOMMENDED' | 'USER_SELECTED'; skill_id: string }; approved_memory_context?: { items: { id: number; content: string }[]; omitted_count?: number }; recent_performance_observations?: { items: { id: number; content: string }[] } }
-  completion_json?: { overall_average: number | null; dimension_averages: Record<string, number | null>; answered_count: number; evaluated_count: number; mode: string }
+  completion_json?: { overall_average: number | null; dimension_averages: Record<string, number | null>; answered_count: number; evaluated_count: number; mode: string; technical_question_count?: number; question_budget?: number; completion_reason?: string }
   id: number
   user_id: number
   resume_id: number | null

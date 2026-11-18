@@ -158,7 +158,9 @@ def test_cross_job_history_is_reused_as_evidence_but_not_mixed_with_this_target(
         assert all(g["relation"] == "GENERAL_HISTORY_NOT_CURRENT_TARGET"
                    for g in result["general_only"])
         assert "不代表当前岗位已完全胜任" in result["verified_note"]
-        assert "读取这一刻" in result["semantics"]  # current state, not report-time conclusion
+        # R130: the public copy is user-facing; no internal function names leak.
+        assert "当前推荐的练习内容" in result["semantics"]
+        assert "training.modes()" not in result["semantics"]
     body(database_url, scenario)
 
 

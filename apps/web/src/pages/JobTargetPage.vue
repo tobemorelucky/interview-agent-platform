@@ -355,12 +355,14 @@ load()
           <ul class="skill-list">
             <li v-for="c in skillRec.candidates.filter(c => c.eligible)" :key="c.skill_id">
               <div><strong>{{ c.label }}</strong>
-                <span> {{ c.skill_id }} · v{{ c.version }} · 第 {{ c.rank }} 位 · 命中权重 {{ c.ranking_points }}（要求与职责 {{ c.content_points }} + 岗位名称 {{ c.title_points }}）</span>
                 <span v-if="c.skill_id === skillRec.recommended_skill_id && skillRec.auto_select"> 系统首推</span>
-                <span v-if="c.uncertain"> 证据不确定</span>
+                <span v-if="c.uncertain"> 证据不足</span>
               </div>
               <p>{{ c.reason_note }}</p>
-              <p><small>规则判定（算法按关键词加分，不是 JD 原文）：{{ c.matched_reason }}</small></p>
+              <p><small>匹配依据：{{ c.matched_reason }}（按关键词匹配，不等于岗位原文）。</small></p>
+              <details class="ux-technical"><summary>高级详情</summary>
+                <p><small>方向标识 {{ c.skill_id }} · 版本 v{{ c.version }} · 排序第 {{ c.rank }} · 命中权重 {{ c.ranking_points }}（要求与职责 {{ c.content_points }} + 岗位名称 {{ c.title_points }}）</small></p>
+              </details>
               <ul v-if="c.evidence.length" class="evidence-list">
                 <li v-for="(e, i) in uniqueEvidence(c.evidence)" :key="i">
                   <small>{{ evidenceStatusLabels[e.evidence_status] || e.evidence_status }}：{{ e.verbatim_jd_evidence || e.requirement_statement || e.excerpt }}</small>
@@ -373,7 +375,7 @@ load()
             </li>
           </ul>
           <p><small>{{ skillRec.disclaimer }}</small></p>
-          <p><small>手动更换：跳转后在「专业方向」下拉自行选择；你手动选中的方向不会被异步推荐结果覆盖。当前为 JD 第 {{ skillRec.target_version }} 版，推荐输入指纹 {{ skillRec.input_fingerprint.slice(0, 12) }}…；JD 更新后请重新查看推荐。</small></p>
+          <p><small>手动更换：跳转后在「专业方向」下拉自行选择；你手动选中的方向不会被自动推荐覆盖。岗位描述更新后请重新查看推荐。</small></p>
         </template>
         <p v-else role="status">正在读取推荐方向…</p>
       </section>

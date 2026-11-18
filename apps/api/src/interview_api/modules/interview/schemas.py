@@ -53,6 +53,10 @@ class SendMessageRequest(BaseModel):
     # The user knowingly accepts one resend after a vanished attempt whose
     # outcome is UNKNOWN. Never implied by a plain retry of the same key.
     confirm_unknown_retry: bool = False
+    # The user explicitly confirmed an answer flagged as an obvious paste, or
+    # chose to replace it with a fresh answer for the same question.
+    confirm_off_topic: bool = False
+    restart_after_off_topic: bool = False
 
 
 class ConsolidateMemoryRequest(BaseModel):

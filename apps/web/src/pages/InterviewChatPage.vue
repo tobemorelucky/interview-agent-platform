@@ -24,6 +24,7 @@ import {
   getInterviewerOptions,
   startInterview,
   endInterview,
+  skipQuestion,
   type InterviewTarget,
 } from "../api/interview"
 import { uploadResume, getResume as apiGetResume } from "../api/resume"
@@ -131,7 +132,7 @@ watch([skillRecommendation, interviewerOptions], () => {
 function selectSkill(event: Event) { skillChoice.value = chooseSkill((event.target as HTMLSelectElement).value) }
 const activeInterviewer = computed(() => profileContext.value?.interviewer_config)
 const activeQuestionId = ref<number | null>(null)
-const retryAnswer = ref<{ question_id: number; idempotency_key: string; content: string; design_plan?: DesignPlan } | null>(null)
+const retryAnswer = ref<{ question_id: number; idempotency_key: string; content: string; error?: string | null; design_plan?: DesignPlan; recovery_stage?: string | null; evaluation_reusable?: boolean; recovery_diagnostic?: Record<string, unknown> | null } | null>(null)
 const answerPersisted = ref(false)
 const profileContext = ref<InterviewSession["context_snapshot"]>()
 // A private JD has no public JD version; showing "第 版" told the user nothing.
@@ -146,10 +147,32 @@ const trainingLabel = computed(() => ({FULL:'完整模拟面试',WEAKNESS:'薄�
 const completion = ref<InterviewSession["completion_json"]>()
 const pageError = ref("")
 const streamErrorCode = ref("")
+// Optional opening: the normal interview starts from the job/resume directly.
+const useIntroductionOpening = ref(false)
 const isReplay = computed(() => messages.value.some(m => m.metadata_json?.mode === 'replay'))
 const activeSessionId = ref<number | null>(null)
 const messages = ref<InterviewMessage[]>([])
 const questionList = ref<InterviewQuestionSummary[]>([])
+// The scripted self-introduction is not a scored technical round. Keep it
+// visible as an opening, but number formal questions without it.
+function formalRound(questionIndex: number | null | undefined): number {
+  const index = questionIndex ?? 0
+  const intro = questionList.value.find(q => q.question_kind === 'INTRODUCTION')
+  return intro?.question_index != null && index > intro.question_index ? index : index + 1
+}
+function isIntroductionQuestion(questionId: number | null | undefined): boolean {
+  return !!questionList.value.find(q => q.id === questionId && q.question_kind === 'INTRODUCTION')
+}
+// Server-side state decides the wording: a paid evaluation is never presented
+// as "send a new answer", and an unconfirmed result is never claimed as saved.
+const pendingRecovery = computed(() => {
+  const p = retryAnswer.value
+  const stage = p?.recovery_stage || ''
+  return {
+    evaluationDone: !!p?.evaluation_reusable || ['EVALUATED', 'NEXT_REJECTED', 'RECOVERED_FROM_AUDIT_RUN'].includes(stage),
+    nextRejected: stage === 'NEXT_REJECTED' || (!!p?.evaluation_reusable && p.error === 'ADAPTIVE_TOPIC_MISMATCH'),
+  }
+})
 const answerVisibleMap = ref<Record<number, boolean>>({})
 const standardAnswerMap = ref<Record<number, string>>({})
 const referenceAnswerMap = ref<Record<number, ReferenceAnswer | null>>({})
@@ -188,7 +211,9 @@ function pollAnswer(id: number) {
       if (generationStage.value !== 'idle') pollAnswer(id)
       else {
         await selectSession(id, true)
-        if (detail.pending_answer) pageError.value = '本轮处理已中断或超时，回答仍已保存；请安全重试原回答，不会重复提交。'
+        if (detail.pending_answer) pageError.value = detail.pending_answer.evaluation_reusable
+          ? '评价已完成，下一题处理中断；回答与评价仍已保存，继续处理不会重新评价。'
+          : '本轮处理已中断或超时，回答仍已保存；请安全重试原回答，不会重复提交。'
       }
     } catch (e) {
       generationStage.value = 'idle'
@@ -290,9 +315,18 @@ async function selectSession(id: number, force = false) {
       streamErrorCode.value = detail.pending_answer.error || ''
       generationStage.value = pendingStage(detail.pending_answer)
       if (generationStage.value !== 'idle') pollAnswer(id)
-      else pageError.value = detail.pending_answer.error === 'INTERVIEW_BUDGET_EXHAUSTED'
-        ? '本场时间或模型预算已不足，回答仍已保存；请新建面试继续，重试不会重置预算。'
-        : '本轮处理未完成，回答已保存；可以安全重试原回答。'
+      else {
+        const p = detail.pending_answer
+        pageError.value = p.error === 'INTERVIEW_BUDGET_EXHAUSTED'
+          ? '本场时间或模型预算已不足，回答仍已保存；请新建面试继续，重试不会重置预算。'
+          : (p.recovery_stage === 'NEXT_REJECTED' || (p.evaluation_reusable && p.error === 'ADAPTIVE_TOPIC_MISMATCH'))
+            ? '评价已完成，下一题生成失败；回答与评价已保存。继续处理本轮不会重新评价。'
+            : p.evaluation_reusable
+              ? '评价已完成，正在等待下一题；继续处理不会重新评价。'
+              : p.status === 'RUNNING'
+                ? '处理结果尚未确认，请读取服务端状态；原回答不会被当成新回答提交。'
+                : '回答已保存，待评价；请使用原提交标识继续处理。'
+      }
     } else { inputText.value = "" }
     // Phase 3.7: Initialize eval collapsed state on refresh
     for (const msg of messages.value) {
@@ -362,7 +396,7 @@ async function handleStart() {
   generationStage.value = "generating_first_question"
   startBlocked.value = ""
   try {
-    await startInterview(activeSessionId.value)
+    await startInterview(activeSessionId.value, useIntroductionOpening.value ? 'INTRODUCTION' : 'MODEL')
     await loadSessions()
     await selectSession(activeSessionId.value, true)
   } catch (e) {
@@ -390,6 +424,11 @@ async function recoverWithRequirement() {
   } finally { generationStage.value = "idle" }
 }
 
+const offTopicConfirm = ref<{ question_id: number; idempotency_key: string; content: string } | null>(null)
+const topicChangeConfirm = ref(false)
+const sendFlags = ref<{ confirm_off_topic?: boolean; restart_after_off_topic?: boolean }>({})
+const scoreMode = ref<'SIMULATION' | 'PRACTICE'>(
+  (localStorage.getItem('interview_score_mode') as 'SIMULATION' | 'PRACTICE') || 'SIMULATION')
 const endConfirmVisible = ref(false)
 const ending = ref(false)
 const endResult = ref<{ answered: number; excluded: number } | null>(null)
@@ -416,6 +455,35 @@ async function confirmEnd() {
     endConfirmVisible.value = false
     alert(e instanceof ApiError ? e.message : "结束面试失败，请稍后重试；本次请求未改变任何状态")
   } finally { ending.value = false }
+}
+
+function retryOffTopic(restart: boolean) {
+  const pending = offTopicConfirm.value
+  if (!pending) return
+  offTopicConfirm.value = null
+  inputText.value = pending.content
+  retryAnswer.value = restart ? null : {
+    question_id: pending.question_id, idempotency_key: pending.idempotency_key, content: pending.content,
+  }
+  sendFlags.value = restart ? { restart_after_off_topic: true } : { confirm_off_topic: true }
+  void handleSend()
+}
+
+async function confirmTopicChange() {
+  topicChangeConfirm.value = false
+  if (!activeSessionId.value || !activeQuestionId.value) return
+  try {
+    await skipQuestion(activeSessionId.value, activeQuestionId.value)
+    await loadSessions()
+    await selectSession(activeSessionId.value, true)
+  } catch (e) {
+    alert(e instanceof ApiError ? e.message : "跳过本题失败，请稍后重试")
+  }
+}
+
+function setScoreMode(mode: 'SIMULATION' | 'PRACTICE') {
+  scoreMode.value = mode
+  localStorage.setItem('interview_score_mode', mode)
 }
 
 function goReport() {
@@ -555,6 +623,8 @@ async function handleSend() {
   if (retryAnswer.value && retryAnswer.value.content !== text) { alert("上一回答处理失败，请先重试原回答，不能替换已提交内容"); return }
   const answerContext = retryAnswer.value || { question_id: activeQuestionId.value, idempotency_key: crypto.randomUUID(), content: text,
     ...(activeDesign.value ? { design_plan: { ...designPlan.value } } : {}) }
+  const flags = sendFlags.value
+  sendFlags.value = {}
   pageError.value = ''
   streamErrorCode.value = ''
   if (!retryAnswer.value) answerPersisted.value = false
@@ -615,6 +685,29 @@ async function handleSend() {
     },
     // onError
     (code, message) => {
+      if (code === 'OFF_TOPIC_CONFIRMATION_REQUIRED') {
+        pageError.value = ""
+        streamErrorCode.value = code
+        generationStage.value = "idle"
+        streamingContent.value = ""
+        streaming.value = false
+        sending.value = false
+        abortController = null
+        inputText.value = answerContext.content
+        offTopicConfirm.value = { question_id: answerContext.question_id, idempotency_key: answerContext.idempotency_key, content: answerContext.content }
+        return
+      }
+      if (code === 'INTERVIEW_TOPIC_CHANGE') {
+        pageError.value = ""
+        streamErrorCode.value = ""
+        generationStage.value = "idle"
+        streamingContent.value = ""
+        streaming.value = false
+        sending.value = false
+        abortController = null
+        topicChangeConfirm.value = true
+        return
+      }
       if (code === 'INTERVIEW_END_INTENT') {
         // The text was never persisted or evaluated; turn it into the confirm.
         pageError.value = ""
@@ -662,7 +755,7 @@ async function handleSend() {
     (data) => {
       activeQuestionId.value = data.question_id || null
       const mid = Date.now()
-      evalCollapsed.value[mid] = true  // default collapsed
+      evalCollapsed.value[mid] = scoreMode.value === 'SIMULATION'  // practice mode opens the real submitted evaluation
       messages.value.push({
         id: mid,
         role: "ASSISTANT",
@@ -755,7 +848,9 @@ async function handleSend() {
       const budget = data.question_budget || data.total_questions || questionBudget.value || 0
       messages.value.push({
         id: mid, role: "ASSISTANT",
-        content: `面试结束。已回答 ${answered} 题，计划 ${budget} 题。全场均分 ${data.overall_average ?? data.avg_score ?? '—'} / 5。`,
+        // The interviewer closes the conversation first; numbers stay in the
+        // separate, collapsible recap below instead of arriving as the reply.
+        content: "这一轮就到这里，感谢你的时间。我们看一下本场复盘。",
         metadata_json: { type: "INTERVIEW_COMPLETE", answered_count: answered, question_budget: budget },
         turn_index: messages.value.length, created_at: new Date().toISOString(),
       })
@@ -763,7 +858,7 @@ async function handleSend() {
       streaming.value = false
       activeQuestionId.value = null
     },
-    answerContext
+    { ...answerContext, ...flags }
   )
 }
 
@@ -954,8 +1049,8 @@ getInterviewTargets().then(async data => {
 
 <template>
   <div class="interview-page">
-    <p v-if="pageError" class="ux-empty" role="alert">{{ pageError }}</p>
-    <details v-if="streamErrorCode" class="ux-technical"><summary>错误技术详情</summary>{{ streamErrorCode }}</details>
+    <!-- Errors live inside the chat column: never compete with the sidebar
+         and the chat pane for horizontal flex space. -->
     <!-- Left: Session List -->
     <aside class="session-sidebar">
       <div class="sidebar-header">
@@ -998,6 +1093,10 @@ getInterviewTargets().then(async data => {
 
     <!-- Center: Chat -->
     <main class="chat-main">
+      <div v-if="pageError || streamErrorCode" class="chat-error-area" role="alert">
+        <p v-if="pageError" class="ux-empty chat-error">{{ pageError }}</p>
+        <details v-if="streamErrorCode" class="ux-technical chat-error-detail"><summary>错误技术详情</summary>{{ streamErrorCode }}</details>
+      </div>
       <div v-if="startBlocked" class="start-blocked" role="alert">
         <p><strong>第一题没有生成成功。</strong>{{ startBlocked }}</p>
         <p class="meta">这道题没有被保存，也没有产生评价；重试不会重复计费或重复评价。</p>
@@ -1022,6 +1121,27 @@ getInterviewTargets().then(async data => {
           </div>
         </div>
       </div>
+      <div v-if="offTopicConfirm" class="end-confirm-mask" role="dialog" aria-modal="true" aria-label="确认回答是否误粘贴">
+        <div class="end-confirm">
+          <h3>这段回答似乎和刚才的问题不太对应</h3>
+          <p>是不是粘贴错了？先确认可以重答；原提交会保留在审计里，但不会计分、不计题量、也不写入成长记录。</p>
+          <div class="end-actions">
+            <button class="btn-ghost" @click="offTopicConfirm = null">取消</button>
+            <button class="btn-ghost" @click="retryOffTopic(false)">确认按原文继续</button>
+            <button class="btn-primary" @click="retryOffTopic(true)">重新回答</button>
+          </div>
+        </div>
+      </div>
+      <div v-if="topicChangeConfirm" class="end-confirm-mask" role="dialog" aria-modal="true" aria-label="确认跳过本题">
+        <div class="end-confirm">
+          <h3>检测到换题 / 暂停请求</h3>
+          <p>确认后跳过当前题目；本题不计分、不写入成长记录。下一题会按现有规则生成。</p>
+          <div class="end-actions">
+            <button class="btn-ghost" @click="topicChangeConfirm = false">继续回答本题</button>
+            <button class="btn-primary" @click="confirmTopicChange">确认跳过本题</button>
+          </div>
+        </div>
+      </div>
       <div v-if="endResult" class="resume-bar end-result">
         面试已结束（你主动提前结束）：已回答 {{ endResult.answered }} 题，{{ endResult.excluded > 0 ? `${endResult.excluded} 轮结束请求/自我介绍未计入统计；` : '' }}可以查看报告与成长记录。
         <button class="btn-ghost" @click="goReport">查看面试报告</button>
@@ -1039,18 +1159,24 @@ getInterviewTargets().then(async data => {
               <p v-if="profileContext?.interviewer_selection">选择来源：{{ profileContext.interviewer_selection.source === 'AUTO_RECOMMENDED' ? '根据岗位自动推荐' : '用户手动选择' }}</p>
               <p>{{ activeInterviewer.round.focus }}</p><p>考察领域：{{ activeInterviewer.skill.domains.join('、') }}</p>
               <p>{{ activeInterviewer.company_background.instruction }}</p>
-              <small>Skill {{ activeInterviewer.skill.version }} / 策略 {{ activeInterviewer.style.version }}；后续配置更新不改变本场。</small>
+              <small>本场面试官配置在开始时已经固定，之后修改设置不会改变这一场。</small>
             </details>
             <span v-else>原有通用面试策略</span>
-            <details v-if="profileContext?.adaptive_policy && interviewFinished" class="session-context-detail"><summary>自适应考察范围（本场固定）</summary>
+            <details v-if="profileContext?.adaptive_policy && interviewFinished" class="session-context-detail"><summary>本场考察范围</summary>
               <p>{{ profileContext.adaptive_blueprint?.targets.map(t => t.label).join('、') }}</p>
               <p>依据本轮回答调整追问；表现观察不等于稳定技能事实，跨场次推断可在成长记录中查看和更正。</p>
             </details>
-            <span class="round-progress">第 {{ Math.min(questionList.find(q => q.id === activeQuestionId)?.question_index != null ? questionList.find(q => q.id === activeQuestionId)!.question_index + 1 : questionList.length || 1, questionBudget) }} / {{ questionBudget }} 轮</span>
+            <span class="round-progress" v-if="isIntroductionQuestion(activeQuestionId)">开场 · 自我介绍（不计技术分）</span>
+            <span class="round-progress" v-else>第 {{ Math.min(formalRound(questionList.find(q => q.id === activeQuestionId)?.question_index), questionBudget) }} / {{ questionBudget }} 轮</span>
             <span v-if="activeQuestionId && interviewFinished">当前题型：{{ displayLabel(questionList.find(q => q.id === activeQuestionId)?.dimension, '技术 / 项目') }} · 难度：{{ displayLabel(questionList.find(q => q.id === activeQuestionId)?.difficulty) }}</span>
             <span v-if="activeQuestionId && interviewFinished && questionList.find(q => q.id === activeQuestionId)?.assessment_topic">考察主题：{{ questionList.find(q => q.id === activeQuestionId)?.assessment_topic }}</span>
+            <span class="score-mode-switch">评分显示：
+              <button :class="{ active: scoreMode === 'SIMULATION' }" @click="setScoreMode('SIMULATION')">模拟（结束后看）</button>
+              <button :class="{ active: scoreMode === 'PRACTICE' }" @click="setScoreMode('PRACTICE')">练习（提交后看）</button>
+            </span>
             <details class="session-context-detail"><summary>本场资料详情</summary><p>画像第 {{ profileContext?.profile_version_number }} 版 / {{ jdVersionLabel }}（本场固定）</p><p v-if="profileContext?.coverage_insufficient">题库覆盖有限，本场会结合真实项目和岗位要求出题。</p></details>
             <span v-if="isReplay || completion?.mode === 'replay'">DEMO · Replay 回放模式（不是 Live 模型验收）</span>
+            <label v-if="activeSession()?.status === 'READY'" class="opening-choice"><input type="checkbox" v-model="useIntroductionOpening" /> 以自我介绍开场（可选，不计技术分）</label>
             <button v-if="activeSession()?.status === 'READY'" :disabled="generationStage !== 'idle'" @click="handleStart">开始 / 重试首题</button>
             <button v-if="activeSession()?.status === 'IN_PROGRESS'" class="btn-end" :disabled="ending || generationStage !== 'idle'" @click="requestEnd">结束面试</button>
           </template>
@@ -1089,7 +1215,12 @@ getInterviewTargets().then(async data => {
         </div>
 
         <!-- Messages -->
-        <div v-if="retryAnswer && !sending && !processingAnswer && streamErrorCode !== 'INTERVIEW_BUDGET_EXHAUSTED'" class="resume-bar">{{ answerPersisted ? '已保存本题回答；可以安全重试，不会重复评分或推进。' : '本题处理尚未确认完成，请保留原回答安全重试；保存状态以刷新后的结果为准。' }}</div>
+        <div v-if="retryAnswer && !sending && !processingAnswer && streamErrorCode !== 'INTERVIEW_BUDGET_EXHAUSTED'" class="resume-bar">
+          <template v-if="pendingRecovery.nextRejected">评价已完成，下一题生成失败；回答与评价都已保存。沿用同一提交标识继续处理，不会重新评价。</template>
+          <template v-else-if="pendingRecovery.evaluationDone">评价已完成，正在等待下一题；继续处理不会重新评价。</template>
+          <template v-else-if="answerPersisted">回答已保存，待评价；重试沿用同一提交标识，不会重复提交。</template>
+          <template v-else>处理结果尚未确认，请先读取服务端状态；原回答不会被当成新回答提交。</template>
+        </div>
         <div v-if="streamErrorCode === 'AUTH_TOKEN_EXPIRED'" class="resume-bar">
           本次回答尚未提交，草稿保留在输入框。
           <a href="/login" target="_blank" rel="noopener">重新登录（新窗口）</a>
@@ -1133,8 +1264,9 @@ getInterviewTargets().then(async data => {
               <div class="message-bubble question-bubble">
                 <div class="speaker-label">面试官</div>
                 <div class="q-header">
-                  <span class="q-badge" v-if="item.type === 'QUESTION'">
-                    第 {{ (item.question_index ?? 0) + 1 }} / {{ item.question_budget || questionBudget }} 轮
+                  <span class="q-badge opening" v-if="item.question_kind === 'INTRODUCTION'">开场 · 自我介绍（不计技术分）</span>
+                  <span class="q-badge" v-else-if="item.type === 'QUESTION'">
+                    第 {{ formalRound(item.question_index) }} / {{ item.question_budget || questionBudget }} 轮
                   </span>
                   <span class="q-badge followup" v-else-if="item.type === 'FOLLOW_UP'">
                     追问 {{ followUpOrdinal(questionList, item.question_id) ?? item.follow_up_count ?? '' }}{{ item.max_follow_ups ? ' / ' + item.max_follow_ups : '' }}
@@ -1153,7 +1285,7 @@ getInterviewTargets().then(async data => {
                     <blockquote>{{ e.excerpt }}</blockquote>
                   </div>
                 </details>
-                <details v-if="canReview(item) && item.source_fingerprint" class="ux-technical"><summary>题目技术详情</summary>公共原题指纹：{{ item.source_fingerprint }}</details>
+                <details v-if="canReview(item) && item.source_fingerprint" class="ux-technical"><summary>高级详情</summary>题目来源指纹：{{ item.source_fingerprint }}</details>
                 <button v-if="canReview(item) && interviewFinished" class="q-answer-btn" @click="toggleAnswerForItem(item)">
                   {{ answerVisibleMap[item.id] ? '收起答案' : '展开参考答案' }}
                 </button>
@@ -1163,7 +1295,7 @@ getInterviewTargets().then(async data => {
 
             <!-- EVALUATION: live mode shows only "noted"; the marking appears after the interview -->
             <div v-else-if="item.type === 'EVALUATION'" class="message-row assistant">
-              <div v-if="!interviewFinished" class="message-bubble eval-ack">
+              <div v-if="!interviewFinished && scoreMode !== 'PRACTICE'" class="message-bubble eval-ack">
                 面试官已记下这段回答，继续下一题。
               </div>
               <div v-else class="message-bubble eval-bubble" @click="toggleEvalCollapse(item.id)">
@@ -1192,10 +1324,11 @@ getInterviewTargets().then(async data => {
             <div v-else-if="item.type === 'INTERVIEW_COMPLETE'" class="message-row assistant">
               <div class="message-bubble complete-bubble">
                 <div class="complete-text">🎉 {{ item.content }}</div>
-                <template v-if="completion">
-                  <p>本场复盘：已评价 {{ completion.evaluated_count }} 轮，综合平均表现 {{ completion.overall_average ?? '—' }} / 5</p>
+                <details v-if="completion" class="complete-stats">
+                  <summary>本场复盘（已评价 {{ completion.evaluated_count }} 题）</summary>
+                  <p>综合平均表现 {{ completion.overall_average ?? '—' }} / 5；正式考察题 {{ completion.technical_question_count ?? '—' }} / {{ completion.question_budget ?? '—' }}，开场自我介绍不计入。</p>
                   <div v-for="(label, key) in dimensionLabels" :key="key">{{ label }}：{{ completion.dimension_averages[key] ?? '—' }}</div>
-                </template>
+                </details>
                 <router-link
                   v-if="activeSession()?.workflow_mode === 'm4' && activeSessionId"
                   :to="{ path: '/interview/reports', query: { session_id: activeSessionId } }"
@@ -1273,7 +1406,7 @@ getInterviewTargets().then(async data => {
             :disabled="!inputText.trim() || sending || processingAnswer || streamErrorCode === 'INTERVIEW_BUDGET_EXHAUSTED' || !isActiveResumeReady()"
             @click="handleSend"
           >
-            发送
+            {{ retryAnswer ? (pendingRecovery.evaluationDone ? '继续处理本轮' : '重试原回答') : '发送' }}
           </button>
           <button v-else class="btn-stop" @click="handleStopStream">停止</button>
         </div>
@@ -1521,6 +1654,28 @@ getInterviewTargets().then(async data => {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  overflow-x: hidden;
+}
+
+.chat-error-area {
+  flex: none;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 8px 16px 0;
+}
+
+.chat-error {
+  max-width: none;
+  margin: 0;
+  padding: 10px 12px;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.chat-error-detail {
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
 }
 
 .no-session {
@@ -1605,7 +1760,9 @@ getInterviewTargets().then(async data => {
 /* ── Messages ── */
 .chat-messages {
   flex: 1;
+  min-width: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 16px;
 }
 
@@ -1874,6 +2031,12 @@ getInterviewTargets().then(async data => {
 .eval-risk { margin-top: 8px; font-size: 13px; color: #f56c6c; }
 .complete-bubble { background: #f0f9eb !important; border: 1px solid #c2e7b0 !important; text-align: center; }
 .complete-text { font-size: 15px; color: #67c23a; font-weight: 600; }
+.complete-stats { margin-top: 8px; text-align: left; color: #4d6b3a; font-size: 13px; }
+.complete-stats summary { cursor: pointer; }
+.opening-choice { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #475467; }
+.score-mode-switch { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #475467; }
+.score-mode-switch button { border: 1px solid #d0d5dd; background: #fff; border-radius: 6px; padding: 2px 8px; cursor: pointer; font-size: 12px; }
+.score-mode-switch button.active { border-color: #2563eb; color: #2563eb; background: #eff6ff; }
 .memory-save-btn {
   margin-top: 12px;
   padding: 6px 14px;

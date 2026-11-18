@@ -49,6 +49,29 @@ class SystemOpening:
         self.artifact = artifact
 
 
+class SystemMain:
+    """Server-authored NEXT after a rejected model question. No model call."""
+    provider = "deterministic"
+    model = None
+    prompt_version = None
+    retry = 0
+    run_id = None
+    usage = {}
+
+    def __init__(self, artifact, policy=None):
+        self.artifact = artifact
+        self.policy = policy
+
+
+class RecoveredEvaluation:
+    """A validated evaluation artifact replayed from a persisted checkpoint."""
+
+    def __init__(self, artifact, *, provider, model, prompt_version, retry, usage, run_id):
+        self.artifact = artifact
+        self.provider, self.model, self.prompt_version = provider, model, prompt_version
+        self.retry, self.usage, self.run_id = retry, usage, run_id
+
+
 class MockInterviewService:
     def __init__(self, factory, router=None):
         self.factory = factory
@@ -278,6 +301,8 @@ class MockInterviewService:
         except Exception:
             logger.warning("topic mismatch audit write failed for session %s", session_id, exc_info=True)
 
+    # The user-facing default lives in the HTTP router (INTRODUCTION) and the
+    # web client; this service default stays MODEL for internal/scripted callers.
     async def start(self, session_id, user_id, *, opening="MODEL"):
         session, context, questions, active, _ = await self.read_state(session_id, user_id)
         if session.status == "IN_PROGRESS" and active:
@@ -350,8 +375,13 @@ class MockInterviewService:
             return result
 
     async def answer(self, session_id, user_id, question_id, key, content, on_stage=None, design_plan=None,
-                     allow_unknown_retry=False):
+                     allow_unknown_retry=False, confirm_off_topic=False, restart_after_off_topic=False):
         _, initial_context, _, _, _ = await self.read_state(session_id, user_id)
+        from interview_api.modules.interview.answer_relevance import classify
+        pre = classify(content, "", job_title="", skill_label="")
+        if pre.kind == "USER_CONTROL" and pre.reason == "CHANGE_TOPIC":
+            # Deterministic control intent: never scored, never remembered.
+            raise AppError("INTERVIEW_TOPIC_CHANGE", "检测到换题/暂停请求。确认后将跳过本题，本题不计分、不写入成长记忆。", 409)
         if end_intent(content):
             # Never becomes an answer: no message row, no evaluation, no charge.
             # The UI turns this into a confirmation and calls /sessions/{id}/end.
@@ -364,13 +394,33 @@ class MockInterviewService:
         # Retrying the same key resumes one persisted Answer, not a new user message.
         async with self.factory() as db:
             answer, expected, reused = await SessionController(db).prepare_answer(session_id, user_id, question_id, key, content,
-                allow_unknown_retry=allow_unknown_retry)
+                allow_unknown_retry=allow_unknown_retry, restart_after_off_topic=restart_after_off_topic)
             if design_plan is not None:
                 revision = await SessionController(db).bind_design_plan(session_id, user_id, answer, expected, design_plan)
             await db.commit()
             answer_id, old_events = answer.id, answer.result_events
         if reused:
             return old_events
+        if not confirm_off_topic:
+            _, context, _, active, _ = await self.read_state(session_id, user_id)
+            skill = (context.get("interviewer_config") or {}).get("skill") or {}
+            verdict = classify(content, active.question if active else "",
+                job_title=context.get("job_title") or "",
+                skill_label=str(skill.get("label") or skill.get("name") or ""))
+            if verdict.kind == "OFF_TOPIC_SUSPECTED":
+                # Stop before Evaluation: an obvious paste must never become a
+                # score, a technical-memory observation or a Coach proposal.
+                from interview_api.modules.audit.models import AuditLog
+                async with self.factory() as db:
+                    db.add(AuditLog(actor_user_id=user_id, actor_role="USER",
+                        action="OFF_TOPIC_CONFIRMATION_REQUIRED", resource_type="interview_answer",
+                        resource_id=str(answer_id), metadata_json=verdict.detail,
+                        status="REJECTED", error_message="obvious off-topic answer; not scored"))
+                    await SessionController(db).failed_answer(session_id, user_id, answer_id, expected,
+                        "OFF_TOPIC_CONFIRMATION_REQUIRED")
+                    await db.commit()
+                raise AppError("OFF_TOPIC_CONFIRMATION_REQUIRED",
+                    "你这段回答似乎和刚才的问题不太对应，是不是粘贴错了？请确认按原文继续，或重新回答。", 409)
         try:
             session, context, questions, active, _ = await self.read_state(session_id, user_id)
             if active is not None and active.question_kind == "INTRODUCTION":
@@ -456,14 +506,82 @@ class MockInterviewService:
             raise
         return events
 
+    async def recovered_evaluation(self, sid, uid, aid):
+        """Reuse a validated evaluation instead of paying for it a second time.
+
+        Source order: this answer's checkpoint, then a SUCCEEDED evaluation run
+        already linked to the same answer in the model ledger. A committed
+        Evaluation row always wins — no score is ever added twice.
+        """
+        from interview_api.modules.interview.adaptive import AdaptiveEvaluation, bounded
+        from interview_api.modules.experience.models import ExperienceAgentRun, ExperienceAgentStepRun
+        from interview_api.modules.interview.models import InterviewAgentCall
+        async with self.factory() as db:
+            session = await SessionController(db).owned(sid, uid, lock=True)
+            if await db.scalar(select(InterviewEvaluation.id).where(InterviewEvaluation.answer_id == aid).limit(1)):
+                return None
+            recovery = (session.interview_plan_json or {}).get("answer_recovery") or {}
+            if recovery.get("answer_id") == aid and recovery.get("artifact"):
+                artifact = AdaptiveEvaluation.model_validate(recovery["artifact"])
+                logger.info("reusing evaluation checkpoint for answer %s (stage=%s)", aid, recovery.get("stage"))
+                return RecoveredEvaluation(artifact, provider=recovery.get("provider"), model=recovery.get("model"),
+                    prompt_version=recovery.get("prompt_version"), retry=recovery.get("retry") or 0,
+                    usage=recovery.get("usage") or {}, run_id=recovery.get("run_id"))
+            runs = (await db.scalars(select(ExperienceAgentRun).join(InterviewAgentCall,
+                InterviewAgentCall.agent_run_id == ExperienceAgentRun.id).where(
+                InterviewAgentCall.answer_id == aid, ExperienceAgentRun.status == "SUCCEEDED")
+                .order_by(ExperienceAgentRun.id.desc()))).all()
+            for run in runs:
+                output = run.output_json or {}
+                if output.get("schema") != "AdaptiveEvaluation" or not output.get("validated_artifact"):
+                    continue
+                artifact = AdaptiveEvaluation.model_validate(output["validated_artifact"])
+                step = await db.scalar(select(ExperienceAgentStepRun).where(
+                    ExperienceAgentStepRun.agent_run_id == run.id).order_by(ExperienceAgentStepRun.id))
+                result = RecoveredEvaluation(artifact,
+                    provider=step.provider_name if step else None, model=step.model_name if step else None,
+                    prompt_version=step.prompt_version if step else None,
+                    retry=(step.structured_retry or 0) if step else 0,
+                    usage=(step.token_usage_json or {}) if step else {}, run_id=run.id)
+                plan = dict(session.interview_plan_json or {})
+                plan["answer_recovery"] = dict(answer_id=aid, stage="RECOVERED_FROM_AUDIT_RUN",
+                    artifact=artifact.model_dump(), provider=result.provider, model=result.model,
+                    prompt_version=result.prompt_version, retry=result.retry, usage=result.usage,
+                    run_id=run.id, source=f"experience_agent_run:{run.id}",
+                    at=datetime.now(timezone.utc).isoformat())
+                session.interview_plan_json = bounded(plan, maximum=192_000)
+                await db.commit()
+                logger.info("recovered evaluation for answer %s from run %s", aid, run.id)
+                return result
+        return None
+
+    async def fallback_after_mismatch(self, sid, uid, aid, expected, evaluation, payload, exc,
+                                      rejected_target=None):
+        """Audit the rejected model question and replace it without another call."""
+        from interview_api.modules.interview.adaptive import fallback_selection
+        await self.record_topic_mismatch(sid, uid, exc)
+        async with self.factory() as db:
+            await SessionController(db).checkpoint_evaluation(sid, uid, aid, expected,
+                evaluation, "NEXT_REJECTED", diagnostic=getattr(exc, "diagnostic", None), source="interview_main")
+            await db.commit()
+        fallback, policy = fallback_selection(payload, rejected_target)
+        logger.info("replaced rejected NEXT with deterministic fallback for answer %s", aid)
+        return SystemMain(fallback, policy), policy
+
     async def adaptive_answer(self, sid, uid, aid, expected, content, on_stage):
-        from interview_api.modules.interview.adaptive import planning_payload, validate_decision, all_goals_demonstrated
+        from interview_api.modules.interview.adaptive import (
+            fallback_selection, planning_payload, validate_decision, all_goals_demonstrated)
         session, context, questions, active, _ = await self.read_state(sid, uid)
         payload = planning_payload(context, questions, active, session.interview_plan_json, answer=content, answer_id=aid)
-        if on_stage: on_stage("generating_evaluation")
-        evaluation = await self.call_agent(self.evaluator.adaptive(), sid, uid, expected, payload, answer_id=aid)
+        evaluation = await self.recovered_evaluation(sid, uid, aid)
         if evaluation is None:
-            raise AppError("INTERVIEW_BUDGET_EXHAUSTED", "评价预算不足，回答已保存，未推进或结束", 409)
+            if on_stage: on_stage("generating_evaluation")
+            evaluation = await self.call_agent(self.evaluator.adaptive(), sid, uid, expected, payload, answer_id=aid)
+            if evaluation is None:
+                raise AppError("INTERVIEW_BUDGET_EXHAUSTED", "评价预算不足，回答已保存，未推进或结束", 409)
+            async with self.factory() as db:
+                await SessionController(db).checkpoint_evaluation(sid, uid, aid, expected, evaluation, "EVALUATED")
+                await db.commit()
         session, context, questions, active, tokens = await self.read_state(sid, uid)
         payload = planning_payload(context, questions, active, session.interview_plan_json, answer=content,
             answer_id=aid, evaluation=evaluation.artifact, evaluation_run_id=evaluation.run_id)
@@ -476,7 +594,12 @@ class MockInterviewService:
                 await SessionController(db).answer_stage(sid, uid, aid, expected, "generating_next_question")
                 await db.commit()
             if on_stage: on_stage("generating_next_question")
-            main = await self.call_agent(self.main.adaptive(payload), sid, uid, expected, payload, answer_id=aid)
+            try:
+                main = await self.call_agent(self.main.adaptive(payload), sid, uid, expected, payload, answer_id=aid)
+            except AppError as exc:
+                if exc.code != "ADAPTIVE_TOPIC_MISMATCH":
+                    raise
+                main, policy = await self.fallback_after_mismatch(sid, uid, aid, expected, evaluation, payload, exc)
             if main is None:
                 # call_agent returns None only when the session refused this logical
                 # call before any HTTP was sent. The evaluation above is already
@@ -491,7 +614,16 @@ class MockInterviewService:
                     # Unidentified refusal is not proof of a budget stop.
                     raise AppError("INTERVIEW_BUDGET_EXHAUSTED", "下一题预算不足，回答已保存，未推进", 409)
             else:
-                policy = validate_decision(main.artifact, payload)
+                if isinstance(main, SystemMain):
+                    policy = main.policy  # already passed the same gate in fallback_selection
+                else:
+                    try:
+                        policy = validate_decision(main.artifact, payload)
+                    except AppError as exc:
+                        if exc.code != "ADAPTIVE_TOPIC_MISMATCH":
+                            raise
+                        main, policy = await self.fallback_after_mismatch(sid, uid, aid, expected,
+                            evaluation, payload, exc, rejected_target=main.artifact.target_knowledge_id)
                 action = main.artifact.recommendation
         try:
             async with self.factory() as db:
@@ -511,7 +643,9 @@ class MockInterviewService:
         task = asyncio.create_task(self.answer(session_id, user_id, request.question_id,
             request.idempotency_key, request.content, on_stage=stages.put_nowait,
             design_plan=request.design_plan.model_dump() if request.design_plan else None,
-            allow_unknown_retry=request.confirm_unknown_retry))
+            allow_unknown_retry=request.confirm_unknown_retry,
+            confirm_off_topic=request.confirm_off_topic,
+            restart_after_off_topic=request.restart_after_off_topic))
         stage = "evaluating"
         try:
             while not task.done():
@@ -600,9 +734,32 @@ class MockInterviewService:
                 if not expires:
                     from datetime import timedelta
                     deadline += timedelta(seconds=2 * settings.interview_model_timeout_seconds + 30)
+                recovery = (session.interview_plan_json or {}).get("answer_recovery") or {}
+                reusable = recovery.get("answer_id") == pending.id and bool(recovery.get("artifact"))
+                diagnostic = recovery.get("diagnostic") if reusable else None
+                stage = recovery.get("stage") if reusable else None
+                if not reusable:
+                    # Old sessions failed before checkpoints existed. Read the
+                    # model ledger only: an already-paid evaluation is still
+                    # reusable, and the UI must not call it "awaiting grading".
+                    from interview_api.modules.experience.models import ExperienceAgentRun
+                    from interview_api.modules.interview.models import InterviewAgentCall
+                    runs = (await db.scalars(select(ExperienceAgentRun).join(InterviewAgentCall,
+                        InterviewAgentCall.agent_run_id == ExperienceAgentRun.id).where(
+                        InterviewAgentCall.answer_id == pending.id).order_by(ExperienceAgentRun.id))).all()
+                    for run in runs:
+                        output = run.output_json or {}
+                        if run.status == "SUCCEEDED" and output.get("schema") == "AdaptiveEvaluation":
+                            reusable = True
+                            stage = "EVALUATION_AVAILABLE_IN_LEDGER"
+                        if run.status == "FAILED" and output.get("validation", {}).get("error") == "ADAPTIVE_TOPIC_MISMATCH":
+                            stage = "NEXT_REJECTED"
+                            diagnostic = output["validation"]
                 result["pending_answer"].update(processing_stage=processing.get("stage", "evaluating"),
                     retryable=pending.status != "RUNNING" or deadline <= datetime.now(timezone.utc),
-                    processing_deadline=deadline.isoformat())
+                    processing_deadline=deadline.isoformat(),
+                    recovery_stage=stage, evaluation_reusable=bool(reusable),
+                    recovery_diagnostic=diagnostic)
                 if (message.metadata_json or {}).get("design_revision"):
                     result["pending_answer"]["design_plan"] = message.metadata_json["design_revision"]["plan"]
             if session.context_snapshot_id:

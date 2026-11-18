@@ -2,7 +2,7 @@
   <div class="public-layout">
     <div class="public-card">
       <h1 class="public-title">秋招面试助手</h1>
-      <p class="product-caption">面向秋招的多 Agent 求职与模拟面试系统</p>
+      <p class="product-caption">简历 → 模拟面试 → 复盘成长</p>
       <slot />
     </div>
   </div>

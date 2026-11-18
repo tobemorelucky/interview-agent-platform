@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue"
+import { computed, nextTick, onMounted, ref, watch } from "vue"
+import { useRoute } from "vue-router"
 import CapabilityMemoryPanel from "../components/CapabilityMemoryPanel.vue"
 import { displayLabel } from "../i18n/zh-CN"
 const error = ref("")
+const route = useRoute()
+const highlightedId = ref<number | null>(null)
 import { confidenceLabel } from "../types/interview-report"
 import {
   createMemoryItem,
@@ -45,6 +48,26 @@ const typeLabel: Record<string, string> = {
   PROCEDURAL: "流程记忆",
   PREFERENCE: "偏好",
   SAFETY: "安全/同意",
+}
+
+const confirmedMemories = computed(() => memories.value.filter(item => item.source_type === "MEMORY_PROPOSAL"))
+
+// The report's jump link lands on the exact approved record, even when a
+// previous filter or keyword would otherwise hide it.
+async function focusMemoryFromRoute() {
+  const raw = route.query.memory_id
+  if (!raw) return
+  const id = Number(raw)
+  if (!Number.isFinite(id)) return
+  filterType.value = ""
+  keyword.value = ""
+  await loadMemories()
+  await nextTick()
+  const element = document.getElementById(`memory-${id}`)
+  if (element) {
+    highlightedId.value = id
+    element.scrollIntoView({ behavior: "smooth", block: "center" })
+  }
 }
 
 function memoryLabel(item: UserMemoryItem): string {
@@ -117,10 +140,12 @@ function scorePercent(value: number) {
   return `${Math.round((value || 0) * 100)}%`
 }
 
-onMounted(() => {
-  loadMemories()
+onMounted(async () => {
+  await loadMemories()
   loadSkills()
+  await focusMemoryFromRoute()
 })
+watch(() => route.query.memory_id, () => { focusMemoryFromRoute() })
 </script>
 
 <template>
@@ -128,11 +153,23 @@ onMounted(() => {
     <header class="page-head">
       <div>
         <h2>成长记录</h2>
-        <p>查看和管理本人确认的 长期成长记忆 与偏好；面试表现观察不等同于简历事实或稳定能力。</p>
+        <p>查看和管理你本人确认的长期记忆与偏好；面试表现观察不等同于简历事实，也不代表稳定能力。</p>
       </div>
     </header>
 
     <p v-if="error" role="alert">{{ error }}</p>
+    <section class="panel confirmed-summary">
+      <h3>本人确认的记忆（{{ confirmedMemories.length }}）</h3>
+      <p>由面试报告的建议经你批准或修正后写入，保存在下方「记忆列表」。它与下方系统推断的能力记忆分开存放，也不作为能力认证。</p>
+      <div v-if="confirmedMemories.length" class="confirmed-links">
+        <router-link
+          v-for="item in confirmedMemories.slice(0, 5)"
+          :key="item.id"
+          :to="{ path: '/memory', query: { memory_id: String(item.id) } }"
+        >{{ memoryLabel(item) }}：{{ item.content.slice(0, 48) }}{{ item.content.length > 48 ? '…' : '' }}</router-link>
+      </div>
+      <p v-else>暂无本人确认的记忆；可在面试报告中批准提案。</p>
+    </section>
     <CapabilityMemoryPanel />
     <section class="panel create-panel">
       <div>
@@ -183,7 +220,7 @@ onMounted(() => {
 
       <div v-if="loading" class="empty">加载中...</div>
       <div v-else-if="memories.length" class="memory-list">
-        <article v-for="item in memories" :key="item.id" class="memory-item">
+        <article v-for="item in memories" :key="item.id" :id="`memory-${item.id}`" class="memory-item" :class="{ highlighted: highlightedId === item.id }">
           <div class="memory-main">
             <div class="memory-meta">
               <span>{{ memoryLabel(item) }}</span>
@@ -441,6 +478,17 @@ button:disabled {
   padding: 28px;
   text-align: center;
   color: #98a2b3;
+}
+
+.confirmed-summary h3 { margin: 0 0 6px; }
+.confirmed-summary p { color: #475467; line-height: 1.6; }
+.confirmed-links { display: flex; flex-wrap: wrap; gap: 8px; }
+.confirmed-links a,
+.notice a { color: #2563eb; text-decoration: underline; }
+.memory-item.highlighted {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  background: #eff6ff;
 }
 
 @media (max-width: 820px) {

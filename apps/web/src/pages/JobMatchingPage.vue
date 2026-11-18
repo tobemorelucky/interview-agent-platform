@@ -221,7 +221,9 @@ function suggestions(card: { candidate: MatchCandidate }) {
         <summary>历史推荐（{{ history.length }}）与本次固定筛选</summary>
         <p v-for="h in history" :key="h.id"><router-link :to="`/jobs/matches/${h.id}`">{{ h.created_at }} · {{ displayLabel(h.result_state) }}</router-link></p>
         <button v-if="moreHistory" class="ghost" @click="older">更早的记录</button>
-        <pre>{{ run.snapshot.request.filters }}</pre>
+        <details class="advanced"><summary>本次筛选条件原始记录</summary>
+          <pre>{{ run.snapshot.request.filters }}</pre>
+        </details>
       </details>
       <details v-if="run.excluded_candidates.length" class="advanced">
         <summary>明确不满足 / 已排除（{{ run.excluded_candidates.length }}）</summary>

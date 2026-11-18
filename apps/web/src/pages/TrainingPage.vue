@@ -62,7 +62,7 @@ async function loadCandidates(current:number){
     if(seq===candidateSequence&&current===sequence)candidates.value=result
   }catch(e){if(seq===candidateSequence&&current===sequence){
     candidates.value=null
-    candidateError.value=e instanceof Error?e.message:'训练候选读取失败'
+    candidateError.value=e instanceof Error?e.message:'练习方向读取失败'
   }}
 }
 function onSkillChange(){manualSkill.value=true; autoRecommended.value=false}
@@ -160,13 +160,13 @@ onMounted(async()=>{
       <label>面试轮次<select v-model="round"><option v-for="r in options?.rounds" :key="r.id" :value="r.id">{{ r.label }}</option></select></label>
       <label>面试官风格<select v-model="style"><option v-for="s in options?.styles" :key="s.id" :value="s.id">{{ s.label }}</option></select></label>
     </section>
-    <p v-if="privateTarget" class="provenance" role="note">当前目标来自你自己提供的 JD（{{ privateTarget.company_name }} · {{ privateTarget.job_title }}，第 {{ privateTarget.version }} 版），{{ privateTarget.source_label }}。训练只使用该目标已确认的岗位要求，以及你在上方选择的平台专业 Skill；它不会进入公开招聘岗位或公共题库。</p>
-    <p v-if="privateTarget && !skill" role="note">请先在上方「专业方向」里选择一个已注册 Skill；平台只会在你选定的 Skill 与你确认的岗位要求范围内生成训练目标。</p>
+    <p v-if="privateTarget" class="provenance" role="note">当前目标是你在上方提供的岗位描述（{{ privateTarget.company_name }} · {{ privateTarget.job_title }}）。训练只使用这份描述里已确认的要求和你选择的方向，不会进入公开招聘岗位或公共题库。</p>
+    <p v-if="privateTarget && !skill" role="note">请先在上方「专业方向」里选择一个方向；训练目标只会在这个方向和你确认的岗位要求范围内生成。</p>
     <p v-if="loading" role="status">正在核对岗位范围和有效历史表现…</p>
     <section v-if="board" class="targets"><h2>可以练什么</h2>
       <p v-if="!trainable.length" class="empty-state">
         还没有可以专项练习的目标。先完成一场<router-link to="/interview">完整的模拟面试</router-link>，
-        系统会根据那一场的正式评价判断哪些点值得单独练；在既有规则下，不会凭空生成弱项。
+        系统会根据那一场的评价判断哪些点值得单独练，不会凭空生成弱项。
       </p>
       <p v-if="!board.coverage.reviewed_question_count" class="meta">该岗位暂无已审核的专属面试题，使用专业规则和岗位要求出题，不冒充公司真题。</p>
       <ul><li v-for="t in trainable" :key="t.knowledge_id"><div><strong>{{ t.label }}</strong><span>{{ capabilityLabels[t.state] }}</span></div>
@@ -183,12 +183,12 @@ onMounted(async()=>{
       </li></ul>
     </section>
     <details v-if="candidates" class="candidate-panel advanced">
-      <summary>系统推荐的练习顺序（内部依据）</summary>
+      <summary>高级详情：练习顺序的依据</summary>
       <p class="meta">{{ candidates.semantics }}</p>
       <p class="meta">{{ candidates.disclaimer }}</p>
-      <p v-if="candidateError" role="alert">候选读取失败：{{ candidateError }}</p>
+      <p v-if="candidateError" role="alert">练习方向读取失败：{{ candidateError }}</p>
       <p v-if="candidates.status==='TARGET_UNAVAILABLE'" role="alert">{{ candidates.message || candidateEmptyLabels[candidates.empty_reason||''] }}</p>
-      <p v-else-if="!candidates.candidates.length" role="status">{{ candidateEmptyLabels[candidates.empty_reason||''] || '当前没有可训练候选。' }}</p>
+      <p v-else-if="!candidates.candidates.length" role="status">{{ candidateEmptyLabels[candidates.empty_reason||''] || '当前没有可练习的方向。' }}</p>
       <ul><li v-for="c in candidates.candidates" :key="`${c.knowledge_id}-${c.mode}`">
         <div><strong>{{ c.label }}</strong><span>{{ plainMode(c.mode) }} · {{ capabilityLabels[c.state]||c.state }}</span></div>
         <p>{{ c.reason }}</p>

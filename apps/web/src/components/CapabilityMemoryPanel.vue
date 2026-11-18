@@ -28,7 +28,7 @@ onMounted(load)
 
 <template>
   <section class="capability-panel">
-    <header><div><h3>能力记忆</h3><p>根据多场面试表现推断，不是本人确认的经历，也不是技能认证。下一场仅参考相关知识点，不改变评分。</p></div><button @click="load" :disabled="loading">刷新</button></header>
+    <header><div><h3>能力记忆（系统推断）</h3><p>根据多场面试表现推断，不是本人确认的经历，也不是技能认证；与上方「本人确认的记忆」分开存储。下一场仅参考相关知识点，不改变评分。</p></div><button @click="load" :disabled="loading">刷新</button></header>
     <p v-if="error" role="alert">{{ error }}</p>
     <p v-if="loading" role="status">正在读取能力变化…</p>
     <p v-else-if="!items.length">完成一场自适应面试后，这里会记录知识点表现。没有记录不表示你不会。</p>

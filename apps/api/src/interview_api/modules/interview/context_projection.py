@@ -113,9 +113,10 @@ def model_payload(payload, route):
     # contract, so both remain valid for the same projection. Anything else is a
     # mixed pair and is refused rather than guessed.
     expected_main = (MAIN_HARNESS.version, MAIN_HARNESS_CONTEXT_HINTS.version) if harness else (
-        # 2.6.0 (new sessions), 2.5.0 and 2.3.3 (frozen older sessions) all keep
-        # the same decision/project shape; a mixed pair is refused, not guessed.
-        ('2.6.0', '2.5.0', '2.3.3') if gap_scope else ('2.3.1',))
+        # 3.0.0 (new sessions) and 2.9.0/2.8.0/2.7.0/2.6.0/2.5.0/2.3.3 (frozen
+        # older sessions) keep the same decision/project shape; a mixed pair is
+        # refused rather than guessed.
+        ('3.0.0', '2.9.0', '2.8.0', '2.7.0', '2.6.0', '2.5.0', '2.3.3') if gap_scope else ('2.3.1',))
     # 2.3.4 adds the five-dimension boundary contract. It is only accepted when the
     # session froze that contract: an older session must keep reading 2.3.3 with the
     # exact prompt it was scored under, and a mixed pair is refused, not upgraded.
@@ -162,8 +163,8 @@ def model_payload(payload, route):
                 'mention_terms'))
             sources[ref] = {**pick(candidate['source'], ('ref', 'source_type', 'source_id', 'kind')),
                 'semantics': candidate['source_semantics']}
-            candidates.append(pick(candidate, ('candidate_id', 'target_knowledge_id', 'strategies')) |
-                dict(source=dict(ref=ref)))
+            candidates.append(pick(candidate, ('candidate_id', 'target_knowledge_id', 'strategies',
+                'question_shapes')) | dict(source=dict(ref=ref)))
         adaptive.update(candidates=candidates, targets=targets, sources=sources)
         state = adaptive['knowledge_state']
         adaptive['knowledge_state'] = dict(version=state['version'],

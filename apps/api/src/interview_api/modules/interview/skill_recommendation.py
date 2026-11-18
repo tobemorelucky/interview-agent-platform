@@ -256,16 +256,13 @@ def attach_to_match(candidate):
 TARGET_SKILL_PROJECTION = "PRIVATE_TARGET_SKILL_V1"
 REASON_KIND = "RULE_MATCH_EXPLANATION"
 RANKING_SEMANTICS = (
-    "ranking_points 是公开匹配规则的整数权重之和"
-    "（category / title / responsibility / capability_group），不是概率、百分比或模型置信度；"
-    "content_points 是其中来自要求、职责与能力词的部分，title_points 只来自岗位名称。"
-    f"标题单独不足以构成推荐（content_points 需 ≥ {MIN_CONTENT}），"
-    "标题与要求指向不同方向时不自动选择；同分按 skill_id 固定打破，排序可复核。"
+    "推荐按公开匹配规则给方向打分：主要看你确认的岗位要求与职责里出现的依据，岗位名称只作辅助。"
+    "分数不是概率，也不是对你的能力评分；只有标题、或者标题与要求指向不同方向时，系统不会替你决定。"
 )
 TARGET_SKILL_DISCLAIMER = (
-    "推荐只依据你已确认的私有 JD 要求与本地合法注册的 Skill 清单做确定性文本匹配。"
-    "JD 由你提供、未经企业核实；推荐不代表企业官方要求，也不代表你已掌握该方向。"
-    "推荐不是强制选择，最终面试只冻结你实际选择的专业 Skill 与版本。"
+    "推荐只依据你已确认的岗位描述与本地可用的方向清单做文本匹配。"
+    "岗位描述由你提供、未经企业核实，推荐不代表企业官方要求，也不代表你已经掌握该方向；"
+    "最终以你实际选择的方向为准。"
 )
 STATUS_NOTES = dict(
     NOT_CONFIRMED="该 JD 尚未确认：只有已确认版本才提供正式推荐。",
@@ -345,7 +342,7 @@ def project_target_recommendation(target, recommendation=None, *, expected_key=N
             message=STATUS_NOTES["NOT_CONFIRMED"], reason=None,
             ambiguity_reason=None, content_threshold=MIN_CONTENT,
             needs_manual_confirmation=True, candidates=[], empty_reason="JD_NOT_CONFIRMED",
-            confidence_note="无置信度百分比；未确认 JD 不提供任何正式推荐。")
+            confidence_note="不提供置信度百分比；岗位描述未确认前不给出正式推荐。")
     rows = {row.get("id"): row for row in (target.requirements_json or []) if isinstance(row, dict)}
     candidates = []
     for item in recommendation["ranking"]:
@@ -396,4 +393,4 @@ def project_target_recommendation(target, recommendation=None, *, expected_key=N
         content_threshold=MIN_CONTENT,
         needs_manual_confirmation=status in ("AMBIGUOUS", "INSUFFICIENT_DATA", "NO_APPLICABLE_SKILL"),
         candidates=candidates, empty_reason=empty_reason,
-        confidence_note="不提供百分比或置信度分数；每个候选的 uncertain 与 evidence_status 标明证据是否可核对。")
+        confidence_note="不提供百分比或置信度分数；每个方向都会标注证据是否可核对。")
