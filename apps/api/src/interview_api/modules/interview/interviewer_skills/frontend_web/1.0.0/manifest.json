@@ -1,0 +1,70 @@
+{
+ "id": "frontend_web",
+ "label": "前端开发",
+ "version": "1.0.0",
+ "professional_category": "frontend",
+ "applicable_roles": [
+  "前端工程师",
+  "Web前端开发",
+  "H5开发工程师"
+ ],
+ "capability_tags": [
+  "Vue",
+  "React",
+  "TypeScript",
+  "性能优化"
+ ],
+ "scope": "Web 前端工程：框架、状态与数据流、渲染性能与工程化，不等同于 UI 视觉设计",
+ "matching": {
+  "categories": [
+   "frontend",
+   "前端",
+   "Web前端"
+  ],
+  "title_aliases": [
+   "前端",
+   "前端工程师",
+   "Web开发",
+   "H5",
+   "Vue",
+   "React"
+  ],
+  "responsibility_terms": [
+   "前端开发",
+   "Web开发",
+   "页面开发",
+   "组件开发",
+   "Vue",
+   "React",
+   "小程序前端",
+   "前端性能优化"
+  ],
+  "capability_groups": [
+   [
+    "Vue",
+    "React",
+    "TypeScript",
+    "JavaScript"
+   ],
+   [
+    "Pinia",
+    "Vuex",
+    "Redux"
+   ],
+   [
+    "首屏",
+    "懒加载",
+    "打包构建"
+   ],
+   [
+    "浏览器渲染",
+    "跨端",
+    "小程序"
+   ]
+  ],
+  "exclusions": [
+   "纯UI设计师",
+   "平面设计"
+  ]
+ }
+}

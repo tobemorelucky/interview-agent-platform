@@ -1,0 +1,68 @@
+{
+  "id": "rag_retrieval", "label": "RAG 与检索工程", "version": "1.0.0",
+  "professional_category": "rag_retrieval", "applicable_roles": [
+ "RAG工程师",
+ "检索工程师",
+ "知识库工程师",
+ "大模型应用（检索方向）"
+],
+  "capability_tags": [
+ "RAG",
+ "向量检索",
+ "Embedding",
+ "重排",
+ "知识库"
+], "scope": "检索增强与检索系统工程：切分、召回、融合、重排与证据约束，不等同于模型训练或纯算法研究",
+  "matching": {
+    "categories": [
+ "rag_retrieval",
+ "检索工程",
+ "知识工程"
+],
+    "title_aliases": [
+ "RAG",
+ "检索工程师",
+ "向量检索",
+ "知识库",
+ "Embedding"
+],
+    "responsibility_terms": [
+ "RAG",
+ "检索增强",
+ "向量检索",
+ "知识库",
+ "Embedding",
+ "重排",
+ "召回",
+ "语义检索"
+],
+    "capability_groups": [
+ [
+  "RAG",
+  "检索增强",
+  "语义检索"
+ ],
+ [
+  "Milvus",
+  "Elasticsearch",
+  "BM25",
+  "向量数据库"
+ ],
+ [
+  "Embedding",
+  "BGE",
+  "重排",
+  "RRF"
+ ],
+ [
+  "知识库",
+  "文档切分",
+  "索引"
+ ]
+],
+    "exclusions": [
+ "纯推荐系统",
+ "传统数据库运维"
+]
+  }
+}

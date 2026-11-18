@@ -1,0 +1,59 @@
+{
+  "id": "general_cs", "label": "通用计算机基础", "version": "1.0.0",
+  "professional_category": "general_cs", "applicable_roles": [
+ "软件开发工程师",
+ "后端开发（通用）",
+ "校招技术岗"
+],
+  "capability_tags": [
+ "操作系统",
+ "计算机网络",
+ "数据结构",
+ "数据库基础"
+], "scope": "通用计算机基础：操作系统、网络、数据结构算法与数据库原理，适用于任何研发岗的底座考察",
+  "matching": {
+    "categories": [
+ "general_cs",
+ "计算机基础",
+ "软件开发"
+],
+    "title_aliases": [
+ "软件开发",
+ "通用后端",
+ "计算机基础",
+ "校招"
+],
+    "responsibility_terms": [
+ "软件开发",
+ "基础平台",
+ "通用研发",
+ "系统开发",
+ "底层开发"
+],
+    "capability_groups": [
+ [
+  "操作系统",
+  "进程",
+  "线程",
+  "内存管理"
+ ],
+ [
+  "TCP",
+  "HTTP",
+  "网络协议",
+  "三次握手"
+ ],
+ [
+  "数据结构",
+  "算法",
+  "复杂度"
+ ],
+ [
+  "MySQL",
+  "Redis",
+  "数据库原理"
+ ]
+],
+    "exclusions": []
+  }
+}

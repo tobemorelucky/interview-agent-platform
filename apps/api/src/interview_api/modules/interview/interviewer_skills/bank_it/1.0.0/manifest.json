@@ -1,0 +1,11 @@
+{
+  "id": "bank_it", "label": "银行信息科技岗位", "version": "1.0.0",
+  "professional_category": "bank_it", "applicable_roles": ["信息科技岗", "科技菁英", "金融科技工程师"],
+  "capability_tags": ["信息系统", "数据安全", "权限", "业务一致性"], "scope": "银行信息系统研发与技术支持，不覆盖银行综合营销岗位",
+  "matching": {
+    "categories": ["bank_it", "金融科技", "银行科技"], "title_aliases": ["信息科技", "科技菁英", "金融科技"],
+    "responsibility_terms": ["信息系统研发", "信息科技", "金融科技", "银行科技", "应用研发", "科技研发", "数据治理", "系统运维"],
+    "capability_groups": [["数据安全", "权限", "审计"], ["信息系统", "软件开发", "研发", "编程"], ["数据库", "SQL", "一致性"]],
+    "exclusions": ["柜面营销", "客户营销", "综合营销", "客户经理"]
+  }
+}

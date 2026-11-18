@@ -1,0 +1,68 @@
+{
+  "id": "data_engineering", "label": "数据工程", "version": "1.0.0",
+  "professional_category": "data_engineering", "applicable_roles": [
+ "数据工程师",
+ "大数据开发工程师",
+ "数仓工程师"
+],
+  "capability_tags": [
+ "数仓",
+ "Spark",
+ "Flink",
+ "ETL"
+], "scope": "数据工程：建模、集成、批流计算与数据质量，不等同于算法研究或纯 BI 报表",
+  "matching": {
+    "categories": [
+ "data_engineering",
+ "数据工程",
+ "大数据开发"
+],
+    "title_aliases": [
+ "数据开发",
+ "大数据",
+ "数仓",
+ "ETL",
+ "数据平台"
+],
+    "responsibility_terms": [
+ "数据仓库",
+ "数据建模",
+ "ETL",
+ "数据集成",
+ "Spark",
+ "Flink",
+ "Hive",
+ "实时计算",
+ "数据治理"
+],
+    "capability_groups": [
+ [
+  "数仓",
+  "数据仓库",
+  "维度建模"
+ ],
+ [
+  "Spark",
+  "Flink",
+  "Hive",
+  "批流计算"
+ ],
+ [
+  "ETL",
+  "数据集成",
+  "调度",
+  "Airflow",
+  "DolphinScheduler"
+ ],
+ [
+  "数据质量",
+  "数据治理",
+  "元数据"
+ ]
+],
+    "exclusions": [
+ "纯BI报表",
+ "数据标注"
+]
+  }
+}

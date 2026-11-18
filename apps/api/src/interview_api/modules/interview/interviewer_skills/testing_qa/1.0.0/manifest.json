@@ -1,0 +1,68 @@
+{
+  "id": "testing_qa", "label": "测试开发", "version": "1.0.0",
+  "professional_category": "testing_qa", "applicable_roles": [
+ "测试开发工程师",
+ "自动化测试工程师",
+ "QA工程师",
+ "测试工程师"
+],
+  "capability_tags": [
+ "自动化测试",
+ "用例设计",
+ "pytest",
+ "质量保障"
+], "scope": "测试与质量工程：用例设计、自动化、稳定性与效能工具，不等同于 AI 应用开发",
+  "matching": {
+    "categories": [
+ "testing_qa",
+ "测试开发",
+ "质量保障"
+],
+    "title_aliases": [
+ "测试开发",
+ "测试工程师",
+ "QA",
+ "自动化测试",
+ "质量保障"
+],
+    "responsibility_terms": [
+ "测试",
+ "测试开发",
+ "自动化测试",
+ "用例设计",
+ "质量保障",
+ "测试平台",
+ "性能测试",
+ "接口测试"
+],
+    "capability_groups": [
+ [
+  "测试用例",
+  "用例设计",
+  "边界值"
+ ],
+ [
+  "pytest",
+  "unittest",
+  "Selenium",
+  "自动化框架"
+ ],
+ [
+  "接口测试",
+  "JMeter",
+  "压测",
+  "性能测试"
+ ],
+ [
+  "CI",
+  "流水线",
+  "测试平台",
+  "质量度量"
+ ]
+],
+    "exclusions": [
+ "AI应用开发",
+ "大模型应用开发"
+]
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "id": "python_backend", "label": "Python 后端开发", "version": "1.0.0",
+  "professional_category": "python_backend", "applicable_roles": [
+ "Python后端工程师",
+ "Python开发工程师",
+ "服务端开发"
+],
+  "capability_tags": [
+ "Python",
+ "Django",
+ "FastAPI",
+ "Flask",
+ "异步"
+], "scope": "Python 服务端工程：Web 框架、异步并发、数据访问与服务可靠性，不等同于数据科学或脚本自动化",
+  "matching": {
+    "categories": [
+ "python_backend",
+ "Python后端",
+ "Python开发"
+],
+    "title_aliases": [
+ "Python工程师",
+ "Python后端",
+ "Python服务端",
+ "后端开发（Python）"
+],
+    "responsibility_terms": [
+ "Python开发",
+ "后端服务",
+ "接口开发",
+ "Web服务",
+ "Django",
+ "FastAPI",
+ "Flask",
+ "异步编程"
+],
+    "capability_groups": [
+ [
+  "Python",
+  "FastAPI",
+  "Django",
+  "Flask"
+ ],
+ [
+  "异步",
+  "asyncio",
+  "协程"
+ ],
+ [
+  "MySQL",
+  "PostgreSQL",
+  "Redis"
+ ],
+ [
+  "Celery",
+  "任务队列",
+  "消息队列"
+ ]
+],
+    "exclusions": [
+ "数据标注",
+ "数据分析（纯业务）",
+ "爬虫外包"
+]
+  }
+}

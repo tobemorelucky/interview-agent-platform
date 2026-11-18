@@ -1,0 +1,62 @@
+{
+ "id": "java_backend",
+ "label": "Java 后端开发",
+ "version": "1.0.0",
+ "professional_category": "java_backend",
+ "applicable_roles": [
+  "Java后端工程师",
+  "Java开发工程师"
+ ],
+ "capability_tags": [
+  "Java",
+  "Spring",
+  "事务",
+  "消息可靠性"
+ ],
+ "scope": "以 Java 服务端研发为主要职责的工程岗位",
+ "matching": {
+  "categories": [
+   "java_backend",
+   "Java后端"
+  ],
+  "title_aliases": [
+   "Java后端",
+   "Java开发",
+   "Java工程师"
+  ],
+  "responsibility_terms": [
+   "Java服务",
+   "Java后端",
+   "Spring",
+   "服务端研发",
+   "后端开发",
+   "微服务开发",
+   "并发编程",
+   "JVM调优",
+   "分布式系统",
+   "高并发",
+   "分布式"
+  ],
+  "capability_groups": [
+   [
+    "Java",
+    "JVM"
+   ],
+   [
+    "Spring",
+    "SpringBoot",
+    "微服务"
+   ],
+   [
+    "Kafka",
+    "Redis",
+    "MySQL",
+    "事务"
+   ]
+  ],
+  "exclusions": [
+   "客户营销",
+   "柜面业务"
+  ]
+ }
+}
