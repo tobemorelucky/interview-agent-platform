@@ -2,6 +2,7 @@
 
 from datetime import datetime, timezone
 from hashlib import sha256
+import re
 
 from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert
@@ -31,6 +32,12 @@ from interview_api.modules.public_career.manual_import import (
     manual_manifest, resolve_manual_snapshot, validate_expected_identity, ACQUISITION_MODE,
 )
 from interview_api.modules.public_career.web_collection import resolve_web_snapshot, web_manifest
+
+
+def job_title_base(title):
+    """Normalized title without a trailing campus/round suffix."""
+    stripped = re.sub(r"[（(][^（()）]*[)）]\s*$", "", str(title or "")).strip()
+    return normalize_text(stripped)
 
 
 class PublicDataResearchAgent:
@@ -297,8 +304,26 @@ class PublicDataResearchAgent:
         if len(company_ids) != 1:
             return None, None
         company_id = next(iter(company_ids))
-        job_id = await db.scalar(select(Job.id).where(Job.company_id == company_id, Job.normalized_title == normalize_text(title or "")))
-        return company_id, job_id
+        normalized = normalize_text(title or "")
+        if not normalized:
+            return company_id, None
+        job_id = await db.scalar(select(Job.id).where(Job.company_id == company_id,
+            Job.normalized_title == normalized))
+        if job_id is not None:
+            return company_id, job_id
+        # A campus suffix ("（2027届秋招）") names the same posted role. Accept it
+        # only when exactly one job in this company has that base title; anything
+        # ambiguous stays unlinked instead of guessing.
+        rows = (await db.execute(select(Job.id, Job.canonical_title).where(
+            Job.company_id == company_id))).all()
+        base = job_title_base(title)
+        candidates = [row[0] for row in rows if job_title_base(row[1]) == base]
+        if not candidates:
+            # Spacing between Latin and Chinese ("Harness 研发" vs "Harness研发")
+            # is typography, not a different role.
+            compact = re.sub(r"\s+", "", base)
+            candidates = [row[0] for row in rows if re.sub(r"\s+", "", job_title_base(row[1])) == compact]
+        return company_id, candidates[0] if len(candidates) == 1 else None
 
     async def _publish_interview(self, db, task, extracted, state, catalog, sources, snapshots, *, force=False):
         gate = state["quality_gate_result"]

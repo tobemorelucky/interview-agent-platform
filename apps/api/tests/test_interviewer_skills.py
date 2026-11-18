@@ -120,21 +120,21 @@ def test_snapshot_contains_exact_config_and_generic_fallback(tmp_path):
     assert first["company_background"]["mode"] == "GENERIC_SKILL_FALLBACK"
     # A real catalog upgrade in a temporary asset tree, never the repository.
     import shutil
-    directory = tmp_path / "skills" / "java_backend" / "1.0.1"
-    shutil.copytree(directory.with_name("1.0.0"), directory)
+    directory = tmp_path / "skills" / "java_backend" / "1.0.2"
+    shutil.copytree(directory.with_name("1.0.1"), directory)
     definition = json.loads((directory / "skill.json").read_text(encoding="utf-8"))
-    definition["version"] = "1.0.1"
+    definition["version"] = "1.0.2"
     definition["priority_topics"] = ["system_design"]
     (directory / "skill.json").write_text(json.dumps(definition), encoding="utf-8")
     manifest_path = directory / "manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    manifest["version"] = "1.0.1"
+    manifest["version"] = "1.0.2"
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
     from interview_api.modules.interview.skill_registry import discover
     discover(tmp_path / "skills", refresh=True)
     second = registry.freeze("java_backend", "technical_screen", "strict")
-    assert second["skill"]["version"] == "1.0.1"
-    assert first["skill"]["version"] == "1.0.0"
+    assert second["skill"]["version"] == "1.0.2"
+    assert first["skill"]["version"] == "1.0.1"
     assert first == pinned and first["content_fingerprint"] != second["content_fingerprint"]
     sourced = registry.freeze("java_backend", "technical_screen", "standard",
         requirements=[dict(id=7)], jd_source=dict(source_type="COMMUNITY", snapshot_id=4))

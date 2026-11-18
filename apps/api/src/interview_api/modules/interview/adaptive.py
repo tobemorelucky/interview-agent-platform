@@ -485,6 +485,7 @@ def planning_payload(context, questions, active, plan, *, answer=None, answer_id
         current_evaluation_ref=f"evaluation_run:{evaluation_run_id}" if evaluation_run_id else None)
     refs = {s["ref"] for t in context["adaptive_blueprint"]["targets"] for s in t["sources"]}
     refs.update(f"question:{q.id}" for q in questions)
+    refs.update((context.get("reviewed_experience_scope") or {}).get("source_refs") or [])
     refs.update(r for r in (adaptive["current_answer_ref"], adaptive["current_evaluation_ref"]) if r)
     adaptive["allowed_refs"] = sorted(refs)
     if uses_pairs(payload):

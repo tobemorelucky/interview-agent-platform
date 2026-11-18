@@ -178,7 +178,10 @@ async def build_context(db, user_id, request):
                                dimension=q.category or "综合", difficulty=q.difficulty,
                                fingerprint=compute_question_fingerprint(q.question), experience_id=q.experience_id) for q in questions],
         interview_experiences=[dict(id=e.id, summary=(e.summary or "")[:2000],
-                                   fingerprint=compute_content_fingerprint(e.content_text or e.summary or "")) for e in experiences],
+                                   fingerprint=compute_content_fingerprint(e.content_text or e.summary or ""),
+                                   round=e.interview_round, source_url=e.source_url,
+                                   reviewed_at=e.reviewed_at.isoformat() if e.reviewed_at else None,
+                                   reliability=e.reliability_score) for e in experiences],
         coverage_insufficient=len(questions) < request.question_count,
         budgets=dict(question_count=request.question_count, max_follow_ups=settings.interview_max_follow_ups_per_question,
                      max_rounds=settings.interview_max_rounds, max_duration_seconds=settings.interview_max_duration_seconds,
@@ -243,6 +246,7 @@ async def build_context(db, user_id, request):
             # A private target has no reviewed public question or experience pool.
             # The Skill still supplies the knowledge targets; nothing is borrowed.
             context["public_questions"], context["interview_experiences"] = [], []
+        context["reviewed_experience_scope"] = reviewed_experience_scope(context)
         context["adaptive_policy"] = dict(version="2.1.0", decision_contract="TARGET_SOURCE_PAIR_V1",
             context_projection="ROLE_CONTEXT_V1",
             evaluation_context="FOLLOWUP_SCORING_V1", gap_scope_contract=GAP_SCOPE_CONTRACT,
@@ -253,7 +257,7 @@ async def build_context(db, user_id, request):
                 evaluation_context=True, gap_scope=True, evaluation_boundaries=True), invalid_decision="FAIL_SAFE_RETRY_NO_EXTRA_CALL")
         if request.main_harness:
             from interview_api.modules.interview.main_harness import VERSION as HARNESS_VERSION
-            from interview_api.modules.interview.adaptive_prompts import MAIN_HARNESS_CONTEXT_HINTS as prompt
+            from interview_api.modules.interview.adaptive_prompts import MAIN_HARNESS_CONTEXT_HINTS_V4 as prompt
             context["adaptive_policy"]["main_harness_version"] = HARNESS_VERSION
             context["adaptive_policy"]["prompts"]["interview_main"] = dict(
                 version=prompt.version, system=prompt.system, fingerprint=prompt.content_hash)
@@ -426,3 +430,39 @@ def validate_question(artifact, context, policy):
     elif artifact.source_type == "CANDIDATE_PROFILE" and (policy["source_id"] not in artifact.candidate_fact_ids or not artifact.candidate_evidence_ids):
         raise AppError("CANDIDATE_EVIDENCE_REQUIRED", "缺少本题候选人证据", 422)
     validate_topic(artifact, policy)
+
+
+def reviewed_experience_scope(context, *, limit=5, question_limit=20):
+    """Frozen, exact-job reviewed material a Main tool may read later.
+
+    Only refs and routing facts are stored. Question text stays in the existing
+    frozen public_questions list, so the tool cannot widen provenance: it can
+    only reveal what this session already pinned for this exact job.
+    """
+    by_experience = {}
+    for question in context.get("public_questions") or []:
+        experience_id = question.get("experience_id")
+        if experience_id is not None:
+            by_experience.setdefault(experience_id, []).append(question)
+    items = []
+    for experience in context.get("interview_experiences") or []:
+        questions = by_experience.get(experience["id"]) or []
+        if not questions:
+            continue
+        topics = set()
+        for anchor in experience.get("reported_topics") or []:
+            topics.update(mentioned_topics(anchor.get("raw_excerpt") or ""))
+        for question in questions:
+            topics.update(mentioned_topics(question.get("question") or ""))
+        items.append(dict(experience_ref=f"experience:{experience['id']}",
+            round=experience.get("round"), reviewed_at=experience.get("reviewed_at"),
+            reliability=experience.get("reliability"),
+            source_url=(experience.get("source_url") or "")[:200],
+            topics=sorted(topics),
+            question_refs=[f"public_question:{q['id']}" for q in questions][:question_limit]))
+        if len(items) >= limit:
+            break
+    refs = [item["experience_ref"] for item in items]
+    refs += [ref for item in items for ref in item["question_refs"]]
+    return dict(version="REVIEWED_EXPERIENCE_SCOPE_V1", items=items,
+                source_refs=sorted(set(refs)), max_items=3)

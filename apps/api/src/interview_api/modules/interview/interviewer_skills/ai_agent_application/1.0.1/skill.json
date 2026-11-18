@@ -1,0 +1,41 @@
+{
+ "id": "ai_agent_application",
+ "version": "1.0.1",
+ "label": "AI / Agent 应用开发",
+ "priority_topics": [
+  "rag_retrieval",
+  "agent",
+  "llm",
+  "python",
+  "system_design"
+ ],
+ "domains": [
+  "检索与生成链路",
+  "Agent 工具与状态边界",
+  "模型接入和结构化输出",
+  "Python 异步与工程可靠性"
+ ],
+ "key_capabilities": [
+  "解释检索融合与证据约束",
+  "区分模型建议和程序执行",
+  "处理超时、重试与取消",
+  "说明质量、延迟与成本的取舍"
+ ],
+ "project_strategy": [
+  "只追问简历证据或本轮回答已经建立的项目",
+  "沿输入、检索、生成、验证链路选择一个实现细节",
+  "不把框架名称当成掌握原理的证明"
+ ],
+ "level_probes": {
+  "introductory": "说明输入输出和基本流程",
+  "intermediate": "解释一个实际机制及选择理由",
+  "advanced": "讨论失败边界、替代方案及验证方法"
+ },
+ "evaluation_anchors": {
+  "technical_correctness": "机制和术语是否准确，是否区分模型与程序责任",
+  "coverage": "是否覆盖当前问题要求的链路与关键步骤",
+  "depth": "是否说明设计理由、失败边界和验证依据",
+  "relevance": "是否针对实际问题和已建立的项目背景",
+  "communication": "是否清晰表达流程、因果和取舍"
+ }
+}

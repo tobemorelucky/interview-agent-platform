@@ -63,12 +63,24 @@ class InspectRequirement(EmptyArguments):
     arguments: RequirementArguments
 
 
+class ReviewedExperienceArguments(EmptyArguments):
+    topics: list[str] = Field(default_factory=list, max_length=2)
+    max_items: int = Field(default=3, ge=1, le=3)
+
+
+class SearchReviewedExperiences(EmptyArguments):
+    kind: Literal["tool"]
+    name: Literal["search_reviewed_interview_experiences"]
+    arguments: ReviewedExperienceArguments
+
+
 class FinalAction(EmptyArguments):
     kind: Literal["final"]
     selection: ScopedAdaptiveSelection
 
 
-ToolAction = Annotated[ReadGaps | InspectSkill | InspectRequirement, Field(discriminator="name")]
+ToolAction = Annotated[ReadGaps | InspectSkill | InspectRequirement | SearchReviewedExperiences,
+                       Field(discriminator="name")]
 
 
 class MainHarnessAction(RootModel[Annotated[ToolAction | FinalAction, Field(discriminator="kind")]]):
@@ -211,6 +223,8 @@ class MainHarness:
             return _feedback("OK", "ACTIVE_GAPS", dict(knowledge_id=kid, gaps=rows,
                 truncated=len(gaps) > len(rows) or any(r["text"] != g["text"] for r, g in zip(rows, gaps)),
                 state_scope="CURRENT_DECISION_INCLUDES_VALIDATED_PENDING_EVALUATION"), refs)
+        if isinstance(action, SearchReviewedExperiences):
+            return self._reviewed_experiences(action, payload)
         if isinstance(action, InspectRequirement):
             rid = action.arguments.requirement_id
             ref = f"requirement:{rid}"
@@ -229,6 +243,49 @@ class MainHarness:
             fingerprint=skill["content_fingerprint"], priority_topics=skill["priority_topics"],
             instructions=instructions, truncated=instructions != skill["instructions"]),
             [f"skill:{skill['id']}@{skill['version']}"])
+
+    def _reviewed_experiences(self, action, payload):
+        """Read only this session's frozen reviewed items; never a live query."""
+        scope = payload["snapshot"].get("reviewed_experience_scope") or {}
+        items = scope.get("items") or []
+        if not items:
+            return _feedback("EMPTY", "NO_REVIEWED_EXPERIENCE_FOR_SCOPE")
+        legal = {candidate.get("topic") for candidate in payload["adaptive"].get("candidates") or []
+                 if candidate.get("topic")}
+        legal |= {target.get("topic") for target in (payload["adaptive"].get("targets") or {}).values()
+                  if target.get("topic")}
+        requested = list(dict.fromkeys(action.arguments.topics))
+        if any(topic not in legal for topic in requested):
+            return _feedback("ERROR", "TOPIC_OUT_OF_SCOPE")
+        questions = {row["id"]: row for row in payload["snapshot"].get("public_questions") or []}
+        chosen, refs = [], []
+        for item in items:
+            if requested and not set(requested) & set(item.get("topics") or []):
+                continue
+            rows = []
+            for ref in item.get("question_refs") or []:
+                try:
+                    question = questions[int(ref.split(":", 1)[1])]
+                except (KeyError, ValueError, IndexError):
+                    continue
+                text = _clip(question.get("question") or "", 140)
+                rows.append(dict(ref=ref, text=text, dimension=question.get("dimension")))
+                refs.append(ref)
+                if len(rows) >= 3:
+                    break
+            chosen.append(dict(experience_ref=item["experience_ref"], round=item.get("round"),
+                reviewed_at=item.get("reviewed_at"), reliability=item.get("reliability"),
+                source_url=item.get("source_url"), topics=(item.get("topics") or [])[:6],
+                questions=rows))
+            refs.append(item["experience_ref"])
+            if len(chosen) >= action.arguments.max_items:
+                break
+        if not chosen:
+            return _feedback("EMPTY", "NO_MATCHING_REVIEWED_EXPERIENCE",
+                             dict(topics=requested, scope_items=len(items)))
+        return _feedback("OK", "REVIEWED_EXPERIENCES", dict(
+            scope_company_job="EXACT_FROZEN_SCOPE", items=chosen,
+            truncated=len(chosen) < len(items)), refs)
 
     async def _tool_step(self, run_id, action, feedback, sid, uid, expected, payload):
         started = perf_counter()
@@ -255,6 +312,33 @@ class MainHarness:
                 latency_ms=round((perf_counter() - started) * 1000)))
             await db.commit()
         return item
+
+    async def _tool_audit(self, run_id, artifact):
+        """Separate a real tool query from a preloaded public question.
+
+        `used_tool_result` is true only when the final question's source ref was
+        actually returned by a tool call in this run. A public_question that was
+        already frozen in the snapshot is reported as preloaded, not as a tool hit.
+        """
+        tools = []
+        for step in await self._steps(run_id):
+            if step.step_name != TOOL_STEP:
+                continue
+            item = step.output_json or {}
+            tools.append(dict(tool=item.get("tool"), arguments=item.get("arguments"),
+                              status=(item.get("result") or {}).get("status"),
+                              code=(item.get("result") or {}).get("code"),
+                              source_refs=(item.get("result") or {}).get("source_refs") or []))
+        source_ref = getattr(artifact, "question_source_ref", None)
+        searched = [item for item in tools if item["tool"] == "search_reviewed_interview_experiences"]
+        returned = {ref for item in searched for ref in item["source_refs"]}
+        return dict(tool_called=bool(tools), tools=tools,
+                    reviewed_search_called=bool(searched), reviewed_search_count=len(searched),
+                    selection_source_ref=source_ref,
+                    used_tool_result=bool(source_ref and source_ref in returned),
+                    preloaded_public_question=bool(source_ref and source_ref.startswith("public_question:")),
+                    used_preloaded_without_tool=bool(source_ref and source_ref.startswith("public_question:")
+                                                     and not searched))
 
     async def _result(self, run_id, artifact, prompt, provider):
         usage, complete, repairs = {}, True, 0
@@ -300,7 +384,8 @@ class MainHarness:
                 raise
             result = await self._result(run_id, artifact, prompt, provider)
             await finish_research_run(self.factory, run_id, status="SUCCEEDED",
-                output={"validated_artifact": artifact.model_dump(), "harness_version": VERSION})
+                output={"validated_artifact": artifact.model_dump(), "harness_version": VERSION,
+                        "tool_audit": await self._tool_audit(run_id, artifact)})
             return result
         except _AdmissionRefused:
             # Preserve the audited run as FAILED, then hand the refusal back as

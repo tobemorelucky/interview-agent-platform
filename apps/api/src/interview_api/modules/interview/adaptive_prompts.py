@@ -442,6 +442,28 @@ return FINAL directly. No tool call is required merely because more detail exist
 ))
 
 
+MAIN_HARNESS_CONTEXT_HINTS_V3 = PromptDefinition("interview_main", "2.4.0-harness.3",
+    MAIN_HARNESS_CONTEXT_HINTS.system + """
+REVIEWED EXPERIENCES. snapshot.context_availability.reviewed_experiences reports whether this
+exact company+job has reviewed, source-backed interview material frozen for this session.
+You may call search_reviewed_interview_experiences when knowing what this role actually asked
+would change your choice. It returns only this session's reviewed items: reported topics, short
+question text, round, reliability and source refs. These are candidate-reported, never a company
+question bank and never proof of what will be asked. If count is 0 or the tool returns EMPTY,
+continue with the pinned Skill and job requirements; do not mention the absence to the candidate.
+Only query when useful; never call it just to restate context you already have.
+""")
+
+
+MAIN_HARNESS_CONTEXT_HINTS_V4 = PromptDefinition("interview_main", "2.4.0-harness.4",
+    MAIN_HARNESS_CONTEXT_HINTS_V3.system + """
+When reviewed_experiences.count > 0 and knowing what this exact company and job actually asked
+would materially improve your next choice, call search_reviewed_interview_experiences once before
+deciding. Do not call it when the count is 0, and do not call it merely to confirm the Skill or
+the job requirements you already have. One lookup per turn is enough.
+""")
+
+
 def freeze_prompts(contract=None, *, memory_guided=False, context_projection=False, evaluation_context=False,
                    gap_scope=False, evaluation_boundaries=False):
     if context_projection:

@@ -107,4 +107,6 @@ def public_session_view(data):
             return [hide_planning(v) for v in value]
         return value
     result = hide_planning(result)
+    if isinstance(result.get('context_snapshot'), dict):
+        result['context_snapshot'].pop('reviewed_experience_scope', None)
     return result

@@ -21,7 +21,7 @@ def test_seven_new_skills_register_and_freeze():
     for skill_id in NEW_SKILLS:
         assert skill_id in entries, skill_id
         manifest = entries[skill_id]["manifest"]
-        assert manifest["version"] == "1.0.0"
+        assert manifest["version"] in {"1.0.0", "1.0.1"}
         assert manifest["matching"]["capability_groups"], skill_id
         registry = SkillRegistry(ROOT)
         frozen = registry.freeze(skill_id, "project_deep_dive", "standard")

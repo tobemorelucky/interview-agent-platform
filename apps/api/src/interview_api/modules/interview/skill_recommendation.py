@@ -72,7 +72,11 @@ def recommend(job, *, root=ROOT, full_evidence=False):
     def hits_at(text, term):
         key = (text, term)
         if key not in spans:
-            spans[key] = occurrences(text, term)
+            # ReAct (agent reasoning) and React (frontend) differ only by case,
+            # which normalized() folds away. Mask the acronym before matching so
+            # an Agent JD never earns frontend evidence from "ReAct".
+            probe = re.sub(r"ReAct", "XeAct", str(text)) if normalized(term) == "react" else text
+            spans[key] = occurrences(probe, term)
         return spans[key]
 
     def matches(text, term, skill_id):

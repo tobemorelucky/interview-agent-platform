@@ -100,7 +100,9 @@ def model_payload(payload, route):
     harness = policy.get('main_harness_version')
     if harness is not None:
         from interview_api.modules.interview.main_harness import VERSION as HARNESS_VERSION
-        from interview_api.modules.interview.adaptive_prompts import MAIN_HARNESS, MAIN_HARNESS_CONTEXT_HINTS
+        from interview_api.modules.interview.adaptive_prompts import (
+            MAIN_HARNESS, MAIN_HARNESS_CONTEXT_HINTS, MAIN_HARNESS_CONTEXT_HINTS_V3,
+            MAIN_HARNESS_CONTEXT_HINTS_V4)
         if harness != HARNESS_VERSION or gap_scope != GAP_SCOPE_CONTRACT:
             raise AppError('MAIN_HARNESS_UNSUPPORTED', '本场 Main 工具契约不可用', 409)
     if contract is None:
@@ -112,7 +114,8 @@ def model_payload(payload, route):
     # 2.5.0 keeps the 2.3.3 decision/project shape and adds the conversation
     # contract, so both remain valid for the same projection. Anything else is a
     # mixed pair and is refused rather than guessed.
-    expected_main = (MAIN_HARNESS.version, MAIN_HARNESS_CONTEXT_HINTS.version) if harness else (
+    expected_main = (MAIN_HARNESS.version, MAIN_HARNESS_CONTEXT_HINTS.version,
+                     MAIN_HARNESS_CONTEXT_HINTS_V3.version, MAIN_HARNESS_CONTEXT_HINTS_V4.version) if harness else (
         # 3.0.0 (new sessions) and 2.9.0/2.8.0/2.7.0/2.6.0/2.5.0/2.3.3 (frozen
         # older sessions) keep the same decision/project shape; a mixed pair is
         # refused rather than guessed.
@@ -174,7 +177,8 @@ def model_payload(payload, route):
                 'question_id', 'answer_id', 'evaluation_id', *(
                     ('question_state', 'focus_gap_ids') if gap_scope else ()))) for o in state['observations']])
         snapshot = pick(snapshot, ('company_name', 'job_title', 'candidate_facts', 'candidate_evidence',
-            'requirements', 'public_questions', 'approved_memory_context', 'memory_guided_plan', 'interviewer_config', 'training'))
+            'requirements', 'public_questions', 'approved_memory_context', 'memory_guided_plan', 'interviewer_config', 'training',
+            'reviewed_experience_scope'))
         if 'training' in snapshot:
             # before/revisions/request keys belong to feedback and idempotency,
             # not to the interviewer. The frozen MemoryGuidedPlan remains whole.
@@ -186,10 +190,16 @@ def model_payload(payload, route):
             snapshot['interviewer_config']['skill'].pop('content_fingerprint', None)
         for name in ('requirements', 'public_questions'):
             snapshot[name] = [{k: v for k, v in row.items() if k != 'fingerprint'} for row in snapshot.get(name, [])]
+        scope = snapshot.pop('reviewed_experience_scope', None)
         result['snapshot'] = snapshot
         if harness:
-            if main_version == MAIN_HARNESS_CONTEXT_HINTS.version:
+            if main_version in (MAIN_HARNESS_CONTEXT_HINTS.version, MAIN_HARNESS_CONTEXT_HINTS_V3.version,
+                                MAIN_HARNESS_CONTEXT_HINTS_V4.version):
                 snapshot['context_availability'] = context_availability(snapshot, adaptive)
+                snapshot['context_availability']['reviewed_experiences'] = dict(
+                    count=len((scope or {}).get('items') or []),
+                    detail='AVAILABLE_ON_DEMAND' if (scope or {}).get('items') else 'NO_REVIEWED_EXPERIENCE_FOR_SCOPE',
+                    tool='search_reviewed_interview_experiences')
             lazy_main(result)
     # Bound the role DTO, independently of the richer internal planning packet.
     from interview_api.modules.interview.adaptive import bounded

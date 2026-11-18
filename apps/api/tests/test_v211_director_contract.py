@@ -56,7 +56,8 @@ def test_main_selects_one_legal_pair_without_writing_source_or_target_ids():
 def test_pairs_are_stable_and_one_skill_source_can_support_distinct_targets():
     payload = packet()
     candidates = payload["adaptive"]["candidates"]
-    generic = [c for c in candidates if c["source"]["ref"] == "skill:java_backend@1.0.0"]
+    version = payload["snapshot"]["interviewer_config"]["skill"]["version"]
+    generic = [c for c in candidates if c["source"]["ref"] == f"skill:java_backend@{version}"]
     assert len(generic) >= 2
     assert len({c["candidate_id"] for c in generic}) == len(generic)
     assert candidates == packet()["adaptive"]["candidates"]
