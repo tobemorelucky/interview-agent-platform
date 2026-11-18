@@ -26,13 +26,18 @@ def resolve_fragment_extraction(selected, fragments):
     if selected.company or selected.position:
         fragments.resolve(selected.identity_evidence_ids)
         fragments.validate_identity(selected.identity_evidence_ids, selected.company, selected.position)
-    questions, anchors, topics = [], [], []
+    questions, anchors, topics, rejected = [], [], [], []
     seen = set()
     for index, item in enumerate(selected.questions):
         try:
             span = fragments.question_span(item.fragment_id, item.kind)
         except EvidenceValidationError as exc:
-            raise EvidenceValidationError(f'questions[{index}].fragment_id: {exc}') from exc
+            # Keep only what the source text actually supports. One unsupported
+            # item must not discard the rest of a real article, and it is never
+            # rewritten into a question the page does not contain.
+            rejected.append(dict(index=index, fragment_id=item.fragment_id,
+                                 claimed_kind=item.kind, reason=str(exc)))
+            continue
         anchor = dict(fragment_id=span.evidence_id, source_snapshot_id=span.snapshot_id,
                       raw_excerpt=span.excerpt, location=span.location, kind=item.kind)
         if item.kind == 'REPORTED_TOPIC':
@@ -54,11 +59,14 @@ def resolve_fragment_extraction(selected, fragments):
                         'normalization_status': 'DERIVED_REQUIRES_REVIEW'})
     value = selected.model_dump(exclude={'questions'})
     value['questions'] = questions
+    if not questions and not topics and rejected:
+        detail = "; ".join(f"questions[{item['index']}]: {item['reason']}" for item in rejected[:3])
+        raise EvidenceValidationError(f"No question is supported by the cited source text: {detail}")
     # A topic-only article is retained in audit, not turned into exact questions.
     value['is_interview_experience'] = selected.is_interview_experience and bool(questions)
     return PublicInterviewExtraction.model_validate(value), dict(
         contract_version='source-fragments@1.0.0', questions=anchors, reported_topics=topics,
-        excluded_fragments=fragments.excluded)
+        rejected_questions=rejected, excluded_fragments=fragments.excluded)
 
 
 class RoutedLegacyLLM:

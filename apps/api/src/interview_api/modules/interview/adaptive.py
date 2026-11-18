@@ -88,6 +88,19 @@ class AdaptiveDecision(StrictArtifact):
 
 PAIR_CONTRACT = "TARGET_SOURCE_PAIR_V1"
 GAP_SCOPE_CONTRACT = "QUESTION_GAP_SCOPE_V1"
+# A question the gate refuses is a business outcome, not a broken Main. Callers
+# may replace it with the deterministic fallback, which passes the same gate, so
+# the validated answer and evaluation survive. Anything outside this set (limits,
+# frozen-snapshot drift, model attribution) makes the turn permanently terminal.
+RECOVERABLE_DECISION_CODES = frozenset({
+    "ADAPTIVE_TOPIC_MISMATCH", "INVALID_QUESTION_GAP_SCOPE", "ADAPTIVE_DECISION_REJECTED",
+    "UNKNOWN_DIRECTOR_REFERENCE", "DIRECTOR_ANSWER_REQUIRED", "UNKNOWN_DIRECTOR_CANDIDATE",
+    "DIRECTOR_PAIR_MISMATCH", "UNKNOWN_DIRECTOR_SOURCE",
+})
+# Only these two are replaced silently by the deterministic fallback. The other
+# business rejections stay visible to the caller so the existing retry contract
+# (same idempotency key, evaluation reused) is unchanged.
+SILENT_FALLBACK_CODES = frozenset({"ADAPTIVE_TOPIC_MISMATCH", "INVALID_QUESTION_GAP_SCOPE"})
 
 
 class QuestionDraft(StrictArtifact):
@@ -136,6 +149,27 @@ def validate_gap_scope(focus, gaps, *, required=False):
             any(not isinstance(identifier, str) or identifier not in gaps for identifier in focus)
             or len(set(focus)) != len(focus))):
         raise AppError("INVALID_QUESTION_GAP_SCOPE", "本题聚焦缺口必须是本场同一目标的有效开放缺口", 422)
+
+
+def gap_scope_diagnostic(artifact, adaptive, gaps):
+    """Facts a reviewer needs when a question's gap scope is refused.
+
+    The scope itself is never repaired here: an empty focus stays empty and an
+    unknown ID stays unknown. This only records which target had which gaps and
+    whether the model could have known their IDs from the frozen input.
+    """
+    knowledge_id = getattr(artifact, "target_knowledge_id", None)
+    focus = getattr(artifact, "focus_gap_ids", None)
+    projected = ((adaptive.get("knowledge_state") or {}).get("items") or {}).get(knowledge_id) or {}
+    return dict(target_knowledge_id=knowledge_id, strategy=getattr(artifact, "strategy", None),
+        focus_gap_ids=focus if isinstance(focus, list) else None,
+        open_gap_ids=sorted(gaps)[:8], open_gap_count=len(gaps),
+        candidate_id=getattr(artifact, "candidate_id", None),
+        question_source_ref=getattr(artifact, "question_source_ref", None),
+        # The harness projection keeps gap text/IDs on demand only. An empty
+        # focus under FOLLOW_UP is then a look-before-you-leap miss, not proof
+        # that the server offered an unsatisfiable scope.
+        gap_ids_in_projection=("INLINE" if projected.get("open_gaps") else "ON_DEMAND_ONLY"))
 
 
 def decision_candidates(context, choices):
@@ -628,9 +662,16 @@ def validate_decision(artifact, payload):
         gaps = {g["id"] for g in adaptive["knowledge_state"]["items"].get(
             artifact.target_knowledge_id, {}).get("open_gaps", [])}
         focus = getattr(artifact, "focus_gap_ids", None)
-        validate_gap_scope(focus, gaps, required=True)
+        try:
+            validate_gap_scope(focus, gaps, required=True)
+        except AppError as exc:
+            if not getattr(exc, "diagnostic", None):
+                exc.diagnostic = gap_scope_diagnostic(artifact, adaptive, gaps)
+            raise
         if gaps and not focus and artifact.strategy == "FOLLOW_UP":
-            raise AppError("INVALID_QUESTION_GAP_SCOPE", "追问已有缺口时须明确聚焦至少一个开放缺口", 422)
+            error = AppError("INVALID_QUESTION_GAP_SCOPE", "追问已有缺口时须明确聚焦至少一个开放缺口", 422)
+            error.diagnostic = gap_scope_diagnostic(artifact, adaptive, gaps)
+            raise error
     if set(artifact.supporting_refs) - set(adaptive["allowed_refs"]):
         raise AppError("UNKNOWN_DIRECTOR_REFERENCE", "面试决策引用不存在或不属于本场", 422)
     if payload.get("answer") is not None and not set(artifact.supporting_refs) & {adaptive["current_answer_ref"], adaptive["current_evaluation_ref"]}:

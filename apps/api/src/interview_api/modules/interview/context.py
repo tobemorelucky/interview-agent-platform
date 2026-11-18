@@ -181,7 +181,10 @@ async def build_context(db, user_id, request):
                                    fingerprint=compute_content_fingerprint(e.content_text or e.summary or ""),
                                    round=e.interview_round, source_url=e.source_url,
                                    reviewed_at=e.reviewed_at.isoformat() if e.reviewed_at else None,
-                                   reliability=e.reliability_score) for e in experiences],
+                                   reliability=e.reliability_score,
+                                   # Frozen topic evidence: what the poster said was asked,
+                                   # never a verbatim company question. Empty stays empty.
+                                   reported_topics=reported_topic_anchors(e)) for e in experiences],
         coverage_insufficient=len(questions) < request.question_count,
         budgets=dict(question_count=request.question_count, max_follow_ups=settings.interview_max_follow_ups_per_question,
                      max_rounds=settings.interview_max_rounds, max_duration_seconds=settings.interview_max_duration_seconds,
@@ -285,6 +288,26 @@ def _fact_keys(snapshot, path):
     parts = path.split(".")
     item = snapshot[parts[0]] if len(parts) == 1 else snapshot[parts[0]][int(parts[1])]
     return item["evidence_ids"]
+
+
+def reported_topic_anchors(experience, *, limit=6):
+    """Frozen reported-topic anchors, read once at session creation.
+
+    `reviewed_experience_scope` already expected this shape but the snapshot
+    never supplied it, so topic matching could only look at question wording.
+    Only already-extracted anchors are copied; nothing is inferred here.
+    """
+    anchors = ((experience.extraction_output_json or {}).get("source_anchors") or {}).get("reported_topics") or []
+    rows = []
+    for anchor in anchors[:limit]:
+        if not isinstance(anchor, dict):
+            continue
+        excerpt = (anchor.get("raw_excerpt") or "").strip()
+        if not excerpt:
+            continue
+        rows.append(dict(fragment_id=anchor.get("fragment_id"), kind=anchor.get("kind"),
+                         raw_excerpt=excerpt[:400]))
+    return rows
 
 
 def model_context(context, policy=None):

@@ -17,7 +17,8 @@ from interview_api.core.exceptions import AppError
 from interview_api.infrastructure.models.provider import ModelProviderError
 from interview_api.modules.candidate_profile.evidence import digest
 from interview_api.modules.experience.models import ExperienceAgentRun, ExperienceAgentStepRun
-from interview_api.modules.interview.adaptive import ScopedAdaptiveSelection, resolve_selection
+from interview_api.modules.interview.adaptive import (
+    RECOVERABLE_DECISION_CODES, ScopedAdaptiveSelection, resolve_selection)
 from interview_api.modules.interview.agents import AgentResult, configured_prompt_registry
 from interview_api.modules.interview.context_projection import model_payload
 from interview_api.modules.interview.controller import SessionController
@@ -379,8 +380,8 @@ class MainHarness:
             try:
                 artifact = resolve_selection(artifact, payload)
                 self.agent.validate_artifact(artifact, payload)
-            except AppError:
-                terminal = True
+            except AppError as exc:
+                terminal = getattr(exc, "code", None) not in RECOVERABLE_DECISION_CODES
                 raise
             result = await self._result(run_id, artifact, prompt, provider)
             await finish_research_run(self.factory, run_id, status="SUCCEEDED",

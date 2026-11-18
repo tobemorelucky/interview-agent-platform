@@ -288,18 +288,18 @@ class MockInterviewService:
         artifact = resolve_selection(selection, payload)
         return artifact, validate_decision(artifact, payload)
 
-    async def record_topic_mismatch(self, session_id, user_id, exc):
+    async def record_topic_mismatch(self, session_id, user_id, exc, action="ADAPTIVE_TOPIC_MISMATCH"):
         """Persist why a NEXT question was rejected; never masks the error."""
         from interview_api.modules.audit.models import AuditLog
         try:
             async with self.factory() as db:
                 db.add(AuditLog(actor_user_id=user_id, actor_role="USER",
-                                action="ADAPTIVE_TOPIC_MISMATCH", resource_type="interview_session",
+                                action=action, resource_type="interview_session",
                                 resource_id=str(session_id), metadata_json=exc.diagnostic,
                                 status="REJECTED", error_message=exc.message[:500]))
                 await db.commit()
         except Exception:
-            logger.warning("topic mismatch audit write failed for session %s", session_id, exc_info=True)
+            logger.warning("rejected decision audit write failed for session %s", session_id, exc_info=True)
 
     # The user-facing default lives in the HTTP router (INTRODUCTION) and the
     # web client; this service default stays MODEL for internal/scripted callers.
@@ -556,21 +556,22 @@ class MockInterviewService:
         return None
 
     async def fallback_after_mismatch(self, sid, uid, aid, expected, evaluation, payload, exc,
-                                      rejected_target=None):
+                                      rejected_target=None, action="ADAPTIVE_TOPIC_MISMATCH"):
         """Audit the rejected model question and replace it without another call."""
         from interview_api.modules.interview.adaptive import fallback_selection
-        await self.record_topic_mismatch(sid, uid, exc)
+        await self.record_topic_mismatch(sid, uid, exc, action)
         async with self.factory() as db:
             await SessionController(db).checkpoint_evaluation(sid, uid, aid, expected,
                 evaluation, "NEXT_REJECTED", diagnostic=getattr(exc, "diagnostic", None), source="interview_main")
             await db.commit()
         fallback, policy = fallback_selection(payload, rejected_target)
-        logger.info("replaced rejected NEXT with deterministic fallback for answer %s", aid)
+        logger.info("replaced rejected %s with deterministic fallback for answer %s", action, aid)
         return SystemMain(fallback, policy), policy
 
     async def adaptive_answer(self, sid, uid, aid, expected, content, on_stage):
         from interview_api.modules.interview.adaptive import (
-            fallback_selection, planning_payload, validate_decision, all_goals_demonstrated)
+            SILENT_FALLBACK_CODES, fallback_selection, planning_payload, validate_decision,
+            all_goals_demonstrated)
         session, context, questions, active, _ = await self.read_state(sid, uid)
         payload = planning_payload(context, questions, active, session.interview_plan_json, answer=content, answer_id=aid)
         evaluation = await self.recovered_evaluation(sid, uid, aid)
@@ -597,9 +598,10 @@ class MockInterviewService:
             try:
                 main = await self.call_agent(self.main.adaptive(payload), sid, uid, expected, payload, answer_id=aid)
             except AppError as exc:
-                if exc.code != "ADAPTIVE_TOPIC_MISMATCH":
+                if exc.code not in SILENT_FALLBACK_CODES:
                     raise
-                main, policy = await self.fallback_after_mismatch(sid, uid, aid, expected, evaluation, payload, exc)
+                main, policy = await self.fallback_after_mismatch(sid, uid, aid, expected, evaluation,
+                    payload, exc, action=exc.code)
             if main is None:
                 # call_agent returns None only when the session refused this logical
                 # call before any HTTP was sent. The evaluation above is already
@@ -620,10 +622,11 @@ class MockInterviewService:
                     try:
                         policy = validate_decision(main.artifact, payload)
                     except AppError as exc:
-                        if exc.code != "ADAPTIVE_TOPIC_MISMATCH":
+                        if exc.code not in SILENT_FALLBACK_CODES:
                             raise
                         main, policy = await self.fallback_after_mismatch(sid, uid, aid, expected,
-                            evaluation, payload, exc, rejected_target=main.artifact.target_knowledge_id)
+                            evaluation, payload, exc, rejected_target=main.artifact.target_knowledge_id,
+                            action=exc.code)
                 action = main.artifact.recommendation
         try:
             async with self.factory() as db:
