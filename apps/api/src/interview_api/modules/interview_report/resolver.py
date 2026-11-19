@@ -14,11 +14,14 @@ SCORE_UNITS = ("分", "/5", "out of 5")
 COUNT_UNITS = ("次", "道题", "场面试", "轮回答")
 CHINESE_DIGITS = {"一": 1, "二": 2, "两": 2, "三": 3, "四": 4, "五": 5, "六": 6,
                   "七": 7, "八": 8, "九": 9, "十": 10, "百": 100}
-# "一次" is idiomatic in this domain (at-least-once delivery, one round trip,
-# first attempt). Every larger Chinese count must be a server-provided number.
-# "一次" stops being an idiom as soon as it is scoped to this interview, because
-# then it is a claim about how many times the candidate actually answered.
-ONE_TIME_IDIOM = re.compile(r"[至最多少再第首每]?一次(?!性)")
+# Chinese numerals before 次 are frequently technical idioms, not session counts:
+# "一次投递", "二次确认", "三次握手", "二次重试", "二次开发", "再试一次". They stay legal
+# while they are unscoped. A Chinese count stops being an idiom as soon as it is
+# scoped to this interview ("本场回答二次" / "累计二次" / "只答了二次"), because then it
+# is a claim about how many times the candidate actually answered and must match
+# the server-computed count. Scores, percentages, Arabic counts and English claims
+# are unaffected by this idiom rule.
+CHINESE_COUNT_IDIOM = re.compile(r"[至最多少再第首每]?[一二两三四五六七八九十]+次(?!性)")
 SESSION_SCOPE = re.compile(r"(本场|这场|该场|全场|本次|整场|总共|一共|合计|累计)")
 ONLY_COUNT_VERB = re.compile(r"(只|仅)(回答|作答|答|说|讲|做|写|用)了$")
 ARABIC_CLAIM = re.compile(r"(?<![0-9.])(\d+(?:\.\d+)?)\s*(分|%|/\s*5|次|道题|场面试|轮回答)")
@@ -82,35 +85,51 @@ def _scoped_once(text, start):
     return bool(SESSION_SCOPE.search(window) or ONLY_COUNT_VERB.search(window))
 
 
+def _context_hint(text, start, end):
+    """Bounded, de-identified suffix after a rejected phrase for later diagnosis.
+
+    Only the immediate technical noun that follows the number is kept (e.g. the
+    "握手" in "三次握手", the "确认" in "二次确认"), and never the preceding words,
+    which may contain session-scope facts about the candidate. This keeps the hint
+    useful for telling a technical idiom from a fabricated count without echoing
+    prose back to the client.
+    """
+    source = text or ""
+    return source[end:end + 4][:24]
+
+
 def _unsupported(text, catalog):
-    """Return (phrase, unit, value) for the first statistic the server did not provide."""
+    """Return (phrase, unit, value, context_hint) for the first unsupported statistic."""
     for match in ARABIC_CLAIM.finditer(text or ""):
         phrase, unit, value = match.group(0), match.group(2).strip(), float(match.group(1))
         if unit in SCORE_UNITS or unit == "/5":
             if value not in catalog["scores"]:
-                return phrase, unit, value
+                return phrase, unit, value, _context_hint(text, match.start(), match.end())
         elif unit == "%":
-            return phrase, unit, value
+            return phrase, unit, value, _context_hint(text, match.start(), match.end())
         elif value not in catalog["counts"]:
-            return phrase, unit, value
+            return phrase, unit, value, _context_hint(text, match.start(), match.end())
     for match in CHINESE_CLAIM.finditer(text or ""):
         phrase, unit = match.group(0), match.group(2)
-        if unit == "次" and ONE_TIME_IDIOM.fullmatch(phrase) and not _scoped_once(text or "", match.start()):
+        # Unscoped Chinese-count idioms (二次确认 / 三次握手 / 二次重试 ...) are
+        # technical vocabulary, not a claim about this interview. Scoped counts
+        # (本场/累计/只答了) still fall through to the strict check below.
+        if unit == "次" and CHINESE_COUNT_IDIOM.fullmatch(phrase) and not _scoped_once(text or "", match.start()):
             continue
         value = _chinese_number(match.group(1))
         if value is None:
             continue
         if unit in SCORE_UNITS:
             if float(value) not in catalog["scores"]:
-                return phrase, unit, float(value)
+                return phrase, unit, float(value), _context_hint(text, match.start(), match.end())
         elif unit == "%":
-            return phrase, unit, float(value)
+            return phrase, unit, float(value), _context_hint(text, match.start(), match.end())
         elif float(value) not in catalog["counts"]:
-            return phrase, unit, float(value)
+            return phrase, unit, float(value), _context_hint(text, match.start(), match.end())
     for match in ENGLISH_CLAIM.finditer(text or ""):
         value = float(match.group(2))
         if value not in catalog["counts"] and value not in catalog["scores"]:
-            return match.group(0), "english", value
+            return match.group(0), "english", value, _context_hint(text, match.start(), match.end())
     return None
 
 
@@ -120,11 +139,12 @@ def _qualitative(text, path="unknown", catalog=None):
     catalog = catalog or dict(scores=set(), counts=set())
     found = _unsupported(text, catalog)
     if found:
-        phrase, unit, value = found
+        phrase, unit, value, context_hint = found
         error = AppError("COACH_COMPUTED_NUMBER",
                          "Coach 只能引用服务端已计算的统计；此处数字没有数据支持", 422)
         error.diagnostics = dict(field_path=path, rule="FABRICATED_STATISTIC",
-                                 matched_number=phrase[:40], unit=unit, value=value)
+                                 matched_number=phrase[:40], unit=unit, value=value,
+                                 context_hint=context_hint)
         raise error
     return text
 

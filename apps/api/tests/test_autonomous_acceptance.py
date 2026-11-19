@@ -123,9 +123,13 @@ def test_coach_prose_numeric_guard_is_not_weakened_and_has_safe_field_diagnostic
     assert exc.value.code == "COACH_COMPUTED_NUMBER"
     # The claim is still rejected; only the rule name now says why (a statistic
     # the server never computed, not "any number at all").
-    assert exc.value.diagnostics == dict(field_path="overall_summary", rule="FABRICATED_STATISTIC",
-        matched_number="三轮回答", unit="轮回答", value=3.0)
-    assert "本场" not in str(exc.value.diagnostics)
+    diag = exc.value.diagnostics
+    assert diag["field_path"] == "overall_summary" and diag["rule"] == "FABRICATED_STATISTIC"
+    assert diag["matched_number"] == "三轮回答" and diag["unit"] == "轮回答" and diag["value"] == 3.0
+    # The context hint keeps only the technical suffix after the number, never
+    # the session-scope words ("本场") that precede it.
+    assert "本场" not in str(diag)
+    assert diag["context_hint"] == "表现不一"
     registry = CoachPromptRegistry()
     assert registry.get(INTERVIEW_COACH_ROUTE).version == "1.0.3"
     assert registry.get(INTERVIEW_COACH_ROUTE, "1.0.0").version == "1.0.0"
