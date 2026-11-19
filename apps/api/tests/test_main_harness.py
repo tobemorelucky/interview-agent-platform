@@ -14,7 +14,7 @@ from interview_api.core.exceptions import AppError
 from interview_api.infrastructure.models.provider import ModelProvider, ModelProviderError, ModelResponse
 from interview_api.infrastructure.models.structured import StructuredOutputError
 from interview_api.modules.public_career.models import JobDescriptionVersion, JobRequirement
-from test_gap_scope_contract import CALLS, KID, FORMULA, interview_fixture
+from test_gap_scope_contract import CALLS, KID, FORMULA, interview_fixture, legal_pair
 from test_m4_interview import run_with_database
 
 
@@ -199,8 +199,7 @@ def test_frozen_gap_read_survives_mid_loop_failure_and_same_key_retry(database_u
         if title == "AdaptiveEvaluation":
             return deepcopy(CALLS[1]["output"])
         adaptive = packet["adaptive"]
-        pair = next(c for c in adaptive["candidates"] if c["target_knowledge_id"] == KID
-                    and c["source"]["ref"].startswith("skill:"))
+        pair = legal_pair(adaptive, knowledge_id=KID)
         if not packet.get("answer"):
             return final(packet, pair)
         assert "open_gaps" not in adaptive["knowledge_state"]["items"][KID]

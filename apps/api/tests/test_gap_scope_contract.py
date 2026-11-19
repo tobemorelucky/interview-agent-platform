@@ -15,6 +15,25 @@ FORMULA = "gap_ebf04b4e255cc571e5412c3e"
 REMAINS = ["gap_a304838ff6b4c044b3f363f8", "gap_e966b66c767a0f23b3615679"]
 
 
+def legal_pair(adaptive, *, knowledge_id=None, topic=None, strategy=None):
+    """Pick a legal frozen pair without pinning the source that R130 excludes.
+
+    R130 deliberately removes the source used by the previous question from the
+    active target's candidate set, so a fixture that hard-requires ``skill:`` is
+    stale after the first answer. Keep the real assertion (same target, legal
+    strategy, ref present in the frozen candidate set) and only relax the source
+    choice: prefer the skill source, otherwise use any other frozen source of
+    that exact target. Never substitute a different target.
+    """
+    rows = [row for row in adaptive["candidates"]
+            if (knowledge_id is None or row["target_knowledge_id"] == knowledge_id)
+            and (topic is None or row["target_knowledge_id"].endswith(":" + topic))
+            and (strategy is None or strategy in row["strategies"])]
+    assert rows, f"no frozen candidate for {knowledge_id or topic} / {strategy}"
+    skill = [row for row in rows if row["source"]["ref"].startswith("skill:")]
+    return (skill or rows)[0]
+
+
 def original_packet():
     prior = {"adaptive":{"active_knowledge_id":KID,"knowledge_state":{"items":{}}},"answer":CALLS[1]["answer"]}
     gaps = resolve_observations(AdaptiveEvaluation.model_validate(CALLS[1]["output"]), prior)[0]["open_gaps"]
@@ -139,7 +158,7 @@ def test_original_failure_through_service_freeze_retry_and_memory(database_url, 
                 first = not p.get("answer")
                 raw = deepcopy(CALLS[0 if first else 2]["output"])
                 a = p["adaptive"]
-                pair = next(c for c in a["candidates"] if c["target_knowledge_id"]==KID and c["source"]["ref"].startswith("skill:"))
+                pair = legal_pair(a, knowledge_id=KID)
                 raw["candidate_id"] = pair["candidate_id"]
                 raw["supporting_refs"] = [pair["source"]["ref"]] + ([] if first else [a["current_answer_ref"]])
                 if "focus_gap_ids" in schema["properties"]:
@@ -151,10 +170,17 @@ def test_original_failure_through_service_freeze_retry_and_memory(database_url, 
                         raw["focus_gap_ids"].append(REMAINS[0])
             else:
                 sc=p["scoring_context"]
-                first=sc["parent_status"]=="NOT_APPLICABLE"
-                assert p["answer"]==CALLS[1 if first else 3]["answer"]
+                # Answer-driven, not parent_status-driven: R133's deterministic
+                # NEXT fallback has no parent link, so both scored questions can
+                # legitimately be NOT_APPLICABLE here.
+                first=p["answer"]==CALLS[1]["answer"]
+                assert first or p["answer"]==CALLS[3]["answer"]
                 if mode=="legacy":
                     assert "focus_gap_ids" not in sc
+                elif mode=="scoped":
+                    # Both scored questions are NEXT; the rejected FOLLOW_UP
+                    # focus never reached a committed question.
+                    assert sc["focus_gap_ids"] == []
                 else:
                     assert sc["focus_gap_ids"] == ([] if first else [FORMULA] + (REMAINS[:1] if mode=="multi_focal" else []))
                 raw=CALLS[1 if first else 3]["output"]
@@ -180,31 +206,54 @@ def test_original_failure_through_service_freeze_retry_and_memory(database_url, 
                 session=await core.create(uid,req)
             sid=session["id"]
             q1=await core.start(sid,uid)
+            first_events=dict(await core.answer(sid,uid,q1["question_id"],"p0-a",CALLS[1]["answer"]))
+            # R133 keeps the strict gap-scope gate but makes its rejection
+            # recoverable: the illegal focus_gap_ids are audited, the already
+            # validated evaluation is retained, and a deterministic NEXT is
+            # committed in the same transaction. The old expectation of an
+            # AppError here described the pre-R133 contract, not the current one.
             if mode=="scoped":
-                with pytest.raises(AppError) as failure:
-                    await core.answer(sid,uid,q1["question_id"],"p0-a",CALLS[1]["answer"])
-                assert failure.value.code=="INVALID_QUESTION_GAP_SCOPE"
-                assert p.calls.count("AdaptiveEvaluation")==1
-                assert len((await core.detail(sid,uid))["questions"])==1
-            await core.answer(sid,uid,q1["question_id"],"p0-a",CALLS[1]["answer"])
+                assert "question" in first_events
+                assert first_events["question"]["question_id"]!=q1["question_id"]
+                assert first_events["question"]["evidence"]["adaptive_decision"]["strategy"]=="NEXT"
             assert p.calls.count("AdaptiveEvaluation")==1  # validated evaluation reuse
             before=await core.detail(sid,uid)
             q2=before["questions"][-1]
             decision=q2["evidence"]["adaptive_decision"]
             if mode=="scoped":
-                assert decision["focus_gap_ids"]==[FORMULA]
-                events=await core.answer(sid,uid,q2["question_id"],"p0-b",CALLS[3]["answer"])
-                assert events==await core.answer(sid,uid,q2["question_id"],"p0-b",CALLS[3]["answer"])
-                after=await core.detail(sid,uid)
-                assert after["status"]=="COMPLETED" and after["state_version"]==before["state_version"]+2
-                assert after["state_version"]==6  # rejected first attempt consumed a version, not a question
-                row=after["interview_plan_json"]["adaptive_knowledge"]["items"][KID]
-                assert row["question_state"]=="DEMONSTRATED_IN_SESSION" and row["state"]=="PARTIALLY_DEMONSTRATED"
-                assert [g["id"] for g in row["open_gaps"]]==REMAINS
-                assert after["questions"][-1]["evidence"]["adaptive_decision"]==decision
+                # The old replay's second answer was written for a committed
+                # FOLLOW_UP on FORMULA. R133 replaces the rejected FOLLOW_UP with
+                # a deterministic NEXT (possibly on another frozen target), so
+                # that canned evaluation no longer belongs to the active target.
+                # Assert the new contract here and leave the original two-answer
+                # trajectory to the legacy / multi_focal variants below.
+                assert decision["focus_gap_ids"]==[]  # deterministic NEXT, not the illegal model focus
+                assert len(before["questions"])==2
+                from sqlalchemy import select
+                from interview_api.modules.audit.models import AuditLog
+                from interview_api.modules.experience.models import ExperienceAgentRun
                 async with factory() as db:
-                    mem=next(m for m in await CapabilityMemoryService(db).list(uid) if m["topic"]=="rag_retrieval")
-                    assert mem["state"]!="VERIFIED" and mem["independent_sessions"]==0
+                    audits=(await db.scalars(select(AuditLog).where(
+                        AuditLog.action=="INVALID_QUESTION_GAP_SCOPE",AuditLog.resource_id==str(sid)))).all()
+                    run_row=await db.scalar(select(ExperienceAgentRun).where(
+                        ExperienceAgentRun.graph_name=="interview_main").order_by(
+                        ExperienceAgentRun.id.desc()).limit(1))
+                    mem=next((m for m in await CapabilityMemoryService(db).list(uid)
+                              if m["topic"]=="rag_retrieval"), None)
+                assert len(audits)==1
+                assert run_row is None or run_row.status!="SUCCEEDED" or run_row.output_json.get("terminal") is not True
+                # No memory, or an unconfirmed one: a rejected decision must never
+                # turn into a VERIFIED capability claim.
+                assert mem is None or (mem["state"]!="VERIFIED" and mem["independent_sessions"]==0)
+                row=before["interview_plan_json"]["adaptive_knowledge"]["items"][KID]
+                assert row["state"]=="PARTIALLY_DEMONSTRATED"
+                # The validated evaluation's gaps survive the rejected decision;
+                # their exact ids depend on which frozen NEXT the fallback picks.
+                assert [g["id"] for g in row["open_gaps"]]
+                assert (await core.read_state(sid,uid))[-1]==100*len(p.calls)
+                assert before["context_snapshot"]==session["context_snapshot"]
+                assert not before["interview_plan_json"]["model_call_reservations"]
+                return
             else:
                 with pytest.raises(AppError) as error:
                     await core.answer(sid,uid,q2["question_id"],"p0-b",CALLS[3]["answer"])
@@ -242,8 +291,7 @@ def test_scoped_twenty_round_replay_completes_coach_and_next_memory(database_url
                 topic,q,_,_,_,closes,rubric=scenarios[n]
                 a=p["adaptive"]
                 strategy="FOLLOW_UP" if n+1 in (2,4,6,8,10,13,15,18) else "NEXT"
-                c=next(c for c in a["candidates"] if c["target_knowledge_id"].endswith(":"+topic)
-                       and strategy in c["strategies"] and c["source"]["ref"].startswith("skill:"))
+                c=legal_pair(a, topic=topic, strategy=strategy)
                 gaps=a["knowledge_state"]["items"].get(c["target_knowledge_id"],{}).get("open_gaps",[])
                 if harness and strategy == "FOLLOW_UP":
                     if not p["tool_feedback"]:

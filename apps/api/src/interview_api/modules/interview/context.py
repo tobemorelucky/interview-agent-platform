@@ -260,7 +260,7 @@ async def build_context(db, user_id, request):
                 evaluation_context=True, gap_scope=True, evaluation_boundaries=True), invalid_decision="FAIL_SAFE_RETRY_NO_EXTRA_CALL")
         if request.main_harness:
             from interview_api.modules.interview.main_harness import VERSION as HARNESS_VERSION
-            from interview_api.modules.interview.adaptive_prompts import MAIN_HARNESS_CONTEXT_HINTS_V4 as prompt
+            from interview_api.modules.interview.adaptive_prompts import MAIN_HARNESS_CONTEXT_HINTS_V5 as prompt
             context["adaptive_policy"]["main_harness_version"] = HARNESS_VERSION
             context["adaptive_policy"]["prompts"]["interview_main"] = dict(
                 version=prompt.version, system=prompt.system, fingerprint=prompt.content_hash)

@@ -464,6 +464,16 @@ the job requirements you already have. One lookup per turn is enough.
 """)
 
 
+MAIN_HARNESS_CONTEXT_HINTS_V5 = PromptDefinition("interview_main", "2.4.0-harness.5",
+    MAIN_HARNESS_CONTEXT_HINTS_V4.system + """
+REVIEWED QUESTION TEXT IS ON DEMAND IN THIS MODE. Public-question rows that came from a reviewed
+experience are shown only by id and dimension; their reported wording and expected points are not
+in this input. Those ids stay usable as source references, but you cannot copy their detail without
+reading it. If you want to ask from one of them, call search_reviewed_interview_experiences first
+and use only the short question text that tool returns. Do not guess what a numbered id asked.
+""")
+
+
 def freeze_prompts(contract=None, *, memory_guided=False, context_projection=False, evaluation_context=False,
                    gap_scope=False, evaluation_boundaries=False):
     if context_projection:

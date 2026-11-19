@@ -38,6 +38,16 @@ def test_returns_only_matching_reviewed_items():
     assert result["trust"] == "UNTRUSTED_DATA"
 
 
+def test_natural_topic_wording_maps_to_the_frozen_canonical_topic():
+    # Real harness models write "Agent" / "RAG 检索", not internal topic ids.
+    result = MainHarness._reviewed_experiences(None, action(["Redis"]), payload())
+    assert result["status"] == "OK" and result["code"] == "REVIEWED_EXPERIENCES"
+    assert [i["experience_ref"] for i in result["data"]["items"]] == ["experience:20"]
+    result = MainHarness._reviewed_experiences(None, action(["RAG 检索"]), payload())
+    assert result["status"] == "OK"
+    assert [i["experience_ref"] for i in result["data"]["items"]] == ["experience:21"]
+
+
 def test_unknown_topic_is_refused():
     result = MainHarness._reviewed_experiences(None, action(["frontend"]), payload())
     assert result["status"] == "ERROR" and result["code"] == "TOPIC_OUT_OF_SCOPE"

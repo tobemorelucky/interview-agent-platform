@@ -102,7 +102,8 @@ def model_payload(payload, route):
         from interview_api.modules.interview.main_harness import VERSION as HARNESS_VERSION
         from interview_api.modules.interview.adaptive_prompts import (
             MAIN_HARNESS, MAIN_HARNESS_CONTEXT_HINTS, MAIN_HARNESS_CONTEXT_HINTS_V3,
-            MAIN_HARNESS_CONTEXT_HINTS_V4)
+            MAIN_HARNESS_CONTEXT_HINTS_V4,
+            MAIN_HARNESS_CONTEXT_HINTS_V5)
         if harness != HARNESS_VERSION or gap_scope != GAP_SCOPE_CONTRACT:
             raise AppError('MAIN_HARNESS_UNSUPPORTED', '本场 Main 工具契约不可用', 409)
     if contract is None:
@@ -115,7 +116,8 @@ def model_payload(payload, route):
     # contract, so both remain valid for the same projection. Anything else is a
     # mixed pair and is refused rather than guessed.
     expected_main = (MAIN_HARNESS.version, MAIN_HARNESS_CONTEXT_HINTS.version,
-                     MAIN_HARNESS_CONTEXT_HINTS_V3.version, MAIN_HARNESS_CONTEXT_HINTS_V4.version) if harness else (
+                     MAIN_HARNESS_CONTEXT_HINTS_V3.version, MAIN_HARNESS_CONTEXT_HINTS_V4.version,
+                     MAIN_HARNESS_CONTEXT_HINTS_V5.version) if harness else (
         # 3.0.0 (new sessions) and 2.9.0/2.8.0/2.7.0/2.6.0/2.5.0/2.3.3 (frozen
         # older sessions) keep the same decision/project shape; a mixed pair is
         # refused rather than guessed.
@@ -194,18 +196,46 @@ def model_payload(payload, route):
         result['snapshot'] = snapshot
         if harness:
             if main_version in (MAIN_HARNESS_CONTEXT_HINTS.version, MAIN_HARNESS_CONTEXT_HINTS_V3.version,
-                                MAIN_HARNESS_CONTEXT_HINTS_V4.version):
+                                MAIN_HARNESS_CONTEXT_HINTS_V4.version, MAIN_HARNESS_CONTEXT_HINTS_V5.version):
                 snapshot['context_availability'] = context_availability(snapshot, adaptive)
                 snapshot['context_availability']['reviewed_experiences'] = dict(
                     count=len((scope or {}).get('items') or []),
                     detail='AVAILABLE_ON_DEMAND' if (scope or {}).get('items') else 'NO_REVIEWED_EXPERIENCE_FOR_SCOPE',
                     tool='search_reviewed_interview_experiences')
+            if main_version == MAIN_HARNESS_CONTEXT_HINTS_V5.version:
+                on_demand_reviewed_questions(snapshot, scope)
             lazy_main(result)
     # Bound the role DTO, independently of the richer internal planning packet.
     from interview_api.modules.interview.adaptive import bounded
     bounded(result)
     # Stable wire order as well as canonical hashing; never sort semantic lists.
     return json.loads(json.dumps(result, ensure_ascii=False, sort_keys=True))
+
+
+def on_demand_reviewed_questions(snapshot, scope):
+    """Harness wire: reviewed question wording comes from the tool, not the input.
+
+    Only the model copy is changed. The frozen snapshot still holds the full
+    rows, which is what ``search_reviewed_interview_experiences`` reads, so the
+    tool cannot reveal anything beyond the session's frozen exact-job scope.
+    IDs and dimensions stay: a pinned ``public_question:N`` source must remain
+    selectable, but its reported text and expected points are no longer
+    available for free at session start. Older harness prompts keep their old
+    fully preloaded projection and frozen sessions are untouched.
+    """
+    refs = {ref for item in (scope or {}).get('items') or []
+            for ref in (item.get('question_refs') or [])}
+    if not refs:
+        return
+    rows = []
+    for row in snapshot.get('public_questions') or []:
+        if f"public_question:{row.get('id')}" in refs:
+            rows.append(dict(id=row['id'], dimension=row.get('dimension'),
+                detail='ON_DEMAND_VIA_TOOL', tool='search_reviewed_interview_experiences',
+                semantics='REVIEWED_QUESTION_TEXT_NOT_PRELOADED'))
+        else:
+            rows.append(row)
+    snapshot['public_questions'] = rows
 
 
 def context_availability(snapshot, adaptive):

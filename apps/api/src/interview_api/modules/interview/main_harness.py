@@ -25,6 +25,7 @@ from interview_api.modules.interview.controller import SessionController
 from interview_api.modules.interview.director_repair import SupportingRefsRepair
 from interview_api.modules.interview.models import InterviewAgentCall, InterviewContextSnapshot
 from interview_api.modules.interview.skill_engine import agent_payload
+from interview_api.modules.interview.topics import mentioned_topics
 from interview_api.modules.public_career.research.audit import ResearchModelCalls, finish_research_run
 
 VERSION = "MAIN_HARNESS_V1"
@@ -255,7 +256,17 @@ class MainHarness:
                  if candidate.get("topic")}
         legal |= {target.get("topic") for target in (payload["adaptive"].get("targets") or {}).values()
                   if target.get("topic")}
-        requested = list(dict.fromkeys(action.arguments.topics))
+        # The frozen scope stores canonical topic ids, but a real model naturally
+        # writes "Agent" / "多 Agent". Normalise through the same topic matcher
+        # that built the scope instead of rejecting on spelling. This only maps
+        # synonyms onto topics already legal in this session; items and refs
+        # still come exclusively from the frozen exact-job scope.
+        normalized = []
+        for value in action.arguments.topics:
+            for topic in (mentioned_topics(value) or [value.strip().casefold()]):
+                if topic not in normalized:
+                    normalized.append(topic)
+        requested = normalized
         if any(topic not in legal for topic in requested):
             return _feedback("ERROR", "TOPIC_OUT_OF_SCOPE")
         questions = {row["id"]: row for row in payload["snapshot"].get("public_questions") or []}
