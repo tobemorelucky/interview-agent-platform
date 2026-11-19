@@ -58,6 +58,9 @@ const interviewerOptionsError = ref('')
 const creatingSession = ref(false)
 const designInterview = ref(false), activeDesign = ref(false)
 const adaptiveInterview = ref(false)
+// Business-facing label: "参考真实面经（如有）". Maps to the existing read-only
+// Main Harness tool mode; only meaningful together with adaptive interview.
+const reviewExperienceRef = ref(false)
 // Creation is a guided dialog; the sidebar only holds the button and history.
 const showCreate = ref(false)
 // First-question contract rejections are recoverable, not a dead end.
@@ -70,8 +73,8 @@ const summaryJobLabel = computed(() => {
   const job = targets.value.find(t => t.job_id === selectedJobId.value)
   return job ? `${publicName(job.company_name)} · ${publicName(job.job_title)}` : '未选择'
 })
-watch(adaptiveInterview, value => { if (value) designInterview.value = false })
-watch(designInterview, value => { if (value) adaptiveInterview.value = false })
+watch(adaptiveInterview, value => { if (value) designInterview.value = false; if (!value) reviewExperienceRef.value = false })
+watch(designInterview, value => { if (value) adaptiveInterview.value = false; if (value) reviewExperienceRef.value = false })
 const designTrace = ref<DesignTrace>()
 const designPlan = ref<DesignPlan>({ deduplication: 'NONE', capacity_guard: 'NONE', capacity: 1 })
 const skillChoice = ref<SkillChoice>({ skill_id: '', source: null })
@@ -79,6 +82,7 @@ const roundAndStyle = ref<Pick<InterviewerSelection, 'interview_round' | 'interv
 const interviewerSelection = computed<InterviewerSelection>(() => ({ ...roundAndStyle.value, interviewer_skill_id: skillChoice.value.skill_id,
   design_interview: designInterview.value,
   adaptive_interview: adaptiveInterview.value,
+  main_harness: adaptiveInterview.value && reviewExperienceRef.value,
   interviewer_selection_source: skillChoice.value.source || 'USER_SELECTED' }))
 const privateSkillRec = ref<TargetSkillRecommendation | null>(null)
 let privateSkillSequence = 0
@@ -1537,6 +1541,8 @@ getInterviewTargets().then(async data => {
           <h3><span>6</span>是否自适应</h3>
           <label class="switch"><input type="checkbox" v-model="adaptiveInterview" aria-label="自适应面试"> 根据回答调整考察目标</label>
           <p class="meta">开启后，面试会根据你的回答补具体缺口或切换技术主题；关闭则按固定大纲出题。两种都按同一套评价标准打分。</p>
+          <label v-if="adaptiveInterview" class="switch"><input type="checkbox" v-model="reviewExperienceRef" aria-label="参考真实面经"> 参考真实面经（如有）</label>
+          <p v-if="adaptiveInterview" class="meta">开启后，面试官会在本岗位确有已审核面经时查阅并参考其中的问题；没有面经时按专业方向与岗位要求正常提问。此模式可能带来额外的模型调用。</p>
           <label v-if="!adaptiveInterview" class="switch"><input type="checkbox" v-model="designInterview" aria-label="系统设计验证面试"> 系统设计验证面试（限量预约场景）</label>
         </section>
 
@@ -1546,7 +1552,8 @@ getInterviewTargets().then(async data => {
           <p>方向：{{ interviewerOptions?.skills.find(s => s.id === skillChoice.skill_id)?.label || '未选择' }}
             · 侧重：{{ interviewerOptions?.rounds.find(r => r.id === roundAndStyle.interview_round)?.label || '—' }}
             · 题量 {{ createBudget }} · 风格：{{ interviewerOptions?.styles.find(s => s.id === roundAndStyle.interviewer_style)?.label || '—' }}
-            · 自适应：{{ adaptiveInterview ? '开' : '关' }}</p>
+            · 自适应：{{ adaptiveInterview ? '开' : '关' }}
+            · 参考面经：{{ adaptiveInterview && reviewExperienceRef ? '开' : '关' }}</p>
           <p v-if="pageError" role="alert">{{ pageError }}</p>
         </section>
 

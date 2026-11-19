@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from time import perf_counter
 from typing import Annotated, Literal
@@ -160,6 +161,59 @@ def _feedback(status, code, data=None, refs=()):
     if len(json.dumps(result, ensure_ascii=False).encode("utf-8")) > 2048:
         return _feedback("ERROR", "OUTPUT_LIMIT")
     return result
+
+
+def bind_reviewed_questions_to_candidates(wire, feedback):
+    """Make a retrieved reviewed question answerable at the selection point.
+
+    R134/R135 kept reviewed wording only in ``tool_feedback`` while the model
+    selects a ``candidate_id`` from ``adaptive.candidates``. In V5 the reviewed
+    candidate there carried no text, so the model could not see what it would be
+    asking and kept choosing the fully-described generic Skill candidate. This
+    binds the wording that the tool *already returned* onto the matching legal
+    candidate in the model wire, so choosing that candidate_id is an informed,
+    evidence-backed decision rather than a blind one.
+
+    Defensive by construction (no fabricated provenance):
+      - only a successful REVIEWED_EXPERIENCES result is consulted;
+      - the candidate must already exist in the wire and carry the exact source
+        ref and candidate_id returned by the tool;
+      - only presentation fields are added; identity, source, target and the
+        frozen payload are never changed;
+      - returns a new structure and never mutates its inputs.
+    """
+    enriched = deepcopy(wire)
+    candidates = (enriched.get("adaptive") or {}).get("candidates") or []
+    if not candidates:
+        return enriched
+    returned = {}  # (ref, candidate_id) -> evidence from the tool result
+    for item in feedback or []:
+        result = item.get("result") or {}
+        if item.get("tool") != "search_reviewed_interview_experiences" or \
+                result.get("status") != "OK" or result.get("code") != "REVIEWED_EXPERIENCES":
+            continue
+        for exp in (result.get("data") or {}).get("items") or []:
+            meta = dict(experience_ref=exp.get("experience_ref"), source_url=exp.get("source_url"),
+                        reviewed_at=exp.get("reviewed_at"), reliability=exp.get("reliability"))
+            for q in exp.get("questions") or []:
+                ref, cid, text = q.get("ref"), q.get("candidate_id"), q.get("text")
+                if ref and cid and text:
+                    returned[(ref, cid)] = dict(text=text, dimension=q.get("dimension"), **meta)
+    for candidate in candidates:
+        ref = (candidate.get("source") or {}).get("ref")
+        evidence = returned.get((ref, candidate.get("candidate_id")))
+        if not evidence:
+            continue
+        candidate["reported_question"] = evidence["text"]
+        if evidence.get("dimension"):
+            candidate["reported_dimension"] = evidence["dimension"]
+        if evidence.get("experience_ref"):
+            candidate["reported_source_ref"] = evidence["experience_ref"]
+        if evidence.get("source_url"):
+            candidate["reported_source_url"] = evidence["source_url"]
+        candidate["review_evidence"] = {k: evidence[k] for k in ("reviewed_at", "reliability")
+                                        if evidence.get(k) is not None}
+    return enriched
 
 
 class MainHarness:
@@ -355,12 +409,30 @@ class MainHarness:
                               code=(item.get("result") or {}).get("code"),
                               source_refs=(item.get("result") or {}).get("source_refs") or []))
         source_ref = getattr(artifact, "question_source_ref", None)
+        # A call counts as called whatever it returned (EMPTY is still a call).
         searched = [item for item in tools if item["tool"] == "search_reviewed_interview_experiences"]
-        returned = {ref for item in searched for ref in item["source_refs"]}
+        # Only a successful result contributes retrieved refs that a source could
+        # legitimately have come from; an EMPTY/ERROR result retrieves nothing.
+        successful = [item for item in searched if item["status"] == "OK"]
+        returned = {ref for item in successful for ref in item["source_refs"]
+                    if ref and ref.startswith("public_question:")}
+        used = bool(source_ref and source_ref in returned)
+        # Four mutually exclusive ways a reviewed question can relate to this
+        # question. Keeping them separate stops "we retrieved it" from being
+        # reported as "we asked it" and vice versa. None of this mutates facts.
+        if used:
+            usage_kind = "REVIEWED_SELECTED_AS_SOURCE"
+        elif source_ref and source_ref.startswith("public_question:") and successful:
+            usage_kind = "REVIEWED_BACKGROUND_ONLY"
+        elif source_ref and source_ref.startswith("public_question:"):
+            usage_kind = "PRELOADED_WITHOUT_TOOL"
+        else:
+            usage_kind = "NO_REVIEWED_QUESTION"
         return dict(tool_called=bool(tools), tools=tools,
                     reviewed_search_called=bool(searched), reviewed_search_count=len(searched),
+                    reviewed_retrieved_refs=sorted(returned), reviewed_retrieved_count=len(returned),
                     selection_source_ref=source_ref,
-                    used_tool_result=bool(source_ref and source_ref in returned),
+                    used_tool_result=used, reviewed_usage=usage_kind,
                     preloaded_public_question=bool(source_ref and source_ref.startswith("public_question:")),
                     used_preloaded_without_tool=bool(source_ref and source_ref.startswith("public_question:")
                                                      and not searched))
@@ -453,6 +525,13 @@ class MainHarness:
             schema = FinalAction if len(feedback) >= TOOL_LIMIT or index == MODEL_LIMIT - 1 else MainHarnessAction
             allow_repair = not repaired and http_slots < HTTP_LIMIT - 1
             packet = dict(wire, tool_feedback=list(feedback), main_harness_version=VERSION)
+            # Once a reviewed search has returned real wording, bind it onto the
+            # matching legal candidate in this turn's projection so the model can
+            # select that candidate_id with its evidence visible. This changes the
+            # model wire only; the frozen payload used for validation is untouched.
+            if feedback:
+                bound = bind_reviewed_questions_to_candidates(wire, feedback)
+                packet["adaptive"] = bound["adaptive"]
             output_cap = getattr(provider, "max_output_tokens", settings.interview_model_max_output_tokens)
             schema_bytes = len(json.dumps(schema.model_json_schema(), ensure_ascii=False).encode("utf-8"))
             # The hold includes the capped repair input. ModelGovernance still

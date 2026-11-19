@@ -180,6 +180,8 @@ export type InterviewerStyle = "gentle" | "standard" | "strict"
 export interface InterviewerSelection {
   adaptive_interview?: boolean
   design_interview?: boolean
+  /** Let the Main interviewer consult reviewed interview experiences for this exact job. */
+  main_harness?: boolean
   interviewer_skill_id: InterviewerSkillId
   interview_round: InterviewerRound
   interviewer_style: InterviewerStyle
