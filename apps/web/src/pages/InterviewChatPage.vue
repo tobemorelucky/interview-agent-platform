@@ -425,8 +425,12 @@ async function recoverWithRequirement() {
 }
 
 const offTopicConfirm = ref<{ question_id: number; idempotency_key: string; content: string } | null>(null)
+// An UNKNOWN model outcome means bytes may have reached the provider but no
+// usage receipt came back. Retrying is opt-in and MUST reuse the same answer and
+// idempotency key; the server then re-checks actual persistence before scoring.
+const unknownConfirm = ref<{ question_id: number; idempotency_key: string; content: string } | null>(null)
 const topicChangeConfirm = ref(false)
-const sendFlags = ref<{ confirm_off_topic?: boolean; restart_after_off_topic?: boolean }>({})
+const sendFlags = ref<{ confirm_off_topic?: boolean; restart_after_off_topic?: boolean; confirm_unknown_retry?: boolean }>({})
 const scoreMode = ref<'SIMULATION' | 'PRACTICE'>(
   (localStorage.getItem('interview_score_mode') as 'SIMULATION' | 'PRACTICE') || 'SIMULATION')
 const endConfirmVisible = ref(false)
@@ -466,6 +470,18 @@ function retryOffTopic(restart: boolean) {
     question_id: pending.question_id, idempotency_key: pending.idempotency_key, content: pending.content,
   }
   sendFlags.value = restart ? { restart_after_off_topic: true } : { confirm_off_topic: true }
+  void handleSend()
+}
+
+function confirmUnknownRetry() {
+  const pending = unknownConfirm.value
+  if (!pending) return
+  unknownConfirm.value = null
+  inputText.value = pending.content
+  retryAnswer.value = {
+    question_id: pending.question_id, idempotency_key: pending.idempotency_key, content: pending.content,
+  }
+  sendFlags.value = { confirm_unknown_retry: true }
   void handleSend()
 }
 
@@ -684,7 +700,25 @@ async function handleSend() {
       console.log(`Memory compressed: ${data.compressed_turns} turns`)
     },
     // onError
-    (code, message) => {
+    (code, message, meta) => {
+      if (code === 'INTERVIEW_OUTCOME_UNKNOWN') {
+        // Never auto-retry a possibly billed request. Let the user decide with
+        // full knowledge, then reuse the same answer + idempotency key.
+        pageError.value = ""
+        streamErrorCode.value = code
+        generationStage.value = "idle"
+        streamingContent.value = ""
+        streaming.value = false
+        sending.value = false
+        abortController = null
+        inputText.value = answerContext.content
+        unknownConfirm.value = {
+          question_id: answerContext.question_id,
+          idempotency_key: meta?.idempotency_key || answerContext.idempotency_key,
+          content: answerContext.content,
+        }
+        return
+      }
       if (code === 'OFF_TOPIC_CONFIRMATION_REQUIRED') {
         pageError.value = ""
         streamErrorCode.value = code
@@ -1129,6 +1163,16 @@ getInterviewTargets().then(async data => {
             <button class="btn-ghost" @click="offTopicConfirm = null">取消</button>
             <button class="btn-ghost" @click="retryOffTopic(false)">确认按原文继续</button>
             <button class="btn-primary" @click="retryOffTopic(true)">重新回答</button>
+          </div>
+        </div>
+      </div>
+      <div v-if="unknownConfirm" class="end-confirm-mask" role="dialog" aria-modal="true" aria-label="确认重试未确定结果的回答">
+        <div class="end-confirm">
+          <h3>上一轮模型结果未能确认</h3>
+          <p>请求可能已送达模型，但系统没有收到完成回执，因此这题尚未计分、也未推进。是否用同一份回答重试？系统会在重试前核对是否已评分，不会重复计分。取消则保留现状，可稍后重新发送。</p>
+          <div class="end-actions">
+            <button class="btn-ghost" @click="unknownConfirm = null">取消</button>
+            <button class="btn-primary" @click="confirmUnknownRetry">用同一回答安全重试</button>
           </div>
         </div>
       </div>

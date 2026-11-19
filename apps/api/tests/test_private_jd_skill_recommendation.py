@@ -117,7 +117,11 @@ def test_confirmed_private_jd_returns_a_legal_skill_with_verbatim_evidence(datab
         assert rec["projection"] == "PRIVATE_TARGET_SKILL_V1"
         assert rec["status"] == "RECOMMENDED" and rec["auto_select"] is True
         assert rec["recommended_skill_id"] == "ai_agent_application"
-        assert rec["recommended_version"] == "1.0.0"
+        # R132 promoted ai_agent_application to 1.0.1; assert the registered
+        # latest version, not a frozen literal that goes stale on every bump.
+        from interview_api.modules.interview.skill_registry import discover
+        registered = discover(refresh=True)[0]["ai_agent_application"]["manifest"]["version"]
+        assert rec["recommended_version"] == registered
         assert rec["source"] == "DETERMINISTIC_RULE" and rec["model_calls"] == 0
         assert rec["skill_registry_read_only"] is True
         assert rec["target_version"] == 1 and rec["parse_status"] == "CONFIRMED"

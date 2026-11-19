@@ -471,6 +471,18 @@ experience are shown only by id and dimension; their reported wording and expect
 in this input. Those ids stay usable as source references, but you cannot copy their detail without
 reading it. If you want to ask from one of them, call search_reviewed_interview_experiences first
 and use only the short question text that tool returns. Do not guess what a numbered id asked.
+Each returned reviewed question may include a candidate_id: that is the legal candidate for this
+turn. When a retrieved question genuinely fits the answer and the job, you may use that candidate_id
+as your selection.candidate_id and put its source ref in supporting_refs. It is optional; never
+invent a candidate_id that the tool did not return, and never claim a tool result you did not read.
+FOLLOW-UP AND GAPS. snapshot.context_availability.active_gaps reports how many open gaps the current
+goal has. If you choose strategy FOLLOW_UP while that count is greater than 0, you MUST first call
+read_active_knowledge_gaps to obtain the real gap IDs and put at least one into focus_gap_ids; an
+empty focus_gap_ids with open gaps is rejected. If you do not want to target an existing gap, choose
+strategy NEXT instead (its focus_gap_ids is []) or answer with a different legal candidate. Never
+guess a gap ID: the tool is the only source of them in this input. A gap ID belongs ONLY in
+focus_gap_ids; it is NOT a supporting_ref and must never be added to supporting_refs (that list
+holds source and answer/evaluation refs only).
 """)
 
 

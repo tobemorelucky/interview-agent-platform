@@ -270,6 +270,16 @@ class MainHarness:
         if any(topic not in legal for topic in requested):
             return _feedback("ERROR", "TOPIC_OUT_OF_SCOPE")
         questions = {row["id"]: row for row in payload["snapshot"].get("public_questions") or []}
+        # A reviewed question ref is a source ref; the model selects a candidate_id.
+        # Surface the *existing* legal candidate for that ref so a real retrieved
+        # question can be turned into an answerable NEXT. Never invent an id: a ref
+        # without a current NEXT candidate stays unmapped, and the frozen scope is
+        # still the only place question text comes from.
+        candidate_by_ref = {}
+        for candidate in payload["adaptive"].get("candidates") or []:
+            source_ref = (candidate.get("source") or {}).get("ref")
+            if source_ref and "NEXT" in (candidate.get("strategies") or []) and candidate.get("candidate_id"):
+                candidate_by_ref.setdefault(source_ref, candidate["candidate_id"])
         chosen, refs = [], []
         for item in items:
             if requested and not set(requested) & set(item.get("topics") or []):
@@ -281,7 +291,10 @@ class MainHarness:
                 except (KeyError, ValueError, IndexError):
                     continue
                 text = _clip(question.get("question") or "", 140)
-                rows.append(dict(ref=ref, text=text, dimension=question.get("dimension")))
+                row = dict(ref=ref, text=text, dimension=question.get("dimension"))
+                if ref in candidate_by_ref:
+                    row["candidate_id"] = candidate_by_ref[ref]
+                rows.append(row)
                 refs.append(ref)
                 if len(rows) >= 3:
                     break

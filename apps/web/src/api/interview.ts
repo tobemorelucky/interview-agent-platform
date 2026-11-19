@@ -154,7 +154,7 @@ export function sendMessageStream(
     compressed_turns: number;
     new_last_compressed_turn: number;
   }) => void,
-  onError: (code: string, message: string) => void,
+  onError: (code: string, message: string, meta?: { requires_confirmation?: boolean; idempotency_key?: string }) => void,
   onStatus: (stage: string) => void,
   // Phase 3.6: New SSE event callbacks
   onEvaluation?: (data: {
@@ -206,7 +206,7 @@ export function sendMessageStream(
     dimension_averages?: Record<string, number>;
     overall_average?: number;
   }) => void,
-  answerContext?: { question_id: number; idempotency_key: string; design_plan?: DesignPlan; confirm_off_topic?: boolean; restart_after_off_topic?: boolean }
+  answerContext?: { question_id: number; idempotency_key: string; design_plan?: DesignPlan; confirm_off_topic?: boolean; restart_after_off_topic?: boolean; confirm_unknown_retry?: boolean }
 ): AbortController {
   const controller = new AbortController();
   const token = localStorage.getItem("access_token");
@@ -225,7 +225,7 @@ export function sendMessageStream(
         const text = await response.text();
         if (response.status === 401) expireAuthorization();
         const error = streamHttpError(response.status, text);
-        onError(error.code, error.message);
+        onError(error.code, error.message, error as { requires_confirmation?: boolean; idempotency_key?: string });
         return;
       }
       const reader = response.body?.getReader();
@@ -283,7 +283,7 @@ export function sendMessageStream(
                   break;
                 case "error":
                   receivedDone = true;
-                  onError(data.code, data.message);
+                  onError(data.code, data.message, data as { requires_confirmation?: boolean; idempotency_key?: string });
                   break;
               }
         }
